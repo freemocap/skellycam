@@ -1,41 +1,53 @@
 import React from 'react';
-import {IconButton, InputAdornment, TextField} from '@mui/material';
+import { IconButton, InputAdornment, TextField } from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import {useAppDispatch} from "@/store";
-import {setRecordingInfo} from "@/store/slices/recording/recording-slice";
-import {electronApi} from "@/hooks/electron-service/electron-api";
+import { useAppDispatch } from '@/store';
+import { recordingDirectoryChanged } from '@/store/slices/recording/recording-slice';
+import { useElectronIPC } from '@/services';
 
 interface DirectoryInputProps {
     value: string;
 }
 
-export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({value}) => {
+export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({ value }) => {
     const dispatch = useAppDispatch();
-    const { fileSystem } = electronApi();
+    const { api, isElectron } = useElectronIPC();
 
-    const handleSelectDirectory = async () => {
+    const handleSelectDirectory = async (): Promise<void> => {
+        // Only try to use electron API if we're in electron environment
+        if (!isElectron || !api) {
+            console.warn('Electron API not available');
+            return;
+        }
+
         try {
-            const result = await fileSystem?.selectDirectory();
+            const result: string | null = await api.fileSystem.selectDirectory.mutate();
             if (result) {
-                dispatch(setRecordingInfo({recordingDirectory: result}));
+                // Use the specific action for recording directory changes
+                dispatch(recordingDirectoryChanged(result));
             }
         } catch (error) {
             console.error('Failed to select directory:', error);
         }
     };
 
-    const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newPath = e.target.value;
-        if (newPath.includes('~')) {
+    const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+        const newPath: string = e.target.value;
+
+        // Handle tilde expansion for home directory
+        if (newPath.includes('~') && isElectron && api) {
             try {
-                const home = await fileSystem?.getHomeDirectory();
-                const expanded = home ? newPath.replace(/^~(\/|\\)?/, `${home}$1` || home) : newPath;
-                dispatch(setRecordingInfo({ recordingDirectory: expanded }));
-            } catch {
-                dispatch(setRecordingInfo({ recordingDirectory: newPath }));
+                const home: string = await api.fileSystem.getHomeDirectory.query();
+                // Replace ~ at the beginning of the path with home directory
+                const expanded: string = newPath.replace(/^~(\/|\\)?/, home ? `${home}$1` : '');
+                dispatch(recordingDirectoryChanged(expanded));
+            } catch (error) {
+                console.error('Failed to expand home directory:', error);
+                // Fall back to using the path as-is
+                dispatch(recordingDirectoryChanged(newPath));
             }
         } else {
-            dispatch(setRecordingInfo({ recordingDirectory: newPath }));
+            dispatch(recordingDirectoryChanged(newPath));
         }
     };
 
@@ -49,8 +61,12 @@ export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({valu
             InputProps={{
                 endAdornment: (
                     <InputAdornment position="end">
-                        <IconButton onClick={handleSelectDirectory} edge="end">
-                            <FolderOpenIcon/>
+                        <IconButton
+                            onClick={handleSelectDirectory}
+                            edge="end"
+                            disabled={!isElectron}
+                        >
+                            <FolderOpenIcon />
                         </IconButton>
                     </InputAdornment>
                 ),

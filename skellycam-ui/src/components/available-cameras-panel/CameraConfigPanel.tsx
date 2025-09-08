@@ -1,13 +1,20 @@
-import {Box, Collapse, IconButton, Tooltip, useTheme} from "@mui/material";
+import React from "react";
+import {
+    Box,
+    Collapse,
+    IconButton,
+    Tooltip,
+    useTheme,
+} from "@mui/material";
 import Grid from "@mui/material/Grid2";
-import MediationIcon from '@mui/icons-material/Mediation';
-import * as React from "react";
-import {CameraConfigResolution} from "./CameraConfigResolution";
-import {CameraConfigExposure} from "./CameraConfigExposure";
-import {CameraConfigRotation} from "./CameraConfigRotation";
-import {CameraConfig} from "@/store/slices/cameras/camera-types";
-import {copyConfigToAllCameras} from "@/store/slices/cameras/camerasSlice";
-import {useAppDispatch} from "@/store";
+import MediationIcon from "@mui/icons-material/Mediation";
+import { CameraConfigResolution } from "./CameraConfigResolution";
+import { CameraConfigExposure } from "./CameraConfigExposure";
+import { CameraConfigRotation } from "./CameraConfigRotation";
+import { CameraConfig, ExposureMode } from "@/store/slices/cameras/cameras-types";
+import { configCopiedToAllCameras } from "@/store/slices/cameras/cameras-slice";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { selectAllCameras } from "@/store/slices/cameras/cameras-selectors";
 
 interface CameraConfigPanelProps {
     config: CameraConfig;
@@ -23,20 +30,42 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
     const theme = useTheme();
     const dispatch = useAppDispatch();
 
+    // Get total camera count for UI feedback
+    const allCameras = useAppSelector(selectAllCameras);
+    const otherCamerasCount = allCameras.length - 1;
+
     const handleChange = <K extends keyof CameraConfig>(
         key: K,
         value: CameraConfig[K]
-    ) => {
+    ): void => {
         onConfigChange({
             ...config,
             [key]: value,
         });
     };
-    const handleCopyToAllCameras = () => {
-        dispatch(copyConfigToAllCameras(config.camera_id));
+
+    const handleCopyToAllCameras = (): void => {
+        dispatch(configCopiedToAllCameras(config.camera_id));
     };
+
+    const handleResolutionChange = (width: number, height: number): void => {
+        handleChange("resolution", { width, height });
+    };
+
+    const handleRotationChange = (value: number): void => {
+        handleChange("rotation", value);
+    };
+
+    const handleExposureModeChange = (mode: ExposureMode): void => {
+        handleChange("exposure_mode", mode);
+    };
+
+    const handleExposureValueChange = (value: number): void => {
+        handleChange("exposure", value);
+    };
+
     return (
-        <Collapse in={isExpanded}>
+        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <Box
                 sx={{
                     p: 1.5,
@@ -45,36 +74,62 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                     mb: 1,
                     borderRadius: 1,
                     border: `1px solid ${theme.palette.divider}`,
+                    backgroundColor: theme.palette.background.paper,
                 }}
             >
-
                 <Grid container spacing={2}>
-                    {/* Top row with Resolution, Rotation, and Copy Settings */}
-                    <Grid size={{xs: 12, sm: 5}}>
+                    {/* Top row with Resolution and Rotation */}
+                    <Grid size={{ xs: 12, md: 5 }}>
                         <CameraConfigResolution
                             resolution={config.resolution}
-                            onChange={(width, height) =>
-                                handleChange("resolution", {width, height})
-                            }
+                            onChange={handleResolutionChange}
                         />
                     </Grid>
 
-                    <Grid size={{xs: 12, sm: 5}}>
+                    <Grid size={{ xs: 12, md: 5 }}>
                         <CameraConfigRotation
                             rotation={config.rotation}
-                            onChange={(value) => handleChange("rotation", value)}
+                            onChange={handleRotationChange}
                         />
                     </Grid>
 
-                    <Grid size={{xs: 12, sm: 2}} sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                        <Tooltip title="Copy settings to all cameras">
-                            <IconButton
-                                size="small"
-                                onClick={handleCopyToAllCameras}
-                                aria-label="Copy settings to all cameras"
-                            >
-                                <MediationIcon/>
-                            </IconButton>
+                    <Grid
+                        size={{ xs: 12, md: 2 }}
+                        sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        <Tooltip
+                            title={
+                                otherCamerasCount > 0
+                                    ? `Copy settings to ${otherCamerasCount} other camera${
+                                        otherCamerasCount > 1 ? "s" : ""
+                                    }`
+                                    : "No other cameras to copy to"
+                            }
+                        >
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleCopyToAllCameras}
+                                    disabled={otherCamerasCount === 0}
+                                    aria-label="Copy settings to all cameras"
+                                    sx={{
+                                        color: theme.palette.primary.main,
+                                        "&:hover": {
+                                            backgroundColor: theme.palette.primary.light,
+                                            color: theme.palette.primary.contrastText,
+                                        },
+                                        "&:disabled": {
+                                            color: theme.palette.action.disabled,
+                                        },
+                                    }}
+                                >
+                                    <MediationIcon />
+                                </IconButton>
+                            </span>
                         </Tooltip>
                     </Grid>
 
@@ -83,10 +138,8 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                         <CameraConfigExposure
                             exposureMode={config.exposure_mode}
                             exposure={config.exposure}
-                            onExposureModeChange={(mode) =>
-                                handleChange("exposure_mode", mode)
-                            }
-                            onExposureValueChange={(value) => handleChange("exposure", value)}
+                            onExposureModeChange={handleExposureModeChange}
+                            onExposureValueChange={handleExposureValueChange}
                         />
                     </Grid>
                 </Grid>

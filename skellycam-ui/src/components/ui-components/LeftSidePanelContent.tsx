@@ -2,15 +2,14 @@
 import * as React from 'react';
 import Box from "@mui/material/Box";
 import {IconButton, List, ListItem, useTheme} from "@mui/material";
-import {AvailableCamerasPanel} from "@/components/available-cameras-panel/AvailableCamerasPanel";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
 import HomeIcon from '@mui/icons-material/Home';
 import {useLocation, useNavigate} from "react-router-dom";
 import VideocamIcon from '@mui/icons-material/Videocam';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import {VideoFolderPanel} from "@/components/video-folder-panel/VideoFolderPanel";
 import {ServerSettingsPanel} from '../server-settings-panel/ServerSettingsPanel';
+import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraConfigTreeView";
 
 // Extract reusable scrollbar styles
 const scrollbarStyles = {
@@ -44,7 +43,6 @@ export const LeftSidePanelContent = () => {
     const location = useLocation();
 
     // Dynamic styles based on theme
-
 
 
     return (
@@ -105,8 +103,6 @@ export const LeftSidePanelContent = () => {
             </List>
 
 
-
-
             {location.pathname === '/videos' && (
                 <Box sx={{
                     flex: 1,
@@ -125,7 +121,8 @@ export const LeftSidePanelContent = () => {
                 ...scrollbarStyles
             }}>
                 <RecordingInfoPanel/>
-                <AvailableCamerasPanel/>
+                {/*<AvailableCamerasPanel/>*/}
+                <CameraConfigTreeView/>
             </Box>
 
         </Box>

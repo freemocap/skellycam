@@ -1,24 +1,24 @@
-// CameraConfigRotation.tsx
-import * as React from 'react';
+import React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import {Box, Tooltip, useTheme} from '@mui/material';
-import {RotationLabels, RotationOptions} from "@/store/slices/cameras/camera-types";
+import { Box, Tooltip, useTheme } from '@mui/material';
+import { RotationOptions, RotationLabels } from "@/store/slices/cameras/cameras-types";
 
 interface CameraConfigRotationProps {
-    rotation?: number; // Use number directly
+    rotation?: number;
     onChange: (rotation: number) => void;
 }
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-                                                                              rotation = -1, // Set default value to -1 for NO_ROTATION
+                                                                              rotation = -1, // Default to -1 for NO_ROTATION
                                                                               onChange
                                                                           }) => {
     const theme = useTheme();
+
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,
-        newRotation: number,
-    ) => {
+        newRotation: number | null,
+    ): void => {
         if (newRotation !== null) {
             onChange(newRotation);
         }
@@ -45,8 +45,7 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                         }
                     }}
                 >
-                    {/* Map through RotationOptions and RotationLabels to create buttons */}
-                    {RotationOptions.map((value, index) => (
+                    {RotationOptions.map((value: number, index: number) => (
                         <ToggleButton key={value} value={value}>
                             {RotationLabels[index]}
                         </ToggleButton>
@@ -55,4 +54,4 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
             </Tooltip>
         </Box>
     );
-}
+};

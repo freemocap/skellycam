@@ -1,23 +1,15 @@
+
 import React, { useEffect } from 'react';
-import { Provider } from "react-redux";
-import { store } from "@/store/store";
-import { PaperbaseContent } from "@/layout/paperbase_theme/PaperbaseContent";
-import { useAppSelector } from '@/store/hooks';
-import { selectServerStatus } from '@/store/slices/server/server-selectors';
-import {websocketManager} from "@/services/api";
+import { Provider } from 'react-redux';
+import { store } from '@/store';
+import { websocketService } from '@/services/websocket/websocket-service';
+import { PaperbaseContent } from '@/layout/paperbase_theme/PaperbaseContent';
 
 function AppContent() {
-    const serverStatus = useAppSelector(selectServerStatus);
-
     useEffect(() => {
-        // Auto-connect WebSocket when server is alive
-        if (serverStatus === 'alive') {
-            const wsUrl = `ws://localhost:8006/skellycam/websocket/connect`;
-            websocketManager.connect(wsUrl);
-        } else if (serverStatus === 'not-connected') {
-            websocketManager.disconnect();
-        }
-    }, [serverStatus]);
+        // Initialize WebSocket service once
+        websocketService.initialize();
+    }, []);
 
     return <PaperbaseContent />;
 }

@@ -3,13 +3,13 @@ import {Box, Container, Fade, Grow, Paper, Typography} from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
 import {Footer} from '@/components/ui-components/Footer';
-import {electronApi} from "@/hooks/electron-service/electron-api";
+import {useElectronIPC} from "@/services";
 
 const WelcomePage: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const [logoPath, setLogoPath] = useState<string | null>(null)
-    const {isElectron, api, fileSystem} = electronApi();
+    const {isElectron, api} = useElectronIPC()
 
     useEffect(() => {
         const fetchLogoPath = async () => {

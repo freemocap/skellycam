@@ -1,5 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import {loadVideos, openVideoFile, selectVideoLoadFolder, VideoFile, VideosState} from "@/store";
+import { VideoFile, VideosState } from './videos-types';
+import {
+    loadVideos,
+    openVideoFile,
+    selectVideoLoadFolder,
+} from './videos-thunks';
+
 
 const initialState: VideosState = {
     folder: '',

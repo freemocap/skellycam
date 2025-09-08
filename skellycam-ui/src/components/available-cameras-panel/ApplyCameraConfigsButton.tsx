@@ -1,7 +1,7 @@
 import React from 'react';
 import {IconButton, Tooltip} from '@mui/material';
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
-import {useAppDispatch} from '@/store/AppStateStore';
+import {useAppDispatch} from '@/store';
 import {updateCameraConfigsThunk} from "@/store/slices/cameras/old-camera-thunks/update-camera-configs-thunk";
 
 export const ApplyCameraConfigsButton: React.FC = () => {

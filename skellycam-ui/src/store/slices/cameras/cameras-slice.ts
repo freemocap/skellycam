@@ -1,10 +1,10 @@
 import {
     createSlice,
-    createEntityAdapter,
     PayloadAction,
     EntityState,
 } from '@reduxjs/toolkit';
 import { CameraDevice, CameraConfig } from './cameras-types';
+import { cameraAdapter } from './cameras-adapter';
 import {
     detectCameras,
     connectToCameras,
@@ -12,12 +12,7 @@ import {
     closeCameras,
 } from './cameras-thunks';
 
-export const cameraAdapter = createEntityAdapter<CameraDevice>({
-    selectId: (camera) => camera.cameraId,
-    sortComparer: (a, b) => a.index - b.index,
-});
-
-interface CameraState extends EntityState<CameraDevice> {
+interface CameraState extends EntityState<CameraDevice, string> {
     isLoading: boolean;
     error: string | null;
     connectionStatus: 'disconnected' | 'connecting' | 'connected';
@@ -94,7 +89,7 @@ export const cameraSlice = createSlice({
                 };
 
                 const updates = Object.values(state.entities)
-                    .filter((cam): cam is CameraDevice =>
+                    .filter((cam) =>
                         cam !== undefined && cam.cameraId !== action.payload
                     )
                     .map((camera) => ({
@@ -106,7 +101,6 @@ export const cameraSlice = createSlice({
                             },
                         },
                     }));
-
                 cameraAdapter.updateMany(state, updates);
             }
         },

@@ -1,23 +1,26 @@
-import {Box, Typography} from "@mui/material";
-import {useWebSocketContext} from "@/context/websocket-context/WebSocketContext";
+import React from 'react';
+import { Box, Typography } from "@mui/material";
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import { useAppSelector } from "@/store";
+import { selectIsWebSocketConnected, selectWebSocketStatus } from "@/store/slices/websocket/websocket-selectors";
+import { websocketService } from "@/services/websocket/websocket-service";
 
-const WebsocketConnectionStatus = () => {
-    const {isConnected, disconnect, connect} = useWebSocketContext();
+const WebsocketConnectionStatus: React.FC = () => {
+    const isConnected = useAppSelector(selectIsWebSocketConnected);
+    const connectionStatus = useAppSelector(selectWebSocketStatus);
 
     const handleToggleConnection = () => {
         if (isConnected) {
             console.log('Toggling WebSocket: disconnecting');
-            disconnect(false);
+            websocketService.disconnect();
         } else {
             console.log('Toggling WebSocket: connecting');
-            connect();
+            websocketService.connect();
         }
     };
 
     return (
-        // <Tooltip title={`WebSocket URL: ${wsUrl}`} placement="bottom-start" arrow>
         <Box
             sx={{
                 display: 'flex',
@@ -38,7 +41,7 @@ const WebsocketConnectionStatus = () => {
         >
             <Typography
                 variant="body1"
-                component="div" // Override the default <p> to <div>
+                component="div"
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -66,16 +69,17 @@ const WebsocketConnectionStatus = () => {
                     },
                 }}>
                     {isConnected ? (
-                        <CheckIcon sx={{color: 'green'}}/>
+                        <CheckIcon sx={{ color: 'green' }} />
                     ) : (
-                        <CloseIcon fontSize="small" sx={{color: 'red'}}/>
+                        <CloseIcon fontSize="small" sx={{ color: 'red' }} />
                     )}
                 </Box>
-                Websocket: {isConnected ? 'connected' : 'disconnected'}
+                WebSocket: {connectionStatus === 'connecting' || connectionStatus === 'reconnecting'
+                ? connectionStatus
+                : isConnected ? 'connected' : 'disconnected'}
             </Typography>
         </Box>
-        // </Tooltip>
-    )
-        ;
+    );
 };
+
 export default WebsocketConnectionStatus;

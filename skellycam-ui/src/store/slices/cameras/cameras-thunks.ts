@@ -1,13 +1,8 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import { RootState } from '../../types';
-import {
-    CameraDevice,
-    CameraConfig,
-    createDefaultCameraConfig,
-    CAMERA_DEFAULT_CONSTRAINTS
-} from './cameras-types';
-import { selectSelectedCameraConfigs } from './cameras-selectors';
-import {selectEndpoints} from "@/store/slices/config/config-selector";
+import {createAsyncThunk} from '@reduxjs/toolkit';
+import {RootState} from '../../types';
+import {CAMERA_DEFAULT_CONSTRAINTS, CameraConfig, CameraDevice, createDefaultCameraConfig} from './cameras-types';
+import {selectSelectedCameraConfigs} from './cameras-selectors';
+import {selectEndpoints} from "@/store";
 
 interface DetectCamerasResponse {
     cameras: Array<{
@@ -22,14 +17,14 @@ export const detectCameras = createAsyncThunk<
     CameraDevice[],
     { filterVirtual?: boolean } | undefined,
     { state: RootState }
->('cameras/detect', async (args = { filterVirtual: true }, { getState }) => {
+>('cameras/detect', async (args = {filterVirtual: true}, {getState}) => {
     const state = getState();
     const endpoints = selectEndpoints(state); // Get URLs from state
     const existingCameras = state.cameras.entities;
 
     const response = await fetch(endpoints.detectCameras, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(args),
     });
 
@@ -66,7 +61,7 @@ export const connectToCameras = createAsyncThunk<
     { camera_configs: Record<string, CameraConfig> },
     void,
     { state: RootState }
->('cameras/connect', async (_, { getState }) => {
+>('cameras/connect', async (_, {getState}) => {
     const state = getState();
     const endpoints = selectEndpoints(state);
     const cameraConfigs = selectSelectedCameraConfigs(state);
@@ -77,8 +72,8 @@ export const connectToCameras = createAsyncThunk<
 
     const response = await fetch(endpoints.createGroup, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ camera_configs: cameraConfigs }),
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({camera_configs: cameraConfigs}),
     });
 
     if (!response.ok) {
@@ -93,15 +88,15 @@ export const updateCameraConfigs = createAsyncThunk<
     { camera_configs: Record<string, CameraConfig> },
     void,
     { state: RootState }
->('cameras/updateConfigs', async (_, { getState }) => {
+>('cameras/updateConfigs', async (_, {getState}) => {
     const state = getState();
     const endpoints = selectEndpoints(state);
     const cameraConfigs = selectSelectedCameraConfigs(state);
 
     const response = await fetch(endpoints.updateConfigs, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ camera_configs: cameraConfigs }),
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({camera_configs: cameraConfigs}),
     });
 
     if (!response.ok) {
@@ -111,10 +106,13 @@ export const updateCameraConfigs = createAsyncThunk<
 
     return response.json();
 });
-
-export const closeCameras = createAsyncThunk<void, { state: RootState }>(
+export const closeCameras = createAsyncThunk<
+    void,                    // Return type
+    void,                    // Argument type (no arguments)
+    { state: RootState }     // ThunkAPI config
+>(
     'cameras/close',
-    async (_, { getState }) => {
+    async (_, {getState}) => {
         const state = getState();
         const endpoints = selectEndpoints(state);
         const response = await fetch(endpoints.closeAll, {
@@ -126,9 +124,14 @@ export const closeCameras = createAsyncThunk<void, { state: RootState }>(
         }
     }
 );
-export const pauseUnpauseCameras = createAsyncThunk<void, { state: RootState }>(
+
+export const pauseUnpauseCameras = createAsyncThunk<
+    void,                    // Return type
+    void,                    // Argument type (no arguments)
+    { state: RootState }     // ThunkAPI config
+>(
     'cameras/pause',
-    async (_, { getState }) => {
+    async (_, {getState}) => {
         const state = getState();
         const endpoints = selectEndpoints(state);
         const response = await fetch(endpoints.pauseUnpauseCameras, {method: 'GET'});

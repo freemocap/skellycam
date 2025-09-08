@@ -1,10 +1,19 @@
 import { z } from 'zod';
 
+// Constants
 export const PixelFormats = ['RGB', 'BGR', 'GRAY'] as const;
 export const ExposureModes = ['MANUAL', 'AUTO', 'RECOMMEND'] as const;
 export const CameraStatus = ['CONNECTED', 'AVAILABLE', 'UNAVAILABLE', 'IN_USE', 'ERROR'] as const;
 export const RotationOptions = [-1, 0, 1, 2] as const;
+export const RotationLabels = ['None', '90°', '180°', '270°'] as const;
 export const FourccOptions = ['MJPG', 'X264', 'YUYV', 'H264'] as const;
+
+// Type definitions derived from constants
+export type PixelFormat = typeof PixelFormats[number];
+export type ExposureMode = typeof ExposureModes[number];
+export type CameraStatusType = typeof CameraStatus[number];
+export type RotationOption = typeof RotationOptions[number];
+export type FourccOption = typeof FourccOptions[number];
 
 export const ResolutionPresets = [
     { width: 640, height: 480, label: "VGA (4:3)" },
@@ -49,7 +58,7 @@ export const CameraConfigSchema = z.object({
     }),
     color_channels: z.number(),
     pixel_format: z.string(),
-    exposure_mode: z.string(),
+    exposure_mode: z.enum(ExposureModes),
     exposure: z.number(),
     framerate: z.number(),
     rotation: z.number(),
@@ -63,7 +72,7 @@ export interface CameraDevice {
     index: number;
     deviceId: string;
     cameraId: string;
-    status: typeof CameraStatus[number];
+    status: CameraStatusType;
     groupId: string;
     kind: string;
     label: string;

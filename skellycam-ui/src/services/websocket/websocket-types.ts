@@ -50,3 +50,5 @@ export const WebSocketMessageSchema = z.discriminatedUnion("message_type", [
 ]);
 
 export type WebSocketMessage = z.infer<typeof WebSocketMessageSchema>;
+export type FramerateUpdateMessage = z.infer<typeof FramerateUpdateMessageSchema>;
+export type LogRecordMessage = z.infer<typeof LogRecordMessageSchema>;

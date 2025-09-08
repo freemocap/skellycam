@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import {electronApi} from "@/hooks/electron-service/electron-api";
+import {electronApi} from "@/services/electron-ipc/electron-ipc";
 
 export const ExecutablePathSelector: React.FC = () => {
     const { api, isElectron } = electronApi();

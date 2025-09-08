@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import {electronAPI} from "@/hooks/electron-service/electron-api";
+import {electronIpc} from "@/services/electron-ipc/electron-ipc";
 import {VideoFile} from "@/store";
 
 const VIDEO_EXTENSIONS = ['.mp4', '.avi', '.mov', '.mkv', '.webm'];
@@ -16,14 +16,14 @@ interface FolderEntry {
 export const selectVideoLoadFolder = createAsyncThunk<
     { folder: string; files: VideoFile[] } | null
 >('videos/selectFolder', async () => {
-    if (!electronAPI) {
+    if (!electronIpc) {
         throw new Error('Electron API not available');
     }
 
-    const selectedFolder = await electronAPI.fileSystem.selectDirectory.mutate();
+    const selectedFolder = await electronIpc.fileSystem.selectDirectory.mutate();
     if (!selectedFolder) return null;
 
-    const entries: FolderEntry[] = await electronAPI.fileSystem.getFolderContents.query({
+    const entries: FolderEntry[] = await electronIpc.fileSystem.getFolderContents.query({
         path: selectedFolder,
     });
 
@@ -46,11 +46,11 @@ export const loadVideos = createAsyncThunk<
     { success: boolean },
     { folder: string; files: VideoFile[] }
 >('videos/load', async ({ folder }) => {
-    if (!electronAPI) {
+    if (!electronIpc) {
         throw new Error('Electron API not available');
     }
 
-    const success = await electronAPI.fileSystem.openFolder.mutate({ path: folder });
+    const success = await electronIpc.fileSystem.openFolder.mutate({ path: folder });
     if (!success) {
         throw new Error('Failed to open folder');
     }
@@ -61,14 +61,14 @@ export const openVideoFile = createAsyncThunk<
     { success: boolean; error?: Error },
     string
 >('videos/openFile', async (filePath) => {
-    if (!electronAPI) {
+    if (!electronIpc) {
         return { success: false, error: new Error('Electron API not available') };
     }
 
     try {
         const idx = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
         const folderPath = idx >= 0 ? filePath.substring(0, idx) : filePath;
-        await electronAPI.fileSystem.openFolder.mutate({ path: folderPath });
+        await electronIpc.fileSystem.openFolder.mutate({ path: folderPath });
         return { success: true };
     } catch (error) {
         console.error('Failed to open video file:', error);

@@ -1,7 +1,6 @@
-// CameraConfigExposure.tsx
-import * as React from 'react';
-import {Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme} from '@mui/material';
-import {CAMERA_DEFAULT_CONSTRAINTS, ExposureMode} from "@/store/slices/cameras/camera-types";
+import React from 'react';
+import { Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme } from '@mui/material';
+import { CAMERA_DEFAULT_CONSTRAINTS, ExposureMode } from "@/store/slices/cameras/cameras-types";
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
@@ -14,7 +13,7 @@ const ValueLabelComponent = (props: {
     children: React.ReactElement;
     value: number;
 }) => {
-    const {children, value} = props;
+    const { children, value } = props;
 
     return (
         <Tooltip title={
@@ -28,6 +27,7 @@ const ValueLabelComponent = (props: {
         </Tooltip>
     );
 };
+
 export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                                                                               exposureMode = CAMERA_DEFAULT_CONSTRAINTS.exposure_modes[0], // MANUAL
                                                                               exposure = CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
@@ -38,27 +38,33 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
 
     const handleModeChange = (
         event: React.MouseEvent<HTMLElement>,
-        newMode: string,
-    ) => {
+        newMode: string | null,
+    ): void => {
         if (newMode !== null) {
             onExposureModeChange(newMode as ExposureMode);
         }
     };
 
+    const handleSliderChange = (event: Event, value: number | number[]): void => {
+        onExposureValueChange(value as number);
+    };
 
     const baseMarks = [
-        {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min)},
+        { value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min) },
         {
             value: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
             label: `${CAMERA_DEFAULT_CONSTRAINTS.exposure.default} (default)`
         },
-        {value: CAMERA_DEFAULT_CONSTRAINTS.exposure.max, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.max)}
+        { value: CAMERA_DEFAULT_CONSTRAINTS.exposure.max, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.max) }
     ];
+
     const marks = [
         ...baseMarks,
-        ...(![CAMERA_DEFAULT_CONSTRAINTS.exposure.min as number,
+        ...(![
+                CAMERA_DEFAULT_CONSTRAINTS.exposure.min as number,
                 CAMERA_DEFAULT_CONSTRAINTS.exposure.default as number,
-                CAMERA_DEFAULT_CONSTRAINTS.exposure.max as number].includes(exposure)
+                CAMERA_DEFAULT_CONSTRAINTS.exposure.max as number
+            ].includes(exposure)
                 ? [{
                     value: exposure,
                     label: `${exposure}`,
@@ -96,7 +102,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                 </ToggleButtonGroup>
             </Tooltip>
             <Tooltip title="Adjust exposure time, e.g. cv2.VideoCapture.set(cv2.CAP_PROP_EXPOSURE, value)">
-                <Box sx={{flexGrow: 1}}>
+                <Box sx={{ flexGrow: 1 }}>
                     <Slider
                         value={exposure}
                         disabled={exposureMode === 'AUTO' || exposureMode === 'RECOMMEND'}
@@ -105,7 +111,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                         step={1}
                         marks={marks}
                         valueLabelDisplay="auto"
-                        onChange={(_, value) => onExposureValueChange(value as number)}
+                        onChange={handleSliderChange}
                         components={{
                             ValueLabel: ValueLabelComponent
                         }}
@@ -113,10 +119,9 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                             color: theme.palette.primary.light,
                             '& .MuiSlider-thumb': {
                                 '&:hover, &.Mui-focusVisible': {
-                                    boxShadow: `0px 0px 0px 8px ${theme.palette.primary.light}33`, // Adding a cool effect on hover and focus
+                                    boxShadow: `0px 0px 0px 8px ${theme.palette.primary.light}33`,
                                 },
                             },
-
                         }}
                     />
                 </Box>
@@ -124,4 +129,3 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
         </Box>
     );
 };
-

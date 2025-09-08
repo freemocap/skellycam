@@ -1,6 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { RootState } from '../../types';
-import { cameraAdapter } from './cameras-slice';
+import { cameraAdapter } from './cameras-adapter';
 import { CameraConfig } from './cameras-types';
 
 // Export entity adapter selectors

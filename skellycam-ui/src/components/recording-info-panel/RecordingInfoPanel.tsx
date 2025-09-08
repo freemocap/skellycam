@@ -9,16 +9,18 @@ import {useAppDispatch, useAppSelector} from "@/store";
 import {
     StartStopRecordingButton
 } from "@/components/recording-info-panel/recording-subcomponents/StartStopRecordingButton";
-import {startRecording, stopRecording,} from "@/store/slices/cameras/old-camera-thunks/start-stop-recording-thunks";
-import {setRecordingInfo} from "@/store/slices/recording/recording-slice";
+// Updated imports - using the recording thunks from the store barrel export
+import {startRecording, stopRecording, recordingInfoUpdated} from "@/store";
 import {RecordingPathTreeItem} from "@/components/recording-info-panel/RecordingPathTreeItem";
-import {electronApi} from "@/hooks/electron-service/electron-api";
+import {electronIpc, useElectronIPC} from "@/services/electron-ipc/electron-ipc";
+import {electronIpcClient} from "@/services";
 
 export const RecordingInfoPanel: React.FC = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
+    // Updated selector to match the store structure
     const recordingInfo = useAppSelector(
-        (state) => state.recordingStatus.currentRecordingInfo
+        (state) => state.recording
     );
 
     // Local UI state
@@ -34,21 +36,22 @@ export const RecordingInfoPanel: React.FC = () => {
     const [baseName, setBaseName] = useState("recording");
     const [customSubfolderName, setCustomSubfolderName] = useState("");
     const [recordingTag, setRecordingTag] = useState("");
-    const {isElectron, api, fileSystem} = electronApi();
+    const {isElectron, api} = useElectronIPC();
+
     // replace ~ with user's home directory
     useEffect(() => {
-        if (recordingInfo?.recordingDirectory?.startsWith("~")) {
-            fileSystem?.getHomeDirectory().then((homePath) => {
+        if (recordingInfo?.recordingDirectory?.startsWith("~") && isElectron && api) {
+            api.fileSystem.getHomeDirectory.query().then((homePath: string) => {
                 const updatedDirectory = recordingInfo.recordingDirectory.replace(
                     "~",
                     homePath
                 );
-                dispatch(setRecordingInfo({recordingDirectory: updatedDirectory}));
-            }).catch((error) => {
+                dispatch(recordingInfoUpdated({recordingDirectory: updatedDirectory}));
+            }).catch((error: any) => {
                 console.error("Failed to get home directory:", error);
             });
         }
-    }, [recordingInfo.recordingDirectory, fileSystem, dispatch]);
+    }, [recordingInfo.recordingDirectory, isElectron, api, dispatch]);
 
     // Handle countdown timer
     useEffect(() => {
@@ -96,9 +99,11 @@ export const RecordingInfoPanel: React.FC = () => {
 
         return timestamp;
     };
+
     const handleRecordingTagChange = (tag: string) => {
         setRecordingTag(tag);
     };
+
     const buildRecordingName = (): string => {
         const parts: string[] = [];
 
@@ -194,7 +199,6 @@ export const RecordingInfoPanel: React.FC = () => {
                                 Record Videos
                             </Typography>
 
-
                             <Box sx={{display: "flex", flexGrow: 1, pl: 2, alignItems: "left"}}>
                                 <StartStopRecordingButton
                                     isRecording={recordingInfo.isRecording}
@@ -202,11 +206,8 @@ export const RecordingInfoPanel: React.FC = () => {
                                     onClick={handleRecordButtonClick}
                                 />
                             </Box>
-
-
                         </Box>
                     }
-
                 >
                     <RecordingPathTreeItem
                         recordingDirectory={recordingInfo.recordingDirectory}

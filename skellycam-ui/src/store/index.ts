@@ -9,6 +9,5 @@ export * from './slices/recording';
 export * from './slices/framerate';
 export * from './slices/log-records';
 export * from './slices/server';
-export * from './slices/websocket';
 export * from './slices/theme';
 export * from './slices/videos';

@@ -1,37 +1,53 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import {checkServerHealth, ServerConfig, ServerState, ServerStatus, startServer, stopServer} from "@/store";
+import {
+    ServerConfig,
+    ServerState,
+    ServerStatus,
+    WebSocketStatus
+} from './server-types';
+import { checkServerHealth, startServer, stopServer } from './server-thunks';
 
+// Helper to load config from localStorage
+const loadConfigFromStorage = (): ServerConfig => ({
+    host: localStorage.getItem('server-host') || 'localhost',
+    port: parseInt(localStorage.getItem('server-port') || '8006'),
+    autoConnect: localStorage.getItem('auto-connect') === 'true',
+});
 
-const loadServerConfig = (): ServerConfig => {
-    try {
-        const stored = localStorage.getItem('skellycam-server-config');
-        if (stored) {
-            return {
-                host: 'localhost',
-                port: 8006,
-                autoConnect: true,
-                ...JSON.parse(stored)
-            };
-        }
-    } catch (error) {
-        console.error('Failed to load server config:', error);
+// Helper to save config to localStorage
+const saveConfigToStorage = (config: Partial<ServerConfig>): void => {
+    if (config.host !== undefined) {
+        localStorage.setItem('server-host', config.host);
     }
-    return {
-        host: 'localhost',
-        port: 8006,
-        autoConnect: true,
-    };
+    if (config.port !== undefined) {
+        localStorage.setItem('server-port', config.port.toString());
+    }
+    if (config.autoConnect !== undefined) {
+        localStorage.setItem('auto-connect', config.autoConnect.toString());
+    }
 };
 
 const initialState: ServerState = {
+    // Load config from localStorage
+    config: loadConfigFromStorage(),
+
+    // Server process state
     status: 'not-connected',
     errorMessage: null,
     retryCount: 0,
     lastHealthCheck: null,
-    config: loadServerConfig(),
     processInfo: {
         pid: null,
         executablePath: null,
+    },
+
+    // WebSocket state
+    websocket: {
+        status: 'disconnected',
+        error: null,
+        reconnectAttempts: 0,
+        lastConnectedAt: null,
+        lastDisconnectedAt: null,
     },
 };
 
@@ -39,13 +55,15 @@ export const serverSlice = createSlice({
     name: 'server',
     initialState,
     reducers: {
+        // Config actions
+        updateServerConfig: (state, action: PayloadAction<Partial<ServerConfig>>) => {
+            state.config = { ...state.config, ...action.payload };
+            saveConfigToStorage(action.payload);
+        },
+
+        // Server process actions
         serverStatusUpdated: (state, action: PayloadAction<ServerStatus>) => {
             state.status = action.payload;
-        },
-        serverConfigUpdated: (state, action: PayloadAction<Partial<ServerConfig>>) => {
-            state.config = { ...state.config, ...action.payload };
-            // Persist to localStorage
-            localStorage.setItem('skellycam-server-config', JSON.stringify(state.config));
         },
         serverErrorSet: (state, action: PayloadAction<string | null>) => {
             state.errorMessage = action.payload;
@@ -61,6 +79,30 @@ export const serverSlice = createSlice({
             action: PayloadAction<Partial<ServerState['processInfo']>>
         ) => {
             state.processInfo = { ...state.processInfo, ...action.payload };
+        },
+
+        // WebSocket actions
+        websocketConnecting: (state) => {
+            state.websocket.status = 'connecting';
+            state.websocket.error = null;
+        },
+        websocketConnected: (state) => {
+            state.websocket.status = 'connected';
+            state.websocket.error = null;
+            state.websocket.reconnectAttempts = 0;
+            state.websocket.lastConnectedAt = new Date().toISOString();
+        },
+        websocketDisconnected: (state) => {
+            state.websocket.status = 'disconnected';
+            state.websocket.lastDisconnectedAt = new Date().toISOString();
+        },
+        websocketReconnecting: (state, action: PayloadAction<number>) => {
+            state.websocket.status = 'reconnecting';
+            state.websocket.reconnectAttempts = action.payload;
+        },
+        websocketError: (state, action: PayloadAction<string>) => {
+            state.websocket.status = 'error';
+            state.websocket.error = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -84,10 +126,15 @@ export const serverSlice = createSlice({
             .addCase(stopServer.pending, (state) => {
                 state.status = 'shutting-down';
                 state.errorMessage = null;
+                // Also disconnect WebSocket
+                state.websocket.status = 'disconnected';
             })
             .addCase(stopServer.fulfilled, (state) => {
                 state.status = 'not-connected';
                 state.processInfo = { pid: null, executablePath: null };
+                // Ensure WebSocket is marked as disconnected
+                state.websocket.status = 'disconnected';
+                state.websocket.lastDisconnectedAt = new Date().toISOString();
             })
             .addCase(stopServer.rejected, (state, action) => {
                 state.status = 'error';
@@ -102,10 +149,15 @@ export const serverSlice = createSlice({
 });
 
 export const {
+    updateServerConfig,
     serverStatusUpdated,
-    serverConfigUpdated,
     serverErrorSet,
     retryCountUpdated,
     healthCheckRecorded,
     processInfoUpdated,
+    websocketConnecting,
+    websocketConnected,
+    websocketDisconnected,
+    websocketReconnecting,
+    websocketError,
 } = serverSlice.actions;
