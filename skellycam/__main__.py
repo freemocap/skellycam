@@ -61,7 +61,6 @@ def handle_shutdown_signal(signum, frame):
 
 
 if __name__ == "__main__":
-    multiprocessing.freeze_support()
     original_global_kill_flag = multiprocessing.Value("b", False)
 
     # Register signal handlers - these will set the global kill flag to True when the process receives a termination signal
