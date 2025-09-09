@@ -1,12 +1,17 @@
-import * as React from 'react';
+// components/ServerSettingsPanel.tsx
+import React, { useState, useEffect } from 'react';
 import {
     Alert,
     Box,
     Button,
     Card,
     CardContent,
-    Chip,
+    Chip, CircularProgress,
     Collapse,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Divider,
     FormControl,
     FormControlLabel,
@@ -24,63 +29,77 @@ import {
 } from '@mui/material';
 import {
     CheckCircle as CheckCircleIcon,
+    Computer as ComputerIcon,
     Error as ErrorIcon,
     ExpandMore as ExpandMoreIcon,
     FolderOpen as FolderOpenIcon,
-    Info as InfoIcon,
     Link as LinkIcon,
     LinkOff as LinkOffIcon,
     PlayArrow as PlayArrowIcon,
     Refresh as RefreshIcon,
     Settings as SettingsIcon,
     Stop as StopIcon,
-    Warning as WarningIcon,
+    Storage as StorageIcon,
 } from '@mui/icons-material';
-import {styled} from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import {
-    selectBaseHttpUrl,
-    selectIsServerAlive,
-    selectIsServerTransitioning,
-    selectIsWebSocketConnected,
-    selectServerConfig,
-    selectServerError,
-    selectServerProcessInfo,
-    selectServerStatus,
-    selectServerUrls, selectWebSocketUrl,
-    ServerStatus,
-    startServer,
-    stopServer,
-    updateServerConfig,
     useAppDispatch,
     useAppSelector,
+    // Connection selectors
+    selectConnectionMode,
+    selectConnectionStatus,
+    selectConnectionError,
+    selectHasManagedServer,
+    selectIsServerConnected,
+    selectIsServerTransitioning,
+    selectCanConnect,
+    selectCanDisconnect,
+    selectManagedProcess,
+    // Config selectors
+    selectServerConfig,
+    selectAutoConnect,
+    selectAutoSpawn,
+    selectPreferredExecutablePath,
+    // URL selectors
+    selectHttpUrl,
+    selectWebSocketUrl,
+    // WebSocket selectors
+    selectIsWebSocketConnected,
+    selectWebSocketStatus,
+    // Executable selectors
+    selectExecutableCandidates,
+    selectIsRefreshingExecutables,
+    // Actions and thunks
+    updateServerConfig,
+    startManagedServer,
+    stopManagedServer,
+    connectToExternalServer,
+    disconnectFromServer,
+    refreshExecutableCandidates,
+    websocketStatusChanged,
 } from "@/store";
-import {websocketService} from "@/services/websocket/websocket-service";
-import {useElectronIPC} from "@/services/electron-ipc/electron-ipc";
+import { websocketService } from "@/services/websocket/websocket-service";
+import { useElectronIPC } from "@/services/electron-ipc/electron-ipc";
 
-const ExpandMoreStyled = styled((props: any) => {
-    const {expand, ...other} = props;
-    return <IconButton {...other} />;
-})(({theme, expand}) => ({
-    transform: !expand ? 'rotate(0deg)' : 'rotate(180deg)',
+const ExpandMoreStyled = styled(IconButton)(({ theme }) => ({
     marginLeft: 'auto',
     transition: theme.transitions.create('transform', {
         duration: theme.transitions.duration.shortest,
     }),
 }));
 
-const StatusChip = styled(Chip)<{ status: ServerStatus }>(({theme, status}) => {
+const StatusChip = styled(Chip)<{ status: string }>(({ theme, status }) => {
     const getStatusColor = () => {
         switch (status) {
-            case 'alive':
-                return {bg: theme.palette.success.main, text: theme.palette.success.contrastText};
-            case 'spawning':
-                return {bg: theme.palette.warning.main, text: theme.palette.warning.contrastText};
-            case 'shutting-down':
-                return {bg: theme.palette.info.main, text: theme.palette.info.contrastText};
+            case 'connected':
+                return { bg: theme.palette.success.main, text: theme.palette.success.contrastText };
+            case 'connecting':
+            case 'disconnecting':
+                return { bg: theme.palette.warning.main, text: theme.palette.warning.contrastText };
             case 'error':
-                return {bg: theme.palette.error.main, text: theme.palette.error.contrastText};
+                return { bg: theme.palette.error.main, text: theme.palette.error.contrastText };
             default:
-                return {bg: theme.palette.grey[500], text: theme.palette.common.white};
+                return { bg: theme.palette.grey[500], text: theme.palette.common.white };
         }
     };
 
@@ -92,78 +111,132 @@ const StatusChip = styled(Chip)<{ status: ServerStatus }>(({theme, status}) => {
     };
 });
 
-export const ServerSettingsPanel: React.FC = () => {
-    const {api, isElectron} = useElectronIPC();
-    // Redux hooks
+// External server connection dialog
+const ConnectionDialog: React.FC<{
+    open: boolean;
+    onClose: () => void;
+}> = ({ open, onClose }) => {
     const dispatch = useAppDispatch();
+    const config = useAppSelector(selectServerConfig);
+    const [host, setHost] = useState(config.host);
+    const [port, setPort] = useState(config.port);
 
-    // Server selectors
-    const serverStatus = useAppSelector(selectServerStatus);
-    const serverConfig = useAppSelector(selectServerConfig);
-    const serverError = useAppSelector(selectServerError);
-    const baseHttpUrl = useAppSelector(selectBaseHttpUrl);
-    const webSocketUrl = useAppSelector(selectWebSocketUrl);
-    const processInfo = useAppSelector(selectServerProcessInfo);
-    const isServerAlive = useAppSelector(selectIsServerAlive);
-    const isServerTransitioning = useAppSelector(selectIsServerTransitioning);
-    const serverUrls = useAppSelector(selectServerUrls);
-
-    // WebSocket selectors
-    const isWebSocketConnected = useAppSelector(selectIsWebSocketConnected);
-
-    const [expanded, setExpanded] = React.useState(false);
-    const [candidates, setCandidates] = React.useState<any[]>([]);
-    const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
-    const [isRefreshing, setIsRefreshing] = React.useState(false);
-
-    React.useEffect(() => {
-        if (api && isElectron) {
-            loadExecutableCandidates().then(r => {
-            }).catch(
-                error => console.error('Error loading executable candidates:', error)
-            )
-        }
-    }, [api, isElectron]);
-
-    React.useEffect(() => {
-        // Auto-connect behavior
-        if (serverConfig.autoConnect && serverStatus === 'alive' && !isWebSocketConnected) {
-            websocketService.connect();
-        }
-    }, [serverConfig.autoConnect, serverStatus, isWebSocketConnected]);
-
-    const loadExecutableCandidates = async () => {
-        if (!api) return;
-        setIsRefreshing(true);
-        try {
-            const [path, candidateList] = await Promise.all([
-                api.pythonServer.getExecutablePath.query(),
-                api.pythonServer.getExecutableCandidates.query(),
-            ]);
-            setSelectedPath(path);
-            setCandidates(candidateList);
-        } catch (error) {
-            console.error('Failed to load executables:', error);
-        } finally {
-            setIsRefreshing(false);
-        }
+    const handleConnect = () => {
+        dispatch(updateServerConfig({ host, port }));
+        dispatch(connectToExternalServer({ host, port }));
+        onClose();
     };
 
-    const handleServerToggle = async () => {
-        if (serverStatus === 'alive' || serverStatus === 'spawning') {
-            // Stop the server using the thunk
-            dispatch(stopServer());
-        } else {
-            // Start the server using the thunk
-            dispatch(startServer({exePath: selectedPath}));
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Connect to External Server</DialogTitle>
+            <DialogContent>
+                <Stack spacing={2} sx={{ mt: 2 }}>
+                    <TextField
+                        label="Host"
+                        value={host}
+                        onChange={(e) => setHost(e.target.value)}
+                        fullWidth
+                    />
+                    <TextField
+                        label="Port"
+                        type="number"
+                        value={port}
+                        onChange={(e) => setPort(parseInt(e.target.value) || 8006)}
+                        fullWidth
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                        Connect to a SkellyCam server running elsewhere
+                    </Typography>
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={handleConnect} variant="contained">Connect</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+export const ServerSettingsPanel: React.FC = () => {
+    const dispatch = useAppDispatch();
+    const { api, isElectron } = useElectronIPC();
+
+    // Connection state
+    const connectionMode = useAppSelector(selectConnectionMode);
+    const connectionStatus = useAppSelector(selectConnectionStatus);
+    const connectionError = useAppSelector(selectConnectionError);
+    const hasManagedServer = useAppSelector(selectHasManagedServer);
+    const managedProcess = useAppSelector(selectManagedProcess);
+    const isConnected = useAppSelector(selectIsServerConnected);
+    const isTransitioning = useAppSelector(selectIsServerTransitioning);
+    const canConnect = useAppSelector(selectCanConnect);
+    const canDisconnect = useAppSelector(selectCanDisconnect);
+
+    // Config
+    const serverConfig = useAppSelector(selectServerConfig);
+    const autoConnect = useAppSelector(selectAutoConnect);
+    const autoSpawn = useAppSelector(selectAutoSpawn);
+    const preferredPath = useAppSelector(selectPreferredExecutablePath);
+
+    // URLs
+    const httpUrl = useAppSelector(selectHttpUrl);
+    const wsUrl = useAppSelector(selectWebSocketUrl);
+
+    // WebSocket
+    const isWsConnected = useAppSelector(selectIsWebSocketConnected);
+    const wsStatus = useAppSelector(selectWebSocketStatus);
+
+    // Executables
+    const executables = useAppSelector(selectExecutableCandidates);
+    const isRefreshing = useAppSelector(selectIsRefreshingExecutables);
+
+    // Local state
+    const [expanded, setExpanded] = useState(false);
+    const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
+    const [selectedPath, setSelectedPath] = useState(preferredPath);
+
+    // Load executables on mount
+    useEffect(() => {
+        if (isElectron && executables.length === 0) {
+            dispatch(refreshExecutableCandidates());
         }
+    }, [isElectron, dispatch]);
+
+    // Auto-connect WebSocket when server is available
+    useEffect(() => {
+        if (autoConnect && isConnected && !isWsConnected) {
+            handleWebSocketConnect();
+        }
+    }, [autoConnect, isConnected, isWsConnected]);
+
+    const handleStartManaged = () => {
+        dispatch(startManagedServer({ executablePath: selectedPath }));
+    };
+
+    const handleStopManaged = () => {
+        dispatch(stopManagedServer());
+    };
+
+    const handleDisconnect = () => {
+        dispatch(disconnectFromServer());
+    };
+
+    const handleWebSocketConnect = () => {
+        dispatch(websocketStatusChanged('connecting'));
+        websocketService.connect();
+    };
+
+    const handleWebSocketDisconnect = () => {
+        websocketService.disconnect();
+        dispatch(websocketStatusChanged('disconnected'));
     };
 
     const handleWebSocketToggle = () => {
-        if (isWebSocketConnected) {
-            websocketService.disconnect();
+        if (isWsConnected) {
+            handleWebSocketDisconnect();
         } else {
-            websocketService.connect();
+            handleWebSocketConnect();
         }
     };
 
@@ -172,242 +245,291 @@ export const ServerSettingsPanel: React.FC = () => {
         const path = await api.fileSystem.selectExecutableFile.mutate();
         if (path) {
             setSelectedPath(path);
-            // Start server with the new path using the thunk
-            dispatch(startServer({exePath: path}));
+            dispatch(updateServerConfig({ preferredExecutablePath: path }));
         }
     };
 
     const handleExecutableChange = (event: SelectChangeEvent) => {
-        setSelectedPath(event.target.value);
+        const path = event.target.value;
+        setSelectedPath(path);
+        dispatch(updateServerConfig({ preferredExecutablePath: path }));
     };
 
-    const updateConfig = (updates: Partial<typeof serverConfig>) => {
-        dispatch(updateServerConfig(updates));
-    };
-
-    const getStatusIcon = (status: ServerStatus) => {
-        switch (status) {
-            case 'alive':
-                return <CheckCircleIcon color="success"/>;
-            case 'spawning':
-                return <WarningIcon color="warning"/>;
+    const getStatusIcon = () => {
+        switch (connectionStatus) {
+            case 'connected':
+                return <CheckCircleIcon color="success" />;
+            case 'connecting':
+            case 'disconnecting':
+                return <CircularProgress size={20} />;
             case 'error':
-                return <ErrorIcon color="error"/>;
+                return <ErrorIcon color="error" />;
             default:
-                return <InfoIcon color="disabled"/>;
+                return <InfoIcon color="disabled" />;
         }
     };
 
-    const isServerOperational = serverStatus === 'alive';
+    const getConnectionDescription = () => {
+        if (connectionStatus === 'disconnected') return 'Not connected';
+        if (connectionStatus === 'connecting') return 'Connecting...';
+        if (connectionStatus === 'disconnecting') return 'Disconnecting...';
+        if (connectionStatus === 'error') return 'Connection error';
+        if (connectionStatus === 'connected') {
+            if (connectionMode === 'managed') return 'Connected (managed)';
+            if (connectionMode === 'external') return 'Connected (external)';
+            return 'Connected';
+        }
+        return connectionStatus.toUpperCase();
+    };
 
     return (
-        <Card elevation={2} sx={{m: 2}}>
-            <CardContent>
-                <Stack spacing={3}>
-                    {/* Header */}
-                    <Box display="flex" alignItems="center" justifyContent="space-between">
-                        <Box display="flex" alignItems="center" gap={1}>
-                            <SettingsIcon color="primary"/>
-                            <Typography variant="h6" component="h2">
-                                Server Management
-                            </Typography>
+        <>
+            <Card elevation={2} sx={{ m: 2 }}>
+                <CardContent>
+                    <Stack spacing={3}>
+                        {/* Header */}
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Box display="flex" alignItems="center" gap={1}>
+                                <SettingsIcon color="primary" />
+                                <Typography variant="h6" component="h2">
+                                    Server Management
+                                </Typography>
+                            </Box>
+                            <ExpandMoreStyled
+                                onClick={() => setExpanded(!expanded)}
+                                sx={{
+                                    transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                }}
+                            >
+                                <ExpandMoreIcon />
+                            </ExpandMoreStyled>
                         </Box>
-                        <ExpandMoreStyled
-                            expand={expanded}
-                            onClick={() => setExpanded(!expanded)}
-                            aria-expanded={expanded}
-                            aria-label="show more"
-                        >
-                            <ExpandMoreIcon/>
-                        </ExpandMoreStyled>
-                    </Box>
 
-                    {/* Status Section */}
-                    <Paper elevation={0} sx={{p: 2, bgcolor: 'background.default'}}>
-                        <Stack spacing={2}>
-                            <Box display="flex" alignItems="center" justifyContent="space-between">
-                                <Box display="flex" alignItems="center" gap={2}>
-                                    {getStatusIcon(serverStatus)}
-                                    <Typography variant="body1" fontWeight={500}>
-                                        Python Server
-                                    </Typography>
-                                    <StatusChip
-                                        label={serverStatus.toUpperCase()}
-                                        status={serverStatus}
-                                        size="small"
-                                    />
-                                </Box>
-                                <Button
-                                    variant="contained"
-                                    color={isServerOperational ? "error" : "primary"}
-                                    startIcon={isServerOperational ? <StopIcon/> : <PlayArrowIcon/>}
-                                    onClick={handleServerToggle}
-                                    disabled={isServerTransitioning}
-                                    size="small"
-                                >
-                                    {isServerOperational ? 'Stop' : 'Start'}
-                                </Button>
-                            </Box>
-
-                            {isServerTransitioning && <LinearProgress/>}
-
-                            <Box display="flex" alignItems="center" justifyContent="space-between">
-                                <Box display="flex" alignItems="center" gap={2}>
-                                    {isWebSocketConnected ? <LinkIcon color="success"/> :
-                                        <LinkOffIcon color="disabled"/>}
-                                    <Typography variant="body1" fontWeight={500}>
-                                        WebSocket
-                                    </Typography>
-                                    <Chip
-                                        label={isWebSocketConnected ? 'CONNECTED' : 'DISCONNECTED'}
-                                        color={isWebSocketConnected ? 'success' : 'default'}
-                                        size="small"
-                                    />
-                                </Box>
-                                <Button
-                                    variant="outlined"
-                                    color={isWebSocketConnected ? "error" : "primary"}
-                                    startIcon={isWebSocketConnected ? <LinkOffIcon/> : <LinkIcon/>}
-                                    onClick={handleWebSocketToggle}
-                                    disabled={!isServerOperational}
-                                    size="small"
-                                >
-                                    {isWebSocketConnected ? 'Disconnect' : 'Connect'}
-                                </Button>
-                            </Box>
-                        </Stack>
-                    </Paper>
-
-                    {serverError && (
-                        <Alert severity="error" onClose={() => {
-                        }}>
-                            {serverError}
-                        </Alert>
-                    )}
-
-                    {/* Configuration Section */}
-                    <Collapse in={expanded} timeout="auto" unmountOnExit>
-                        <Stack spacing={3}>
-                            <Divider/>
-
-                            {/* Auto-connect Setting */}
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={serverConfig.autoConnect}
-                                        onChange={(e) => updateConfig({autoConnect: e.target.checked})}
-                                        color="primary"
-                                    />
-                                }
-                                label={
-                                    <Box>
-                                        <Typography variant="body1">Auto-connect WebSocket</Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Automatically connect WebSocket when server starts
+                        {/* Status Section */}
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                            <Stack spacing={2}>
+                                {/* Server Status */}
+                                <Box display="flex" alignItems="center" justifyContent="space-between">
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        {getStatusIcon()}
+                                        <Typography variant="body1" fontWeight={500}>
+                                            Python Server
                                         </Typography>
+                                        <StatusChip
+                                            label={getConnectionDescription()}
+                                            status={connectionStatus}
+                                            size="small"
+                                        />
+                                        {hasManagedServer && (
+                                            <Tooltip title="Server spawned by this app">
+                                                <ComputerIcon fontSize="small" color="primary" />
+                                            </Tooltip>
+                                        )}
                                     </Box>
-                                }
-                            />
-
-                            {/* URL Configuration */}
-                            <Stack direction="row" spacing={2}>
-                                <TextField
-                                    label="Host"
-                                    value={serverConfig.host}
-                                    onChange={(e) => updateConfig({host: e.target.value})}
-                                    size="small"
-                                    fullWidth
-                                />
-                                <TextField
-                                    label="Port"
-                                    type="number"
-                                    value={serverConfig.port}
-                                    onChange={(e) => updateConfig({port: parseInt(e.target.value) || 8006})}
-                                    size="small"
-                                    sx={{width: 120}}
-                                />
-                            </Stack>
-
-                            {/* URLs Display */}
-                            <Paper elevation={0} sx={{p: 2, bgcolor: 'background.default'}}>
-                                <Stack spacing={1}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        API URL
-                                    </Typography>
-                                    <Typography variant="body2" fontFamily="monospace" sx={{wordBreak: 'break-all'}}>
-                                        {baseHttpUrl}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{mt: 1}}>
-                                        WebSocket URL
-                                    </Typography>
-                                    <Typography variant="body2" fontFamily="monospace" sx={{wordBreak: 'break-all'}}>
-                                        {webSocketUrl}
-                                    </Typography>
-                                </Stack>
-                            </Paper>
-
-                            {/* Executable Selection */}
-                            {isElectron && (
-                                <>
-                                    <Divider/>
                                     <Box>
-                                        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                            <Typography variant="subtitle2">
-                                                Python Executable
-                                            </Typography>
-                                            <IconButton
-                                                onClick={loadExecutableCandidates}
-                                                disabled={isRefreshing}
+                                        {canConnect && (
+                                            <Stack direction="row" spacing={1}>
+                                                {isElectron && (
+                                                    <Button
+                                                        variant="contained"
+                                                        color="primary"
+                                                        startIcon={<PlayArrowIcon />}
+                                                        onClick={handleStartManaged}
+                                                        disabled={isTransitioning}
+                                                        size="small"
+                                                    >
+                                                        Spawn
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="outlined"
+                                                    startIcon={<StorageIcon />}
+                                                    onClick={() => setConnectionDialogOpen(true)}
+                                                    disabled={isTransitioning}
+                                                    size="small"
+                                                >
+                                                    Connect
+                                                </Button>
+                                            </Stack>
+                                        )}
+                                        {canDisconnect && (
+                                            <Button
+                                                variant="contained"
+                                                color="error"
+                                                startIcon={<StopIcon />}
+                                                onClick={hasManagedServer ? handleStopManaged : handleDisconnect}
+                                                disabled={isTransitioning}
                                                 size="small"
                                             >
-                                                <RefreshIcon/>
-                                            </IconButton>
-                                        </Box>
-
-                                        <Stack spacing={2}>
-                                            <FormControl fullWidth size="small">
-                                                <InputLabel>Select Executable</InputLabel>
-                                                <Select
-                                                    value={selectedPath || ''}
-                                                    onChange={handleExecutableChange}
-                                                    label="Select Executable"
-                                                >
-                                                    {candidates.map((candidate) => (
-                                                        <MenuItem
-                                                            key={candidate.path}
-                                                            value={candidate.path}
-                                                            disabled={!candidate.isValid}
-                                                        >
-                                                            <Box>
-                                                                <Typography variant="body2">
-                                                                    {candidate.name}
-                                                                </Typography>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    {candidate.description}
-                                                                    {!candidate.isValid && ` - ${candidate.error}`}
-                                                                </Typography>
-                                                            </Box>
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                            </FormControl>
-
-                                            <Button
-                                                variant="outlined"
-                                                startIcon={<FolderOpenIcon/>}
-                                                onClick={handleSelectCustomExecutable}
-                                                fullWidth
-                                            >
-                                                Browse for Executable
+                                                {hasManagedServer ? 'Stop' : 'Disconnect'}
                                             </Button>
-                                        </Stack>
+                                        )}
                                     </Box>
-                                </>
-                            )}
-                        </Stack>
-                    </Collapse>
-                </Stack>
-            </CardContent>
-        </Card>
+                                </Box>
+
+                                {isTransitioning && <LinearProgress />}
+
+                                {/* WebSocket Status */}
+                                <Box display="flex" alignItems="center" justifyContent="space-between">
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        {isWsConnected ? <LinkIcon color="success" /> : <LinkOffIcon color="disabled" />}
+                                        <Typography variant="body1" fontWeight={500}>
+                                            WebSocket
+                                        </Typography>
+                                        <Chip
+                                            label={wsStatus.toUpperCase()}
+                                            color={isWsConnected ? 'success' : 'default'}
+                                            size="small"
+                                        />
+                                    </Box>
+                                    <Button
+                                        variant="outlined"
+                                        color={isWsConnected ? "error" : "primary"}
+                                        startIcon={isWsConnected ? <LinkOffIcon /> : <LinkIcon />}
+                                        onClick={handleWebSocketToggle}
+                                        disabled={!isConnected}
+                                        size="small"
+                                    >
+                                        {isWsConnected ? 'Disconnect' : 'Connect'}
+                                    </Button>
+                                </Box>
+                            </Stack>
+                        </Paper>
+
+                        {connectionError && (
+                            <Alert severity="error">{connectionError}</Alert>
+                        )}
+
+                        {/* Expanded Configuration */}
+                        <Collapse in={expanded} timeout="auto" unmountOnExit>
+                            <Stack spacing={3}>
+                                <Divider />
+
+                                {/* Settings */}
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={autoConnect}
+                                            onChange={(e) => dispatch(updateServerConfig({ autoConnect: e.target.checked }))}
+                                            color="primary"
+                                        />
+                                    }
+                                    label={
+                                        <Box>
+                                            <Typography variant="body1">Auto-connect WebSocket</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Automatically connect WebSocket when server starts
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+
+                                {isElectron && (
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={autoSpawn}
+                                                onChange={(e) => dispatch(updateServerConfig({ autoSpawn: e.target.checked }))}
+                                                color="primary"
+                                            />
+                                        }
+                                        label={
+                                            <Box>
+                                                <Typography variant="body1">Auto-spawn server</Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Automatically spawn server on app start
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                )}
+
+                                {/* URL Configuration */}
+                                <Stack direction="row" spacing={2}>
+                                    <TextField
+                                        label="Host"
+                                        value={serverConfig.host}
+                                        onChange={(e) => dispatch(updateServerConfig({ host: e.target.value }))}
+                                        size="small"
+                                        fullWidth
+                                    />
+                                    <TextField
+                                        label="Port"
+                                        type="number"
+                                        value={serverConfig.port}
+                                        onChange={(e) => dispatch(updateServerConfig({ port: parseInt(e.target.value) || 8006 }))}
+                                        size="small"
+                                        sx={{ width: 120 }}
+                                    />
+                                </Stack>
+
+                                {/* URLs Display */}
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                                    <Stack spacing={1}>
+                                        <Typography variant="caption" color="text.secondary">API URL</Typography>
+                                        <Typography variant="body2" fontFamily="monospace">{httpUrl}</Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>WebSocket URL</Typography>
+                                        <Typography variant="body2" fontFamily="monospace">{wsUrl}</Typography>
+                                    </Stack>
+                                </Paper>
+
+                                {/* Process Info */}
+                                {managedProcess && (
+                                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
+                                        <Typography variant="caption" color="text.secondary">Process Info</Typography>
+                                        <Typography variant="body2">PID: {managedProcess.pid || 'Unknown'}</Typography>
+                                        <Typography variant="caption">{managedProcess.executablePath}</Typography>
+                                    </Paper>
+                                )}
+
+                                {/* Executable Selection (Electron only) */}
+                                {isElectron && (
+                                    <>
+                                        <Divider />
+                                        <Box>
+                                            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                                                <Typography variant="subtitle2">Python Executable</Typography>
+                                                <IconButton onClick={() => dispatch(refreshExecutableCandidates())} disabled={isRefreshing} size="small">
+                                                    <RefreshIcon />
+                                                </IconButton>
+                                            </Box>
+
+                                            <Stack spacing={2}>
+                                                <FormControl fullWidth size="small">
+                                                    <InputLabel>Select Executable</InputLabel>
+                                                    <Select
+                                                        value={selectedPath || ''}
+                                                        onChange={handleExecutableChange}
+                                                        label="Select Executable"
+                                                    >
+                                                        {executables.map((candidate) => (
+                                                            <MenuItem key={candidate.path} value={candidate.path} disabled={!candidate.isValid}>
+                                                                <Box>
+                                                                    <Typography variant="body2">{candidate.name}</Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {candidate.description}
+                                                                        {!candidate.isValid && ` - ${candidate.error}`}
+                                                                    </Typography>
+                                                                </Box>
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                </FormControl>
+
+                                                <Button variant="outlined" startIcon={<FolderOpenIcon />} onClick={handleSelectCustomExecutable} fullWidth>
+                                                    Browse for Executable
+                                                </Button>
+                                            </Stack>
+                                        </Box>
+                                    </>
+                                )}
+                            </Stack>
+                        </Collapse>
+                    </Stack>
+                </CardContent>
+            </Card>
+
+            <ConnectionDialog open={connectionDialogOpen} onClose={() => setConnectionDialogOpen(false)} />
+        </>
     );
 };

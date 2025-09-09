@@ -2,7 +2,7 @@ import {createAsyncThunk} from '@reduxjs/toolkit';
 import {RootState} from '../../types';
 import {CAMERA_DEFAULT_CONSTRAINTS, CameraConfig, CameraDevice, createDefaultCameraConfig} from './cameras-types';
 import {selectSelectedCameraConfigs} from './cameras-selectors';
-import {selectEndpoints} from "@/store";
+import {selectServerEndpoints} from "@/store";
 
 interface DetectCamerasResponse {
     cameras: Array<{
@@ -19,7 +19,7 @@ export const detectCameras = createAsyncThunk<
     { state: RootState }
 >('cameras/detect', async (args = {filterVirtual: true}, {getState}) => {
     const state = getState();
-    const endpoints = selectEndpoints(state); // Get URLs from state
+    const endpoints = selectServerEndpoints(state); // Get URLs from state
     const existingCameras = state.cameras.entities;
 
     const response = await fetch(endpoints.detectCameras, {
@@ -63,7 +63,7 @@ export const connectToCameras = createAsyncThunk<
     { state: RootState }
 >('cameras/connect', async (_, {getState}) => {
     const state = getState();
-    const endpoints = selectEndpoints(state);
+    const endpoints = selectServerEndpoints(state);
     const cameraConfigs = selectSelectedCameraConfigs(state);
 
     if (Object.keys(cameraConfigs).length === 0) {
@@ -90,7 +90,7 @@ export const updateCameraConfigs = createAsyncThunk<
     { state: RootState }
 >('cameras/updateConfigs', async (_, {getState}) => {
     const state = getState();
-    const endpoints = selectEndpoints(state);
+    const endpoints = selectServerEndpoints(state);
     const cameraConfigs = selectSelectedCameraConfigs(state);
 
     const response = await fetch(endpoints.updateConfigs, {
@@ -114,7 +114,7 @@ export const closeCameras = createAsyncThunk<
     'cameras/close',
     async (_, {getState}) => {
         const state = getState();
-        const endpoints = selectEndpoints(state);
+        const endpoints = selectServerEndpoints(state);
         const response = await fetch(endpoints.closeAll, {
             method: 'DELETE',
         });
@@ -133,7 +133,7 @@ export const pauseUnpauseCameras = createAsyncThunk<
     'cameras/pause',
     async (_, {getState}) => {
         const state = getState();
-        const endpoints = selectEndpoints(state);
+        const endpoints = selectServerEndpoints(state);
         const response = await fetch(endpoints.pauseUnpauseCameras, {method: 'GET'});
 
         if (!response.ok) {

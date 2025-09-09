@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { z } from 'zod';
 import { RootState } from '@/store/types';
-import { selectEndpoints } from '@/store/slices/server/server-selectors';
+import { selectServerEndpoints } from '@/store/slices/server/server-selectors';
 
 const RecordStartRequestSchema = z.object({
     recording_name: z.string(),
@@ -23,7 +23,7 @@ export const startRecording = createAsyncThunk<
     'recording/start',
     async ({ recordingName, recordingDirectory, micDeviceIndex = -1 }, { getState }) => {
         const state = getState();
-        const endpoints = selectEndpoints(state);
+        const endpoints = selectServerEndpoints(state);
 
         const payload = RecordStartRequestSchema.parse({
             recording_name: recordingName,
@@ -51,7 +51,7 @@ export const stopRecording = createAsyncThunk<
     'recording/stop',
     async (_, { getState }) => {
         const state = getState();
-        const endpoints = selectEndpoints(state);
+        const endpoints = selectServerEndpoints(state);
 
         const response = await fetch(endpoints.stopRecording, {
             method: 'GET',

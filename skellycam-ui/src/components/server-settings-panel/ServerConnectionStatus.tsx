@@ -1,71 +1,103 @@
-import {Box, CircularProgress, Typography} from "@mui/material";
+// components/ServerConnectionStatus.tsx
+import React from 'react';
+import { Box, CircularProgress, Typography } from "@mui/material";
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import ErrorIcon from '@mui/icons-material/Error';
-import {usePythonServerContext} from "@/context/python-server-context/PythonServerContext";
-import {ServerStatus} from "@/context/python-server-context/usePythonServer";
+import {
+    useAppDispatch,
+    useAppSelector,
+    selectConnectionStatus,
+    selectConnectionError,
+    selectHasManagedServer,
+    selectCanConnect,
+    startManagedServer,
+    stopManagedServer,
+    connectToExternalServer,
+    disconnectFromServer,
+} from "@/store";
+import { useElectronIPC } from "@/services/electron-ipc/electron-ipc";
 
-export const getStatusIcon = (serverStatus: ServerStatus) => {
-    switch (serverStatus) {
-        case 'alive':
-            return <CheckIcon sx={{color: 'green', fontSize: '16px'}}/>;
-        case 'spawning':
-            return <CircularProgress size={14} sx={{color: 'orange'}}/>;
+const getStatusIcon = (status: string) => {
+    switch (status) {
+        case 'connected':
+            return <CheckIcon sx={{ color: 'green', fontSize: '16px' }} />;
+        case 'connecting':
+        case 'disconnecting':
+            return <CircularProgress size={14} sx={{ color: 'orange' }} />;
         case 'error':
-            return <ErrorIcon sx={{color: 'red', fontSize: '16px'}}/>;
+            return <ErrorIcon sx={{ color: 'red', fontSize: '16px' }} />;
         default:
-            return <CloseIcon fontSize="small" sx={{color: 'red'}}/>;
+            return <CloseIcon fontSize="small" sx={{ color: 'red' }} />;
     }
 };
 
-export const getStatusBorderColor = (serverStatus: ServerStatus) => {
-    switch (serverStatus) {
-        case 'alive':
+const getStatusBorderColor = (status: string) => {
+    switch (status) {
+        case 'connected':
             return 'rgba(0, 255, 255, 0.1)';
-        case 'spawning':
+        case 'connecting':
+        case 'disconnecting':
             return 'rgba(255, 165, 0, 0.1)';
-
-        case 'shutting-down':
-            return 'rgba(105, 0, 255,0.1)';
         case 'error':
             return 'rgba(255, 0, 0, 0.1)';
-        case 'not-connected':
-            return 'rgba(255, 255, 255, 0.1)';
         default:
             return 'rgba(255, 255, 255, 0.1)';
     }
 };
 
-export const getServerStatusBackgroundColor = (serverStatus: ServerStatus) => {
-    switch (serverStatus) {
-        case 'alive':
+const getStatusBackgroundColor = (status: string) => {
+    switch (status) {
+        case 'connected':
             return 'rgba(0, 255, 255, 0.5)';
-        case 'spawning':
+        case 'connecting':
+        case 'disconnecting':
             return 'rgba(255, 165, 0, 0.5)';
-
-        case 'shutting-down':
-            return 'rgba(105, 0, 255,0.5)';
         case 'error':
             return 'rgba(255, 0, 0, 0.5)';
-        case 'not-connected':
-            return 'rgba(255, 255, 255, 0.1)';
         default:
             return 'rgba(255, 255, 255, 0.1)';
     }
 };
 
-export const ServerConnectionStatus = () => {
-    const {serverStatus, errorMessage, stopPythonServer, startPythonServer} = usePythonServerContext();
+export const ServerConnectionStatus: React.FC = () => {
+    const dispatch = useAppDispatch();
+    const { isElectron } = useElectronIPC();
 
+    const connectionStatus = useAppSelector(selectConnectionStatus);
+    const connectionError = useAppSelector(selectConnectionError);
+    const hasManagedServer = useAppSelector(selectHasManagedServer);
+    const canConnect = useAppSelector(selectCanConnect);
 
     const handleClick = () => {
-        if (serverStatus === 'alive' || serverStatus === 'spawning') {
-            console.log('Stopping Python Server');
-            stopPythonServer();
-        } else {
-            console.log('Stopping Python Server');
-            startPythonServer(null)
+        if (connectionStatus === 'connected' || connectionStatus === 'connecting') {
+            // Stop or disconnect based on whether it's managed
+            if (hasManagedServer) {
+                console.log('Stopping managed Python server');
+                dispatch(stopManagedServer());
+            } else {
+                console.log('Disconnecting from external server');
+                dispatch(disconnectFromServer());
+            }
+        } else if (canConnect) {
+            // Start or connect
+            if (isElectron) {
+                console.log('Starting managed Python server');
+                dispatch(startManagedServer());
+            } else {
+                console.log('Connecting to external server');
+                dispatch(connectToExternalServer());
+            }
         }
+    };
+
+    const getStatusText = () => {
+        if (connectionStatus === 'connecting') return 'connecting...';
+        if (connectionStatus === 'disconnecting') return 'disconnecting...';
+        if (connectionStatus === 'connected') {
+            return hasManagedServer ? 'connected (managed)' : 'connected (external)';
+        }
+        return connectionStatus;
     };
 
     return (
@@ -98,8 +130,8 @@ export const ServerConnectionStatus = () => {
             >
                 <Box sx={{
                     border: '1px solid rgba(255, 255, 255, 0.3)',
-                    backgroundColor: getStatusBorderColor(serverStatus),
-                    borderColor: getServerStatusBackgroundColor(serverStatus),
+                    backgroundColor: getStatusBorderColor(connectionStatus),
+                    borderColor: getStatusBackgroundColor(connectionStatus),
                     width: '24px',
                     height: '24px',
                     marginRight: '8px',
@@ -108,13 +140,13 @@ export const ServerConnectionStatus = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}>
-                    {getStatusIcon(serverStatus)}
+                    {getStatusIcon(connectionStatus)}
                 </Box>
-                Python Server: {serverStatus}
+                Python Server: {getStatusText()}
             </Typography>
-            {errorMessage && (
-                <Typography variant="caption" sx={{color: 'error.main', pl: 5, mt: 0.5}}>
-                    {errorMessage}
+            {connectionError && (
+                <Typography variant="caption" sx={{ color: 'error.main', pl: 5, mt: 0.5 }}>
+                    {connectionError}
                 </Typography>
             )}
         </Box>

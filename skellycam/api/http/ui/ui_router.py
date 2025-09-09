@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter
 from starlette.responses import HTMLResponse
 
-from skellycam.api.server.server_constants import PORT
+from skellycam.server.server_constants import PORT
 
 logger = logging.getLogger(__name__)
 

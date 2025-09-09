@@ -1,7 +1,7 @@
 import multiprocessing
 from typing import Optional
 
-from skellycam.api.server.server_manager import UvicornServerManager
+from skellycam.server.server_manager import UvicornServerManager
 
 UVICORN_SERVER_MANAGER: Optional[UvicornServerManager] = None
 
