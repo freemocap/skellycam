@@ -61,7 +61,9 @@ class CameraGroupSharedMemoryManager:
                camera_configs: CameraConfigs,
                timebase_mapping: TimebaseMapping,
                read_only: bool = False):
+        logger.debug("Validating Camera Configs...")
         validate_camera_configs(camera_configs)
+        logger.debug("Validated Camera Configs")
         return cls(camera_shms={camera_id: FramePayloadSharedMemoryRingBuffer.from_config(camera_config=config,
                                                                                           timebase_mapping=timebase_mapping,
                                                                                           read_only=read_only)

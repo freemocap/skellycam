@@ -23,10 +23,12 @@ class CameraManager:
                ipc: CameraGroupIPC,
                camera_configs: CameraConfigs,
                camera_strategy: WorkerStrategy):
+        logger.debug(f"Creating Camera Manager with camera strategy: {camera_strategy}")
         if camera_strategy == WorkerStrategy.THREAD:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS
         else:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
+        logger.debug(f"Using camera manager strategy: {camera_manager_strategy}")
         ready_to_shutdown = multiprocessing.Value("b", False)
         config_subscription_by_camera = {
             camera_id: ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription() for camera_id in
@@ -36,8 +38,8 @@ class CameraManager:
         recording_info_subscription_by_camera = {
             camera_id: ipc.pubsub.topics[TopicTypes.RECORDING_INFO].get_subscription() for camera_id in
             camera_configs.keys()}
-        worker = camera_manager_strategy.value(
-            target=cls._camera_manager_worker,
+        worker = camera_manager_strategy.value(  # Where thread/process is chosen
+            target=cls._camera_manager_worker,  # could try calling this directly, make sure there aren't other threading instances
             name=f"{cls.__name__}-Worker",
             daemon=True,
             kwargs=dict(
@@ -49,7 +51,6 @@ class CameraManager:
                 shm_subscription_by_camera=shm_subscription_by_camera,
                 ready_to_shutdown=ready_to_shutdown
             )
-
         )
 
         return cls(ipc=ipc,
@@ -94,6 +95,7 @@ class CameraManager:
         logger.debug("Awaiting camera processes to finish...")
         while ipc.camera_orchestrator.any_cameras_alive:
             wait_1s()
+        logger.debug("TEMPORARY - Camera Processes Finished")
         for worker in camera_workers.values():
             worker.worker.terminate() #TODO - Die better
         ready_to_shutdown.value = True

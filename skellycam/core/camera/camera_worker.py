@@ -57,6 +57,7 @@ class CameraWorker:
 
     def start(self):
         self.worker.start()
+        logger.debug(f"Started camera worker for camera ID: {self.camera_id}")
 
     def is_alive(self) -> bool:
         return self.worker.is_alive()

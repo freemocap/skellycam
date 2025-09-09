@@ -39,7 +39,7 @@ class CameraGroup:
                camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None,
-               camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
+               camera_strategy: WorkerStrategy = WorkerStrategy.THREAD,
                mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
         ipc = CameraGroupIPC.create(group_id=group_id,
@@ -69,6 +69,7 @@ class CameraGroup:
         self.mf_builder.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
+        logger.debug("recieved extracted configs")
         self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
                                                          timebase_mapping=self.ipc.timebase_mapping,
                                                          read_only=True)
@@ -210,6 +211,7 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
     updated_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
                                                                   requested_configs.keys()}
     while any([not isinstance(config, CameraConfig) for config in updated_configs.values()]) and ipc.should_continue:
+        # logger.debug(f"ipc.should_continue: {ipc.should_continue} but extracted_config_subscription.empty(): {ipc.extracted_config_subscription.empty()}")
         if not ipc.extracted_config_subscription.empty():
             extracted_config_message = ipc.extracted_config_subscription.get()
             if not isinstance(extracted_config_message, DeviceExtractedConfigMessage):

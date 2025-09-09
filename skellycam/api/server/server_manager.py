@@ -37,18 +37,19 @@ class UvicornServerManager:
         create_skellycam_app(global_kill_flag=global_kill_flag)
         self.hostname: str = hostname
         self.port: int = port
-        self.server_thread: threading.Thread|None = None
-        self.server: Server|None = None
+        self.server_thread: threading.Thread | None = None
+        self.server: Server | None = None
         self.log_level: str = log_level
-        self.shutdown_listener_thread = threading.Thread(target=self.shutdown_listener_loop,
-                                                         name="UvicornServerManagerShutdownListenerThread",
-                                                         daemon=True)
-        self.shutdown_listener_thread.start()
+        # self.shutdown_listener_thread = threading.Thread(target=self.shutdown_listener_loop,
+        #                                                  name="UvicornServerManagerShutdownListenerThread",
+        #                                                  daemon=True)
+        # self.shutdown_listener_thread.start()
 
 
     @property
     def is_running(self):
         return self.server_thread.is_alive() if self.server_thread else False
+        # return True # this function doesn't seem to be used, so returning true should be fine
 
     def run_server(self):
 
@@ -83,7 +84,17 @@ class UvicornServerManager:
         self.server_thread.start()
         while not self._global_kill_flag.value and self.server_thread.is_alive():
             time.sleep(1)
-        logger.debug("Server thread shutdown")
+
+        # try:
+        #     self.server.run()
+        # except Exception as e:
+        #     logger.error(f"A fatal error occurred in the uvicorn server: {e}")
+        #     logger.exception(e)
+        #     raise
+        # finally:
+        #     self._global_kill_flag.value = True
+        #     logger.info(f"Uvicorn server completed completed")
+        # logger.debug("Server thread shutdown")
         # kill_process_on_port(port=self.port)
 
     def shutdown_server(self):

@@ -27,7 +27,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         from skellycam.system.logging_configuration.configure_logging import configure_logging
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
-    logger.trace(f"Camera {camera_id} worker started")
+    logger.debug(f"Camera {camera_id} worker started")
     orchestrator: CameraOrchestrator = ipc.camera_orchestrator
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
     self_status.running.value = True

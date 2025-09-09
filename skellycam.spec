@@ -60,7 +60,8 @@ cv2_path = os.path.dirname(cv2.__file__)
 if platform.system()=="Windows":
     binaries.append((os.path.join(cv2_path, '*.dll'), '.'))
 elif platform.system()=="Darwin":
-    binaries.append((os.path.join(cv2_path, '*.dylib'), '.'))
+    dylib_path = os.path.join(cv2_path, '.dylibs')
+    binaries.append((os.path.join(dylib_path, '*.dylib'), '.'))
 else:
     binaries.append((os.path.join(cv2_path, '*.so.*'), '.'))
 

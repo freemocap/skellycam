@@ -31,13 +31,14 @@ def run_server(global_kill_flag: multiprocessing.Value):
 async def main(global_kill_flag: multiprocessing.Value):
 
 
-    main_server_thread = threading.Thread(target=run_server,
-                                          kwargs=dict(global_kill_flag=global_kill_flag),
-                                          name="MainServerThread")
-    main_server_thread.start()
+    # main_server_thread = threading.Thread(target=run_server,
+    #                                       kwargs=dict(global_kill_flag=global_kill_flag),
+    #                                       name="MainServerThread")
+    # main_server_thread.start()
 
+    run_server(global_kill_flag=global_kill_flag)
     logger.debug("joining main server thread...")
-    main_server_thread.join()
+    # main_server_thread.join()
     logger.debug("Main server thread complete - exiting main function")
     global_kill_flag.value = True
 
@@ -66,11 +67,11 @@ if __name__ == "__main__":
     # Register signal handlers - these will set the global kill flag to True when the process receives a termination signal
     signal.signal(signal.SIGTERM, handle_shutdown_signal)  # Normal termination signal
     signal.signal(signal.SIGINT, handle_shutdown_signal)  # Ctrl+C
-    shutdown_listener_thread = threading.Thread(target=listen_for_shutdown_signals,
-                                                kwargs=dict(global_kill_flag=original_global_kill_flag),
-                                                daemon=True,
-                                                name="ShutdownListenerThread")
-    shutdown_listener_thread.start()
+    # shutdown_listener_thread = threading.Thread(target=listen_for_shutdown_signals,
+    #                                             kwargs=dict(global_kill_flag=original_global_kill_flag),
+    #                                             daemon=True,
+    #                                             name="ShutdownListenerThread")
+    # shutdown_listener_thread.start()
     try:
         asyncio.run(main(global_kill_flag=original_global_kill_flag))
     except Exception as e:

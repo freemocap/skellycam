@@ -20,7 +20,12 @@
     ],
     "artifactName": "${productName}_${version}_installer_${arch}.${ext}",
     "icon": "../shared/skellycam-logo/skellycam-icon.icns",
-    "asarUnpack": ["**/skellycam_server", "**/skellycam-logo.png"]
+    "asarUnpack": ["**/skellycam_server", "**/skellycam-logo.png"],
+      "entitlements": "entitlements.mac.plist",
+    "entitlementsInherit": "entitlements.mac.plist",
+    "extendInfo": {
+      "NSCameraUsageDescription": "Camera access is needed to connect to webcams"
+    }
   },
   "win": {
     "target": [
