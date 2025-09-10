@@ -1,12 +1,13 @@
 // components/ServerSettingsPanel.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Box,
     Button,
     Card,
     CardContent,
-    Chip, CircularProgress,
+    Chip,
+    CircularProgress,
     Collapse,
     Dialog,
     DialogActions,
@@ -25,8 +26,10 @@ import {
     Stack,
     Switch,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material';
+import InfoIcon from '@mui/icons-material/Info';
 import {
     CheckCircle as CheckCircleIcon,
     Computer as ComputerIcon,
@@ -43,39 +46,31 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import {
-    useAppDispatch,
-    useAppSelector,
-    // Connection selectors
-    selectConnectionMode,
-    selectConnectionStatus,
-    selectConnectionError,
-    selectHasManagedServer,
-    selectIsServerConnected,
-    selectIsServerTransitioning,
-    selectCanConnect,
-    selectCanDisconnect,
-    selectManagedProcess,
-    // Config selectors
-    selectServerConfig,
-    selectAutoConnect,
-    selectAutoSpawn,
-    selectPreferredExecutablePath,
-    // URL selectors
-    selectHttpUrl,
-    selectWebSocketUrl,
-    // WebSocket selectors
-    selectIsWebSocketConnected,
-    selectWebSocketStatus,
-    // Executable selectors
-    selectExecutableCandidates,
-    selectIsRefreshingExecutables,
-    // Actions and thunks
-    updateServerConfig,
-    startManagedServer,
-    stopManagedServer,
-    connectToExternalServer,
+    connectToServer,
     disconnectFromServer,
     refreshExecutableCandidates,
+    selectAutoConnect,
+    selectAutoSpawn,
+    selectCanConnect,
+    selectCanDisconnect,
+    selectConnectionError,
+    selectConnectionMode,
+    selectConnectionStatus,
+    selectExecutableCandidates,
+    selectHasManagedServer,
+    selectHttpUrl,
+    selectIsRefreshingExecutables,
+    selectIsServerConnected,
+    selectIsServerTransitioning,
+    selectIsWebSocketConnected,
+    selectManagedProcess,
+    selectPreferredExecutablePath,
+    selectServerConfig,
+    selectWebSocketStatus,
+    selectWebSocketUrl,
+    updateServerConfig,
+    useAppDispatch,
+    useAppSelector,
     websocketStatusChanged,
 } from "@/store";
 import { websocketService } from "@/services/websocket/websocket-service";
@@ -121,10 +116,21 @@ const ConnectionDialog: React.FC<{
     const [host, setHost] = useState(config.host);
     const [port, setPort] = useState(config.port);
 
-    const handleConnect = () => {
+    const handleConnect = async () => {
+        // Update config first
         dispatch(updateServerConfig({ host, port }));
-        dispatch(connectToExternalServer({ host, port }));
-        onClose();
+
+        // Connect to external server
+        try {
+            await dispatch(connectToServer({
+                mode: 'external',
+                host,
+                port
+            })).unwrap();
+            onClose();
+        } catch (error) {
+            console.error('Failed to connect to external server:', error);
+        }
     };
 
     return (
@@ -194,32 +200,37 @@ export const ServerSettingsPanel: React.FC = () => {
     // Local state
     const [expanded, setExpanded] = useState(false);
     const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
-    const [selectedPath, setSelectedPath] = useState(preferredPath);
+    const [selectedPath, setSelectedPath] = useState<string | null>(preferredPath);
 
-    // Load executables on mount
+    // Load executables on mount (Electron only)
     useEffect(() => {
         if (isElectron && executables.length === 0) {
             dispatch(refreshExecutableCandidates());
         }
-    }, [isElectron, dispatch]);
+    }, [isElectron, dispatch, executables.length]);
 
-    // Auto-connect WebSocket when server is available
+    // Sync selected path with preferred path from store
     useEffect(() => {
-        if (autoConnect && isConnected && !isWsConnected) {
-            handleWebSocketConnect();
+        setSelectedPath(preferredPath);
+    }, [preferredPath]);
+
+    const handleStartManaged = async () => {
+        try {
+            await dispatch(connectToServer({
+                mode: 'managed',
+                executablePath: selectedPath
+            })).unwrap();
+        } catch (error) {
+            console.error('Failed to start managed server:', error);
         }
-    }, [autoConnect, isConnected, isWsConnected]);
-
-    const handleStartManaged = () => {
-        dispatch(startManagedServer({ executablePath: selectedPath }));
     };
 
-    const handleStopManaged = () => {
-        dispatch(stopManagedServer());
-    };
-
-    const handleDisconnect = () => {
-        dispatch(disconnectFromServer());
+    const handleDisconnect = async () => {
+        try {
+            await dispatch(disconnectFromServer()).unwrap();
+        } catch (error) {
+            console.error('Failed to disconnect:', error);
+        }
     };
 
     const handleWebSocketConnect = () => {
@@ -229,7 +240,6 @@ export const ServerSettingsPanel: React.FC = () => {
 
     const handleWebSocketDisconnect = () => {
         websocketService.disconnect();
-        dispatch(websocketStatusChanged('disconnected'));
     };
 
     const handleWebSocketToggle = () => {
@@ -271,7 +281,9 @@ export const ServerSettingsPanel: React.FC = () => {
 
     const getConnectionDescription = () => {
         if (connectionStatus === 'disconnected') return 'Not connected';
-        if (connectionStatus === 'connecting') return 'Connecting...';
+        if (connectionStatus === 'connecting') {
+            return connectionMode === 'managed' ? 'Starting server...' : 'Connecting...';
+        }
         if (connectionStatus === 'disconnecting') return 'Disconnecting...';
         if (connectionStatus === 'error') return 'Connection error';
         if (connectionStatus === 'connected') {
@@ -279,7 +291,7 @@ export const ServerSettingsPanel: React.FC = () => {
             if (connectionMode === 'external') return 'Connected (external)';
             return 'Connected';
         }
-        return connectionStatus.toUpperCase();
+        return connectionStatus;
     };
 
     return (
@@ -357,7 +369,7 @@ export const ServerSettingsPanel: React.FC = () => {
                                                 variant="contained"
                                                 color="error"
                                                 startIcon={<StopIcon />}
-                                                onClick={hasManagedServer ? handleStopManaged : handleDisconnect}
+                                                onClick={handleDisconnect}
                                                 disabled={isTransitioning}
                                                 size="small"
                                             >
@@ -376,9 +388,9 @@ export const ServerSettingsPanel: React.FC = () => {
                                         <Typography variant="body1" fontWeight={500}>
                                             WebSocket
                                         </Typography>
-                                        <Chip
+                                        <StatusChip
                                             label={wsStatus.toUpperCase()}
-                                            color={isWsConnected ? 'success' : 'default'}
+                                            status={isWsConnected ? 'connected' : wsStatus}
                                             size="small"
                                         />
                                     </Box>
@@ -387,7 +399,7 @@ export const ServerSettingsPanel: React.FC = () => {
                                         color={isWsConnected ? "error" : "primary"}
                                         startIcon={isWsConnected ? <LinkOffIcon /> : <LinkIcon />}
                                         onClick={handleWebSocketToggle}
-                                        disabled={!isConnected}
+                                        disabled={!isConnected && connectionMode === 'managed'}
                                         size="small"
                                     >
                                         {isWsConnected ? 'Disconnect' : 'Connect'}
@@ -489,7 +501,11 @@ export const ServerSettingsPanel: React.FC = () => {
                                         <Box>
                                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                                                 <Typography variant="subtitle2">Python Executable</Typography>
-                                                <IconButton onClick={() => dispatch(refreshExecutableCandidates())} disabled={isRefreshing} size="small">
+                                                <IconButton
+                                                    onClick={() => dispatch(refreshExecutableCandidates())}
+                                                    disabled={isRefreshing}
+                                                    size="small"
+                                                >
                                                     <RefreshIcon />
                                                 </IconButton>
                                             </Box>
@@ -503,7 +519,11 @@ export const ServerSettingsPanel: React.FC = () => {
                                                         label="Select Executable"
                                                     >
                                                         {executables.map((candidate) => (
-                                                            <MenuItem key={candidate.path} value={candidate.path} disabled={!candidate.isValid}>
+                                                            <MenuItem
+                                                                key={candidate.path}
+                                                                value={candidate.path}
+                                                                disabled={!candidate.isValid}
+                                                            >
                                                                 <Box>
                                                                     <Typography variant="body2">{candidate.name}</Typography>
                                                                     <Typography variant="caption" color="text.secondary">
@@ -516,7 +536,12 @@ export const ServerSettingsPanel: React.FC = () => {
                                                     </Select>
                                                 </FormControl>
 
-                                                <Button variant="outlined" startIcon={<FolderOpenIcon />} onClick={handleSelectCustomExecutable} fullWidth>
+                                                <Button
+                                                    variant="outlined"
+                                                    startIcon={<FolderOpenIcon />}
+                                                    onClick={handleSelectCustomExecutable}
+                                                    fullWidth
+                                                >
                                                     Browse for Executable
                                                 </Button>
                                             </Stack>
@@ -529,7 +554,10 @@ export const ServerSettingsPanel: React.FC = () => {
                 </CardContent>
             </Card>
 
-            <ConnectionDialog open={connectionDialogOpen} onClose={() => setConnectionDialogOpen(false)} />
+            <ConnectionDialog
+                open={connectionDialogOpen}
+                onClose={() => setConnectionDialogOpen(false)}
+            />
         </>
     );
 };

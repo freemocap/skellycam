@@ -21,7 +21,7 @@ export const FramerateViewerPanel = () => {
         currentBackendFramerate,
         recentFrontendFrameDurations,
         recentBackendFrameDurations
-    } = useAppSelector((state) => state.framerateTracker);
+    } = useAppSelector((state) => state.framerate);
     return (
         <Box sx={{
             height: '100%',

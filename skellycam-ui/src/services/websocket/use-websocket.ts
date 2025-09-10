@@ -2,14 +2,15 @@
 // ============================================
 //  REACT HOOK (use-websocket.ts)
 // ============================================
-// Clean hook for React components
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import {websocketService} from "@/services/websocket/websocket-service";
-import {selectWebSocketError, selectWebSocketStatus} from "@/store";
-import {frameRouter, websocketManager} from "@/services";
-
+import { websocketService } from './websocket-service';
+import {
+    selectWebSocketError,
+    selectWebSocketStatus,
+    websocketStatusChanged
+} from '@/store';
 
 export function useWebSocket() {
     const dispatch = useAppDispatch();
@@ -17,16 +18,20 @@ export function useWebSocket() {
     const error = useAppSelector(selectWebSocketError);
 
     const connect = useCallback(() => {
+        dispatch(websocketStatusChanged('connecting'));
         websocketService.connect();
-    }, []);
+    }, [dispatch]);
 
     const disconnect = useCallback(() => {
         websocketService.disconnect();
     }, []);
 
     const send = useCallback((data: string | object) => {
-        const message = typeof data === 'string' ? data : JSON.stringify(data);
-        websocketManager.send(message);
+        if (typeof data === 'string') {
+            websocketService.send(data);
+        } else {
+            websocketService.sendMessage(data);
+        }
     }, []);
 
     return {
@@ -39,4 +44,3 @@ export function useWebSocket() {
         send,
     };
 }
-

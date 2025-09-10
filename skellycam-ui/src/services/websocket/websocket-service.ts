@@ -1,123 +1,378 @@
-// websocket-service.ts
-// High-level service that orchestrates WebSocket operations and dispatches to appropriate stores
-
-import { websocketManager } from './websocket-manager';
-import { frameRouter } from '../frames/frame-router';
-
+// services/websocket/unified-websocket-service.ts
+import { store } from '@/store';
 import {
+    websocketConnected,
+    websocketDisconnected,
+    websocketError,
+    websocketReconnecting,
     backendFramerateUpdated,
-    frontendFramerateUpdated, logAdded, LogRecord, selectIsServerAlive,
+    frontendFramerateUpdated,
+    logAdded,
     selectServerConfig,
-    store,
-    websocketConnecting
-} from "@/store";
-import {FramerateUpdateMessage, LogRecordMessage, WebSocketMessage} from "@/services/websocket/websocket-types";
+    selectIsServerAlive,
+    type LogRecord
+} from '@/store';
+import { frameRouter } from '../frames/frame-router';
+import type {
+    WebSocketMessage,
+    FramerateUpdateMessage,
+    LogRecordMessage
+} from './websocket-types';
 
-class WebSocketService {
-    private static instance: WebSocketService;
-    private autoConnectEnabled = true;
+export type MessageHandler = (data: WebSocketMessage) => void;
+export type BinaryHandler = (data: ArrayBuffer) => void;
+
+interface WebSocketConfig {
+    reconnect: boolean;
+    reconnectInterval: number;
+    maxReconnectAttempts: number;
+    autoConnect: boolean;
+    healthCheckInterval: number;
+}
+
+class UnifiedWebSocketService {
+    private static instance: UnifiedWebSocketService;
+    private ws: WebSocket | null = null;
+    private messageHandlers = new Set<MessageHandler>();
+    private binaryHandlers = new Set<BinaryHandler>();
+    private reconnectTimer: NodeJS.Timeout | null = null;
+    private healthCheckTimer: NodeJS.Timeout | null = null;
+    private reconnectAttempts: number = 0;
+    private config: WebSocketConfig = {
+        reconnect: true,
+        reconnectInterval: 1000,
+        maxReconnectAttempts: 10,
+        autoConnect: true,
+        healthCheckInterval: 30000, // 30 seconds
+    };
+    private url: string | null = null;
+    private isInitialized: boolean = false;
+    private unsubscribe: (() => void) | null = null;
 
     private constructor() {}
 
-    static getInstance(): WebSocketService {
-        if (!WebSocketService.instance) {
-            WebSocketService.instance = new WebSocketService();
+    static getInstance(): UnifiedWebSocketService {
+        if (!UnifiedWebSocketService.instance) {
+            UnifiedWebSocketService.instance = new UnifiedWebSocketService();
         }
-        return WebSocketService.instance;
+        return UnifiedWebSocketService.instance;
     }
 
+    /**
+     * Initialize the service and set up auto-connect monitoring
+     */
     initialize(): void {
+        if (this.isInitialized) return;
+
         // Initialize frame router
         frameRouter.initialize();
 
-        // Setup message handlers
-        this.setupMessageHandlers();
 
-        // Monitor server status for auto-connect
+
+        // Setup auto-connect monitoring
         this.setupAutoConnect();
+
+        this.isInitialized = true;
     }
 
-    connect(): void {
-        const state = store.getState();
-        const config = selectServerConfig(state);
-        const url = `ws://${config.host}:${config.port}/skellycam/websocket/connect`;
+    /**
+     * Connect to WebSocket server
+     */
+    connect(url?: string): void {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            console.log('WebSocket already connected');
+            return;
+        }
 
-        store.dispatch(websocketConnecting());
-        websocketManager.connect(url);
+        // Build URL if not provided
+        if (!url) {
+            const state = store.getState();
+            const config = selectServerConfig(state);
+            url = `ws://${config.host}:${config.port}/skellycam/websocket/connect`;
+        }
+
+        this.url = url;
+        this.cleanup();
+
+        try {
+            console.log(`Connecting to WebSocket: ${url}`);
+            this.ws = new WebSocket(url);
+            this.ws.binaryType = 'arraybuffer';
+            this.setupEventHandlers();
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+            console.error('WebSocket connection error:', errorMsg);
+            store.dispatch(websocketError(errorMsg));
+        }
     }
 
+    /**
+     * Disconnect from WebSocket server
+     */
     disconnect(): void {
-        websocketManager.disconnect();
+        console.log('Disconnecting WebSocket');
+        this.config.reconnect = false;
+        this.cleanup();
+        store.dispatch(websocketDisconnected());
     }
 
-    private setupMessageHandlers(): void {
-        // Handle non-binary WebSocket messages
-        websocketManager.addMessageHandler((message: WebSocketMessage) => {
-            switch (message.message_type) {
-                case 'framerate_update':
-                    // Dispatch framerate updates to the framerate store
-                    this.handleFramerateUpdate(message as FramerateUpdateMessage);
-                    break;
+    /**
+     * Send data through WebSocket
+     */
+    send(data: string | ArrayBuffer): void {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(data);
+        } else {
+            console.warn('Cannot send - WebSocket not connected');
+        }
+    }
 
-                case 'log_record':
-                    // Dispatch to log slice
-                    this.handleLogRecord(message as LogRecordMessage);
-                    break;
+    /**
+     * Send JSON message
+     */
+    sendMessage(message: object): void {
+        this.send(JSON.stringify(message));
+    }
 
-                default:
-                    console.warn('Unknown message type:', message);
-            }
+    /**
+     * Acknowledge frame rendered
+     */
+    acknowledgeFrameRendered(cameraId: string, frameNumber: number): void {
+        this.sendMessage({
+            type: 'frame_ack',
+            camera_id: cameraId,
+            frame_number: frameNumber,
         });
     }
 
-    private handleFramerateUpdate(message: WebSocketMessage): void {
-        if (message.message_type !== 'framerate_update') return;
+    /**
+     * Add custom message handler
+     */
+    addMessageHandler(handler: MessageHandler): () => void {
+        this.messageHandlers.add(handler);
+        return () => this.messageHandlers.delete(handler);
+    }
 
-        // Dispatch backend framerate update
+    /**
+     * Add custom binary handler
+     */
+    addBinaryHandler(handler: BinaryHandler): () => void {
+        this.binaryHandlers.add(handler);
+        return () => this.binaryHandlers.delete(handler);
+    }
+
+    /**
+     * Check if WebSocket is connected
+     */
+    get isConnected(): boolean {
+        return this.ws?.readyState === WebSocket.OPEN;
+    }
+
+    /**
+     * Update configuration
+     */
+    updateConfig(config: Partial<WebSocketConfig>): void {
+        this.config = { ...this.config, ...config };
+
+        // If auto-connect changed, update monitoring
+        if (config.autoConnect !== undefined) {
+            if (config.autoConnect) {
+                this.setupAutoConnect();
+            } else {
+                this.teardownAutoConnect();
+            }
+        }
+    }
+
+    /**
+     * Clean up resources
+     */
+    destroy(): void {
+        this.disconnect();
+        this.teardownAutoConnect();
+        this.messageHandlers.clear();
+        this.binaryHandlers.clear();
+        this.isInitialized = false;
+    }
+
+    // Private methods
+
+    private cleanup(): void {
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
+        if (this.healthCheckTimer) {
+            clearInterval(this.healthCheckTimer);
+            this.healthCheckTimer = null;
+        }
+
+        if (this.ws) {
+            // Remove event handlers before closing
+            this.ws.onopen = null;
+            this.ws.onclose = null;
+            this.ws.onerror = null;
+            this.ws.onmessage = null;
+
+            if (this.ws.readyState === WebSocket.OPEN) {
+                this.ws.close();
+            }
+            this.ws = null;
+        }
+    }
+
+    private setupEventHandlers(): void {
+        if (!this.ws) return;
+
+        this.ws.onopen = () => {
+            console.log('WebSocket connected');
+            this.reconnectAttempts = 0;
+            store.dispatch(websocketConnected());
+
+            // Send hello message
+            this.sendMessage({
+                type: 'hello',
+                message: 'Skellycam Frontend Connected'
+            });
+
+            // Start health check
+            this.startHealthCheck();
+        };
+
+        this.ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            store.dispatch(websocketDisconnected());
+            this.stopHealthCheck();
+            this.attemptReconnect();
+        };
+
+        this.ws.onerror = (event) => {
+            console.error('WebSocket error:', event);
+            store.dispatch(websocketError('WebSocket error occurred'));
+        };
+
+        this.ws.onmessage = (event) => {
+            this.handleMessage(event.data);
+        };
+    }
+
+    private handleMessage(data: string | ArrayBuffer): void {
+        if (data instanceof ArrayBuffer) {
+            // Binary data - route to handlers
+            this.binaryHandlers.forEach(handler => handler(data));
+        } else if (typeof data === 'string') {
+            // Handle ping/pong
+            if (data === 'ping') {
+                this.send('pong');
+                return;
+            }
+
+            // Try to parse JSON messages
+            try {
+                const message = JSON.parse(data) as WebSocketMessage;
+
+                // Process internal handlers first
+                this.processInternalMessage(message);
+
+                // Then custom handlers
+                this.messageHandlers.forEach(handler => handler(message));
+            } catch (error) {
+                console.warn('Received non-JSON string message:', data);
+            }
+        }
+    }
+
+    private processInternalMessage(message: WebSocketMessage): void {
+        switch (message.message_type) {
+            case 'framerate_update':
+                this.handleFramerateUpdate(message as FramerateUpdateMessage);
+                break;
+            case 'log_record':
+                this.handleLogRecord(message as LogRecordMessage);
+                break;
+            default:
+                // Unknown message type - let custom handlers deal with it
+                console.warn(`Unhandled message type: ${JSON.stringify(message).slice(0, 50)}...`);
+                break;
+        }
+    }
+
+    private handleFramerateUpdate(message: FramerateUpdateMessage): void {
         if (message.backend_framerate) {
             store.dispatch(backendFramerateUpdated(message.backend_framerate));
         }
-
-        // Dispatch frontend framerate update
         if (message.frontend_framerate) {
             store.dispatch(frontendFramerateUpdated(message.frontend_framerate));
         }
-
-        // Log for debugging if needed
-        console.debug('Framerate update received:', {
-            cameraGroupId: message.camera_group_id,
-            backend: message.backend_framerate?.current,
-            frontend: message.frontend_framerate?.current,
-        });
     }
 
-    private handleLogRecord(message: WebSocketMessage): void {
-        if (message.message_type !== 'log_record') return;
+    private handleLogRecord(message: LogRecordMessage): void {
         store.dispatch(logAdded(message as LogRecord));
     }
 
-    private setupAutoConnect(): void {
-        let lastServerStatus: boolean | null = null;
+    private attemptReconnect(): void {
+        if (!this.config.reconnect || !this.url) return;
 
-        store.subscribe(() => {
-            if (!this.autoConnectEnabled) return;
+        if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+            console.error('Max reconnection attempts reached');
+            store.dispatch(websocketError('Max reconnection attempts reached'));
+            return;
+        }
 
-            const state = store.getState();
-            const isServerAlive = selectIsServerAlive(state);
-            const isConnected = websocketManager.isConnected;
+        this.reconnectAttempts++;
+        store.dispatch(websocketReconnecting(this.reconnectAttempts));
 
-            // Auto-connect when server becomes alive
-            if (isServerAlive && !isConnected && lastServerStatus !== isServerAlive) {
-                this.connect();
+        const delay = Math.min(
+            this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1),
+            10000
+        );
+
+        console.log(`Attempting reconnect ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${delay}ms`);
+
+        this.reconnectTimer = setTimeout(() => {
+            if (this.url) {
+                this.connect(this.url);
             }
-
-            lastServerStatus = isServerAlive;
-        });
+        }, delay);
     }
 
-    setAutoConnect(enabled: boolean): void {
-        this.autoConnectEnabled = enabled;
+
+
+    private setupAutoConnect(): void {
+        if (!this.config.autoConnect) return;
+
+        // Clean up existing subscription
+        this.teardownAutoConnect();
+
+        let lastServerStatus: boolean | null = null;
+
+
+    }
+
+    private teardownAutoConnect(): void {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+        }
+    }
+
+    private startHealthCheck(): void {
+        this.stopHealthCheck();
+
+        this.healthCheckTimer = setInterval(() => {
+            if (this.isConnected) {
+                this.send('ping');
+            }
+        }, this.config.healthCheckInterval);
+    }
+
+    private stopHealthCheck(): void {
+        if (this.healthCheckTimer) {
+            clearInterval(this.healthCheckTimer);
+            this.healthCheckTimer = null;
+        }
     }
 }
 
-export const websocketService = WebSocketService.getInstance();
+export const websocketService = UnifiedWebSocketService.getInstance();

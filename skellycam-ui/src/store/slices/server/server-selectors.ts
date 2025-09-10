@@ -39,6 +39,15 @@ export const selectIsRefreshingExecutables = (state: RootState) =>
 // Computed selectors
 
 /**
+ * Is the server alive (connected)?
+ * This is what the websocket service checks for auto-connect
+ */
+export const selectIsServerAlive = createSelector(
+    [selectConnectionStatus],
+    (status) => status === 'connected'
+);
+
+/**
  * Is the server connection active?
  */
 export const selectIsServerConnected = createSelector(
@@ -155,7 +164,7 @@ export const selectServerEndpoints = createSelector(
  */
 export const selectValidExecutables = createSelector(
     [selectExecutableCandidates],
-    (candidates) => candidates.filter(c => c.isValid)
+    (candidates) => candidates.filter((c: { isValid: any; }) => c.isValid)
 );
 
 /**

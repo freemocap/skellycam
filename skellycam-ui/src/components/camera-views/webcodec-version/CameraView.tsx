@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {FrameMetadata, frameRouter, websocketManager} from "@/services";
+import {FrameMetadata, frameRouter, websocketService} from "@/services";
 
 interface CameraViewProps {
     cameraId: string;
@@ -80,7 +80,7 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
                     lastRenderTimeRef.current = now;
 
                     // Send acknowledgment only for rendered frames
-                    websocketManager.acknowledgeFrameRendered(cameraId, frameMetadata.frameNumber);
+                    websocketService.acknowledgeFrameRendered(cameraId, frameMetadata.frameNumber);
                 } catch (error) {
                     console.error(`Render error for camera ${cameraId}:`, error);
                 } finally {

@@ -1,3 +1,4 @@
+// store/slices/server/server-slice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
     ServerConfig,
@@ -5,14 +6,12 @@ import {
     ServerStatus,
     WebSocketStatus,
     ServerConnectionMode,
-    ServerConnectionInfo
 } from './server-types';
 import {
     checkServerHealth,
-    startManagedServer,
-    stopManagedServer,
-    connectToExternalServer,
-    disconnectFromServer
+    connectToServer,
+    disconnectFromServer,
+    refreshExecutableCandidates,
 } from './server-thunks';
 
 // Helper to load config from localStorage
@@ -109,10 +108,13 @@ export const serverSlice = createSlice({
             state.connection.serverUrl = action.payload;
         },
 
-        healthCheckCompleted: (state, action: PayloadAction<boolean>) => {
+        serverHealthCheckCompleted: (state, action: PayloadAction<boolean>) => {
             state.connection.lastHealthCheck = new Date().toISOString();
             if (action.payload && state.connection.status !== 'connected') {
                 state.connection.status = 'connected';
+            } else if (!action.payload && state.connection.status === 'connected') {
+                state.connection.status = 'error';
+                state.connection.error = 'Server health check failed';
             }
         },
 
@@ -129,16 +131,30 @@ export const serverSlice = createSlice({
             }
         },
 
-        websocketErrorSet: (state, action: PayloadAction<string | null>) => {
-            state.websocket.error = action.payload;
-            if (action.payload) {
-                state.websocket.status = 'error';
-            }
+        websocketConnected: (state) => {
+            state.websocket.status = 'connected';
+            state.websocket.error = null;
+            state.websocket.reconnectAttempts = 0;
+            state.websocket.lastConnectedAt = new Date().toISOString();
         },
 
-        websocketReconnectAttempt: (state) => {
-            state.websocket.reconnectAttempts += 1;
+        websocketDisconnected: (state) => {
+            state.websocket.status = 'disconnected';
+            state.websocket.lastDisconnectedAt = new Date().toISOString();
+        },
+
+        websocketConnecting: (state) => {
+            state.websocket.status = 'connecting';
+        },
+
+        websocketReconnecting: (state, action: PayloadAction<number>) => {
             state.websocket.status = 'reconnecting';
+            state.websocket.reconnectAttempts = action.payload;
+        },
+
+        websocketError: (state, action: PayloadAction<string>) => {
+            state.websocket.status = 'error';
+            state.websocket.error = action.payload;
         },
 
         // Executable management
@@ -155,65 +171,36 @@ export const serverSlice = createSlice({
 
     extraReducers: (builder) => {
         builder
-            // Start managed server
-            .addCase(startManagedServer.pending, (state) => {
-                state.connection.mode = 'managed';
+            // Connect to server
+            .addCase(connectToServer.pending, (state, action) => {
+                state.connection.mode = action.meta.arg.mode;
                 state.connection.status = 'connecting';
                 state.connection.error = null;
                 state.connection.retryCount = 0;
             })
-            .addCase(startManagedServer.fulfilled, (state, action) => {
-                state.connection.mode = 'managed';
-                state.connection.status = 'connected';
-                state.connection.managedProcess = action.payload.process;
-                state.connection.serverUrl = action.payload.serverUrl;
-                state.connection.error = null;
+            .addCase(connectToServer.fulfilled, (state, action) => {
+                // The orchestrator handles most state updates via dispatched actions
+                // This is just for any final cleanup
             })
-            .addCase(startManagedServer.rejected, (state, action) => {
+            .addCase(connectToServer.rejected, (state, action) => {
                 state.connection.status = 'error';
-                state.connection.error = action.error.message || 'Failed to start server';
+                state.connection.error = action.error.message || 'Failed to connect';
                 state.connection.mode = 'none';
             })
 
-            // Stop managed server
-            .addCase(stopManagedServer.pending, (state) => {
+            // Disconnect from server
+            .addCase(disconnectFromServer.pending, (state) => {
                 state.connection.status = 'disconnecting';
             })
-            .addCase(stopManagedServer.fulfilled, (state) => {
+            .addCase(disconnectFromServer.fulfilled, (state) => {
                 state.connection.mode = 'none';
                 state.connection.status = 'disconnected';
                 state.connection.managedProcess = null;
                 state.connection.serverUrl = null;
                 state.websocket.status = 'disconnected';
             })
-            .addCase(stopManagedServer.rejected, (state, action) => {
-                state.connection.error = action.error.message || 'Failed to stop server';
-            })
-
-            // Connect to external server
-            .addCase(connectToExternalServer.pending, (state) => {
-                state.connection.mode = 'external';
-                state.connection.status = 'connecting';
-                state.connection.error = null;
-            })
-            .addCase(connectToExternalServer.fulfilled, (state, action) => {
-                state.connection.mode = 'external';
-                state.connection.status = 'connected';
-                state.connection.serverUrl = action.payload.serverUrl;
-                state.connection.error = null;
-            })
-            .addCase(connectToExternalServer.rejected, (state, action) => {
-                state.connection.status = 'error';
-                state.connection.error = action.error.message || 'Failed to connect to server';
-                state.connection.mode = 'none';
-            })
-
-            // Disconnect from server
-            .addCase(disconnectFromServer.fulfilled, (state) => {
-                state.connection.mode = 'none';
-                state.connection.status = 'disconnected';
-                state.connection.serverUrl = null;
-                state.websocket.status = 'disconnected';
+            .addCase(disconnectFromServer.rejected, (state, action) => {
+                state.connection.error = action.error.message || 'Failed to disconnect';
             })
 
             // Health checks
@@ -227,6 +214,19 @@ export const serverSlice = createSlice({
                     state.connection.status = 'error';
                     state.connection.error = 'Server health check failed';
                 }
+            })
+
+            // Refresh executables
+            .addCase(refreshExecutableCandidates.pending, (state) => {
+                state.executables.isRefreshing = true;
+            })
+            .addCase(refreshExecutableCandidates.fulfilled, (state, action) => {
+                state.executables.candidates = action.payload;
+                state.executables.lastRefresh = new Date().toISOString();
+                state.executables.isRefreshing = false;
+            })
+            .addCase(refreshExecutableCandidates.rejected, (state) => {
+                state.executables.isRefreshing = false;
             });
     },
 });
@@ -238,10 +238,13 @@ export const {
     connectionErrorSet,
     managedProcessUpdated,
     serverUrlUpdated,
-    healthCheckCompleted,
+    serverHealthCheckCompleted,
     websocketStatusChanged,
-    websocketErrorSet,
-    websocketReconnectAttempt,
+    websocketConnected,
+    websocketDisconnected,
+    websocketConnecting,
+    websocketReconnecting,
+    websocketError,
     executablesUpdated,
     executablesRefreshing,
 } = serverSlice.actions;

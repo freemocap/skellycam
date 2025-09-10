@@ -6,7 +6,8 @@
 
 // Type definitions
 import {BinaryFrameParser, ParsedFrame, ParsedPayload} from "@/services/frames/binary-frame-processor";
-import {websocketManager} from "@/services";
+import {websocketService} from "@/services";
+
 
 export interface FrameMetadata {
     cameraId: string;
@@ -100,8 +101,14 @@ class FrameRouter {
 
     initialize(): void {
         // Register binary handler with WebSocket manager
-        websocketManager.addBinaryHandler((data: ArrayBuffer) => {
-            this.processBinaryFrame(data);
+        websocketService.addBinaryHandler((data: ArrayBuffer) => {
+            this.processBinaryFrame(data).then(
+                () => {},
+
+            ).catch(
+                (error) => { console.error('Unhandled error in processBinaryFrame:', error);
+                }
+            )
         });
 
         // Start FPS update timer
@@ -492,7 +499,7 @@ class FrameRouter {
             }, {} as Record<string, { width: number; height: number }>)
         };
 
-        websocketManager.send(JSON.stringify({
+        websocketService.send(JSON.stringify({
             type: 'frame_ack',
             frame_number: ack.frameNumber,
             display_sizes: ack.displaySizes,
