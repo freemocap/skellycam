@@ -19,7 +19,7 @@ from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routers import SKELLYCAM_ROUTERS
 from skellycam.server.server_constants import APP_URL
-from skellycam.skellycam_app.skellycam_app import SkellycamApplication
+from skellycam.skellycam_app.skellycam_app import create_skellycam_app
 from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
     get_default_skellycam_base_folder_path
@@ -82,7 +82,7 @@ def create_fastapi_app(
 
     # Store dependencies in app state
     app.state.global_kill_flag = global_kill_flag
-    app.state.skellycam_app = SkellycamApplication.initialize(
+    app.state.skellycam_app = create_skellycam_app(
         global_kill_flag=global_kill_flag
     )
 

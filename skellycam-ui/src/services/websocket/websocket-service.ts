@@ -1,4 +1,4 @@
-// services/websocket/unified-websocket-service.ts
+// services/websocket/websocket-service.ts
 import { store } from '@/store';
 import {
     websocketConnected,
@@ -30,14 +30,15 @@ interface WebSocketConfig {
     healthCheckInterval: number;
 }
 
-class UnifiedWebSocketService {
-    private static instance: UnifiedWebSocketService;
+class WebSocketService {
+    private static instance: WebSocketService;
     private ws: WebSocket | null = null;
     private messageHandlers = new Set<MessageHandler>();
     private binaryHandlers = new Set<BinaryHandler>();
     private reconnectTimer: NodeJS.Timeout | null = null;
     private healthCheckTimer: NodeJS.Timeout | null = null;
     private reconnectAttempts: number = 0;
+    private intentionalDisconnect: boolean = false; // Track if disconnect was intentional
     private config: WebSocketConfig = {
         reconnect: true,
         reconnectInterval: 1000,
@@ -51,11 +52,11 @@ class UnifiedWebSocketService {
 
     private constructor() {}
 
-    static getInstance(): UnifiedWebSocketService {
-        if (!UnifiedWebSocketService.instance) {
-            UnifiedWebSocketService.instance = new UnifiedWebSocketService();
+    static getInstance(): WebSocketService {
+        if (!WebSocketService.instance) {
+            WebSocketService.instance = new WebSocketService();
         }
-        return UnifiedWebSocketService.instance;
+        return WebSocketService.instance;
     }
 
     /**
@@ -66,8 +67,6 @@ class UnifiedWebSocketService {
 
         // Initialize frame router
         frameRouter.initialize();
-
-
 
         // Setup auto-connect monitoring
         this.setupAutoConnect();
@@ -83,6 +82,11 @@ class UnifiedWebSocketService {
             console.log('WebSocket already connected');
             return;
         }
+
+        // Reset flags when explicitly connecting
+        this.intentionalDisconnect = false;
+        this.config.reconnect = true;
+        this.reconnectAttempts = 0;
 
         // Build URL if not provided
         if (!url) {
@@ -111,6 +115,7 @@ class UnifiedWebSocketService {
      */
     disconnect(): void {
         console.log('Disconnecting WebSocket');
+        this.intentionalDisconnect = true;
         this.config.reconnect = false;
         this.cleanup();
         store.dispatch(websocketDisconnected());
@@ -244,7 +249,11 @@ class UnifiedWebSocketService {
             console.log('WebSocket disconnected');
             store.dispatch(websocketDisconnected());
             this.stopHealthCheck();
-            this.attemptReconnect();
+
+            // Only attempt reconnect if it wasn't an intentional disconnect
+            if (!this.intentionalDisconnect) {
+                this.attemptReconnect();
+            }
         };
 
         this.ws.onerror = (event) => {
@@ -312,7 +321,19 @@ class UnifiedWebSocketService {
     }
 
     private attemptReconnect(): void {
-        if (!this.config.reconnect || !this.url) return;
+        // Don't reconnect if it was intentional or reconnect is disabled
+        if (this.intentionalDisconnect || !this.config.reconnect || !this.url) {
+            return;
+        }
+
+        // Check if server is still alive before attempting reconnect
+        const state = store.getState();
+        const isServerAlive = selectIsServerAlive(state);
+
+        if (!isServerAlive) {
+            console.log('Server not connected, skipping WebSocket reconnect');
+            return;
+        }
 
         if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
             console.error('Max reconnection attempts reached');
@@ -331,13 +352,11 @@ class UnifiedWebSocketService {
         console.log(`Attempting reconnect ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${delay}ms`);
 
         this.reconnectTimer = setTimeout(() => {
-            if (this.url) {
+            if (this.url && !this.intentionalDisconnect) {
                 this.connect(this.url);
             }
         }, delay);
     }
-
-
 
     private setupAutoConnect(): void {
         if (!this.config.autoConnect) return;
@@ -347,7 +366,38 @@ class UnifiedWebSocketService {
 
         let lastServerStatus: boolean | null = null;
 
+        // Subscribe to store changes
+        this.unsubscribe = store.subscribe(() => {
+            const state = store.getState();
+            const isServerAlive = selectIsServerAlive(state);
 
+            // Only react to changes in server status
+            if (isServerAlive !== lastServerStatus) {
+                lastServerStatus = isServerAlive;
+
+                if (isServerAlive && !this.isConnected && !this.intentionalDisconnect) {
+                    // Server became available and we're not connected
+                    console.log('Server became available, auto-connecting WebSocket');
+                    this.connect();
+                } else if (!isServerAlive && this.isConnected) {
+                    // Server became unavailable while we're connected
+                    console.log('Server became unavailable, disconnecting WebSocket');
+                    this.intentionalDisconnect = true; // Prevent reconnect attempts
+                    this.cleanup();
+                    store.dispatch(websocketDisconnected());
+                }
+            }
+        });
+
+        // Check initial state
+        const state = store.getState();
+        const isServerAlive = selectIsServerAlive(state);
+        lastServerStatus = isServerAlive;
+
+        if (isServerAlive && !this.isConnected && !this.intentionalDisconnect) {
+            console.log('Server available on init, auto-connecting WebSocket');
+            this.connect();
+        }
     }
 
     private teardownAutoConnect(): void {
@@ -375,4 +425,4 @@ class UnifiedWebSocketService {
     }
 }
 
-export const websocketService = UnifiedWebSocketService.getInstance();
+export const websocketService = WebSocketService.getInstance();
