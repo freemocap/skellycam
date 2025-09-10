@@ -12,6 +12,9 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
 __package_root__ = __file__.replace("/__init__.py", "")
 
+import multiprocessing
+multiprocessing.freeze_support()
+
 # from skellycam.api.routers import SKELLYCAM_ROUTERS
 # from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 # from skellycam.core.shared_memory.multi_frame_payload_ring_buffer import \
