@@ -24,6 +24,9 @@ export const RecordingNamePreview: React.FC<RecordingNamePreviewProps> = ({
                     label="Recording Tag"
                     value={tag}
                     onChange={(e) => onTagChange(e.target.value)}
+                    onKeyDown={(e) => {
+                        // Stop the TreeView from intercepting keyboard navigation
+                        e.stopPropagation();}}
                     size="small"
                     fullWidth
                     placeholder="Optional tag"
