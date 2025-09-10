@@ -171,7 +171,8 @@ export const RecordingInfoPanel: React.FC = () => {
                 color: "text.primary",
                 backgroundColor: theme.palette.primary.main,
                 borderRadius: 1,
-                mb: 2,
+                mx: 1,
+                my: 0.5,
             }}
         >
             <SimpleTreeView
@@ -180,7 +181,17 @@ export const RecordingInfoPanel: React.FC = () => {
                     collapseIcon: ExpandMoreIcon,
                     expandIcon: ChevronRightIcon,
                 }}
-                sx={{flexGrow: 1}}
+                sx={{
+                    flexGrow: 1,
+                    '& .MuiTreeItem-content': {
+                        padding: '2px 4px',
+                        margin: '1px 0',
+                    },
+                    '& .MuiTreeItem-label': {
+                        fontSize: 13,
+                        padding: '1px 0',
+                    },
+                }}
             >
                 <TreeItem
                     itemId="recording-main"
@@ -189,23 +200,20 @@ export const RecordingInfoPanel: React.FC = () => {
                             sx={{
                                 display: "flex",
                                 alignItems: "center",
-                                // justifyContent: "space-between",
                                 width: "100%",
-                                r: 2,
+                                py: 0.25,
                             }}
                         >
-                            <VideocamIcon/>
-                            <Typography sx={{pl: 1, flexGrow: 1}} variant="h6" component="div">
-                                Record Videos
+                            <VideocamIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                            <Typography sx={{ flexGrow: 1, fontSize: 13, fontWeight: 500 }}>
+                                Record
                             </Typography>
 
-                            <Box sx={{display: "flex", flexGrow: 1, pl: 2, alignItems: "left"}}>
-                                <StartStopRecordingButton
-                                    isRecording={recordingInfo.isRecording}
-                                    countdown={countdown}
-                                    onClick={handleRecordButtonClick}
-                                />
-                            </Box>
+                            <StartStopRecordingButton
+                                isRecording={recordingInfo.isRecording}
+                                countdown={countdown}
+                                onClick={handleRecordButtonClick}
+                            />
                         </Box>
                     }
                 >

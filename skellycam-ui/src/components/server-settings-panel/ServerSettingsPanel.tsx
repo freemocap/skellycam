@@ -4,8 +4,6 @@ import {
     Alert,
     Box,
     Button,
-    Card,
-    CardContent,
     Chip,
     CircularProgress,
     Collapse,
@@ -13,7 +11,6 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    Divider,
     FormControl,
     FormControlLabel,
     IconButton,
@@ -29,7 +26,6 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import InfoIcon from '@mui/icons-material/Info';
 import {
     CheckCircle as CheckCircleIcon,
     Computer as ComputerIcon,
@@ -76,37 +72,32 @@ import {
 import { websocketService } from "@/services/websocket/websocket-service";
 import { useElectronIPC } from "@/services/electron-ipc/electron-ipc";
 
-const ExpandMoreStyled = styled(IconButton)(({ theme }) => ({
-    marginLeft: 'auto',
-    transition: theme.transitions.create('transform', {
-        duration: theme.transitions.duration.shortest,
-    }),
-}));
-
-const StatusChip = styled(Chip)<{ status: string }>(({ theme, status }) => {
+const StatusDot = styled('span')<{ status: string }>(({ theme, status }) => {
     const getStatusColor = () => {
         switch (status) {
             case 'connected':
-                return { bg: theme.palette.success.main, text: theme.palette.success.contrastText };
+                return theme.palette.success.main;
             case 'connecting':
             case 'disconnecting':
-                return { bg: theme.palette.warning.main, text: theme.palette.warning.contrastText };
+                return theme.palette.warning.main;
             case 'error':
-                return { bg: theme.palette.error.main, text: theme.palette.error.contrastText };
+                return theme.palette.error.main;
             default:
-                return { bg: theme.palette.grey[500], text: theme.palette.common.white };
+                return theme.palette.grey[500];
         }
     };
 
-    const colors = getStatusColor();
     return {
-        backgroundColor: colors.bg,
-        color: colors.text,
-        fontWeight: 600,
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        backgroundColor: getStatusColor(),
+        display: 'inline-block',
+        marginRight: theme.spacing(0.5),
     };
 });
 
-// External server connection dialog
+// External server connection dialog (unchanged)
 const ConnectionDialog: React.FC<{
     open: boolean;
     onClose: () => void;
@@ -117,10 +108,7 @@ const ConnectionDialog: React.FC<{
     const [port, setPort] = useState(config.port);
 
     const handleConnect = async () => {
-        // Update config first
         dispatch(updateServerConfig({ host, port }));
-
-        // Connect to external server
         try {
             await dispatch(connectToServer({
                 mode: 'external',
@@ -143,6 +131,7 @@ const ConnectionDialog: React.FC<{
                         value={host}
                         onChange={(e) => setHost(e.target.value)}
                         fullWidth
+                        size="small"
                     />
                     <TextField
                         label="Port"
@@ -150,6 +139,7 @@ const ConnectionDialog: React.FC<{
                         value={port}
                         onChange={(e) => setPort(parseInt(e.target.value) || 8006)}
                         fullWidth
+                        size="small"
                     />
                     <Typography variant="caption" color="text.secondary">
                         Connect to a SkellyCam server running elsewhere
@@ -242,14 +232,6 @@ export const ServerSettingsPanel: React.FC = () => {
         websocketService.disconnect();
     };
 
-    const handleWebSocketToggle = () => {
-        if (isWsConnected) {
-            handleWebSocketDisconnect();
-        } else {
-            handleWebSocketConnect();
-        }
-    };
-
     const handleSelectCustomExecutable = async () => {
         if (!api) return;
         const path = await api.fileSystem.selectExecutableFile.mutate();
@@ -265,294 +247,176 @@ export const ServerSettingsPanel: React.FC = () => {
         dispatch(updateServerConfig({ preferredExecutablePath: path }));
     };
 
-    const getStatusIcon = () => {
-        switch (connectionStatus) {
-            case 'connected':
-                return <CheckCircleIcon color="success" />;
-            case 'connecting':
-            case 'disconnecting':
-                return <CircularProgress size={20} />;
-            case 'error':
-                return <ErrorIcon color="error" />;
-            default:
-                return <InfoIcon color="disabled" />;
-        }
-    };
+    // Compact collapsed view
+    if (!expanded) {
+        return (
+            <Box sx={{ px: 1, py: 0.5 }}>
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        '&:hover': { opacity: 0.8 }
+                    }}
+                    onClick={() => setExpanded(true)}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <SettingsIcon sx={{ fontSize: 16 }} />
+                        <StatusDot status={connectionStatus} />
+                        <Typography variant="caption" sx={{ fontSize: 11 }}>
+                            {connectionStatus === 'connected' ? 'Server' : 'Server (Off)'}
+                        </Typography>
+                    </Box>
+                    <IconButton size="small" sx={{ padding: '2px' }}>
+                        <ExpandMoreIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                </Box>
+                {isTransitioning && (
+                    <LinearProgress sx={{ height: 2, mt: 0.5 }} />
+                )}
+            </Box>
+        );
+    }
 
-    const getConnectionDescription = () => {
-        if (connectionStatus === 'disconnected') return 'Not connected';
-        if (connectionStatus === 'connecting') {
-            return connectionMode === 'managed' ? 'Starting server...' : 'Connecting...';
-        }
-        if (connectionStatus === 'disconnecting') return 'Disconnecting...';
-        if (connectionStatus === 'error') return 'Connection error';
-        if (connectionStatus === 'connected') {
-            if (connectionMode === 'managed') return 'Connected (managed)';
-            if (connectionMode === 'external') return 'Connected (external)';
-            return 'Connected';
-        }
-        return connectionStatus;
-    };
-
+    // Expanded view
     return (
         <>
-            <Card elevation={2} sx={{ m: 2 }}>
-                <CardContent>
-                    <Stack spacing={3}>
-                        {/* Header */}
-                        <Box display="flex" alignItems="center" justifyContent="space-between">
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <SettingsIcon color="primary" />
-                                <Typography variant="h6" component="h2">
-                                    Server Management
+            <Paper elevation={1} sx={{ mx: 1, my: 0.5, p: 1 }}>
+                <Stack spacing={1.5}>
+                    {/* Header */}
+                    <Box display="flex" alignItems="center" justifyContent="space-between">
+                        <Box display="flex" alignItems="center" gap={0.5}>
+                            <SettingsIcon sx={{ fontSize: 18 }} color="primary" />
+                            <Typography variant="body2" fontWeight={500}>
+                                Server
+                            </Typography>
+                        </Box>
+                        <IconButton
+                            onClick={() => setExpanded(false)}
+                            size="small"
+                            sx={{ padding: '2px' }}
+                        >
+                            <ExpandMoreIcon sx={{ fontSize: 18, transform: 'rotate(180deg)' }} />
+                        </IconButton>
+                    </Box>
+
+                    {/* Compact Status Section */}
+                    <Box sx={{ px: 0.5 }}>
+                        {/* Server Status Row */}
+                        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                                <StatusDot status={connectionStatus} />
+                                <Typography variant="caption">
+                                    {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
                                 </Typography>
                             </Box>
-                            <ExpandMoreStyled
-                                onClick={() => setExpanded(!expanded)}
-                                sx={{
-                                    transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                }}
-                            >
-                                <ExpandMoreIcon />
-                            </ExpandMoreStyled>
-                        </Box>
-
-                        {/* Status Section */}
-                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                            <Stack spacing={2}>
-                                {/* Server Status */}
-                                <Box display="flex" alignItems="center" justifyContent="space-between">
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        {getStatusIcon()}
-                                        <Typography variant="body1" fontWeight={500}>
-                                            Python Server
-                                        </Typography>
-                                        <StatusChip
-                                            label={getConnectionDescription()}
-                                            status={connectionStatus}
+                            {canConnect && (
+                                <Stack direction="row" spacing={0.5}>
+                                    {isElectron && (
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            startIcon={<PlayArrowIcon sx={{ fontSize: 14 }} />}
+                                            onClick={handleStartManaged}
+                                            disabled={isTransitioning}
+                                            sx={{ fontSize: 11, py: 0.25, px: 1 }}
                                             size="small"
-                                        />
-                                        {hasManagedServer && (
-                                            <Tooltip title="Server spawned by this app">
-                                                <ComputerIcon fontSize="small" color="primary" />
-                                            </Tooltip>
-                                        )}
-                                    </Box>
-                                    <Box>
-                                        {canConnect && (
-                                            <Stack direction="row" spacing={1}>
-                                                {isElectron && (
-                                                    <Button
-                                                        variant="contained"
-                                                        color="primary"
-                                                        startIcon={<PlayArrowIcon />}
-                                                        onClick={handleStartManaged}
-                                                        disabled={isTransitioning}
-                                                        size="small"
-                                                    >
-                                                        Spawn
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="outlined"
-                                                    startIcon={<StorageIcon />}
-                                                    onClick={() => setConnectionDialogOpen(true)}
-                                                    disabled={isTransitioning}
-                                                    size="small"
-                                                >
-                                                    Connect
-                                                </Button>
-                                            </Stack>
-                                        )}
-                                        {canDisconnect && (
-                                            <Button
-                                                variant="contained"
-                                                color="error"
-                                                startIcon={<StopIcon />}
-                                                onClick={handleDisconnect}
-                                                disabled={isTransitioning}
-                                                size="small"
-                                            >
-                                                {hasManagedServer ? 'Stop' : 'Disconnect'}
-                                            </Button>
-                                        )}
-                                    </Box>
-                                </Box>
-
-                                {isTransitioning && <LinearProgress />}
-
-                                {/* WebSocket Status */}
-                                <Box display="flex" alignItems="center" justifyContent="space-between">
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        {isWsConnected ? <LinkIcon color="success" /> : <LinkOffIcon color="disabled" />}
-                                        <Typography variant="body1" fontWeight={500}>
-                                            WebSocket
-                                        </Typography>
-                                        <StatusChip
-                                            label={wsStatus.toUpperCase()}
-                                            status={isWsConnected ? 'connected' : wsStatus}
-                                            size="small"
-                                        />
-                                    </Box>
+                                        >
+                                            Spawn
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="outlined"
-                                        color={isWsConnected ? "error" : "primary"}
-                                        startIcon={isWsConnected ? <LinkOffIcon /> : <LinkIcon />}
-                                        onClick={handleWebSocketToggle}
-                                        disabled={!isConnected && connectionMode === 'managed'}
+                                        startIcon={<StorageIcon sx={{ fontSize: 14 }} />}
+                                        onClick={() => setConnectionDialogOpen(true)}
+                                        disabled={isTransitioning}
+                                        sx={{ fontSize: 11, py: 0.25, px: 1 }}
                                         size="small"
                                     >
-                                        {isWsConnected ? 'Disconnect' : 'Connect'}
+                                        Connect
                                     </Button>
-                                </Box>
-                            </Stack>
-                        </Paper>
-
-                        {connectionError && (
-                            <Alert severity="error">{connectionError}</Alert>
-                        )}
-
-                        {/* Expanded Configuration */}
-                        <Collapse in={expanded} timeout="auto" unmountOnExit>
-                            <Stack spacing={3}>
-                                <Divider />
-
-                                {/* Settings */}
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={autoConnect}
-                                            onChange={(e) => dispatch(updateServerConfig({ autoConnect: e.target.checked }))}
-                                            color="primary"
-                                        />
-                                    }
-                                    label={
-                                        <Box>
-                                            <Typography variant="body1">Auto-connect WebSocket</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Automatically connect WebSocket when server starts
-                                            </Typography>
-                                        </Box>
-                                    }
-                                />
-
-                                {isElectron && (
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={autoSpawn}
-                                                onChange={(e) => dispatch(updateServerConfig({ autoSpawn: e.target.checked }))}
-                                                color="primary"
-                                            />
-                                        }
-                                        label={
-                                            <Box>
-                                                <Typography variant="body1">Auto-spawn server</Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Automatically spawn server on app start
-                                                </Typography>
-                                            </Box>
-                                        }
-                                    />
-                                )}
-
-                                {/* URL Configuration */}
-                                <Stack direction="row" spacing={2}>
-                                    <TextField
-                                        label="Host"
-                                        value={serverConfig.host}
-                                        onChange={(e) => dispatch(updateServerConfig({ host: e.target.value }))}
-                                        size="small"
-                                        fullWidth
-                                    />
-                                    <TextField
-                                        label="Port"
-                                        type="number"
-                                        value={serverConfig.port}
-                                        onChange={(e) => dispatch(updateServerConfig({ port: parseInt(e.target.value) || 8006 }))}
-                                        size="small"
-                                        sx={{ width: 120 }}
-                                    />
                                 </Stack>
+                            )}
+                            {canDisconnect && (
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    startIcon={<StopIcon sx={{ fontSize: 14 }} />}
+                                    onClick={handleDisconnect}
+                                    disabled={isTransitioning}
+                                    sx={{ fontSize: 11, py: 0.25, px: 1 }}
+                                    size="small"
+                                >
+                                    {hasManagedServer ? 'Stop' : 'Disconnect'}
+                                </Button>
+                            )}
+                        </Box>
 
-                                {/* URLs Display */}
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                                    <Stack spacing={1}>
-                                        <Typography variant="caption" color="text.secondary">API URL</Typography>
-                                        <Typography variant="body2" fontFamily="monospace">{httpUrl}</Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>WebSocket URL</Typography>
-                                        <Typography variant="body2" fontFamily="monospace">{wsUrl}</Typography>
-                                    </Stack>
-                                </Paper>
+                        {/* WebSocket Status Row */}
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                                <StatusDot status={isWsConnected ? 'connected' : wsStatus} />
+                                <Typography variant="caption">
+                                    WebSocket
+                                </Typography>
+                            </Box>
+                            {isConnected && (
+                                <Button
+                                    variant="text"
+                                    color={isWsConnected ? "error" : "primary"}
+                                    onClick={() => isWsConnected ? handleWebSocketDisconnect() : handleWebSocketConnect()}
+                                    sx={{ fontSize: 11, py: 0, px: 0.5, minWidth: 'auto' }}
+                                    size="small"
+                                >
+                                    {isWsConnected ? 'Disconnect' : 'Connect'}
+                                </Button>
+                            )}
+                        </Box>
 
-                                {/* Process Info */}
-                                {managedProcess && (
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                                        <Typography variant="caption" color="text.secondary">Process Info</Typography>
-                                        <Typography variant="body2">PID: {managedProcess.pid || 'Unknown'}</Typography>
-                                        <Typography variant="caption">{managedProcess.executablePath}</Typography>
-                                    </Paper>
-                                )}
+                        {isTransitioning && <LinearProgress sx={{ height: 2, mt: 0.5 }} />}
+                    </Box>
 
-                                {/* Executable Selection (Electron only) */}
-                                {isElectron && (
-                                    <>
-                                        <Divider />
-                                        <Box>
-                                            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                                                <Typography variant="subtitle2">Python Executable</Typography>
-                                                <IconButton
-                                                    onClick={() => dispatch(refreshExecutableCandidates())}
-                                                    disabled={isRefreshing}
-                                                    size="small"
-                                                >
-                                                    <RefreshIcon />
-                                                </IconButton>
-                                            </Box>
+                    {connectionError && (
+                        <Alert severity="error" sx={{ py: 0.25, px: 1, fontSize: 11 }}>
+                            {connectionError}
+                        </Alert>
+                    )}
 
-                                            <Stack spacing={2}>
-                                                <FormControl fullWidth size="small">
-                                                    <InputLabel>Select Executable</InputLabel>
-                                                    <Select
-                                                        value={selectedPath || ''}
-                                                        onChange={handleExecutableChange}
-                                                        label="Select Executable"
-                                                    >
-                                                        {executables.map((candidate) => (
-                                                            <MenuItem
-                                                                key={candidate.path}
-                                                                value={candidate.path}
-                                                                disabled={!candidate.isValid}
-                                                            >
-                                                                <Box>
-                                                                    <Typography variant="body2">{candidate.name}</Typography>
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {candidate.description}
-                                                                        {!candidate.isValid && ` - ${candidate.error}`}
-                                                                    </Typography>
-                                                                </Box>
-                                                            </MenuItem>
-                                                        ))}
-                                                    </Select>
-                                                </FormControl>
+                    {/* Configuration Options */}
+                    <Stack spacing={1} sx={{ px: 0.5 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={autoConnect}
+                                    onChange={(e) => dispatch(updateServerConfig({ autoConnect: e.target.checked }))}
+                                    size="small"
+                                />
+                            }
+                            label={
+                                <Typography variant="caption">Auto-connect WS</Typography>
+                            }
+                            sx={{ m: 0 }}
+                        />
 
-                                                <Button
-                                                    variant="outlined"
-                                                    startIcon={<FolderOpenIcon />}
-                                                    onClick={handleSelectCustomExecutable}
-                                                    fullWidth
-                                                >
-                                                    Browse for Executable
-                                                </Button>
-                                            </Stack>
-                                        </Box>
-                                    </>
-                                )}
-                            </Stack>
-                        </Collapse>
+                        {isElectron && (
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={autoSpawn}
+                                        onChange={(e) => dispatch(updateServerConfig({ autoSpawn: e.target.checked }))}
+                                        size="small"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="caption">Auto-spawn</Typography>
+                                }
+                                sx={{ m: 0 }}
+                            />
+                        )}
                     </Stack>
-                </CardContent>
-            </Card>
+                </Stack>
+            </Paper>
 
             <ConnectionDialog
                 open={connectionDialogOpen}

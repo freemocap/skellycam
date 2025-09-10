@@ -125,7 +125,7 @@ def camera_group_close_all_delete_endpoint():
     logger.api("Received `/camera/group/close/all` DELETE request to close all camera groups...")
 
     try:
-        get_skellycam_app().close_all_camera_groups()
+        get_skellycam_app().camera_group_manager.close_all_camera_groups()
         logger.api("`/camera/group/close/all` request handled successfully.")
         return True
     except Exception as e:

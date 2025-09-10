@@ -14,14 +14,14 @@ import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraC
 // Extract reusable scrollbar styles
 const scrollbarStyles = {
     '&::-webkit-scrollbar': {
-        width: '8px',
+        width: '6px',
         backgroundColor: 'transparent',
     },
     '&::-webkit-scrollbar-thumb': {
         backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
             ? 'rgba(255, 255, 255, 0.2)'
             : 'rgba(0, 0, 0, 0.2)',
-        borderRadius: '4px',
+        borderRadius: '3px',
         '&:hover': {
             backgroundColor: (theme: { palette: { mode: string; }; }) => theme.palette.mode === 'dark'
                 ? 'rgba(255, 255, 255, 0.3)'
@@ -42,89 +42,103 @@ export const LeftSidePanelContent = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Dynamic styles based on theme
-
-
     return (
         <Box sx={{
             width: '100%',
             height: '100%',
-            backgroundColor: theme.palette.primary.dark,
-            color: theme.palette.primary.contrastText,
+            backgroundColor: theme.palette.mode === 'dark'
+                ? theme.palette.background.paper
+                : theme.palette.grey[50],
+            color: theme.palette.text.primary,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
         }}>
+            {/* Header */}
             <List disablePadding>
                 <ListItem
                     sx={{
-
-                        boxShadow: theme.palette.mode === 'dark'
-                            ? '0 -1px 0 rgb(255,255,255,0.1) inset'
-                            : '0 -1px 0 rgba(0,0,0,0.1) inset',
-                        py: 1.5,
-                        px: 3,
-                        color: theme.palette.primary.contrastText,
-                        fontSize: 22,
+                        borderBottom: theme.palette.mode === 'dark'
+                            ? '1px solid rgba(255,255,255,0.08)'
+                            : '1px solid rgba(0,0,0,0.08)',
+                        py: 0.75,
+                        px: 1.5,
+                        minHeight: 40,
                         display: 'flex',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                     }}
                 >
-                    <Box component="span">SkellyCam💀📸</Box>
+                    <Box
+                        component="span"
+                        sx={{
+                            fontSize: 16,
+                            fontWeight: 600,
+                            color: theme.palette.primary.main
+                        }}
+                    >
+                        SkellyCam 💀📸
+                    </Box>
 
-                    <ServerSettingsPanel/>
-
-                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.25}}>
                         <IconButton
-                            color="inherit"
+                            size="small"
                             onClick={() => navigate('/')}
+                            sx={{
+                                padding: '4px',
+                                color: location.pathname === '/' ? theme.palette.primary.main : theme.palette.text.secondary
+                            }}
                         >
-                            <HomeIcon/>
+                            <HomeIcon sx={{ fontSize: 18 }} />
                         </IconButton>
 
                         <IconButton
-                            color="inherit"
+                            size="small"
                             onClick={() => navigate('/cameras')}
+                            sx={{
+                                padding: '4px',
+                                color: location.pathname === '/cameras' ? theme.palette.primary.main : theme.palette.text.secondary
+                            }}
                         >
-                            <VideocamIcon/>
+                            <VideocamIcon sx={{ fontSize: 18 }} />
                         </IconButton>
-                        {/*<IconButton*/}
-                        {/*    color="inherit"*/}
-                        {/*    onClick={() => navigate('/videos')}*/}
-                        {/*>*/}
-                        {/*    <VideoLibraryIcon/>*/}
-                        {/*</IconButton>*/}
 
                         <ThemeToggle/>
                     </Box>
-
                 </ListItem>
-
             </List>
 
+            {/* Server Settings - Compact */}
+            <ServerSettingsPanel/>
 
+            {/* Video Panel for Videos Page */}
             {location.pathname === '/videos' && (
                 <Box sx={{
-                    flex: 1,
+                    flex: 0.3,
                     overflowY: 'auto',
                     overflowX: 'hidden',
+                    borderTop: '1px solid',
+                    borderColor: theme.palette.divider,
                     ...scrollbarStyles
                 }}>
                     <VideoFolderPanel/>
                 </Box>
             )}
 
+            {/* Main Content Area */}
             <Box sx={{
                 flex: 1,
                 overflowY: 'auto',
                 overflowX: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.5,
+                pt: 0.5,
                 ...scrollbarStyles
             }}>
                 <RecordingInfoPanel/>
-                {/*<AvailableCamerasPanel/>*/}
                 <CameraConfigTreeView/>
             </Box>
-
         </Box>
     );
 }

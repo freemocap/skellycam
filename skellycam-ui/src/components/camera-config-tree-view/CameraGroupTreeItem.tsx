@@ -9,6 +9,7 @@ interface CameraGroupTreeItemProps {
     title: string;
     cameras: CameraDevice[];
     icon?: React.ReactNode;
+    expandedItems?: string[];
 }
 
 export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
@@ -16,6 +17,7 @@ export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
                                                                             title,
                                                                             cameras,
                                                                             icon,
+                                                                            expandedItems,
                                                                         }) => {
     return (
         <TreeItem
@@ -30,7 +32,11 @@ export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
             }
         >
             {cameras.map((camera: CameraDevice) => (
-                <CameraTreeItem key={camera.cameraId} camera={camera} />
+                <CameraTreeItem
+                    key={camera.cameraId}
+                    camera={camera}
+                    isExpanded={expandedItems.includes(`camera-${camera.cameraId}`)}
+                />
             ))}
         </TreeItem>
     );

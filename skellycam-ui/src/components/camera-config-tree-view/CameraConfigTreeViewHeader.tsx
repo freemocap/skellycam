@@ -7,14 +7,18 @@ import {
     Tooltip,
     Typography,
     useTheme,
+    Divider,
 } from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
+import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
+import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
@@ -35,6 +39,11 @@ interface CameraConfigTreeViewHeaderProps {
     isLoading: boolean;
     isPaused: boolean;
     onPauseToggle: () => void;
+    onExpandAll: () => void;
+    onCollapseAll: () => void;
+    onSelectAll: () => void;
+    onDeselectAll: () => void;
+    hasSelectedCameras: boolean;
 }
 
 export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProps> = ({
@@ -43,18 +52,23 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                                                                           isLoading,
                                                                                           isPaused,
                                                                                           onPauseToggle,
+                                                                                          onExpandAll,
+                                                                                          onCollapseAll,
+                                                                                          onSelectAll,
+                                                                                          onDeselectAll,
+                                                                                          hasSelectedCameras,
                                                                                       }) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
     const selectedCameras = useAppSelector(selectSelectedCameras);
-    const hasSelectedCameras = selectedCameras.length > 0;
+    const hasSelected = selectedCameras.length > 0;
 
     const handleRefreshCameras = (): void => {
         dispatch(detectCameras({ filterVirtual: true }));
     };
 
     const handleConnectCameras = async (): Promise<void> => {
-        if (hasSelectedCameras) {
+        if (hasSelected) {
             try {
                 await dispatch(connectToCameras()).unwrap();
                 console.log('Connected to selected cameras');
@@ -105,6 +119,56 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
             </Typography>
 
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
+                {/* Expand/Collapse All */}
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="Expand all">
+                        <IconButton
+                            size="small"
+                            onClick={onExpandAll}
+                            sx={{ color: "inherit" }}
+                        >
+                            <UnfoldMoreIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Collapse all">
+                        <IconButton
+                            size="small"
+                            onClick={onCollapseAll}
+                            sx={{ color: "inherit" }}
+                        >
+                            <UnfoldLessIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+
+                <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
+
+                {/* Select/Deselect All */}
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Tooltip title="Select all">
+                        <IconButton
+                            size="small"
+                            onClick={onSelectAll}
+                            disabled={cameraCount === 0}
+                            sx={{ color: "inherit" }}
+                        >
+                            <CheckBoxIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Deselect all">
+                        <IconButton
+                            size="small"
+                            onClick={onDeselectAll}
+                            disabled={!hasSelectedCameras}
+                            sx={{ color: "inherit" }}
+                        >
+                            <CheckBoxOutlineBlankIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+
+                <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
+
                 {/* Connect/Disconnect Button */}
                 {!isConnected ? (
                     <Tooltip title="Connect to selected cameras">
@@ -112,7 +176,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             <IconButton
                                 size="small"
                                 onClick={handleConnectCameras}
-                                disabled={!hasSelectedCameras || isLoading}
+                                disabled={!hasSelected || isLoading}
                                 sx={{ color: "inherit" }}
                             >
                                 <VideocamIcon />

@@ -24,8 +24,15 @@ import {
     selectAllCameras,
     selectCameraLoadingState,
     selectCameraConnectionStatus,
+    selectSelectedCameras,
 } from "@/store/slices/cameras/cameras-selectors";
-import { detectCameras } from "@/store/slices/cameras/cameras-thunks";
+import {
+    detectCameras,
+} from "@/store/slices/cameras/cameras-thunks";
+import {
+    allCamerasSelected,
+    allCamerasDeselected,
+} from "@/store/slices/cameras/cameras-slice";
 import { CameraDevice } from "@/store/slices/cameras/cameras-types";
 
 export const CameraConfigTreeView: React.FC = () => {
@@ -36,6 +43,7 @@ export const CameraConfigTreeView: React.FC = () => {
     const cameras = useAppSelector(selectAllCameras);
     const isLoading = useAppSelector(selectCameraLoadingState);
     const connectionStatus = useAppSelector(selectCameraConnectionStatus);
+    const selectedCameras = useAppSelector(selectSelectedCameras);
     const isWebSocketConnected = useAppSelector(selectIsWebSocketConnected);
     const isServerAlive = useAppSelector(selectIsServerAlive);
 
@@ -51,6 +59,7 @@ export const CameraConfigTreeView: React.FC = () => {
     const connectedCameras = cameras.filter((cam: CameraDevice) => cam.status === "CONNECTED");
     const availableCameras = cameras.filter((cam: CameraDevice) => cam.status !== "CONNECTED");
     const isConnectedToCameras = connectionStatus === "connected";
+    const hasSelectedCameras = selectedCameras.length > 0;
 
     // Initial camera detection
     useEffect(() => {
@@ -68,6 +77,41 @@ export const CameraConfigTreeView: React.FC = () => {
 
     const handlePauseToggle = (): void => {
         setIsPaused(!isPaused);
+    };
+
+    // Expand/Collapse all handlers
+    const handleExpandAll = (): void => {
+        const allItemIds = [
+            "cameras-root",
+            "cameras-connected",
+            "cameras-available",
+            ...cameras.map(cam => `camera-${cam.cameraId}`),
+            ...cameras.map(cam => `camera-${cam.cameraId}-config`)
+        ];
+        setExpandedItems(allItemIds);
+    };
+
+    const handleCollapseAll = (): void => {
+        setExpandedItems(["cameras-root"]); // Keep root expanded
+    };
+
+    // Select/Deselect all handlers
+    const handleSelectAll = (): void => {
+        // Toggle selection for all cameras that are not selected
+        cameras.forEach((camera: CameraDevice) => {
+            if (!camera.selected) {
+                dispatch(cameraSelectionToggled(camera.cameraId));
+            }
+        });
+    };
+
+    const handleDeselectAll = (): void => {
+        // Toggle selection for all cameras that are selected
+        cameras.forEach((camera: CameraDevice) => {
+            if (camera.selected) {
+                dispatch(cameraSelectionToggled(camera.cameraId));
+            }
+        });
     };
 
     return (
@@ -96,6 +140,11 @@ export const CameraConfigTreeView: React.FC = () => {
                             isLoading={isLoading}
                             isPaused={isPaused}
                             onPauseToggle={handlePauseToggle}
+                            onExpandAll={handleExpandAll}
+                            onCollapseAll={handleCollapseAll}
+                            onSelectAll={handleSelectAll}
+                            onDeselectAll={handleDeselectAll}
+                            hasSelectedCameras={hasSelectedCameras}
                         />
                     }
                 >
@@ -110,6 +159,7 @@ export const CameraConfigTreeView: React.FC = () => {
                                     title="Connected Cameras"
                                     cameras={connectedCameras}
                                     icon={<VideocamIcon color="success" />}
+                                    expandedItems={expandedItems}
                                 />
                             )}
 
@@ -120,6 +170,7 @@ export const CameraConfigTreeView: React.FC = () => {
                                     title="Available Cameras"
                                     cameras={availableCameras}
                                     icon={<VideocamIcon color="info" />}
+                                    expandedItems={expandedItems}
                                 />
                             )}
                         </>
