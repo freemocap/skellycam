@@ -23,23 +23,23 @@ const getResourcesPath = () => {
 export const PYTHON_EXECUTABLE_CANDIDATES = [
     {
         name: 'development',
-        path: path.join(getResourcesPath(), '../dist/skellycam_server.exe'),
+        path: path.join(getResourcesPath(), '../dist', process.platform === 'win32' ? 'skellycam_server.exe' : 'skellycam_server'),
         description: 'Development build executable'
     },
     {
         name: 'installed',
-        path: path.join(getResourcesPath(), 'skellycam_server.exe'),
+        path: path.join(getResourcesPath(), process.platform === 'win32' ? 'skellycam_server.exe' : 'skellycam_server'),
         description: 'Executable in the installation folder'
     },
 
     {
         name: 'portable',
-        path: path.join(process.cwd(), 'skellycam_server.exe'),
+        path: path.join(process.cwd(), process.platform === 'win32' ? 'skellycam_server.exe' : 'skellycam_server'),
         description: 'Portable executable in current directory'
     },
     {
         name: 'system-path',
-        path: 'skellycam_server.exe', // Will be found via PATH
+        path: process.platform === 'win32' ? 'skellycam_server.exe' : 'skellycam_server', // Will be found via PATH
         description: 'Executable available in system PATH'
     }
 ];
@@ -51,7 +51,7 @@ export const APP_PATHS = {
         __dirname,
         "../../../shared/skellycam-logo/skellycam-favicon.ico"
     ),
-        SKELLYCAM_LOGO_PNG_RESOURCES_PATH: path.join(getResourcesPath(), 'dist/skellycam-logo.png'),
+    SKELLYCAM_LOGO_PNG_RESOURCES_PATH: path.join(getResourcesPath(), 'dist/skellycam-logo.png'),
     SKELLYCAM_LOGO_PNG_SHARED_PATH:path.resolve(
         __dirname,
         "../../../shared/skellycam-logo/skellycam-logo.png"
