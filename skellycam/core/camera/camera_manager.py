@@ -23,12 +23,13 @@ class CameraManager:
                ipc: CameraGroupIPC,
                camera_configs: CameraConfigs,
                camera_strategy: WorkerStrategy):
-        logger.debug(f"Creating Camera Manager with camera strategy: {camera_strategy}")
+        camera_strategy = WorkerStrategy.PROCESS
+        logger.debug(f"Creating Camera Manager with camera strategy: {camera_strategy}") 
         if camera_strategy == WorkerStrategy.THREAD:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS
         else:
             camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
-        logger.debug(f"Using camera manager strategy: {camera_manager_strategy}")
+        logger.debug(f"Using camera manager strategy: {camera_manager_strategy.value}")
         ready_to_shutdown = multiprocessing.Value("b", False)
         config_subscription_by_camera = {
             camera_id: ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].get_subscription() for camera_id in
@@ -52,6 +53,7 @@ class CameraManager:
                 ready_to_shutdown=ready_to_shutdown
             )
         )
+        logger.debug(f"Created camera manager worker {camera_manager_strategy}")
 
         return cls(ipc=ipc,
                    worker=worker,
@@ -66,8 +68,8 @@ class CameraManager:
                                shm_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
                                recording_info_subscription_by_camera: dict[CameraIdString, TopicSubscriptionQueue],
                                ready_to_shutdown: multiprocessing.Value
-
                                ):
+        logger.debug(f"inside _camera_manager_worker")
         if multiprocessing.parent_process():
             # Configure logging if multiprocessing (i.e. if there is a parent process)
             from skellycam.system.logging_configuration.configure_logging import configure_logging
@@ -87,8 +89,11 @@ class CameraManager:
                 recording_info_subscription=recording_info_subscription_by_camera[camera_id],
             )
 
+        logger.debug(f"Starting {len(camera_workers)} camera workers...")
         for worker in camera_workers.values():
+            logger.debug(f"Starting camera worker for camera ID: {worker.camera_id}")
             worker.start()
+            logger.debug(f"Camera worker for camera ID: {worker.camera_id} is alive: {worker.is_alive()}")
 
         while ipc.should_continue:
             wait_1s()
@@ -123,6 +128,16 @@ class CameraManager:
 
         logger.info("Starting camera manager process...")
         self.worker.start()
+        logger.debug("Camera manager worker started.")
+        logger.debug(f"Camera manager worker is alive: {self.worker.is_alive()}: {self.worker.pid if isinstance(self.worker, multiprocessing.Process) else None}")
+        logger.debug("\nActive Processes:")
+        for process in multiprocessing.active_children():
+            logger.debug(f'Process Name: {process.name}, PID: {process.pid}')
+
+        import threading
+        logger.debug("\nActive Threads:")
+        for thread in threading.enumerate():
+            logger.debug(f'Thread Name: {thread.name}, ID: {thread.ident}')
 
     def pause(self, await_paused: bool):
         logger.debug(f"Pausing cameras in camera manager...")

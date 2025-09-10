@@ -36,7 +36,7 @@ class CameraWorker:
                ):
 
 
-
+        logger.debug(f"Creating Camera Worker for camera ID: {camera_id}")
 
         return cls(camera_id=camera_id,
                    ipc=ipc,
@@ -56,6 +56,7 @@ class CameraWorker:
                    )
 
     def start(self):
+        logger.debug(f"Attempting to start camera worker for camera ID: {self.camera_id}")
         self.worker.start()
         logger.debug(f"Started camera worker for camera ID: {self.camera_id}")
 

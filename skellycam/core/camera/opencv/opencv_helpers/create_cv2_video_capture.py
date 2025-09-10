@@ -23,6 +23,7 @@ def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tupl
     cap_backend = determine_opencv_camera_backend()
     attempts = -1
     capture: cv2.VideoCapture | None = None
+    logger.debug(f"attempting to connect to camera {config.camera_index} with opencv backend {cap_backend.name}")
     while attempts < retry_count and capture is None:
         attempts += 1
         capture = cv2.VideoCapture(int(config.camera_index), cap_backend.id)
