@@ -15,4 +15,8 @@ npm run build
 
 cd ..
 
+VOLUME=$(hdiutil attach "skellycam-ui/release/2.0.0/skellycam_2.0.0_installer_arm64.dmg" | tail -1 | awk '{print $3}')
+# cp -r "/Volumes/skellycam 2.0.0-arm64/skellycam.app" /Applications/
+# diskutil unmount "/Volumes/skellycam 2.0.0-arm64"
+
 echo "Build completed!"
