@@ -23,12 +23,14 @@ class CameraManager:
                ipc: CameraGroupIPC,
                camera_configs: CameraConfigs,
                camera_strategy: WorkerStrategy):
-        camera_strategy = WorkerStrategy.PROCESS
-        logger.debug(f"Creating Camera Manager with camera strategy: {camera_strategy}") 
-        if camera_strategy == WorkerStrategy.THREAD:
-            camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS
-        else:
-            camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
+        # camera_strategy = WorkerStrategy.PROCESS
+        # logger.debug(f"Creating Camera Manager with camera strategy: {camera_strategy}") 
+        # if camera_strategy == WorkerStrategy.THREAD:
+        #     camera_manager_strategy: WorkerStrategy = WorkerStrategy.PROCESS
+        # else:
+        #     camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
+        camera_strategy = WorkerStrategy.THREAD
+        camera_manager_strategy: WorkerStrategy = WorkerStrategy.THREAD
         logger.debug(f"Using camera manager strategy: {camera_manager_strategy.value}")
         ready_to_shutdown = multiprocessing.Value("b", False)
         config_subscription_by_camera = {
@@ -130,14 +132,14 @@ class CameraManager:
         self.worker.start()
         logger.debug("Camera manager worker started.")
         logger.debug(f"Camera manager worker is alive: {self.worker.is_alive()}: {self.worker.pid if isinstance(self.worker, multiprocessing.Process) else None}")
-        logger.debug("\nActive Processes:")
-        for process in multiprocessing.active_children():
-            logger.debug(f'Process Name: {process.name}, PID: {process.pid}')
+        # logger.debug("\nActive Processes:")
+        # for process in multiprocessing.active_children():
+        #     logger.debug(f'Process Name: {process.name}, PID: {process.pid}')
 
-        import threading
-        logger.debug("\nActive Threads:")
-        for thread in threading.enumerate():
-            logger.debug(f'Thread Name: {thread.name}, ID: {thread.ident}')
+        # import threading
+        # logger.debug("\nActive Threads:")
+        # for thread in threading.enumerate():
+        #     logger.debug(f'Thread Name: {thread.name}, ID: {thread.ident}')
 
     def pause(self, await_paused: bool):
         logger.debug(f"Pausing cameras in camera manager...")
