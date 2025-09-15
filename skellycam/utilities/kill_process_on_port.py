@@ -21,6 +21,6 @@ def kill_process_on_port(port: int):
 
 
 if __name__ == "__main__":
-    from skellycam.server.server_constants import PORT
+    from skellycam.api.server import PORT
 
     kill_process_on_port(PORT)

@@ -1,7 +1,6 @@
 // ============================================
-// BINARY FRAME PARSER (binary-frame-parser.ts)
+// BINARY FRAME PARSER (binary-frame-parser.ts) - WITH DEBUG LOGGING
 // ============================================
-// Handles parsing of binary WebSocket frame data according to Python protocol
 
 // Message types from Python protocol
 export enum MessageType {
@@ -81,21 +80,29 @@ interface FrameHeader {
     jpegLength: number;
 }
 
-/**
- * Binary frame parser for multicamera streaming protocol
- */
 export class BinaryFrameParser {
     private textDecoder = new TextDecoder();
     private tempCameraIdBuffer = new Uint8Array(16);
 
     // Performance monitoring
     private parseWarningsEnabled = true;
-    private maxParseTimeMs = 5; // Warn if parsing takes more than 5ms
+    private maxParseTimeMs = 5;
+
+    // Debug stats
+    private parseStats = {
+        totalPayloadsParsed: 0,
+        totalFramesParsed: 0,
+        totalBytesProcessed: 0,
+        totalParseErrors: 0,
+        lastParseTime: 0,
+    };
 
     constructor(options?: {
         parseWarningsEnabled?: boolean;
         maxParseTimeMs?: number;
     }) {
+        console.log('🔬 BinaryFrameParser: Constructor called with options:', options);
+
         if (options?.parseWarningsEnabled !== undefined) {
             this.parseWarningsEnabled = options.parseWarningsEnabled;
         }
@@ -110,19 +117,38 @@ export class BinaryFrameParser {
     parseFrameData(data: ArrayBuffer): ParsedPayload | null {
         const startTime = this.parseWarningsEnabled ? performance.now() : 0;
 
+        console.log(`🔬 BinaryFrameParser: Starting parse of ${data.byteLength} bytes`);
+        this.parseStats.totalBytesProcessed += data.byteLength;
+
         try {
+            // Log first 100 bytes for debugging
+            const preview = new Uint8Array(data, 0, Math.min(100, data.byteLength));
+            console.log('🔬 BinaryFrameParser: First 100 bytes:', Array.from(preview).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
             const result = this.parsePayload(data);
 
             if (this.parseWarningsEnabled) {
                 const parseTime = performance.now() - startTime;
+                this.parseStats.lastParseTime = parseTime;
+
                 if (parseTime > this.maxParseTimeMs) {
-                    console.warn(`Binary parsing took ${parseTime.toFixed(2)}ms (threshold: ${this.maxParseTimeMs}ms)`);
+                    console.warn(`⚠️ BinaryFrameParser: Slow parse! ${parseTime.toFixed(2)}ms (threshold: ${this.maxParseTimeMs}ms)`);
+                } else {
+                    console.log(`⏱️ BinaryFrameParser: Parse completed in ${parseTime.toFixed(2)}ms`);
                 }
+            }
+
+            if (result) {
+                this.parseStats.totalPayloadsParsed++;
+                console.log(`✅ BinaryFrameParser: Successfully parsed payload #${this.parseStats.totalPayloadsParsed}`);
+                console.log(`📊 BinaryFrameParser: Parse stats:`, this.parseStats);
             }
 
             return result;
         } catch (error) {
-            console.error('Failed to parse binary frame data:', error);
+            this.parseStats.totalParseErrors++;
+            console.error('❌ BinaryFrameParser: Parse failed:', error);
+            console.error('📊 BinaryFrameParser: Error stats:', this.parseStats);
             return null;
         }
     }
@@ -131,15 +157,29 @@ export class BinaryFrameParser {
         const dataView = new DataView(data);
         let offset = 0;
 
+        console.log(`🔬 BinaryFrameParser: parsePayload - buffer size: ${data.byteLength} bytes`);
+
         // Parse Payload Header
+        console.log(`🔬 BinaryFrameParser: Parsing payload header at offset ${offset}`);
         const header = this.parsePayloadHeader(dataView, offset);
-        if (!header) return null;
+        if (!header) {
+            console.error('❌ BinaryFrameParser: Failed to parse payload header');
+            return null;
+        }
+
+        console.log(`✅ BinaryFrameParser: Payload header parsed:`, {
+            messageType: header.messageType,
+            frameNumber: header.frameNumber,
+            numCameras: header.numCameras
+        });
 
         offset += PROTOCOL_SIZES.PAYLOAD_HEADER;
 
         // Parse all camera frames
         const frames: ParsedFrame[] = [];
         for (let i = 0; i < header.numCameras; i++) {
+            console.log(`🔬 BinaryFrameParser: Parsing frame ${i + 1}/${header.numCameras} at offset ${offset}`);
+
             const frame = this.parseFrame(
                 data,
                 dataView,
@@ -147,15 +187,37 @@ export class BinaryFrameParser {
                 header.frameNumber
             );
 
-            if (!frame) return null;
+            if (!frame) {
+                console.error(`❌ BinaryFrameParser: Failed to parse frame ${i + 1}/${header.numCameras}`);
+                return null;
+            }
+
+            console.log(`✅ BinaryFrameParser: Frame ${i + 1} parsed:`, {
+                cameraId: frame.parsedFrame.cameraId,
+                cameraIndex: frame.parsedFrame.cameraIndex,
+                dimensions: `${frame.parsedFrame.width}x${frame.parsedFrame.height}`,
+                jpegSize: frame.parsedFrame.jpegData.length
+            });
 
             frames.push(frame.parsedFrame);
             offset = frame.nextOffset;
+            this.parseStats.totalFramesParsed++;
         }
 
         // Verify Payload Footer
+        console.log(`🔬 BinaryFrameParser: Verifying payload footer at offset ${offset}`);
         if (!this.verifyPayloadFooter(dataView, offset, header)) {
+            console.error('❌ BinaryFrameParser: Payload footer verification failed');
             return null;
+        }
+
+        console.log('✅ BinaryFrameParser: Payload footer verified');
+
+        const totalSize = offset + PROTOCOL_SIZES.PAYLOAD_FOOTER;
+        console.log(`📏 BinaryFrameParser: Total payload size: ${totalSize} bytes (buffer: ${data.byteLength} bytes)`);
+
+        if (totalSize !== data.byteLength) {
+            console.warn(`⚠️ BinaryFrameParser: Size mismatch! Expected ${totalSize}, got ${data.byteLength}`);
         }
 
         return {
@@ -165,15 +227,23 @@ export class BinaryFrameParser {
     }
 
     private parsePayloadHeader(dataView: DataView, offset: number): PayloadHeader | null {
+        console.log(`🔬 BinaryFrameParser: parsePayloadHeader at offset ${offset}`);
+
         // Check buffer bounds
         if (dataView.byteLength < offset + PROTOCOL_SIZES.PAYLOAD_HEADER) {
-            console.error('Buffer too small for payload header');
+            console.error(`❌ BinaryFrameParser: Buffer too small for payload header. Need ${offset + PROTOCOL_SIZES.PAYLOAD_HEADER}, have ${dataView.byteLength}`);
             return null;
         }
 
         const messageType = dataView.getUint8(offset + PAYLOAD_HEADER_LAYOUT.MESSAGE_TYPE.offset);
+        console.log(`🔬 BinaryFrameParser: Message type: ${messageType} (expected ${MessageType.PAYLOAD_HEADER})`);
+
         if (messageType !== MessageType.PAYLOAD_HEADER) {
-            console.error(`Expected payload header (${MessageType.PAYLOAD_HEADER}), got ${messageType}`);
+            console.error(`❌ BinaryFrameParser: Wrong message type! Expected ${MessageType.PAYLOAD_HEADER}, got ${messageType}`);
+
+            // Log surrounding bytes for debugging
+            const contextBytes = new Uint8Array(dataView.buffer, dataView.byteOffset + offset, Math.min(32, dataView.byteLength - offset));
+            console.error('Context bytes:', Array.from(contextBytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
             return null;
         }
 
@@ -181,14 +251,16 @@ export class BinaryFrameParser {
             offset + PAYLOAD_HEADER_LAYOUT.FRAME_NUMBER.offset,
             true // little-endian
         ));
+        console.log(`🔬 BinaryFrameParser: Frame number: ${frameNumber}`);
 
         const numCameras = dataView.getInt32(
             offset + PAYLOAD_HEADER_LAYOUT.NUM_CAMERAS.offset,
             true
         );
+        console.log(`🔬 BinaryFrameParser: Number of cameras: ${numCameras}`);
 
-        if (numCameras <= 0 || numCameras > 100) { // Sanity check
-            console.error(`Invalid number of cameras: ${numCameras}`);
+        if (numCameras <= 0 || numCameras > 100) {
+            console.error(`❌ BinaryFrameParser: Invalid number of cameras: ${numCameras}`);
             return null;
         }
 
@@ -201,14 +273,19 @@ export class BinaryFrameParser {
         offset: number,
         expectedFrameNumber: number
     ): { parsedFrame: ParsedFrame; nextOffset: number } | null {
+        console.log(`🔬 BinaryFrameParser: parseFrame at offset ${offset}`);
+
         // Parse Frame Header
         const frameHeader = this.parseFrameHeader(dataView, offset);
-        if (!frameHeader) return null;
+        if (!frameHeader) {
+            console.error('❌ BinaryFrameParser: Failed to parse frame header');
+            return null;
+        }
 
         // Verify frame number matches
         if (frameHeader.frameNumber !== expectedFrameNumber) {
             console.error(
-                `Frame number mismatch: expected ${expectedFrameNumber}, got ${frameHeader.frameNumber}`
+                `❌ BinaryFrameParser: Frame number mismatch! Expected ${expectedFrameNumber}, got ${frameHeader.frameNumber}`
             );
             return null;
         }
@@ -217,12 +294,23 @@ export class BinaryFrameParser {
 
         // Check JPEG data bounds
         if (offset + frameHeader.jpegLength > dataView.byteLength) {
-            console.error('Buffer too small for JPEG data');
+            console.error(`❌ BinaryFrameParser: Buffer too small for JPEG data. Need ${offset + frameHeader.jpegLength}, have ${dataView.byteLength}`);
             return null;
         }
 
         // Extract JPEG data (create a view, not a copy, for efficiency)
         const jpegData = new Uint8Array(data, offset, frameHeader.jpegLength);
+
+        // Verify JPEG magic bytes
+        if (jpegData.length >= 2) {
+            const jpegMagic = (jpegData[0] << 8) | jpegData[1];
+            if (jpegMagic === 0xFFD8) {
+                console.log(`✅ BinaryFrameParser: Valid JPEG magic bytes found (0xFFD8)`);
+            } else {
+                console.warn(`⚠️ BinaryFrameParser: Unexpected JPEG magic bytes: 0x${jpegMagic.toString(16)}`);
+            }
+        }
+
         offset += frameHeader.jpegLength;
 
         return {
@@ -239,15 +327,19 @@ export class BinaryFrameParser {
     }
 
     private parseFrameHeader(dataView: DataView, offset: number): FrameHeader | null {
+        console.log(`🔬 BinaryFrameParser: parseFrameHeader at offset ${offset}`);
+
         // Check buffer bounds
         if (dataView.byteLength < offset + PROTOCOL_SIZES.FRAME_HEADER) {
-            console.error('Buffer too small for frame header');
+            console.error(`❌ BinaryFrameParser: Buffer too small for frame header. Need ${offset + PROTOCOL_SIZES.FRAME_HEADER}, have ${dataView.byteLength}`);
             return null;
         }
 
         const messageType = dataView.getUint8(offset + FRAME_HEADER_LAYOUT.MESSAGE_TYPE.offset);
+        console.log(`🔬 BinaryFrameParser: Frame message type: ${messageType} (expected ${MessageType.FRAME_HEADER})`);
+
         if (messageType !== MessageType.FRAME_HEADER) {
-            console.error(`Expected frame header (${MessageType.FRAME_HEADER}), got ${messageType}`);
+            console.error(`❌ BinaryFrameParser: Wrong frame message type! Expected ${MessageType.FRAME_HEADER}, got ${messageType}`);
             return null;
         }
 
@@ -258,6 +350,7 @@ export class BinaryFrameParser {
 
         // Extract camera ID efficiently
         const cameraId = this.extractCameraId(dataView, offset + FRAME_HEADER_LAYOUT.CAMERA_ID.offset);
+        console.log(`🔬 BinaryFrameParser: Camera ID: "${cameraId}"`);
 
         const cameraIndex = dataView.getInt32(
             offset + FRAME_HEADER_LAYOUT.CAMERA_INDEX.offset,
@@ -284,14 +377,23 @@ export class BinaryFrameParser {
             true
         );
 
+        console.log(`🔬 BinaryFrameParser: Frame details:`, {
+            frameNumber,
+            cameraId,
+            cameraIndex,
+            dimensions: `${width}x${height}`,
+            colorChannels,
+            jpegLength
+        });
+
         // Sanity checks
         if (width <= 0 || width > 10000 || height <= 0 || height > 10000) {
-            console.error(`Invalid image dimensions: ${width}x${height}`);
+            console.error(`❌ BinaryFrameParser: Invalid image dimensions: ${width}x${height}`);
             return null;
         }
 
-        if (jpegLength <= 0 || jpegLength > 10 * 1024 * 1024) { // Max 10MB per frame
-            console.error(`Invalid JPEG length: ${jpegLength}`);
+        if (jpegLength <= 0 || jpegLength > 10 * 1024 * 1024) {
+            console.error(`❌ BinaryFrameParser: Invalid JPEG length: ${jpegLength} bytes`);
             return null;
         }
 
@@ -315,6 +417,10 @@ export class BinaryFrameParser {
             FRAME_HEADER_LAYOUT.CAMERA_ID.size
         );
 
+        // Log raw bytes for debugging
+        console.log('🔬 BinaryFrameParser: Camera ID bytes:',
+            Array.from(cameraIdBytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
         // Find null terminator
         let cameraIdLength = 0;
         while (
@@ -324,10 +430,14 @@ export class BinaryFrameParser {
             cameraIdLength++;
         }
 
+        console.log(`🔬 BinaryFrameParser: Camera ID length: ${cameraIdLength}`);
+
         // Decode the string
-        return this.textDecoder.decode(
+        const cameraId = this.textDecoder.decode(
             cameraIdBytes.subarray(0, cameraIdLength)
         );
+
+        return cameraId;
     }
 
     private verifyPayloadFooter(
@@ -335,9 +445,11 @@ export class BinaryFrameParser {
         offset: number,
         header: PayloadHeader
     ): boolean {
+        console.log(`🔬 BinaryFrameParser: verifyPayloadFooter at offset ${offset}`);
+
         // Check buffer bounds
         if (dataView.byteLength < offset + PROTOCOL_SIZES.PAYLOAD_FOOTER) {
-            console.error('Buffer too small for payload footer');
+            console.error(`❌ BinaryFrameParser: Buffer too small for payload footer. Need ${offset + PROTOCOL_SIZES.PAYLOAD_FOOTER}, have ${dataView.byteLength}`);
             return false;
         }
 
@@ -345,9 +457,11 @@ export class BinaryFrameParser {
             offset + PAYLOAD_FOOTER_LAYOUT.MESSAGE_TYPE.offset
         );
 
+        console.log(`🔬 BinaryFrameParser: Footer message type: ${footerMessageType} (expected ${MessageType.PAYLOAD_FOOTER})`);
+
         if (footerMessageType !== MessageType.PAYLOAD_FOOTER) {
             console.error(
-                `Expected payload footer (${MessageType.PAYLOAD_FOOTER}), got ${footerMessageType}`
+                `❌ BinaryFrameParser: Wrong footer message type! Expected ${MessageType.PAYLOAD_FOOTER}, got ${footerMessageType}`
             );
             return false;
         }
@@ -362,14 +476,20 @@ export class BinaryFrameParser {
             true
         );
 
+        console.log(`🔬 BinaryFrameParser: Footer data:`, {
+            frameNumber: footerFrameNumber,
+            numCameras: footerNumCameras
+        });
+
         if (footerFrameNumber !== header.frameNumber || footerNumCameras !== header.numCameras) {
             console.error(
-                `Footer mismatch: expected ${header.frameNumber}/${header.numCameras}, ` +
-                `got ${footerFrameNumber}/${footerNumCameras}`
+                `❌ BinaryFrameParser: Footer mismatch! Header: ${header.frameNumber}/${header.numCameras}, ` +
+                `Footer: ${footerFrameNumber}/${footerNumCameras}`
             );
             return false;
         }
 
+        console.log('✅ BinaryFrameParser: Footer verification passed');
         return true;
     }
 
@@ -385,6 +505,14 @@ export class BinaryFrameParser {
                 payloadFooter: PAYLOAD_FOOTER_LAYOUT,
             },
             messageTypes: MessageType,
+            stats: this.parseStats,
         };
+    }
+
+    /**
+     * Get current parse statistics
+     */
+    getStats() {
+        return { ...this.parseStats };
     }
 }

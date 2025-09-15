@@ -18,18 +18,14 @@ const WelcomePage: React.FC = () => {
                     // Use the new base64 method that returns a data URL
                     const dataUrl = await api.assets.getLogoBase64.query();
                     if (dataUrl) {
-                        console.log('Successfully loaded logo as base64 data URL');
                         setLogoDataUrl(dataUrl);
                     } else {
-                        console.warn('Logo not found, using fallback');
-                        // Optionally set a fallback image from your public folder
-                        setLogoDataUrl('/skellycam-logo.png');
+                        console.warn('Logo image not found...');
                     }
                 }
             } catch (error) {
                 console.error('Failed to load logo:', error);
-                // Use fallback from public folder
-                setLogoDataUrl('/skellycam-logo.png');
+
             }
         };
 
@@ -79,8 +75,8 @@ const WelcomePage: React.FC = () => {
                     <Grow in={true} timeout={1000}>
                         <Box
                             sx={{
-                                width: 360,
-                                height: 360,
+                                width: 240,
+                                height: 240,
                                 mb: 4,
                                 mt: 2,
                                 display: 'flex',

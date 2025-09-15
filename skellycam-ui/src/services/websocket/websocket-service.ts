@@ -38,32 +38,47 @@ class WebSocketService {
     private reconnectTimer: NodeJS.Timeout | null = null;
     private healthCheckTimer: NodeJS.Timeout | null = null;
     private reconnectAttempts: number = 0;
-    private intentionalDisconnect: boolean = false; // Track if disconnect was intentional
+    private intentionalDisconnect: boolean = false;
     private config: WebSocketConfig = {
         reconnect: true,
         reconnectInterval: 1000,
         maxReconnectAttempts: 10,
         autoConnect: true,
-        healthCheckInterval: 30000, // 30 seconds
+        healthCheckInterval: 30000,
     };
     private url: string | null = null;
     private isInitialized: boolean = false;
     private unsubscribe: (() => void) | null = null;
 
-    private constructor() {}
+    // Debug stats
+    private debugStats = {
+        totalBinaryMessages: 0,
+        totalTextMessages: 0,
+        totalByteesReceived: 0,
+        lastMessageTime: 0,
+        messagesSinceConnect: 0,
+    };
+
+    private constructor() {
+        console.log('🔧 WebSocketService: Constructor called');
+    }
 
     static getInstance(): WebSocketService {
         if (!WebSocketService.instance) {
+            console.log('🔧 WebSocketService: Creating new instance');
             WebSocketService.instance = new WebSocketService();
         }
         return WebSocketService.instance;
     }
 
-    /**
-     * Initialize the service and set up auto-connect monitoring
-     */
     initialize(): void {
-        if (this.isInitialized) return;
+        if (this.isInitialized) {
+            console.log('⚠️ WebSocketService: Already initialized');
+            return;
+        }
+
+        console.log('🚀 WebSocketService: Initializing...');
+        console.log('🚀 WebSocketService: Binary handlers count:', this.binaryHandlers.size);
 
         // Initialize frame router
         frameRouter.initialize();
@@ -72,14 +87,15 @@ class WebSocketService {
         this.setupAutoConnect();
 
         this.isInitialized = true;
+        console.log('✅ WebSocketService: Initialization complete');
+        console.log('🔧 WebSocketService: Config:', this.config);
     }
 
-    /**
-     * Connect to WebSocket server
-     */
     connect(url?: string): void {
+        console.log('🔌 WebSocketService: Connect called');
+
         if (this.ws?.readyState === WebSocket.OPEN) {
-            console.log('WebSocket already connected');
+            console.log('⚠️ WebSocketService: Already connected');
             return;
         }
 
@@ -87,6 +103,7 @@ class WebSocketService {
         this.intentionalDisconnect = false;
         this.config.reconnect = true;
         this.reconnectAttempts = 0;
+        this.debugStats.messagesSinceConnect = 0;
 
         // Build URL if not provided
         if (!url) {
@@ -99,50 +116,47 @@ class WebSocketService {
         this.cleanup();
 
         try {
-            console.log(`Connecting to WebSocket: ${url}`);
+            console.log(`🔌 WebSocketService: Connecting to WebSocket: ${url}`);
             this.ws = new WebSocket(url);
             this.ws.binaryType = 'arraybuffer';
+            console.log('🔧 WebSocketService: WebSocket created, binaryType:', this.ws.binaryType);
             this.setupEventHandlers();
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : 'Connection failed';
-            console.error('WebSocket connection error:', errorMsg);
+            console.error('❌ WebSocketService: Connection error:', errorMsg);
             store.dispatch(websocketError(errorMsg));
         }
     }
 
-    /**
-     * Disconnect from WebSocket server
-     */
     disconnect(): void {
-        console.log('Disconnecting WebSocket');
+        console.log('🔌 WebSocketService: Disconnect called');
         this.intentionalDisconnect = true;
         this.config.reconnect = false;
         this.cleanup();
         store.dispatch(websocketDisconnected());
+
+        // Log final stats
+        console.log('📊 WebSocketService: Final stats:', this.debugStats);
     }
 
-    /**
-     * Send data through WebSocket
-     */
     send(data: string | ArrayBuffer): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
+            const dataType = typeof data === 'string' ? 'text' : 'binary';
+            const dataSize = typeof data === 'string' ? data.length : data.byteLength;
+            console.log(`📤 WebSocketService: Sending ${dataType} data, size: ${dataSize}`);
             this.ws.send(data);
         } else {
-            console.warn('Cannot send - WebSocket not connected');
+            console.warn('⚠️ WebSocketService: Cannot send - WebSocket not connected');
         }
     }
 
-    /**
-     * Send JSON message
-     */
     sendMessage(message: object): void {
+        console.log('📤 WebSocketService: Sending JSON message:', message);
         this.send(JSON.stringify(message));
     }
 
-    /**
-     * Acknowledge frame rendered
-     */
     acknowledgeFrameRendered(cameraId: string, frameNumber: number): void {
+        console.log(`📤 WebSocketService: Acknowledging frame ${frameNumber} for camera ${cameraId}`);
         this.sendMessage({
             type: 'frame_ack',
             camera_id: cameraId,
@@ -150,36 +164,34 @@ class WebSocketService {
         });
     }
 
-    /**
-     * Add custom message handler
-     */
     addMessageHandler(handler: MessageHandler): () => void {
+        console.log('➕ WebSocketService: Adding message handler');
         this.messageHandlers.add(handler);
-        return () => this.messageHandlers.delete(handler);
+        console.log('🔧 WebSocketService: Total message handlers:', this.messageHandlers.size);
+        return () => {
+            this.messageHandlers.delete(handler);
+            console.log('➖ WebSocketService: Removed message handler, remaining:', this.messageHandlers.size);
+        };
     }
 
-    /**
-     * Add custom binary handler
-     */
     addBinaryHandler(handler: BinaryHandler): () => void {
+        console.log('➕ WebSocketService: Adding binary handler');
         this.binaryHandlers.add(handler);
-        return () => this.binaryHandlers.delete(handler);
+        console.log('🔧 WebSocketService: Total binary handlers:', this.binaryHandlers.size);
+        return () => {
+            this.binaryHandlers.delete(handler);
+            console.log('➖ WebSocketService: Removed binary handler, remaining:', this.binaryHandlers.size);
+        };
     }
 
-    /**
-     * Check if WebSocket is connected
-     */
     get isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
     }
 
-    /**
-     * Update configuration
-     */
     updateConfig(config: Partial<WebSocketConfig>): void {
+        console.log('🔧 WebSocketService: Updating config:', config);
         this.config = { ...this.config, ...config };
 
-        // If auto-connect changed, update monitoring
         if (config.autoConnect !== undefined) {
             if (config.autoConnect) {
                 this.setupAutoConnect();
@@ -189,10 +201,8 @@ class WebSocketService {
         }
     }
 
-    /**
-     * Clean up resources
-     */
     destroy(): void {
+        console.log('💥 WebSocketService: Destroying service');
         this.disconnect();
         this.teardownAutoConnect();
         this.messageHandlers.clear();
@@ -203,6 +213,8 @@ class WebSocketService {
     // Private methods
 
     private cleanup(): void {
+        console.log('🧹 WebSocketService: Cleanup called');
+
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -214,6 +226,7 @@ class WebSocketService {
         }
 
         if (this.ws) {
+            console.log('🧹 WebSocketService: Closing WebSocket, current state:', this.ws.readyState);
             // Remove event handlers before closing
             this.ws.onopen = null;
             this.ws.onclose = null;
@@ -228,10 +241,18 @@ class WebSocketService {
     }
 
     private setupEventHandlers(): void {
-        if (!this.ws) return;
+        if (!this.ws) {
+            console.error('❌ WebSocketService: Cannot setup handlers - no WebSocket');
+            return;
+        }
+
+        console.log('🔧 WebSocketService: Setting up event handlers');
 
         this.ws.onopen = () => {
-            console.log('WebSocket connected');
+            console.log('✅ WebSocketService: WebSocket connected');
+            console.log('🔧 WebSocketService: ReadyState:', this.ws?.readyState);
+            console.log('🔧 WebSocketService: Binary handlers available:', this.binaryHandlers.size);
+
             this.reconnectAttempts = 0;
             store.dispatch(websocketConnected());
 
@@ -245,54 +266,103 @@ class WebSocketService {
             this.startHealthCheck();
         };
 
-        this.ws.onclose = () => {
-            console.log('WebSocket disconnected');
+        this.ws.onclose = (event) => {
+            console.log('🔌 WebSocketService: WebSocket disconnected');
+            console.log('🔧 WebSocketService: Close event code:', event.code);
+            console.log('🔧 WebSocketService: Close event reason:', event.reason);
+            console.log('🔧 WebSocketService: Was clean close?:', event.wasClean);
+
             store.dispatch(websocketDisconnected());
             this.stopHealthCheck();
 
             // Only attempt reconnect if it wasn't an intentional disconnect
             if (!this.intentionalDisconnect) {
+                console.log('🔄 WebSocketService: Will attempt reconnect');
                 this.attemptReconnect();
+            } else {
+                console.log('✋ WebSocketService: Intentional disconnect, not reconnecting');
             }
         };
 
         this.ws.onerror = (event) => {
-            console.error('WebSocket error:', event);
+            console.error('❌ WebSocketService: WebSocket error:', event);
             store.dispatch(websocketError('WebSocket error occurred'));
         };
 
         this.ws.onmessage = (event) => {
+            this.debugStats.messagesSinceConnect++;
+            this.debugStats.lastMessageTime = Date.now();
+
+            const dataType = event.data instanceof ArrayBuffer ? 'binary' : 'text';
+            const dataSize = event.data instanceof ArrayBuffer ? event.data.byteLength : event.data.length;
+
+            if (event.data instanceof ArrayBuffer) {
+                this.debugStats.totalBinaryMessages++;
+                this.debugStats.totalByteesReceived += dataSize;
+
+                // Log every 10th binary message to avoid spam
+                if (this.debugStats.totalBinaryMessages % 10 === 1) {
+                    console.log(`📥 WebSocketService: Binary message #${this.debugStats.totalBinaryMessages}, size: ${dataSize} bytes`);
+                    console.log('🔧 WebSocketService: Binary handlers to notify:', this.binaryHandlers.size);
+                }
+            } else {
+                this.debugStats.totalTextMessages++;
+                console.log(`📥 WebSocketService: Text message #${this.debugStats.totalTextMessages}: ${event.data.substring(0, 100)}...`);
+            }
+
             this.handleMessage(event.data);
         };
+
+        console.log('✅ WebSocketService: Event handlers setup complete');
     }
 
     private handleMessage(data: string | ArrayBuffer): void {
+
         if (data instanceof ArrayBuffer) {
+            console.log(`🔄 WebSocketService: Routing binary data to ${this.binaryHandlers.size} handlers`);
             // Binary data - route to handlers
-            this.binaryHandlers.forEach(handler => handler(data));
+            let handlerIndex = 0;
+            this.binaryHandlers.forEach((handler) => {
+                handlerIndex++;
+                try {
+                    console.log(`🔄 WebSocketService: Calling binary handler ${handlerIndex}/${this.binaryHandlers.size}`);
+                    handler(data);
+                } catch (error) {
+                    console.error(`❌ WebSocketService: Binary handler error:`, error);
+                }
+            });
         } else if (typeof data === 'string') {
             // Handle ping/pong
             if (data === 'ping') {
+                console.log('🏓 WebSocketService: Received ping, sending pong');
                 this.send('pong');
+                return;
+            }
+            if (data === 'pong') {
+                console.log('🏓 WebSocketService: Received pong response');
                 return;
             }
 
             // Try to parse JSON messages
             try {
                 const message = JSON.parse(data) as WebSocketMessage;
+                console.log('📨 WebSocketService: Parsed JSON message:', message.message_type || 'unknown type');
 
                 // Process internal handlers first
                 this.processInternalMessage(message);
 
                 // Then custom handlers
+                console.log(`🔄 WebSocketService: Routing to ${this.messageHandlers.size} custom handlers`);
                 this.messageHandlers.forEach(handler => handler(message));
             } catch (error) {
-                console.warn('Received non-JSON string message:', data);
+                console.warn('⚠️ WebSocketService: Received non-JSON string message:', data);
             }
         }
     }
 
     private processInternalMessage(message: WebSocketMessage): void {
+        console.log('🔧 WebSocketService: Processing internal message:', message.message_type);
+
         switch (message.message_type) {
             case 'framerate_update':
                 this.handleFramerateUpdate(message as FramerateUpdateMessage);
@@ -301,13 +371,13 @@ class WebSocketService {
                 this.handleLogRecord(message as LogRecordMessage);
                 break;
             default:
-                // Unknown message type - let custom handlers deal with it
-                console.warn(`Unhandled message type: ${JSON.stringify(message).slice(0, 50)}...`);
+                console.warn(`⚠️ WebSocketService: Unhandled message type: ${JSON.stringify(message).slice(0, 100)}...`);
                 break;
         }
     }
 
     private handleFramerateUpdate(message: FramerateUpdateMessage): void {
+        console.log('📊 WebSocketService: Framerate update received');
         if (message.backend_framerate) {
             store.dispatch(backendFramerateUpdated(message.backend_framerate));
         }
@@ -317,26 +387,27 @@ class WebSocketService {
     }
 
     private handleLogRecord(message: LogRecordMessage): void {
+        console.log('📝 WebSocketService: Log record received:', message.levelname);
         store.dispatch(logAdded(message as LogRecord));
     }
 
     private attemptReconnect(): void {
-        // Don't reconnect if it was intentional or reconnect is disabled
         if (this.intentionalDisconnect || !this.config.reconnect || !this.url) {
+            console.log('🚫 WebSocketService: Reconnect skipped (intentional:', this.intentionalDisconnect,
+                ', reconnect enabled:', this.config.reconnect, ', url:', !!this.url, ')');
             return;
         }
 
-        // Check if server is still alive before attempting reconnect
         const state = store.getState();
         const isServerAlive = selectIsServerAlive(state);
 
         if (!isServerAlive) {
-            console.log('Server not connected, skipping WebSocket reconnect');
+            console.log('💤 WebSocketService: Server not connected, skipping reconnect');
             return;
         }
 
         if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-            console.error('Max reconnection attempts reached');
+            console.error('❌ WebSocketService: Max reconnection attempts reached');
             store.dispatch(websocketError('Max reconnection attempts reached'));
             return;
         }
@@ -349,7 +420,7 @@ class WebSocketService {
             10000
         );
 
-        console.log(`Attempting reconnect ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${delay}ms`);
+        console.log(`🔄 WebSocketService: Reconnect attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${delay}ms`);
 
         this.reconnectTimer = setTimeout(() => {
             if (this.url && !this.intentionalDisconnect) {
@@ -359,7 +430,12 @@ class WebSocketService {
     }
 
     private setupAutoConnect(): void {
-        if (!this.config.autoConnect) return;
+        if (!this.config.autoConnect) {
+            console.log('🚫 WebSocketService: Auto-connect disabled');
+            return;
+        }
+
+        console.log('🔧 WebSocketService: Setting up auto-connect');
 
         // Clean up existing subscription
         this.teardownAutoConnect();
@@ -373,16 +449,15 @@ class WebSocketService {
 
             // Only react to changes in server status
             if (isServerAlive !== lastServerStatus) {
+                console.log('🔄 WebSocketService: Server status changed from', lastServerStatus, 'to', isServerAlive);
                 lastServerStatus = isServerAlive;
 
                 if (isServerAlive && !this.isConnected && !this.intentionalDisconnect) {
-                    // Server became available and we're not connected
-                    console.log('Server became available, auto-connecting WebSocket');
+                    console.log('🚀 WebSocketService: Server became available, auto-connecting');
                     this.connect();
                 } else if (!isServerAlive && this.isConnected) {
-                    // Server became unavailable while we're connected
-                    console.log('Server became unavailable, disconnecting WebSocket');
-                    this.intentionalDisconnect = true; // Prevent reconnect attempts
+                    console.log('💤 WebSocketService: Server became unavailable, disconnecting');
+                    this.intentionalDisconnect = true;
                     this.cleanup();
                     store.dispatch(websocketDisconnected());
                 }
@@ -395,13 +470,14 @@ class WebSocketService {
         lastServerStatus = isServerAlive;
 
         if (isServerAlive && !this.isConnected && !this.intentionalDisconnect) {
-            console.log('Server available on init, auto-connecting WebSocket');
+            console.log('🚀 WebSocketService: Server available on init, auto-connecting');
             this.connect();
         }
     }
 
     private teardownAutoConnect(): void {
         if (this.unsubscribe) {
+            console.log('🔧 WebSocketService: Tearing down auto-connect');
             this.unsubscribe();
             this.unsubscribe = null;
         }
@@ -410,8 +486,10 @@ class WebSocketService {
     private startHealthCheck(): void {
         this.stopHealthCheck();
 
+        console.log('💓 WebSocketService: Starting health check, interval:', this.config.healthCheckInterval);
         this.healthCheckTimer = setInterval(() => {
             if (this.isConnected) {
+                console.log('💓 WebSocketService: Sending health check ping');
                 this.send('ping');
             }
         }, this.config.healthCheckInterval);
@@ -419,9 +497,22 @@ class WebSocketService {
 
     private stopHealthCheck(): void {
         if (this.healthCheckTimer) {
+            console.log('💔 WebSocketService: Stopping health check');
             clearInterval(this.healthCheckTimer);
             this.healthCheckTimer = null;
         }
+    }
+
+    // Debug helper to get current stats
+    getDebugStats() {
+        return {
+            ...this.debugStats,
+            isConnected: this.isConnected,
+            binaryHandlers: this.binaryHandlers.size,
+            messageHandlers: this.messageHandlers.size,
+            reconnectAttempts: this.reconnectAttempts,
+            wsReadyState: this.ws?.readyState,
+        };
     }
 }
 

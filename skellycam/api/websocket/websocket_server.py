@@ -101,6 +101,7 @@ class WebsocketServer:
                         for camera_group_id, (frame_number,
                                               multiframe_timestamp,
                                               payload_bytes) in new_frontend_payloads.items():
+                            print(f"Sending frame {frame_number} from camera group {camera_group_id} to frontend with length {len(payload_bytes)} bytes")
                             await self.websocket.send_bytes(payload_bytes)
                             self.last_sent_frame_number = frame_number
                             if camera_group_id not in self._frontend_framerate_trackers:
@@ -185,8 +186,13 @@ class WebsocketServer:
                                 logger.error(f"Failed to decode JSON message: {e}")
                         else:
                             # Handle plain text messages
-                            logger.info(f"Websocket received message: `{text_content}`")
-                            # Add any specific handling for plain text commands here
+                            if text_content.startswith("ping"):
+                                await self.websocket.send_text("pong")
+                            elif text_content.startswith("pong"):
+                                pass
+                            else:
+                                logger.info(f"Websocket received message: `{text_content}`")
+
 
 
                     else:

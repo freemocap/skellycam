@@ -5,7 +5,7 @@ import sys
 from contextlib import suppress
 
 import logging
-from skellycam.server.server_manager import ServerManager
+from skellycam.api.server.server_manager import ServerManager
 
 
 logger = logging.getLogger(__name__)

@@ -4,11 +4,10 @@ import logging
 import multiprocessing
 
 import uvicorn
-from fastapi import FastAPI
 
 from skellycam.skellycam_app.skellycam_app_factory import create_fastapi_app
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
-from skellycam.server.server_constants import HOSTNAME, PORT
+from skellycam.api.server.server_constants import HOSTNAME, PORT
 logger = logging.getLogger(__name__)
 
 

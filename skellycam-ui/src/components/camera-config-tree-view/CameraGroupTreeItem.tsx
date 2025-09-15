@@ -35,7 +35,7 @@ export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
                 <CameraTreeItem
                     key={camera.cameraId}
                     camera={camera}
-                    isExpanded={expandedItems.includes(`camera-${camera.cameraId}`)}
+                    isExpanded={expandedItems?.includes(`camera-${camera.cameraId}`)}
                 />
             ))}
         </TreeItem>

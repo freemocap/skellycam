@@ -1,3 +1,4 @@
+
 """Top-level package for skellycam."""
 
 __author__ = """Skelly FreeMoCap"""
@@ -11,6 +12,9 @@ __repo_issues_url__ = f"{__repo_url__}/issues"
 __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
 __package_root__ = __file__.replace("/__init__.py", "")
+
+import multiprocessing
+multiprocessing.freeze_support()
 
 # from skellycam.api.routers import SKELLYCAM_ROUTERS
 # from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs

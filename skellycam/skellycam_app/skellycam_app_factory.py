@@ -18,7 +18,7 @@ from skellycam.api.http.app.shutdown import shutdown_router
 from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routers import SKELLYCAM_ROUTERS
-from skellycam.server.server_constants import APP_URL
+from skellycam.api.server.server_constants import APP_URL
 from skellycam.skellycam_app.skellycam_app import create_skellycam_app
 from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,

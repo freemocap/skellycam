@@ -1,13 +1,9 @@
 // ============================================
-// FRAME ROUTER (frame-router.ts)
+// FRAME ROUTER (frame-router.ts) - WITH DEBUG LOGGING
 // ============================================
-// High-performance frame routing and metadata management for multicamera streaming
 
-
-// Type definitions
 import {BinaryFrameParser, ParsedFrame, ParsedPayload} from "@/services/frames/binary-frame-processor";
 import {websocketService} from "@/services";
-
 
 export interface FrameMetadata {
     cameraId: string;
@@ -44,9 +40,6 @@ interface FrameRouterOptions {
     fpsUpdateIntervalMs?: number;
 }
 
-/**
- * Frame Router - manages frame distribution and metadata for multicamera streaming
- */
 class FrameRouter {
     private static instance: FrameRouter;
 
@@ -75,9 +68,13 @@ class FrameRouter {
         totalFramesProcessed: 0,
         totalFramesDropped: 0,
         lastProcessingTime: 0,
+        totalBinaryMessagesReceived: 0,
+        lastBinaryMessageTime: 0,
+        lastFrameNumber: -1,
     };
 
     private constructor(options?: FrameRouterOptions) {
+        console.log('🎬 FrameRouter: Constructor called');
         if (options) {
             this.options = { ...this.options, ...options };
         }
@@ -90,6 +87,7 @@ class FrameRouter {
 
     static getInstance(options?: FrameRouterOptions): FrameRouter {
         if (!FrameRouter.instance) {
+            console.log('🎬 FrameRouter: Creating new instance');
             FrameRouter.instance = new FrameRouter(options);
         }
         return FrameRouter.instance;
@@ -100,68 +98,92 @@ class FrameRouter {
     // ============================================
 
     initialize(): void {
-        // Register binary handler with WebSocket manager
-        websocketService.addBinaryHandler((data: ArrayBuffer) => {
-            this.processBinaryFrame(data).then(
-                () => {},
+        console.log('🎬 FrameRouter: Initializing...');
 
+        // Register binary handler with WebSocket manager
+        const unsubscribe = websocketService.addBinaryHandler((data: ArrayBuffer) => {
+            console.log(`🎬 FrameRouter: Binary handler called, data size: ${data.byteLength} bytes`);
+            this.stats.totalBinaryMessagesReceived++;
+            this.stats.lastBinaryMessageTime = Date.now();
+
+            // Log every 10th message to avoid spam
+            if (this.stats.totalBinaryMessagesReceived % 10 === 1) {
+                console.log(`📊 FrameRouter Stats: ${this.stats.totalBinaryMessagesReceived} binary messages received`);
+                console.log(`📊 FrameRouter: Last frame number: ${this.stats.lastFrameNumber}`);
+                console.log(`📊 FrameRouter: Active cameras: ${this.frameMetadata.size}`);
+                console.log(`📊 FrameRouter: Subscribed handlers: ${this.handlers.size}`);
+            }
+
+            this.processBinaryFrame(data).then(
+                () => {
+                    if (this.stats.totalBinaryMessagesReceived % 10 === 1) {
+                        console.log(`✅ FrameRouter: Successfully processed frame`);
+                    }
+                }
             ).catch(
-                (error) => { console.error('Unhandled error in processBinaryFrame:', error);
+                (error) => {
+                    console.error('❌ FrameRouter: Error in processBinaryFrame:', error);
                 }
             )
         });
 
+        console.log('🎬 FrameRouter: Binary handler registered with WebSocket service');
+
         // Start FPS update timer
         this.startFPSUpdates();
 
-        console.log('FrameRouter initialized with options:', this.options);
+        console.log('✅ FrameRouter: Initialization complete with options:', this.options);
     }
 
     destroy(): void {
+        console.log('💥 FrameRouter: Destroying...');
         this.stopFPSUpdates();
         this.handlers.clear();
         this.frameMetadata.clear();
         this.metadataChangeHandlers.clear();
         this.frameCounters.clear();
 
-        console.log('FrameRouter destroyed. Stats:', this.getStats());
+        console.log('📊 FrameRouter: Final stats:', this.getStats());
     }
 
     // ============================================
     // PUBLIC API - SUBSCRIPTIONS
     // ============================================
 
-    /**
-     * Subscribe to frame updates for a specific camera
-     */
     subscribe(cameraId: string, handler: FrameHandler): () => void {
+        console.log(`➕ FrameRouter: Subscribing to camera ${cameraId}`);
+
         if (!this.handlers.has(cameraId)) {
             this.handlers.set(cameraId, new Set());
         }
         this.handlers.get(cameraId)!.add(handler);
 
+        console.log(`✅ FrameRouter: Subscribed to ${cameraId}, total handlers: ${this.handlers.get(cameraId)!.size}`);
+
         return () => {
             const handlers = this.handlers.get(cameraId);
             if (handlers) {
                 handlers.delete(handler);
+                console.log(`➖ FrameRouter: Unsubscribed from ${cameraId}, remaining handlers: ${handlers.size}`);
                 if (handlers.size === 0) {
                     this.handlers.delete(cameraId);
+                    console.log(`🗑️ FrameRouter: Removed all handlers for ${cameraId}`);
                 }
             }
         };
     }
 
-    /**
-     * Subscribe to metadata changes for all cameras
-     */
     subscribeToMetadataChanges(handler: MetadataChangeHandler): () => void {
+        console.log('➕ FrameRouter: Adding metadata change handler');
         this.metadataChangeHandlers.add(handler);
 
         // Immediately call with current metadata
         handler(new Map(this.frameMetadata));
+        console.log(`✅ FrameRouter: Metadata handler added, total: ${this.metadataChangeHandlers.size}`);
 
         return () => {
             this.metadataChangeHandlers.delete(handler);
+            console.log(`➖ FrameRouter: Metadata handler removed, remaining: ${this.metadataChangeHandlers.size}`);
         };
     }
 
@@ -169,38 +191,30 @@ class FrameRouter {
     // PUBLIC API - METADATA ACCESS
     // ============================================
 
-    /**
-     * Get current metadata for a specific camera
-     */
     getCameraMetadata(cameraId: string): FrameMetadata | undefined {
-        return this.frameMetadata.get(cameraId);
+        const metadata = this.frameMetadata.get(cameraId);
+        console.log(`🔍 FrameRouter: Getting metadata for ${cameraId}:`, metadata ? 'found' : 'not found');
+        return metadata;
     }
 
-    /**
-     * Get all camera metadata
-     */
     getAllCameraMetadata(): Map<string, FrameMetadata> {
+        console.log(`🔍 FrameRouter: Getting all metadata, ${this.frameMetadata.size} cameras`);
         return new Map(this.frameMetadata);
     }
 
-    /**
-     * Get list of active camera IDs
-     */
     getActiveCameraIds(): string[] {
-        return Array.from(this.frameMetadata.keys());
+        const ids = Array.from(this.frameMetadata.keys());
+        console.log(`🔍 FrameRouter: Active camera IDs:`, ids);
+        return ids;
     }
 
-    /**
-     * Get current FPS for a camera
-     */
     getCameraFPS(cameraId: string): number | null {
         const counter = this.frameCounters.get(cameraId);
-        return counter?.fps ?? null;
+        const fps = counter?.fps ?? null;
+        console.log(`📊 FrameRouter: FPS for ${cameraId}: ${fps}`);
+        return fps;
     }
 
-    /**
-     * Get performance statistics
-     */
     getStats() {
         return {
             ...this.stats,
@@ -213,28 +227,21 @@ class FrameRouter {
     // PUBLIC API - MANAGEMENT
     // ============================================
 
-    /**
-     * Remove a camera and its metadata
-     */
     removeCamera(cameraId: string): void {
+        console.log(`🗑️ FrameRouter: Removing camera ${cameraId}`);
         this.frameMetadata.delete(cameraId);
         this.frameCounters.delete(cameraId);
         this.handlers.delete(cameraId);
         this.notifyMetadataChange();
     }
 
-    /**
-     * Remove stale cameras that haven't received frames recently
-     */
     removeStaleCamera(cameraId: string): void {
+        console.log(`⏰ FrameRouter: Removing stale camera ${cameraId}`);
         this.frameMetadata.delete(cameraId);
         this.frameCounters.delete(cameraId);
         this.notifyMetadataChange();
     }
 
-    /**
-     * Check for and remove stale cameras
-     */
     checkForStaleCameras(): string[] {
         const now = Date.now();
         const staleCameras: string[] = [];
@@ -247,26 +254,22 @@ class FrameRouter {
         }
 
         if (staleCameras.length > 0) {
-            console.warn(`Removed ${staleCameras.length} stale cameras:`, staleCameras);
+            console.warn(`⏰ FrameRouter: Removed ${staleCameras.length} stale cameras:`, staleCameras);
         }
 
         return staleCameras;
     }
 
-    /**
-     * Update configuration options
-     */
     updateOptions(options: Partial<FrameRouterOptions>): void {
+        console.log('🔧 FrameRouter: Updating options:', options);
         this.options = { ...this.options, ...options };
 
-        // Update parser if performance warnings changed
         if (options.enablePerformanceWarnings !== undefined) {
             this.parser = new BinaryFrameParser({
                 parseWarningsEnabled: options.enablePerformanceWarnings,
             });
         }
 
-        // Restart FPS updates if interval changed
         if (options.fpsUpdateIntervalMs !== undefined) {
             this.stopFPSUpdates();
             this.startFPSUpdates();
@@ -279,23 +282,34 @@ class FrameRouter {
 
     private async processBinaryFrame(data: ArrayBuffer): Promise<void> {
         const processingStart = performance.now();
+        console.log(`🔄 FrameRouter: Processing binary frame, size: ${data.byteLength} bytes`);
 
         try {
             // Parse the binary data
+            console.log('🔍 FrameRouter: Parsing binary data...');
             const payload = this.parser.parseFrameData(data);
+
             if (!payload) {
+                console.error('❌ FrameRouter: Parser returned null payload');
                 this.stats.totalFramesDropped++;
                 return;
             }
+
+            console.log(`✅ FrameRouter: Parsed payload - Frame #${payload.frameNumber}, ${payload.frames.length} cameras`);
+            this.stats.lastFrameNumber = payload.frameNumber;
 
             // Process the parsed payload
             await this.processPayload(payload);
 
             // Send acknowledgment
+            console.log(`📤 FrameRouter: Sending frame acknowledgment for frame ${payload.frameNumber}`);
             this.sendFrameAcknowledgment(payload);
 
         } catch (error) {
-            console.error('Frame processing error:', error);
+            console.error('❌ FrameRouter: Frame processing error:', error);
+            if (error instanceof Error) {
+                console.error('Stack trace:', error.stack);
+            }
             this.stats.totalFramesDropped++;
         } finally {
             // Track processing time
@@ -305,21 +319,28 @@ class FrameRouter {
             if (this.options.enablePerformanceWarnings &&
                 processingTime > this.options.maxProcessingTimeMs) {
                 console.warn(
-                    `Frame processing took ${processingTime.toFixed(2)}ms ` +
+                    `⚠️ FrameRouter: Slow processing! Took ${processingTime.toFixed(2)}ms ` +
                     `(threshold: ${this.options.maxProcessingTimeMs}ms)`
                 );
+            } else if (this.stats.totalBinaryMessagesReceived % 10 === 1) {
+                console.log(`⏱️ FrameRouter: Processing time: ${processingTime.toFixed(2)}ms`);
             }
         }
     }
 
     private async processPayload(payload: ParsedPayload): Promise<void> {
+        console.log(`🔄 FrameRouter: Processing payload with ${payload.frames.length} frames`);
+
         let metadataChanged = false;
         const bitmapPromises: Promise<void>[] = [];
 
         for (const frame of payload.frames) {
+            console.log(`📷 FrameRouter: Processing frame for camera ${frame.cameraId} (${frame.width}x${frame.height})`);
+
             // Update metadata
             if (this.updateFrameMetadata(frame)) {
                 metadataChanged = true;
+                console.log(`📝 FrameRouter: Metadata changed for ${frame.cameraId}`);
             }
 
             // Update frame counter
@@ -329,8 +350,11 @@ class FrameRouter {
             // Skip if no subscribers
             const handlers = this.handlers.get(frame.cameraId);
             if (!handlers || handlers.size === 0) {
+                console.log(`⏭️ FrameRouter: No handlers for ${frame.cameraId}, skipping bitmap creation`);
                 continue;
             }
+
+            console.log(`🎯 FrameRouter: ${handlers.size} handlers for ${frame.cameraId}, creating bitmap`);
 
             // Create bitmap and notify handlers
             const promise = this.processFrame(frame, handlers);
@@ -339,48 +363,60 @@ class FrameRouter {
 
         // Notify metadata changes if needed
         if (metadataChanged) {
+            console.log('📢 FrameRouter: Notifying metadata changes');
             this.notifyMetadataChange();
         }
 
         // Wait for all bitmaps to be processed
+        console.log(`⏳ FrameRouter: Waiting for ${bitmapPromises.length} bitmap operations`);
         await Promise.all(bitmapPromises);
+        console.log(`✅ FrameRouter: All bitmaps processed for frame ${payload.frameNumber}`);
     }
 
     private async processFrame(
         frame: ParsedFrame,
         handlers: Set<FrameHandler>
     ): Promise<void> {
+        console.log(`🖼️ FrameRouter: Creating bitmap for ${frame.cameraId}, JPEG size: ${frame.jpegData.length} bytes`);
+
         try {
             // Create blob and bitmap
             const blob = new Blob([frame.jpegData], { type: 'image/jpeg' });
+            console.log(`📦 FrameRouter: Created blob for ${frame.cameraId}, size: ${blob.size}`);
+
             const bitmap = await createImageBitmap(blob, {
                 premultiplyAlpha: 'none',
                 colorSpaceConversion: 'none',
             });
 
+            console.log(`✅ FrameRouter: Bitmap created for ${frame.cameraId}: ${bitmap.width}x${bitmap.height}`);
+
             // Get current metadata with latest FPS
             const metadata = this.frameMetadata.get(frame.cameraId);
             if (!metadata) {
+                console.error(`❌ FrameRouter: No metadata for ${frame.cameraId}, closing bitmap`);
                 bitmap.close();
                 return;
             }
 
             // Notify all handlers
-            handlers.forEach(handler => {
+            console.log(`📢 FrameRouter: Notifying ${handlers.size} handlers for ${frame.cameraId}`);
+            handlers.forEach((handler) => {
                 try {
                     handler(bitmap, { ...metadata });
                 } catch (error) {
-                    console.error(`Frame handler error for camera ${frame.cameraId}:`, error);
+                    console.error(`❌ FrameRouter: Handler error for ${frame.cameraId}:`, error);
                 }
             });
 
             // Schedule bitmap cleanup
             requestAnimationFrame(() => {
                 bitmap.close();
+                console.log(`🗑️ FrameRouter: Bitmap closed for ${frame.cameraId}`);
             });
 
         } catch (error) {
-            console.error(`Failed to create bitmap for camera ${frame.cameraId}:`, error);
+            console.error(`❌ FrameRouter: Failed to create bitmap for ${frame.cameraId}:`, error);
             this.stats.totalFramesDropped++;
         }
     }
@@ -397,6 +433,7 @@ class FrameRouter {
             existing.height !== frame.height ||
             existing.cameraIndex !== frame.cameraIndex) {
 
+            console.log(`📝 FrameRouter: Creating/updating metadata for ${frame.cameraId}`);
             this.frameMetadata.set(frame.cameraId, {
                 cameraId: frame.cameraId,
                 cameraIndex: frame.cameraIndex,
@@ -416,12 +453,13 @@ class FrameRouter {
     }
 
     private notifyMetadataChange(): void {
+        console.log(`📢 FrameRouter: Notifying ${this.metadataChangeHandlers.size} metadata change handlers`);
         const metadataCopy = new Map(this.frameMetadata);
         this.metadataChangeHandlers.forEach(handler => {
             try {
                 handler(metadataCopy);
             } catch (error) {
-                console.error('Metadata change handler error:', error);
+                console.error('❌ FrameRouter: Metadata change handler error:', error);
             }
         });
     }
@@ -433,6 +471,7 @@ class FrameRouter {
     private startFPSUpdates(): void {
         this.stopFPSUpdates();
 
+        console.log(`⏱️ FrameRouter: Starting FPS updates, interval: ${this.options.fpsUpdateIntervalMs}ms`);
         this.fpsUpdateInterval = window.setInterval(() => {
             this.updateAllFPS();
         }, this.options.fpsUpdateIntervalMs);
@@ -440,6 +479,7 @@ class FrameRouter {
 
     private stopFPSUpdates(): void {
         if (this.fpsUpdateInterval !== null) {
+            console.log('⏹️ FrameRouter: Stopping FPS updates');
             clearInterval(this.fpsUpdateInterval);
             this.fpsUpdateInterval = null;
         }
@@ -453,7 +493,6 @@ class FrameRouter {
             const elapsed = now - counter.startTime;
             if (elapsed >= this.options.fpsUpdateIntervalMs) {
                 const newFPS = Math.round((counter.count / elapsed) * 1000);
-
                 counter.fps = newFPS;
                 counter.count = 0;
                 counter.startTime = now;
@@ -476,6 +515,7 @@ class FrameRouter {
         let counter = this.frameCounters.get(cameraId);
 
         if (!counter) {
+            console.log(`📊 FrameRouter: Creating frame counter for ${cameraId}`);
             counter = { count: 1, startTime: now, fps: 0 };
             this.frameCounters.set(cameraId, counter);
         } else {
@@ -498,6 +538,8 @@ class FrameRouter {
                 return acc;
             }, {} as Record<string, { width: number; height: number }>)
         };
+
+        console.log(`📤 FrameRouter: Sending ACK for frame ${ack.frameNumber} with ${Object.keys(ack.displaySizes).length} display sizes`);
 
         websocketService.send(JSON.stringify({
             type: 'frame_ack',

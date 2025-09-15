@@ -7,7 +7,6 @@ import logging
 import multiprocessing
 import sys
 
-from skellycam.server.server_manager import ServerManager
 from skellycam.skellycam_app.skellycam_runner import SkellyCamRunner
 
 logger = logging.getLogger(__name__)
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Main entry point."""
-    multiprocessing.freeze_support()
 
     # Configure logging
     logging.basicConfig(

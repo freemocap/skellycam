@@ -7,33 +7,27 @@ import {
 } from "@mui/material";
 import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import VideocamIcon from "@mui/icons-material/Videocam";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import ChevronRight from "@mui/icons-material/ChevronRight";
+import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
 
 import { CameraConfigTreeViewHeader } from "./CameraConfigTreeViewHeader";
 import { CameraGroupTreeItem } from "./CameraGroupTreeItem";
 import { NoCamerasPlaceholder } from "./NoCamerasPlaceholder";
 import {
+    cameraSelectionToggled,
     selectIsServerAlive,
     selectIsWebSocketConnected,
     useAppDispatch,
-    useAppSelector
-} from "@/store";
-import {
+    useAppSelector,
     selectAllCameras,
     selectCameraLoadingState,
     selectCameraConnectionStatus,
     selectSelectedCameras,
-} from "@/store/slices/cameras/cameras-selectors";
-import {
     detectCameras,
-} from "@/store/slices/cameras/cameras-thunks";
-import {
-    allCamerasSelected,
-    allCamerasDeselected,
-} from "@/store/slices/cameras/cameras-slice";
-import { CameraDevice } from "@/store/slices/cameras/cameras-types";
+    CameraDevice
+} from "@/store";
+
 
 export const CameraConfigTreeView: React.FC = () => {
     const theme = useTheme();
@@ -79,40 +73,6 @@ export const CameraConfigTreeView: React.FC = () => {
         setIsPaused(!isPaused);
     };
 
-    // Expand/Collapse all handlers
-    const handleExpandAll = (): void => {
-        const allItemIds = [
-            "cameras-root",
-            "cameras-connected",
-            "cameras-available",
-            ...cameras.map(cam => `camera-${cam.cameraId}`),
-            ...cameras.map(cam => `camera-${cam.cameraId}-config`)
-        ];
-        setExpandedItems(allItemIds);
-    };
-
-    const handleCollapseAll = (): void => {
-        setExpandedItems(["cameras-root"]); // Keep root expanded
-    };
-
-    // Select/Deselect all handlers
-    const handleSelectAll = (): void => {
-        // Toggle selection for all cameras that are not selected
-        cameras.forEach((camera: CameraDevice) => {
-            if (!camera.selected) {
-                dispatch(cameraSelectionToggled(camera.cameraId));
-            }
-        });
-    };
-
-    const handleDeselectAll = (): void => {
-        // Toggle selection for all cameras that are selected
-        cameras.forEach((camera: CameraDevice) => {
-            if (camera.selected) {
-                dispatch(cameraSelectionToggled(camera.cameraId));
-            }
-        });
-    };
 
     return (
         <Paper
@@ -127,8 +87,8 @@ export const CameraConfigTreeView: React.FC = () => {
                 expandedItems={expandedItems}
                 onExpandedItemsChange={handleExpandedItemsChange}
                 slots={{
-                    collapseIcon: ExpandMoreIcon,
-                    expandIcon: ChevronRightIcon,
+                    collapseIcon: ExpandMore,
+                    expandIcon: ChevronRight,
                 }}
             >
                 <TreeItem
@@ -140,10 +100,6 @@ export const CameraConfigTreeView: React.FC = () => {
                             isLoading={isLoading}
                             isPaused={isPaused}
                             onPauseToggle={handlePauseToggle}
-                            onExpandAll={handleExpandAll}
-                            onCollapseAll={handleCollapseAll}
-                            onSelectAll={handleSelectAll}
-                            onDeselectAll={handleDeselectAll}
                             hasSelectedCameras={hasSelectedCameras}
                         />
                     }
@@ -158,7 +114,7 @@ export const CameraConfigTreeView: React.FC = () => {
                                     groupId="cameras-connected"
                                     title="Connected Cameras"
                                     cameras={connectedCameras}
-                                    icon={<VideocamIcon color="success" />}
+                                    icon={<VideoCameraFrontIcon color="success" />}
                                     expandedItems={expandedItems}
                                 />
                             )}
@@ -169,7 +125,7 @@ export const CameraConfigTreeView: React.FC = () => {
                                     groupId="cameras-available"
                                     title="Available Cameras"
                                     cameras={availableCameras}
-                                    icon={<VideocamIcon color="info" />}
+                                    icon={<VideoCameraFrontIcon color="info" />}
                                     expandedItems={expandedItems}
                                 />
                             )}

@@ -39,10 +39,6 @@ interface CameraConfigTreeViewHeaderProps {
     isLoading: boolean;
     isPaused: boolean;
     onPauseToggle: () => void;
-    onExpandAll: () => void;
-    onCollapseAll: () => void;
-    onSelectAll: () => void;
-    onDeselectAll: () => void;
     hasSelectedCameras: boolean;
 }
 
@@ -52,10 +48,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                                                                           isLoading,
                                                                                           isPaused,
                                                                                           onPauseToggle,
-                                                                                          onExpandAll,
-                                                                                          onCollapseAll,
-                                                                                          onSelectAll,
-                                                                                          onDeselectAll,
                                                                                           hasSelectedCameras,
                                                                                       }) => {
     const theme = useTheme();
@@ -92,16 +84,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
         onPauseToggle();
     };
 
-    const handleUpdateConfigs = async (): Promise<void> => {
-        if (isConnected) {
-            try {
-                await dispatch(updateCameraConfigs()).unwrap();
-                console.log('Updated camera configurations');
-            } catch (error) {
-                console.error('Error updating configs:', error);
-            }
-        }
-    };
 
     return (
         <Box
@@ -119,55 +101,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
             </Typography>
 
             <Stack direction="row" spacing={1} sx={{ mr: 2 }}>
-                {/* Expand/Collapse All */}
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Tooltip title="Expand all">
-                        <IconButton
-                            size="small"
-                            onClick={onExpandAll}
-                            sx={{ color: "inherit" }}
-                        >
-                            <UnfoldMoreIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Collapse all">
-                        <IconButton
-                            size="small"
-                            onClick={onCollapseAll}
-                            sx={{ color: "inherit" }}
-                        >
-                            <UnfoldLessIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-
-                <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
-
-                {/* Select/Deselect All */}
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Tooltip title="Select all">
-                        <IconButton
-                            size="small"
-                            onClick={onSelectAll}
-                            disabled={cameraCount === 0}
-                            sx={{ color: "inherit" }}
-                        >
-                            <CheckBoxIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Deselect all">
-                        <IconButton
-                            size="small"
-                            onClick={onDeselectAll}
-                            disabled={!hasSelectedCameras}
-                            sx={{ color: "inherit" }}
-                        >
-                            <CheckBoxOutlineBlankIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-
-                <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.3)' }} />
 
                 {/* Connect/Disconnect Button */}
                 {!isConnected ? (
@@ -179,7 +112,14 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                 disabled={!hasSelected || isLoading}
                                 sx={{ color: "inherit" }}
                             >
-                                <VideocamIcon />
+                                <VideocamIcon sx={{
+                                    color: theme.palette.secondary.main,
+                                    border: `2px solid ${theme.palette.secondary.main}`,
+                                    borderRadius: '4px',
+                                    padding: '2px',
+                                    scale: '1.6'
+
+                                }}/>
                             </IconButton>
                         </span>
                     </Tooltip>
@@ -189,9 +129,10 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                         <Tooltip title="Apply configuration changes">
                             <IconButton
                                 size="small"
-                                onClick={handleUpdateConfigs}
+                                onClick={handleConnectCameras}
                                 disabled={isLoading}
                                 sx={{ color: "inherit" }}
+
                             >
                                 <SystemUpdateAltIcon />
                             </IconButton>
