@@ -6,9 +6,9 @@ import sys
 
 import uvicorn
 
+from skellycam.api.server_constants import HOSTNAME, PORT
 from skellycam.skellycam_app.skellycam_app_factory import create_fastapi_app
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
-from skellycam.api.server_constants import HOSTNAME, PORT
 
 logger = logging.getLogger(__name__)
 

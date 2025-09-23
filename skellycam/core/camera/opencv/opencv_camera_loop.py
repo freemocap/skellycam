@@ -11,7 +11,7 @@ from skellycam.core.camera.opencv.opencv_helpers.handle_video_recording_loop imp
 from skellycam.core.camera.opencv.opencv_helpers.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
@@ -19,7 +19,7 @@ from skellycam.utilities.wait_functions import wait_1ms, wait_10us
 logger = logging.getLogger(__name__) 
 
 
-def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
+def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                            config: CameraConfig,
                            cv2_video_capture: cv2.VideoCapture,
                            frame_rec_array: np.recarray,

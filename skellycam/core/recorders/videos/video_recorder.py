@@ -8,7 +8,6 @@ import cv2
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -94,15 +93,6 @@ class VideoRecorder:
         # return self._create_metadata_objects()
         return self.video_frame_metadata
 
-    def _create_metadata_objects(self) -> list[FrameMetadata]:
-        """
-        Create a list of FrameMetadata objects from the deque of video frame metadata.
-        This is useful for saving metadata to a file or for further processing.
-        """
-        metadata_objects = []
-        for metadata in self.video_frame_metadata:
-            metadata_objects.append(FrameMetadata.from_recarray(metadata))
-        return metadata_objects
 
     def _initialize_video_writer(self):
 

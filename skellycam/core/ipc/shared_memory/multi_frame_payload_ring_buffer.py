@@ -5,7 +5,6 @@ import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
 
 logger = logging.getLogger(__name__)

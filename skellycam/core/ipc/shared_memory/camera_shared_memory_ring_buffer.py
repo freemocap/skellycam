@@ -10,7 +10,13 @@ from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 logger = logging.getLogger(__name__)
 
 
-class FramePayloadSharedMemoryRingBuffer(SharedMemoryRingBuffer):
+class CameraSharedMemoryRingBuffer(SharedMemoryRingBuffer):
+
+    @property
+    def latest_frame_number(self) -> int:
+        if not self.valid:
+            raise ValueError("Shared memory is not valid!")
+        return self.last_written_index.value
 
     @classmethod
     def from_config(cls,

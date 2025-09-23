@@ -3,11 +3,11 @@ from multiprocessing import Process
 
 import numpy as np
 import pytest
+from skellycam.core.frame_payloads.frame_payload import FramePayload
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.timestamps import TimebaseMapping
-from skellycam.core.frame_payloads.frame_payload import FramePayload
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 
 
@@ -19,7 +19,7 @@ def reader_process_func(dto_dict, iterations):
     dto = SharedMemoryRingBufferDTO(**dto_dict)
 
     # Recreate ring buffer
-    ring_buffer = FramePayloadSharedMemoryRingBuffer.recreate(dto, read_only=True)
+    ring_buffer = CameraSharedMemoryRingBuffer.recreate(dto, read_only=True)
 
     # Create a pre-allocated recarray for reading
     frame_dtype = dto.dtype
@@ -48,7 +48,7 @@ def sequential_reader_process_func(dto_dict, iterations):
     dto = SharedMemoryRingBufferDTO(**dto_dict)
 
     # Recreate ring buffer
-    ring_buffer = FramePayloadSharedMemoryRingBuffer.recreate(dto, read_only=False)
+    ring_buffer = CameraSharedMemoryRingBuffer.recreate(dto, read_only=False)
 
     # Create a pre-allocated recarray for reading
     frame_dtype = dto.dtype
@@ -80,7 +80,7 @@ def writer_process_func(dto_dict, iterations, camera_config_dict):
     camera_config = CameraConfig(**camera_config_dict)
 
     # Recreate ring buffer
-    ring_buffer = FramePayloadSharedMemoryRingBuffer.recreate(dto, read_only=False)
+    ring_buffer = CameraSharedMemoryRingBuffer.recreate(dto, read_only=False)
     timebase_mapping = TimebaseMapping()
     # Write in a loop
     for i in range(iterations):
@@ -113,7 +113,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
     @pytest.fixture
     def frame_buffer(self, camera_config, timebase_mapping):
         """Create and return a FramePayloadSharedMemoryRingBuffer."""
-        buffer = FramePayloadSharedMemoryRingBuffer.from_config(
+        buffer = CameraSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
             timebase_mapping=timebase_mapping,
             read_only=False
@@ -134,7 +134,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
 
     def test_from_config(self, camera_config, timebase_mapping):
         """Test creating a FramePayloadSharedMemoryRingBuffer from a camera config."""
-        buffer = FramePayloadSharedMemoryRingBuffer.from_config(
+        buffer = CameraSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
             timebase_mapping=timebase_mapping,
             read_only=False
@@ -215,7 +215,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
     def test_read_only_restrictions(self, camera_config, timebase_mapping, example_frame_rec_array, output_frame):
         """Test read-only restrictions."""
         # Create read-only buffer
-        read_only_buffer = FramePayloadSharedMemoryRingBuffer.from_config(
+        read_only_buffer = CameraSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
             timebase_mapping=timebase_mapping,
             read_only=True
@@ -231,7 +231,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
     def test_concurrent_access(self, camera_config, timebase_mapping):
         """Test concurrent access to shared memory from multiple processes."""
         # Create original buffer
-        original = FramePayloadSharedMemoryRingBuffer.from_config(
+        original = CameraSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
             timebase_mapping=timebase_mapping,
             read_only=False
@@ -266,7 +266,7 @@ class TestFramePayloadSharedMemoryRingBuffer:
     def test_sequential_reader(self, camera_config, timebase_mapping):
         """Test sequential reading with concurrent writing."""
         # Create original buffer
-        original = FramePayloadSharedMemoryRingBuffer.from_config(
+        original = CameraSharedMemoryRingBuffer.from_config(
             camera_config=camera_config,
             timebase_mapping=timebase_mapping,
             read_only=False

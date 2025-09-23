@@ -10,18 +10,18 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, SetShmMessage
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
-def setup_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | None,
+def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                              config: CameraConfig,
                              ipc: CameraGroupIPC,
                              self_status: CameraStatus,
                              shm_subscription: TopicSubscriptionQueue) -> tuple[
-    FramePayloadSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
+    CameraSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
     # Create cv2.VideoCapture object
     try:
         cv2_video_capture, config = create_cv2_video_capture(config)
@@ -39,8 +39,8 @@ def setup_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer | No
                     )
                 camera_shm_dto = shm_message.camera_group_shm_dto.camera_shm_dtos[config.camera_id]
                 logger.debug(f"Creating camera shared memory for camera {config.camera_id}...")
-                camera_shm = FramePayloadSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
-                                                                         read_only=False)
+                camera_shm = CameraSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
+                                                                   read_only=False)
         # Ensure camera_group_shm is properly initialized before proceeding
         if camera_shm is None or not camera_shm.valid:
             raise RuntimeError("Failed to initialize camera_group_shm")

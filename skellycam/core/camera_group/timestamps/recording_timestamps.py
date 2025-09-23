@@ -5,12 +5,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 
 from skellycam.core.camera_group.timestamps.frame_timestamp_csv_row import FrameTimestampsCSVRow
 from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.multiframe_csv_row import MultiFrameTimestampsCSVRow
 from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics

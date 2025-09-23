@@ -1,8 +1,9 @@
 import logging
 import time
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
+
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement
 
 logger = logging.getLogger(__name__)

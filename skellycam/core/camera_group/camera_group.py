@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.mf_builder import MultiframeBuilder
-from skellycam.core.frame_payloads.multiframes.multi_frame_payload import MultiFramePayload
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage, RecordingFinishedMessage
@@ -26,7 +24,6 @@ class CameraGroup:
     ipc: CameraGroupIPC
     configs: CameraConfigs
     cameras: CameraManager
-    mf_builder: MultiframeBuilder
     shm: CameraGroupSharedMemoryManager | None = None
 
     @property
@@ -37,15 +34,10 @@ class CameraGroup:
     def create(cls,
                camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
-               group_id: CameraGroupIdString | None = None,
-               camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS,
-               mf_builder_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
+               camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
 
-        ipc = CameraGroupIPC.create(group_id=group_id,
-                                    camera_configs=camera_configs,
+        ipc = CameraGroupIPC.create(camera_configs=camera_configs,
                                     global_kill_flag=global_kill_flag)
-        mf_builder = MultiframeBuilder.create(ipc=ipc,
-                                              worker_strategy=mf_builder_strategy)
 
         # note - create cameras last so others can subscribe to camera updates
         cameras = CameraManager.create(ipc=ipc,
@@ -57,14 +49,11 @@ class CameraGroup:
             ipc=ipc,
             cameras=cameras,
             configs=camera_configs,
-            mf_builder=mf_builder,
         )
 
     def start(self) -> CameraConfigs:
         logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
         self.cameras.start()
-        # self.recorder.start()
-        self.mf_builder.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
         self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
@@ -80,30 +69,26 @@ class CameraGroup:
 
     @property
     def all_alive(self):
-        return all([self.cameras.all_alive,
-                    self.mf_builder.is_alive])
+        return all([self.cameras.all_alive])
 
     @property
     def any_alive(self):
-        return any([self.cameras.any_alive,
-                    self.mf_builder.is_alive])
+        return any([self.cameras.any_alive])
 
     @property
     def all_ready(self) -> bool:
         if self.shm is None:
             return False
         return all([self.cameras.all_ready,
-                    # self.recorder.ready,
-                    self.mf_builder.is_alive,
                     self.shm.valid])
 
     def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
         if self.shm is None or not self.shm.valid:
             return None
-        if self.shm.latest_multiframe_number.value <= if_newer_than:
+        if self.shm.latest_multiframe_number <= if_newer_than:
             return None
 
-        mf_rec_array = self.shm.multi_frame_ring_shm.get_latest_multiframe()
+        mf_rec_array = self.shm.get_latest_multiframe()
         if mf_rec_array is None:
             return None
         return create_frontend_payload_from_mf_recarray(
@@ -192,7 +177,6 @@ class CameraGroup:
         while not self.cameras.ready_to_shutdown.value:
             wait_1s()
         self.cameras.worker.join()
-        self.mf_builder.worker.terminate() # TODO - Die better
         if self.shm is not None:
             try:
                 self.shm.unlink_and_close()

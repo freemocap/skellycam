@@ -6,8 +6,8 @@ from skellycam.core.camera.opencv.opencv_helpers.setup_opencv_camera_loop import
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
-    FramePayloadSharedMemoryRingBuffer
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import \
+    CameraSharedMemoryRingBuffer
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
     orchestrator: CameraOrchestrator = ipc.camera_orchestrator
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
     self_status.running.value = True
-    camera_shm: FramePayloadSharedMemoryRingBuffer | None = None
+    camera_shm: CameraSharedMemoryRingBuffer | None = None
 
     (camera_shm,
      config,

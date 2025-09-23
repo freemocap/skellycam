@@ -1,30 +1,29 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass
-
-from pydantic import BaseModel, Field, SkipValidation, ConfigDict
+from dataclasses import dataclass, field
 
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
 
 
-class CameraStatus(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True
-                              )
-    running: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    connected: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    grabbing_frame: SkipValidation[multiprocessing.Value] = Field(
+@dataclass
+class CameraStatus:
+    running: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    connected: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    grabbing_frame: multiprocessing.Value = field(
         default_factory=lambda: multiprocessing.Value("b", False))
-    closing: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    closed: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    recording_in_progress: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    is_recording_frame: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    is_paused: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    updating: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
-    error: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("b", False))
+    closing: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    closed: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    recording_in_progress: multiprocessing.Value = field(
+        default_factory=lambda: multiprocessing.Value("b", False))
+    is_recording_frame: multiprocessing.Value = field(
+        default_factory=lambda: multiprocessing.Value("b", False))
+    is_paused: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    updating: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    error: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
 
-    frame_count: SkipValidation[multiprocessing.Value] = Field(default_factory=lambda: multiprocessing.Value("q", -1))
+    frame_count: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("q", -1))
 
     @property
     def ready(self) -> bool:
@@ -48,8 +47,7 @@ class CameraStatus(BaseModel):
         self.running.value = False
         self.grabbing_frame.value = False
         self.is_paused.value = False
-
-
+        self.connected.value = False
 
 @dataclass
 class CameraOrchestrator:
@@ -57,21 +55,16 @@ class CameraOrchestrator:
     first_recording_frame_number: multiprocessing.Value
     last_recording_frame_number: multiprocessing.Value
 
-
     @property
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.camera_statuses.keys())
 
-
     @classmethod
-    def from_camera_ids(cls, camera_ids: list[CameraIdString],
-                        first_recording_frame:multiprocessing.Value,
-                        last_recording_frame:multiprocessing.Value,
+    def from_camera_ids(cls, camera_ids: list[CameraIdString]
                         ) -> 'CameraOrchestrator':
-
         return cls(camera_statuses={camera_id: CameraStatus() for camera_id in camera_ids},
-                     first_recording_frame_number=first_recording_frame,
-                     last_recording_frame_number=last_recording_frame)
+                   first_recording_frame_number=multiprocessing.Value("q", -1),
+                   last_recording_frame_number=multiprocessing.Value("q", -1))
 
     @property
     def all_cameras_ready(self):
@@ -95,8 +88,7 @@ class CameraOrchestrator:
 
     @property
     def all_cameras_alive(self) -> bool:
-        return any([not status.closed.value for status in self.camera_statuses.values()])
-
+        return all([not status.closed.value for status in self.camera_statuses.values()])
 
     @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
