@@ -18,7 +18,7 @@ from skellycam.api.http.app.shutdown import shutdown_router
 from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routers import SKELLYCAM_ROUTERS
-from skellycam.api.server.server_constants import APP_URL
+from skellycam.api.server_constants import APP_URL
 from skellycam.skellycam_app.skellycam_app import create_skellycam_app
 from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
@@ -44,9 +44,6 @@ async def app_lifespan(
     base_path.mkdir(parents=True, exist_ok=True)
     logger.info(f"Base folder: {base_path}")
 
-    # Initialize the SkellyCam application
-    skellycam_app = app.state.skellycam_app
-
     logger.success(
         f"SkellyCam API v{skellycam.__version__} started successfully 💀📸✨\n"
         f"Swagger API docs: {APP_URL}/docs"
@@ -59,15 +56,12 @@ async def app_lifespan(
     logger.api("SkellyCam API shutting down...")
 
     # Cleanup SkellyCam application
-    if hasattr(app.state, 'skellycam_app'):
-        skellycam_app.shutdown()
+    app.state.skellycam_app.shutdown()
 
     logger.success("SkellyCam API shutdown complete - Goodbye! 👋")
 
 
-def create_fastapi_app(
-        global_kill_flag: multiprocessing.Value
-) -> FastAPI:
+def create_fastapi_app(global_kill_flag: multiprocessing.Value) -> FastAPI:
     """
     Create and configure the FastAPI application.
 
@@ -82,9 +76,7 @@ def create_fastapi_app(
 
     # Store dependencies in app state
     app.state.global_kill_flag = global_kill_flag
-    app.state.skellycam_app = create_skellycam_app(
-        global_kill_flag=global_kill_flag
-    )
+    app.state.skellycam_app = create_skellycam_app(global_kill_flag=global_kill_flag)
 
     # Configure CORS
     cors(app)

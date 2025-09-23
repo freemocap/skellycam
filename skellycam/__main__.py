@@ -1,39 +1,78 @@
-"""
-Simplified main entry point for SkellyCam server.
-Uses asyncio and proper signal handling without extra threads.
-"""
 import asyncio
 import logging
 import multiprocessing
+import signal
 import sys
 
-from skellycam.skellycam_app.skellycam_runner import SkellyCamRunner
+import uvicorn
+
+from skellycam.skellycam_app.skellycam_app_factory import create_fastapi_app
+from skellycam.utilities.kill_process_on_port import kill_process_on_port
+from skellycam.api.server_constants import HOSTNAME, PORT
 
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
-    """Main entry point."""
+async def main() -> None:
+    """Direct server startup - no intermediate classes."""
+    # Create shared kill flag for subprocesses
+    global_kill_flag = multiprocessing.Value("b", False)
+    server: uvicorn.Server | None = None
 
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    def handle_signal(signum: int, frame: object) -> None:
+        """Handle shutdown signals."""
+        logger.info(f"Received signal {signum}, initiating shutdown...")
+        global_kill_flag.value = True
+        if server:
+            server.should_exit = True
 
-    # Run the application
-    runner = SkellyCamRunner()
+    # Setup signal handlers
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
 
     try:
-        asyncio.run(runner.run())
+        # Clean up any existing process on the port
+        kill_process_on_port(port=PORT)
+
+        # Create FastAPI app
+        app = create_fastapi_app(global_kill_flag=global_kill_flag)
+
+        # Configure and create Uvicorn server
+        config = uvicorn.Config(
+            app=app,
+            host=HOSTNAME,
+            port=PORT,
+            log_level="info",
+            reload=False,
+            access_log=False,
+        )
+        server = uvicorn.Server(config)
+
+        logger.info(f"Starting server on {HOSTNAME}:{PORT}")
+
+        # Run server (blocks until shutdown)
+        await server.serve()
+
     except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt")
+        logger.info("Keyboard interrupt received")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        raise
+    finally:
+        # Ensure kill flag is set and server is stopped
+        global_kill_flag.value = True
+        if server:
+            server.should_exit = True
+            await asyncio.sleep(0.5)  # Give it time to shutdown gracefully
+
+        logger.success("Done! Thank you for using SkellyCam 💀📸✨")
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
     except Exception as e:
         logger.exception(f"Unhandled exception: {e}")
         sys.exit(1)
     else:
         sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()

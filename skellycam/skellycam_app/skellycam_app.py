@@ -1,9 +1,7 @@
-
 import logging
 import multiprocessing
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -38,7 +36,7 @@ class SkellycamApplication:
         )
 
     @classmethod
-    def initialize(
+    def create(
             cls,
             global_kill_flag: multiprocessing.Value
     ) -> 'SkellycamApplication':
@@ -59,12 +57,9 @@ class SkellycamApplication:
         """Check if the application should continue running."""
         return not self.global_kill_flag.value
 
-    # Camera Group Management
-
     def create_camera_group(
             self,
-            camera_configs: CameraConfigs
-    ) ->CameraGroup|None:
+            camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create or update a camera group with the given configurations.
 
@@ -77,44 +72,27 @@ class SkellycamApplication:
         camera_ids = list(camera_configs.keys())
 
         # Check if group already exists
-        existing_group = self.camera_group_manager.find_camera_group_by_camera_ids(
-            camera_ids=camera_ids
-        )
+        existing_group = self.camera_group_manager.find_camera_group_by_camera_ids(camera_ids=camera_ids)
 
         if existing_group:
-            logger.info(
-                f"Updating existing camera group {existing_group.id} "
-                f"with cameras: {camera_ids}"
-            )
-            self.camera_group_manager.update_camera_settings(
-                camera_configs=camera_configs
-            )
+            logger.info(f"Updating existing camera group {existing_group.id} with cameras: {camera_ids}")
+            self.camera_group_manager.update_camera_settings(camera_configs=camera_configs)
             return existing_group
 
         # Create new group
         logger.info(f"Creating new camera group with cameras: {camera_ids}")
-        camera_group = self.camera_group_manager.create_and_start_camera_group(
-            camera_configs=camera_configs
-        )
+        camera_group = self.camera_group_manager.create_and_start_camera_group(camera_configs=camera_configs)
 
         if camera_group is None:
             logger.error("Failed to create camera group")
             return None
 
-        logger.info(
-            f"Camera group created with ID: {camera_group.id} "
-            f"and cameras: {camera_ids}"
-        )
+        logger.info(f"Camera group created with ID: {camera_group.id} and cameras: {camera_ids}")
         return camera_group
 
-    def update_camera_configs(
-            self,
-            camera_configs: CameraConfigs
-    ) -> CameraConfigs:
+    def update_camera_configs(self,camera_configs: CameraConfigs) -> CameraConfigs:
         """Update camera configurations."""
-        return self.camera_group_manager.update_camera_settings(
-            camera_configs=camera_configs
-        )
+        return self.camera_group_manager.update_camera_settings(camera_configs=camera_configs)
 
     def get_new_frontend_payloads(
             self,
@@ -127,7 +105,6 @@ class SkellycamApplication:
             display_image_sizes=display_image_sizes
         )
 
-    # Recording Control
 
     def start_recording(self, recording_info: RecordingInfo) -> None:
         """Start recording on all camera groups."""
@@ -158,7 +135,6 @@ class SkellycamApplication:
         self.camera_group_manager.pause_unpause_all_groups()
         logger.info("Toggled pause state for all camera groups")
 
-    # Lifecycle Management
 
     def shutdown(self) -> None:
         """
@@ -175,12 +151,7 @@ class SkellycamApplication:
 
         logger.success("SkellyCam application shutdown complete")
 
-    def emergency_shutdown(self) -> None:
-        """Emergency shutdown for critical failures."""
-        logger.critical("EMERGENCY SHUTDOWN initiated!")
-        self.shutdown()
 
-    # State Export
 
     def get_state_dto(self) -> 'SkellycamAppStateDTO':
         """Get serializable state representation."""
@@ -195,7 +166,7 @@ class SkellycamAppStateDTO(BaseModel):
 
     type: str = "SkellycamAppStateDTO"
     state_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    camera_configs:CameraConfigs|None = None
+    camera_configs: CameraConfigs | None = None
     is_recording: bool = False
     camera_group_count: int = 0
 
@@ -225,7 +196,7 @@ class SkellycamAppStateDTO(BaseModel):
 
 # Singleton Management (if needed for backwards compatibility)
 
-_SKELLYCAM_APP:SkellycamApplication|None = None
+_SKELLYCAM_APP: SkellycamApplication | None = None
 
 
 def get_skellycam_app() -> SkellycamApplication:
@@ -266,7 +237,7 @@ def create_skellycam_app(
     if _SKELLYCAM_APP is not None:
         raise RuntimeError("SkellyCam application already exists")
 
-    _SKELLYCAM_APP = SkellycamApplication.initialize(
+    _SKELLYCAM_APP = SkellycamApplication.create(
         global_kill_flag=global_kill_flag
     )
     return _SKELLYCAM_APP

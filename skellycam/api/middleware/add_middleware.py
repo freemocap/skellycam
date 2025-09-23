@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 def add_middleware(app: FastAPI):
-    logger.debug("Adding middleware...")
-
+    pass
+    # logger.debug("Adding middleware...")
     # @app.middleware("http")
     # async def log_requests(request: Request, call_next):
     #     start_time = time.time()

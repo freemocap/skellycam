@@ -21,15 +21,11 @@ class CameraGroupManager:
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
         default_factory=dict)
-    closing: bool = False
 
     def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
-        if self.closing:
-            logger.warning("Cannot start recording, camera groups are closing.")
-            return None
         camera_group = CameraGroup.create(camera_configs=camera_configs,
                                           global_kill_flag=self.global_kill_flag)
         self.camera_group_framerate_subscriptions[camera_group.id] = camera_group.ipc.pubsub.get_subscription(
@@ -83,7 +79,7 @@ class CameraGroupManager:
             return
         for camera_group in self.camera_groups.values():
             camera_group.should_continue = False
-        wait_100ms()
+            wait_100ms()
         for camera_group_id in list(self.camera_groups.keys()):
             self.camera_groups[camera_group_id].close()
         logger.success(f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}")
@@ -106,6 +102,7 @@ class CameraGroupManager:
         """
         while self.closing:
             wait_100ms()
+
         for camera_group in self.camera_groups.values():
             camera_group.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")

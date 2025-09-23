@@ -9,7 +9,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, CameraBackendInt
 from skellycam.skellycam_app.skellycam_app import get_skellycam_app
 from skellycam.system.default_paths import default_recording_name, get_default_recording_folder_path
-from skellycam.system.device_detection.detect_cameras_devices import CameraDeviceInfo, detect_available_cameras
+from skellycam.core.device_detection.detect_cameras_devices import CameraDeviceInfo, detect_available_cameras
 
 logger = logging.getLogger(__name__)
 
