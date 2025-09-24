@@ -38,12 +38,23 @@ async def monitor_kill_flag(app: FastAPI) -> None:
     while not app.state.global_kill_flag.value:
         await await_1s()
 
-    # Kill flag was set - initiate graceful shutdown
-    logger.info("Kill flag detected, initiating shutdown...")
-    os.kill(os.getpid(), signal.SIGTERM)
+    await shutdown_app(app=app)
 
 
+async def shutdown_app(app: FastAPI) -> None:
+    """
+    Perform graceful shutdown of the SkellyCam application.
+    Closes all camera groups and sets kill flag.
+    """
+    logger.info("Shutting down SkellyCam application")
 
+    # Set kill flag first to notify all components
+    app.state.global_kill_flag.value = True
+
+    # Close all camera groups
+    app.state.skellycam_app.shutdown()
+
+    logger.success("SkellyCam application shutdown complete")
 
 @asynccontextmanager
 async def app_lifespan(
@@ -84,7 +95,7 @@ async def app_lifespan(
         pass
 
     # Cleanup SkellyCam application
-    app.state.skellycam_app.shutdown()
+    await shutdown_app(app=app)
 
     logger.success("SkellyCam API shutdown complete - Goodbye! 👋")
 

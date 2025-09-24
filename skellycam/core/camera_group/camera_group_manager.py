@@ -112,8 +112,6 @@ class CameraGroupManager:
                                      display_image_sizes: dict[CameraIdString, dict[str, float]]) -> dict[
         CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
         fe_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]] = {}
-        if self.closing:
-            return fe_payloads
         for camera_group in self.camera_groups.values():
             fe_return = camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,
                                                                  display_image_sizes=display_image_sizes)
@@ -128,8 +126,6 @@ class CameraGroupManager:
         """
         Get the latest framerate updates for all camera groups.
         """
-        if self.closing:
-            return {}
         framerate_updates: dict[CameraGroupIdString, CurrentFramerate] = {}
         for camera_group_id, subscription in self.camera_group_framerate_subscriptions.items():
             if not subscription.empty():

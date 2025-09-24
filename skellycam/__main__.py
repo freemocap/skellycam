@@ -42,7 +42,7 @@ async def main() -> None:
             app=app,
             host=HOSTNAME,
             port=PORT,
-            log_level="info",
+            log_level="warning",
             reload=False
 
         )

@@ -53,7 +53,7 @@ class WebsocketServer:
     @property
     def should_continue(self):
         return (
-                self._global_kill_flag.value is False
+                not self._global_kill_flag.value
                 and self._websocket_should_continue
                 and self.websocket.client_state == WebSocketState.CONNECTED
         )
@@ -116,7 +116,7 @@ class WebsocketServer:
                         logger.trace(
                             f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
 
-                backend_framerate_updates:dict[CameraGroupIdString,CurrentFramerate] = self._app.camera_group_manager.get_backend_framerate_updates()
+                backend_framerate_updates:dict[CameraGroupIdString,CurrentFramerate] = self._cgm.get_backend_framerate_updates()
                 if backend_framerate_updates:
                     for camera_group_id, backend_framerate in backend_framerate_updates.items():
                         if camera_group_id not in self._frontend_framerate_trackers:
