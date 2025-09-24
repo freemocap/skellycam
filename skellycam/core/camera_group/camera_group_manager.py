@@ -151,6 +151,7 @@ class CameraGroupManager:
         for camera_group in self.camera_groups.values():
             camera_group.pause(await_paused=await_paused)
             logger.info(f"Paused camera group ID: {camera_group.id}")
+
     def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
         """
         Pause/Unpause all camera groups.
@@ -173,7 +174,7 @@ class CameraGroupManager:
             camera_group.unpause(await_unpaused=await_unpaused)
             logger.info(f"Unpaused camera group ID: {camera_group.id}")
 
-    def find_camera_group_by_camera_ids(self, camera_ids:list[CameraIdString]) -> CameraGroup|None:
+    def find_camera_group_by_camera_ids(self, camera_ids: list[CameraIdString]) -> CameraGroup | None:
         """
         Find a camera group that contains all the specified camera IDs.
         """
@@ -182,3 +183,40 @@ class CameraGroupManager:
                 return camera_group
         return None
 
+
+_CAMERA_GROUP_MANAGER: CameraGroupManager | None = None
+
+def get_or_create_camera_group_manager(
+        global_kill_flag: multiprocessing.Value
+) -> CameraGroupManager:
+    """
+    Create the singleton SkellyCam application instance.
+
+    Args:
+        global_kill_flag: Shared flag for coordinated shutdown
+
+    Returns:
+        Created SkellyCam application instance
+
+    Raises:
+        RuntimeError: If application already exists
+    """
+    global _CAMERA_GROUP_MANAGER
+
+    if _CAMERA_GROUP_MANAGER is not None:
+        return _CAMERA_GROUP_MANAGER
+
+    _CAMERA_GROUP_MANAGER = CameraGroupManager(
+        global_kill_flag=global_kill_flag
+    )
+    return _CAMERA_GROUP_MANAGER
+
+def reset_camera_group_manager() -> CameraGroupManager:
+    """
+    Reset the singleton CameraGroupManager instance.
+    """
+    global _CAMERA_GROUP_MANAGER
+    _CAMERA_GROUP_MANAGER.close_all_camera_groups()
+    _CAMERA_GROUP_MANAGER = CameraGroupManager(global_kill_flag=_CAMERA_GROUP_MANAGER.global_kill_flag)
+    logger.info("CameraGroupManager has been reset.")
+    return _CAMERA_GROUP_MANAGER

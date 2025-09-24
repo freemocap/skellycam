@@ -1,6 +1,7 @@
+
 import logging
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, Request
 
 from skellycam.api.websocket.websocket_server import WebsocketServer
 
@@ -10,9 +11,9 @@ websocket_router = APIRouter(tags=["Websocket"], prefix="/websocket")
 
 
 @websocket_router.websocket("/connect")
-async def websocket_server_connect(websocket: WebSocket):
+async def websocket_server_connect(request:Request, websocket: WebSocket):
     await websocket.accept()
-    logger.success(f"Websocket connection established!")
+    logger.success(f"Websocket connection established at url: {request.url}")
     async with WebsocketServer(websocket=websocket) as websocket_server:
         await websocket_server.run()
     logger.info("Websocket closed")

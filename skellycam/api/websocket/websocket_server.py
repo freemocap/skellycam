@@ -3,13 +3,14 @@ import json
 import logging
 
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
+from fastapi import FastAPI
 
+from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, get_or_create_camera_group_manager
 from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
-from skellycam.skellycam_app.skellycam_app import SkellycamApplication, get_skellycam_app
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue, MIN_LOG_LEVEL_FOR_WEBSOCKET
-from skellycam.utilities.wait_functions import async_wait_10ms
+from skellycam.utilities.wait_functions import await_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +18,11 @@ BACKPRESSURE_WARNING_THRESHOLD: int = 1000  # Number of frames before we warn ab
 
 
 class WebsocketServer:
-    def __init__(self, websocket: WebSocket):
+    def __init__(self, app:FastAPI, websocket: WebSocket):
 
         self.websocket = websocket
-        self._app: SkellycamApplication = get_skellycam_app()
+        self._global_kill_flag = app.state.global_kill_flag
+        self._cgm: CameraGroupManager= get_or_create_camera_group_manager(self._global_kill_flag)
 
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []
@@ -51,7 +53,7 @@ class WebsocketServer:
     @property
     def should_continue(self):
         return (
-                self._app.should_continue
+                self._global_kill_flag.value is False
                 and self._websocket_should_continue
                 and self.websocket.client_state == WebSocketState.CONNECTED
         )
@@ -59,7 +61,6 @@ class WebsocketServer:
     async def run(self):
         logger.info("Starting websocket runner...")
         self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
-                         # asyncio.create_task(self._ipc_queue_relay(), name="WebsocketIPCQueueRelay"),
                          asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
                          asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
 
@@ -87,14 +88,14 @@ class WebsocketServer:
         try:
             skipped_previous = False
             while self.should_continue:
-                await async_wait_10ms()
+                await await_10ms()
                 if self.check_frame_acknowledgment_status():
                     if skipped_previous:  # skip an extra frame if there was backpressure from frontend
                         skipped_previous = False
                     else:
                         new_frontend_payloads: dict[
                             CameraGroupIdString, tuple[
-                                FrameNumberInt, MultiframeTimestampFloat, bytes]] = self._app.get_new_frontend_payloads(
+                                FrameNumberInt, MultiframeTimestampFloat, bytes]] = self._cgm.get_latest_frontend_payloads(
                             if_newer_than=self.last_sent_frame_number,
                             display_image_sizes=self._display_image_sizes)
 
@@ -134,7 +135,7 @@ class WebsocketServer:
             pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
-            get_skellycam_app().kill_everything()
+            self._global_kill_flag.value = True
             raise
 
     async def _logs_relay(self, ws_log_level: int = MIN_LOG_LEVEL_FOR_WEBSOCKET):
@@ -151,14 +152,14 @@ class WebsocketServer:
                     log_data = log_record.model_dump()
                     await self.websocket.send_json(log_data)
                 else:
-                    await async_wait_10ms()
+                    await await_10ms()
         except asyncio.CancelledError:
             logger.debug("Log relay task cancelled")
         except WebSocketDisconnect:
             logger.info("Client disconnected, ending log relay task...")
         except Exception as e:
             logger.exception(f"Error in websocket log relay: {e.__class__}: {e}")
-            get_skellycam_app().kill_everything()
+            self._global_kill_flag.value = True
             raise
 
     async def _client_message_handler(self):
@@ -202,7 +203,7 @@ class WebsocketServer:
             logger.debug("Client message handler task cancelled")
         except Exception as e:
             logger.exception(f"Error handling client message: {e.__class__}: {e}")
-            get_skellycam_app().kill_everything()
+            self._global_kill_flag.value = True
             raise
         finally:
             logger.info("Ending client message handler...")

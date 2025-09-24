@@ -7,14 +7,14 @@ import sys
 import uvicorn
 
 from skellycam.api.server_constants import HOSTNAME, PORT
-from skellycam.skellycam_app.skellycam_app_factory import create_fastapi_app
+from skellycam.app import create_fastapi_app
 from skellycam.utilities.kill_process_on_port import kill_process_on_port
+from skellycam.utilities.wait_functions import await_1s
 
 logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
-    """Direct server startup - no intermediate classes."""
     # Create shared kill flag for subprocesses
     global_kill_flag = multiprocessing.Value("b", False)
     server: uvicorn.Server | None = None
@@ -43,8 +43,8 @@ async def main() -> None:
             host=HOSTNAME,
             port=PORT,
             log_level="info",
-            reload=False,
-            access_log=False,
+            reload=False
+
         )
         server = uvicorn.Server(config)
 
@@ -63,7 +63,7 @@ async def main() -> None:
         global_kill_flag.value = True
         if server:
             server.should_exit = True
-            await asyncio.sleep(0.5)  # Give it time to shutdown gracefully
+            await await_1s()  # Give it time to shut down gracefully
 
         logger.success("Done! Thank you for using SkellyCam 💀📸✨")
 

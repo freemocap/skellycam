@@ -1,8 +1,11 @@
 """
 Consolidated FastAPI app factory with proper lifecycle management.
 """
+import asyncio
 import logging
 import multiprocessing
+import os
+import signal
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
@@ -19,13 +22,27 @@ from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routers import SKELLYCAM_ROUTERS
 from skellycam.api.server_constants import APP_URL
-from skellycam.skellycam_app.skellycam_app import create_skellycam_app
 from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
     get_default_skellycam_base_folder_path
 )
+from skellycam.utilities.wait_functions import await_1s
 
 logger = logging.getLogger(__name__)
+
+
+async def monitor_kill_flag(app: FastAPI) -> None:
+    """
+    Background task to monitor the kill flag and trigger shutdown.
+    """
+    while not app.state.global_kill_flag.value:
+        await await_1s()
+
+    # Kill flag was set - initiate graceful shutdown
+    logger.info("Kill flag detected, initiating shutdown...")
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
 
 
 @asynccontextmanager
@@ -36,7 +53,7 @@ async def app_lifespan(
     Manage the application lifecycle.
     All startup and shutdown logic goes here.
     """
-    # Startup
+    # ===== STARTUP =====
     logger.api("SkellyCam API starting...")
 
     # Ensure base folder exists
@@ -44,16 +61,27 @@ async def app_lifespan(
     base_path.mkdir(parents=True, exist_ok=True)
     logger.info(f"Base folder: {base_path}")
 
+
+    # Start background task to monitor kill flag
+    monitor_task = asyncio.create_task(monitor_kill_flag(app=app))
+
     logger.success(
         f"SkellyCam API v{skellycam.__version__} started successfully 💀📸✨\n"
         f"Swagger API docs: {APP_URL}/docs"
     )
 
-    # Let the app run
+    # Let the application do its thing
     yield
 
-    # Shutdown
+    # ===== SHUTDOWN =====
     logger.api("SkellyCam API shutting down...")
+
+    # Cancel the monitor task
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        pass
 
     # Cleanup SkellyCam application
     app.state.skellycam_app.shutdown()
@@ -76,7 +104,6 @@ def create_fastapi_app(global_kill_flag: multiprocessing.Value) -> FastAPI:
 
     # Store dependencies in app state
     app.state.global_kill_flag = global_kill_flag
-    app.state.skellycam_app = create_skellycam_app(global_kill_flag=global_kill_flag)
 
     # Configure CORS
     cors(app)

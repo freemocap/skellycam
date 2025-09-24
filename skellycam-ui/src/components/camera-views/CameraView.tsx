@@ -51,7 +51,6 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
         return unsubscribe;
     }, [cameraId]);
 
-    // Optimized frame handler with frame dropping for smooth playback
     const handleFrame = useCallback((bitmap: ImageBitmap, frameMetadata: FrameMetadata) => {
         if (!ctxRef.current || renderingRef.current) {
             // Skip frame if still rendering previous one
@@ -60,13 +59,6 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
         }
 
         const now = performance.now();
-
-        // Optional frame rate limiting
-        // const minFrameTime = 1000 / 120; // Cap at 120 FPS
-        // if (now - lastRenderTimeRef.current < minFrameTime) {
-        //     bitmap.close();
-        //     return;
-        // }
 
         renderingRef.current = true;
 

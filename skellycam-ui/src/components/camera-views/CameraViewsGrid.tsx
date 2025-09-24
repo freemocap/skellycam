@@ -24,7 +24,7 @@ export const CameraViewsGrid: React.FC = () => {
     const defaultWidth = 640;
     const defaultHeight = 480;
 
-    // Calculate optimal grid layout based on number of cameras
+    // Calculate  grid layout based on number of cameras
     const getGridColumns = (count: number): string => {
         if (count <= 1) return '1fr';
         if (count <= 2) return 'repeat(2, 1fr)';
