@@ -11,7 +11,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload_from_mf_recarray
+from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
 from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
@@ -88,11 +88,11 @@ class CameraGroup:
         if self.shm.latest_multiframe_number <= if_newer_than:
             return None
 
-        mf_rec_array = self.shm.get_latest_multiframe()
-        if mf_rec_array is None:
+        latest_frames = self.shm.get_latest_multiframe()
+        if not latest_frames:
             return None
-        return create_frontend_payload_from_mf_recarray(
-            mf_rec_array=mf_rec_array,
+        return create_frontend_payload(
+            latest_frames = latest_frames,
             display_image_sizes=display_image_sizes,
         )
 

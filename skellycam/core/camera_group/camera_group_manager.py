@@ -190,16 +190,12 @@ def get_or_create_camera_group_manager(
         global_kill_flag: multiprocessing.Value
 ) -> CameraGroupManager:
     """
-    Create the singleton SkellyCam application instance.
-
-    Args:
+    Create the singleton CameraGroupManager instance.
         global_kill_flag: Shared flag for coordinated shutdown
 
     Returns:
-        Created SkellyCam application instance
+        Created or existing CameraGroupManager instance
 
-    Raises:
-        RuntimeError: If application already exists
     """
     global _CAMERA_GROUP_MANAGER
 

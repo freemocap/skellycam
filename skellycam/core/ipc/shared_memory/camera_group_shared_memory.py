@@ -1,5 +1,7 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
@@ -24,6 +26,7 @@ class CameraGroupSharedMemoryManager:
     camera_configs: CameraConfigs
     read_only: bool
     original: bool = False
+    _latest_frames: dict[CameraIdString, np.recarray] = field(default_factory=dict)
 
     @property
     def latest_multiframe_number(self) -> int:
@@ -120,3 +123,11 @@ class CameraGroupSharedMemoryManager:
         except Exception as e:
             logger.error(f"Error during shared memory cleanup: {type(e).__name__} - {e}")
             logger.exception(e)
+
+    def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]:
+        self._latest_frames = {
+            camera_id: camera_shared_memory.get_data_by_index(index=self.latest_multiframe_number,
+                                                            rec_array=self._latest_frames[camera_id] if camera_id in self._latest_frames else None)
+            for camera_id, camera_shared_memory in self.camera_shms.items()
+        }
+        return self._latest_frames

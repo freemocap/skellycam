@@ -11,9 +11,9 @@ from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimest
 _reusable_bytes_payload: bytearray = bytearray(0)  # Will be resized to fit the payload size in runtime
 
 
-def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
-                                             display_image_sizes: dict[str, dict[str, float]] | None = None,
-                                             jpeg_encoding_parameters=None) -> tuple[FrameNumberInt, MultiframeTimestampFloat,bytes]:
+def create_frontend_payload(latest_frames : dict[str, np.recarray],
+                            display_image_sizes: dict[str, dict[str, float]] | None = None,
+                            jpeg_encoding_parameters=None) -> tuple[FrameNumberInt, MultiframeTimestampFloat,bytes]:
     """
     Convert a multi-frame record array into a list of record arrays for each camera.
      first element is the header, which tell the frontend how many cameras are in the payload.
@@ -26,8 +26,8 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
     if jpeg_encoding_parameters is None:
         jpeg_encoding_parameters = JPEG_ENCODING_PARAMETERS
 
-    camera_ids = mf_rec_array.dtype.names
-    frame_numbers = [mf_rec_array[camera_id].frame_metadata.frame_number[0] for camera_id in camera_ids]
+    camera_ids = list(latest_frames.keys())
+    frame_numbers = [latest_frames[camera_id].frame_metadata.frame_number[0] for camera_id in camera_ids]
     if len(set(frame_numbers)) != 1:
         raise ValueError("All cameras in the multi-frame record array must have the same frame number.")
     frame_number = frame_numbers[0]
@@ -56,9 +56,9 @@ def create_frontend_payload_from_mf_recarray(mf_rec_array: np.recarray,
     current_pos += len(header_bytes)
     # image_scale= np.min([np.max([(len(camera_ids)*2)**-1, 0.2]), 1.0])
     image_scale= .5
-    frame_timestamps:list[int] = []
+    frame_timestamps:list[float|np.floating] = []
     for camera_id in camera_ids:
-        frame_recarray = mf_rec_array[camera_id][0]
+        frame_recarray = latest_frames[camera_id]
         frame_timestamps.append(np.mean([frame_recarray.frame_metadata.timestamps.pre_frame_grab_ns,
                                          frame_recarray.frame_metadata.timestamps.post_frame_grab_ns]))
 
