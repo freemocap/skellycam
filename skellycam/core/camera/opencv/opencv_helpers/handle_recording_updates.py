@@ -2,7 +2,8 @@ import logging
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import RecordingInfoMessage, RecordingFinishedMessage
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder

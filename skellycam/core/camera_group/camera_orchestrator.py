@@ -1,53 +1,12 @@
 import logging
 import multiprocessing
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class CameraStatus:
-    running: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    connected: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    grabbing_frame: multiprocessing.Value = field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    closing: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    closed: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    recording_in_progress: multiprocessing.Value = field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    is_recording_frame: multiprocessing.Value = field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    is_paused: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    updating: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    error: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-
-    frame_count: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("q", -1))
-
-    @property
-    def ready(self) -> bool:
-        return all([self.connected.value,
-                    self.running.value,
-                    not self.closing.value,
-                    not self.closed.value,
-                    not self.updating.value,
-                    not self.error.value,
-                    ])
-
-    def signal_error(self):
-        self.error.value = True
-        self.connected.value = False
-        self.running.value = False
-        self.grabbing_frame.value = False
-        self.is_paused.value = False
-
-    def signal_closing(self):
-        self.closing.value = True
-        self.running.value = False
-        self.grabbing_frame.value = False
-        self.is_paused.value = False
-        self.connected.value = False
 
 @dataclass
 class CameraOrchestrator:
@@ -60,15 +19,22 @@ class CameraOrchestrator:
         return list(self.camera_statuses.keys())
 
     @classmethod
-    def from_camera_ids(cls, camera_ids: list[CameraIdString]
-                        ) -> 'CameraOrchestrator':
-        return cls(camera_statuses={camera_id: CameraStatus() for camera_id in camera_ids},
+    def from_statuses(cls, camera_statuses: dict[CameraIdString, CameraStatus]) -> 'CameraOrchestrator':
+        return cls(camera_statuses=camera_statuses,
                    first_recording_frame_number=multiprocessing.Value("q", -1),
                    last_recording_frame_number=multiprocessing.Value("q", -1))
 
     @property
-    def all_cameras_ready(self):
+    def all_ready(self) -> bool:
         return all([status.ready for status in self.camera_statuses.values()])
+
+    @property
+    def any_alive(self) -> bool:
+        return self.ipc.camera_orchestrator.any_cameras_alive
+
+    @property
+    def all_alive(self) -> bool:
+        return all([not status.closed.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
 
     @property
     def all_cameras_recording(self):
@@ -86,21 +52,10 @@ class CameraOrchestrator:
     def any_cameras_alive(self) -> bool:
         return any([not status.closed.value for status in self.camera_statuses.values()])
 
-    @property
-    def all_cameras_alive(self) -> bool:
-        return all([not status.closed.value for status in self.camera_statuses.values()])
 
     @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
         return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
-
-    @property
-    def any_grabbing_frame(self) -> bool:
-        return any([status.grabbing_frame.value for status in self.camera_statuses.values()])
-
-    @property
-    def any_recording_frame(self) -> bool:
-        return any([status.is_recording_frame.value for status in self.camera_statuses.values()])
 
     def should_record_frame_number(self, frame_number: int) -> tuple[bool, bool]:
 

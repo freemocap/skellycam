@@ -193,9 +193,8 @@ class WebsocketServer:
                                 pass
                             else:
                                 logger.info(f"Websocket received message: `{text_content}`")
-
-
-
+                    elif "websocket" in message:
+                        logger.trace(f"Received unknown websocket control message: {message}")
                     else:
                         logger.warning(f"Received unexpected message format: {message}")
 

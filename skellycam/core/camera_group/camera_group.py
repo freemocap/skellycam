@@ -171,12 +171,8 @@ class CameraGroup:
         self.ipc.pause(await_paused=True)
         self.ipc.should_continue = False
         wait_1s()
+        self.cameras.close()
 
-        while self.any_alive:
-            wait_1s()
-        while not self.cameras.ready_to_shutdown.value:
-            wait_1s()
-        self.cameras.worker.join()
         if self.shm is not None:
             try:
                 self.shm.unlink_and_close()

@@ -7,7 +7,8 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.check_for_new_config import check_for_new_config
 from skellycam.core.camera.opencv.opencv_helpers.handle_recording_updates import check_for_new_recording_info
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 

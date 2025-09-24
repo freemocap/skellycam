@@ -32,7 +32,7 @@ async def shutdown_server(
     Returns:
         JSON response confirming shutdown initiation
     """
-    logger.api("Shutdown requested via API")
+    logger.api(f"Shutdown requested via API - {request.url}")
 
     # Send SIGTERM to ourselves - this triggers the existing shutdown flow
     request.app.state.global_kill_flag.value = True
