@@ -19,6 +19,7 @@ from skellycam.utilities.wait_functions import wait_1ms, wait_10us
 
 logger = logging.getLogger(__name__) 
 
+MAX_FAIL_COUNT = 30
 
 def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                            config: CameraConfig,
@@ -60,7 +61,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                 continue
             self_status.grabbing_frame.value = True
             frame_success = False
-            while not frame_success and ipc.should_continue and fail_count < 30:
+            while not frame_success and ipc.should_continue and fail_count < MAX_FAIL_COUNT:
                 fail_count += 1
                 frame_success, frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                                   frame_rec_array=frame_rec_array, )
@@ -101,16 +102,13 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
             previous_tik = time.perf_counter_ns()
 
-
-
-
     except Exception as e:
         self_status.signal_error()
         logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")
         ipc.kill_everything()
         raise
     finally:
-        self_status.running.value = False
+        self_status.connected.value = False
         logger.debug(f"Camera {config.camera_id} loop ended.")
 
 

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 def opencv_camera_worker_method(camera_id: CameraIdString,
                                 config: CameraConfig,
                                 ipc: CameraGroupIPC,
+                                orchestrator: CameraOrchestrator,
                                 update_camera_settings_subscription: TopicSubscriptionQueue,
                                 shm_subscription: TopicSubscriptionQueue,
                                 recording_info_subscription: TopicSubscriptionQueue,
@@ -29,9 +30,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
     logger.trace(f"Camera {camera_id} worker started")
-    orchestrator: CameraOrchestrator = ipc.camera_orchestrator
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
-    self_status.running.value = True
     camera_shm: CameraSharedMemoryRingBuffer | None = None
 
     (camera_shm,
@@ -40,6 +39,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
      frame_rec_array) = setup_opencv_camera_loop(camera_shm=camera_shm,
                                                  config=config,
                                                  ipc=ipc,
+                                                 orchestrator=orchestrator,
                                                  self_status=self_status,
                                                  shm_subscription=shm_subscription)
 
@@ -72,5 +72,3 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         self_status.closed.value = True
 
         logger.debug(f"Camera {config.camera_index} process completed")
-
-

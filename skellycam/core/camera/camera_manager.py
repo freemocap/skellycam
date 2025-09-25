@@ -35,7 +35,6 @@ class CameraManager:
             camera_id=camera_id,
             ipc=ipc,
             orchestrator=orchestrator,
-            status =camera_statuses[camera_id],
             config=camera_config,
             camera_worker_type=camera_strategy,
             update_camera_settings_subscription=ipc.pubsub.topics[
@@ -52,9 +51,7 @@ class CameraManager:
             orchestrator=orchestrator
         )
 
-    @property
-    def cameras_connected(self) -> bool:
-        return self.orchestrator.all_cameras_ready
+
 
     def start(self):
         logger.info("Starting camera processes...")
@@ -62,12 +59,10 @@ class CameraManager:
             worker.start()
 
     def pause(self, await_paused: bool):
-        logger.debug(f"Pausing cameras in camera manager...")
-        self.ipc.pause(await_paused=await_paused)
+        self.orchestrator.pause(await_paused=await_paused)
 
     def unpause(self, await_unpaused: bool):
-        logger.debug(f"Unpausing cameras in camera manager...")
-        self.ipc.unpause(await_unpaused=await_unpaused)
+        self.orchestrator.unpause(await_unpaused=await_unpaused)
 
     def close(self):
         logger.info("Closing camera manager and all camera processes...")

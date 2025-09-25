@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
+from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +30,6 @@ class CameraOrchestrator:
         return all([status.ready for status in self.camera_statuses.values()])
 
     @property
-    def any_alive(self) -> bool:
-        return self.ipc.camera_orchestrator.any_cameras_alive
-
-    @property
-    def all_alive(self) -> bool:
-        return all([not status.closed.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
-
-    @property
     def all_cameras_recording(self):
         return all([status.recording_in_progress.value for status in self.camera_statuses.values()])
 
@@ -56,6 +49,27 @@ class CameraOrchestrator:
     @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
         return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
+
+    def pause(self, await_paused: bool = True) -> None:
+        logger.info("Pausing all cameras...")
+        for status in self.camera_statuses.values():
+            status.should_pause.value = True
+
+        if await_paused:
+            logger.info("Waiting for all cameras to pause...")
+            while not self.all_cameras_paused:
+                wait_10ms()
+            logger.trace("All cameras paused.")
+    def unpause(self, await_unpaused: bool = True) -> None:
+        logger.info("Unpausing all cameras...")
+        for status in self.camera_statuses.values():
+            status.should_pause.value = False
+
+        if await_unpaused:
+            logger.info("Waiting for all cameras to unpause...")
+            while self.any_cameras_paused:
+                wait_10ms()
+            logger.trace("All cameras unpaused.")
 
     def should_record_frame_number(self, frame_number: int) -> tuple[bool, bool]:
 
@@ -77,7 +91,7 @@ class CameraOrchestrator:
         if not camera_id in self.camera_statuses:
             raise ValueError(f"Camera ID {camera_id} not found in orchestrator: {self.camera_statuses.keys()}")
 
-        if not self.all_cameras_ready:
+        if not self.all_ready:
             return False
 
         return self._all_camera_counts_greater_than_or_equal_to_camera(camera_id)

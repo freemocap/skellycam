@@ -35,9 +35,8 @@ class CameraGroup:
                camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
-
-        ipc = CameraGroupIPC.create(camera_configs=camera_configs,
-                                    global_kill_flag=global_kill_flag)
+        validate_camera_configs(camera_configs)
+        ipc = CameraGroupIPC.create(global_kill_flag=global_kill_flag)
 
         # note - create cameras last so others can subscribe to camera updates
         cameras = CameraManager.create(ipc=ipc,
@@ -67,20 +66,6 @@ class CameraGroup:
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.configs.keys())
 
-    @property
-    def all_alive(self):
-        return all([self.cameras.all_alive])
-
-    @property
-    def any_alive(self):
-        return any([self.cameras.any_alive])
-
-    @property
-    def all_ready(self) -> bool:
-        if self.shm is None:
-            return False
-        return all([self.cameras.all_ready,
-                    self.shm.valid])
 
     def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
         if self.shm is None or not self.shm.valid:
@@ -97,7 +82,7 @@ class CameraGroup:
         )
 
     def pause_unpause(self, await_state_change: bool = True):
-        if self.ipc.any_paused:
+        if self.cameras.any_paused:
             self.unpause(await_unpaused=await_state_change)
         else:
             self.pause(await_paused=await_state_change)
@@ -106,7 +91,7 @@ class CameraGroup:
         Pause the camera group operations.
         """
         logger.info(f"Pausing camera group ID: {self.id}")
-        self.ipc.pause(await_paused=await_paused)
+        self.cameras.pause(await_paused=await_paused)
         logger.info(f"Camera group ID: {self.id} is paused.")
 
     def unpause(self, await_unpaused: bool = True):
@@ -114,7 +99,7 @@ class CameraGroup:
         Unpause the camera group operations.
         """
         logger.info(f"Unpausing camera group ID: {self.id}")
-        self.ipc.unpause(await_unpaused)
+        self.cameras.unpause(await_unpaused)
         logger.info(f"Camera group ID: {self.id} is unpaused.")
 
     def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:
@@ -133,19 +118,18 @@ class CameraGroup:
         """
         Start recording for the camera group.
         """
-        self.ipc.pause(await_paused=True)
+        self.cameras.pause(await_paused=True)
         logger.info("Publishing recording info message...")
-        frame_count = max([status.frame_count.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
-        self.ipc.camera_orchestrator.last_recording_frame_number.value  = -1  # Reset last recording frame number
-        self.ipc.camera_orchestrator.first_recording_frame_number.value = frame_count+ 3 # + a few to avoid off-by-one errors
+        frame_count = max([status.frame_count.value for status in self.cameras.orchestrator.camera_statuses.values()])
+        self.cameras.orchestrator.last_recording_frame_number.value  = -1  # Reset last recording frame number
+        self.cameras.orchestrator.first_recording_frame_number.value = frame_count+ 3 # + a few to avoid off-by-one errors
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
-        while not self.ipc.all_ready_to_record and self.ipc.should_continue:
-            wait_10ms()
+
         logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
 
         wait_10ms()
         logger.api("Unpausing camera group to start recording...")
-        self.ipc.unpause(await_unpaused=True)
+        self.cameras.unpause(await_unpaused=True)
         logger.info("Camera group unpaused - Recording successfully started.")
 
         logger.info(
@@ -159,16 +143,16 @@ class CameraGroup:
         logger.debug(f"Stopping recording for all cameras in orchestrator...")
         self.pause(await_paused=True)
         frame_count = max(
-            [status.frame_count.value for status in self.ipc.camera_orchestrator.camera_statuses.values()])
-        self.ipc.camera_orchestrator.first_recording_frame_number.value = -1
-        self.ipc.camera_orchestrator.last_recording_frame_number.value = frame_count + 3
+            [status.frame_count.value for status in self.cameras.orchestrator.camera_statuses.values()])
+        self.cameras.orchestrator.first_recording_frame_number.value = -1
+        self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
         self.unpause(await_unpaused=True)
         finalize_recording(ipc=self.ipc)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
     def close(self):
         logger.debug("Closing camera group")
-        self.ipc.pause(await_paused=True)
+        self.cameras.pause(await_paused=True)
         self.ipc.should_continue = False
         wait_1s()
         self.cameras.close()
@@ -217,7 +201,7 @@ def finalize_recording(ipc: CameraGroupIPC):
                 raise RuntimeError(
                     f"Received multiple recording finished messages for camera {recording_finished_message.camera_id}.")
 
-            logger.debug(f"Recieved recording finished message for camera {recording_finished_message.camera_id}.")
+            logger.debug(f"Received recording finished message for camera {recording_finished_message.camera_id}.")
             recording_finished_messages_by_camera[recording_finished_message.camera_id] = recording_finished_message
             if recording_info is None:
                 recording_info = recording_finished_message.recording_info

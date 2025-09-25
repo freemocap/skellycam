@@ -7,6 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera.opencv.opencv_helpers.create_initial_frame_recarray import create_initial_frame_rec_array
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, SetShmMessage
@@ -16,9 +17,11 @@ from skellycam.utilities.wait_functions import wait_10ms
 
 logger = logging.getLogger(__name__)
 
+
 def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                              config: CameraConfig,
                              ipc: CameraGroupIPC,
+                             orchestrator: CameraOrchestrator,
                              self_status: CameraStatus,
                              shm_subscription: TopicSubscriptionQueue) -> tuple[
     CameraSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
@@ -44,8 +47,10 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
         # Ensure camera_group_shm is properly initialized before proceeding
         if camera_shm is None or not camera_shm.valid:
             raise RuntimeError("Failed to initialize camera_group_shm")
+        if not cv2_video_capture.isOpened():
+            raise RuntimeError(f"cv2.VideoCapture for camera {config.camera_id} is not opened")
         logger.success(f"Camera {config.camera_id} ready!")
-        while not ipc.all_ready_to_start and ipc.should_continue:
+        while not orchestrator.all_ready and ipc.should_continue:
             wait_10ms()
         frame_rec_array = create_initial_frame_rec_array(config=config,
                                                          ipc=ipc)

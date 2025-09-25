@@ -22,7 +22,6 @@ class CameraWorker:
     worker: WorkerType
     ipc: CameraGroupIPC
     orchestrator: CameraOrchestrator
-    status: CameraStatus
 
     @classmethod
     def create(cls,
@@ -30,7 +29,6 @@ class CameraWorker:
                ipc: CameraGroupIPC,
                config: CameraConfig,
                orchestrator: CameraOrchestrator,
-               status: CameraStatus,
                update_camera_settings_subscription: TopicSubscriptionQueue,
                shm_subscription: TopicSubscriptionQueue,
                recording_info_subscription: TopicSubscriptionQueue,
@@ -39,7 +37,6 @@ class CameraWorker:
                ):
         return cls(camera_id=camera_id,
                    ipc=ipc,
-                   status=status,
                    orchestrator=orchestrator,
                    worker=camera_worker_type.value(target=camera_strategy,
                                                    name=f"Camera{config.camera_index}-{camera_id}-Process",
@@ -47,7 +44,6 @@ class CameraWorker:
                                                    kwargs=dict(camera_id=camera_id,
                                                                ipc=ipc,
                                                                config=config,
-                                                               status=status,
                                                                orchestrator=orchestrator,
                                                                update_camera_settings_subscription=update_camera_settings_subscription,
                                                                shm_subscription=shm_subscription,

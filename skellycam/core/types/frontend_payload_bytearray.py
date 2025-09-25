@@ -63,9 +63,9 @@ def create_frontend_payload(latest_frames : dict[str, np.recarray],
                                          frame_recarray.frame_metadata.timestamps.post_frame_grab_ns]))
 
         if frame_recarray.frame_metadata.camera_config.rotation != -1:
-            rotated_image = cv2.rotate(frame_recarray.image[:], frame_recarray.frame_metadata.camera_config.rotation)
+            rotated_image = cv2.rotate(frame_recarray.image[0], frame_recarray.frame_metadata.camera_config.rotation)
         else:
-            rotated_image = frame_recarray.image[:]
+            rotated_image = frame_recarray.image[0]
 
         if display_image_sizes is None or camera_id not in display_image_sizes.keys() or True: # TODO - Disable resizing for now, but should revisit
             # Default resize to 50% if no sizes provided

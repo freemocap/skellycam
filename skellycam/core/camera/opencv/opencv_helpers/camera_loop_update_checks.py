@@ -50,7 +50,7 @@ def camera_loop_update_checks(config: CameraConfig,
 def check_camera_should_pause(config: CameraConfig,
                               ipc: CameraGroupIPC,
                               self_status: CameraStatus) -> CameraStatus:
-    if ipc.should_pause.value:
+    if self_status.should_pause.value:
         if not self_status.is_paused.value:
             logger.trace(f"Pausing camera {config.camera_id}...")
             self_status.is_paused.value = True

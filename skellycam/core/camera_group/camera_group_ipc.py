@@ -33,10 +33,9 @@ class CameraGroupIPC(BaseModel):
 
     @classmethod
     def create(cls,
-               camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None) -> 'CameraGroupIPC':
-        validate_camera_configs(camera_configs)
+
         if group_id is None:
             group_id = create_camera_group_id()
         pubsub = create_camera_group_pubsub_manager(group_id=group_id)
