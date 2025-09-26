@@ -107,18 +107,14 @@ class FrameRouter {
             this.stats.lastBinaryMessageTime = Date.now();
 
             // Log every 10th message to avoid spam
-            if (this.stats.totalBinaryMessagesReceived % 10 === 1) {
-                console.log(`📊 FrameRouter Stats: ${this.stats.totalBinaryMessagesReceived} binary messages received`);
-                console.log(`📊 FrameRouter: Last frame number: ${this.stats.lastFrameNumber}`);
-                console.log(`📊 FrameRouter: Active cameras: ${this.frameMetadata.size}`);
-                console.log(`📊 FrameRouter: Subscribed handlers: ${this.handlers.size}`);
-            }
+            console.log(`📊 FrameRouter Stats: ${this.stats.totalBinaryMessagesReceived} binary messages received`);
+            console.log(`📊 FrameRouter: Last frame number: ${this.stats.lastFrameNumber}`);
+            console.log(`📊 FrameRouter: Active cameras: ${this.frameMetadata.size}`);
+            console.log(`📊 FrameRouter: Subscribed handlers: ${this.handlers.size}`);
 
             this.processBinaryFrame(data).then(
                 () => {
-                    if (this.stats.totalBinaryMessagesReceived % 10 === 1) {
-                        console.log(`✅ FrameRouter: Successfully processed frame`);
-                    }
+                    console.log(`✅ FrameRouter: Successfully processed frame`);
                 }
             ).catch(
                 (error) => {
@@ -539,13 +535,9 @@ class FrameRouter {
             }, {} as Record<string, { width: number; height: number }>)
         };
 
-        console.log(`📤 FrameRouter: Sending ACK for frame ${ack.frameNumber} with ${Object.keys(ack.displaySizes).length} display sizes`);
+        console.log(`📤 FrameRouter: Sending render acknowledgment for frame ${ack.frameNumber} with ${Object.keys(ack.displaySizes).length} display sizes`);
 
-        websocketService.send(JSON.stringify({
-            type: 'frame_ack',
-            frame_number: ack.frameNumber,
-            display_sizes: ack.displaySizes,
-        }));
+        websocketService.acknowledgeFrameRendered( ack.frameNumber);
     }
 }
 

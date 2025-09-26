@@ -13,10 +13,7 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
     const renderingRef = useRef<boolean>(false);
     const lastRenderTimeRef = useRef<number>(0);
 
-    // Local state for camera metadata
-    const [metadata, setMetadata] = useState<FrameMetadata | undefined>(() =>
-        frameRouter.getCameraMetadata(cameraId)
-    );
+
 
     // Setup canvas context with optimal settings for high framerate
     useEffect(() => {
@@ -41,38 +38,15 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
         };
     }, []);
 
-    // Subscribe to metadata changes
-    useEffect(() => {
-        const unsubscribe = frameRouter.subscribeToMetadataChanges((allMetadata) => {
-            const cameraMetadata = allMetadata.get(cameraId);
-            setMetadata(cameraMetadata);
-        });
 
-        return unsubscribe;
-    }, [cameraId]);
 
-    const handleFrame = useCallback((bitmap: ImageBitmap, frameMetadata: FrameMetadata) => {
-        if (!ctxRef.current || renderingRef.current) {
-            // Skip frame if still rendering previous one
-            bitmap.close(); // Important: clean up skipped bitmaps
-            return;
-        }
+    const handleFrame = useCallback((frame: ParsedFrame) => {
 
-        const now = performance.now();
-
-        renderingRef.current = true;
-
-        // Use requestAnimationFrame for synchronized rendering
         requestAnimationFrame(() => {
             if (ctxRef.current) {
                 try {
-                    // Draw the bitmap directly - fastest method
-                    ctxRef.current.drawImage(bitmap, 0, 0, width, height);
+                    ctxRef.current.drawImage(frame.jpegData, 0, 0, width, height);
 
-                    lastRenderTimeRef.current = now;
-
-                    // Send acknowledgment only for rendered frames
-                    websocketService.acknowledgeFrameRendered(cameraId, frameMetadata.frameNumber);
                 } catch (error) {
                     console.error(`Render error for camera ${cameraId}:`, error);
                 } finally {

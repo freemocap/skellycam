@@ -12,7 +12,6 @@ import {
     selectIsServerAlive,
     type LogRecord
 } from '@/store';
-import { frameRouter } from '../frames/frame-router';
 import type {
     WebSocketMessage,
     FramerateUpdateMessage,
@@ -80,8 +79,6 @@ class WebSocketService {
         console.log('🚀 WebSocketService: Initializing...');
         console.log('🚀 WebSocketService: Binary handlers count:', this.binaryHandlers.size);
 
-        // Initialize frame router
-        frameRouter.initialize();
 
         // Setup auto-connect monitoring
         this.setupAutoConnect();
@@ -139,7 +136,7 @@ class WebSocketService {
         console.log('📊 WebSocketService: Final stats:', this.debugStats);
     }
 
-    send(data: string | ArrayBuffer): void {
+    private send(data: string | ArrayBuffer): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
             const dataType = typeof data === 'string' ? 'text' : 'binary';
             const dataSize = typeof data === 'string' ? data.length : data.byteLength;
@@ -150,17 +147,16 @@ class WebSocketService {
         }
     }
 
-    sendMessage(message: object): void {
+    private sendMessage(message: object): void {
         console.log('📤 WebSocketService: Sending JSON message:', message);
         this.send(JSON.stringify(message));
     }
 
-    acknowledgeFrameRendered(cameraId: string, frameNumber: number): void {
-        console.log(`📤 WebSocketService: Acknowledging frame ${frameNumber} for camera ${cameraId}`);
+    acknowledgeFrameRendered(frameNumber: number): void {
+        console.log(`📤 WebSocketService: Acknowledging frame ${frameNumber} rendered}`);
         this.sendMessage({
-            type: 'frame_ack',
-            camera_id: cameraId,
-            frame_number: frameNumber,
+            type: 'frameAcknowledgement',
+            frameNumber: frameNumber,
         });
     }
 
@@ -259,7 +255,7 @@ class WebSocketService {
             // Send hello message
             this.sendMessage({
                 type: 'hello',
-                message: 'Skellycam Frontend Connected'
+                message: '👋 Skellycam Frontend Connected'
             });
 
             // Start health check
@@ -300,14 +296,10 @@ class WebSocketService {
                 this.debugStats.totalBinaryMessages++;
                 this.debugStats.totalByteesReceived += dataSize;
 
-                // Log every 10th binary message to avoid spam
-                if (this.debugStats.totalBinaryMessages % 10 === 1) {
-                    console.log(`📥 WebSocketService: Binary message #${this.debugStats.totalBinaryMessages}, size: ${dataSize} bytes`);
-                    console.log('🔧 WebSocketService: Binary handlers to notify:', this.binaryHandlers.size);
-                }
+                console.log(`📥 WebSocketService: Binary message #${this.debugStats.totalBinaryMessages}, size: ${dataSize} bytes`);
+                console.log('🔧 WebSocketService: Binary handlers to notify:', this.binaryHandlers.size);
             } else {
                 this.debugStats.totalTextMessages++;
-                console.log(`📥 WebSocketService: Text message #${this.debugStats.totalTextMessages}: ${event.data.substring(0, 100)}...`);
             }
 
             this.handleMessage(event.data);
@@ -331,31 +323,32 @@ class WebSocketService {
                     console.error(`❌ WebSocketService: Binary handler error:`, error);
                 }
             });
-        } else if (typeof data === 'string') {
-            // Handle ping/pong
-            if (data === 'ping') {
-                console.log('🏓 WebSocketService: Received ping, sending pong');
-                this.send('pong');
-                return;
-            }
-            if (data === 'pong') {
-                console.log('🏓 WebSocketService: Received pong response');
-                return;
-            }
+        } else {
+            { // Handle ping/pong
+                {
+                    if (data === 'ping') {
+                        this.send('pong');
+                        return;
+                    }
+                    {
+                        if (data === 'pong') {
+                            return;
+                        }
+                        try {
+                            const message = JSON.parse(data) as WebSocketMessage;
+                            console.log('📨 WebSocketService: Parsed JSON message:', message.message_type || 'unknown type');
 
-            // Try to parse JSON messages
-            try {
-                const message = JSON.parse(data) as WebSocketMessage;
-                console.log('📨 WebSocketService: Parsed JSON message:', message.message_type || 'unknown type');
+                            // Process internal handlers first
+                            this.processInternalMessage(message);
 
-                // Process internal handlers first
-                this.processInternalMessage(message);
-
-                // Then custom handlers
-                console.log(`🔄 WebSocketService: Routing to ${this.messageHandlers.size} custom handlers`);
-                this.messageHandlers.forEach(handler => handler(message));
-            } catch (error) {
-                console.warn('⚠️ WebSocketService: Received non-JSON string message:', data);
+                            // Then custom handlers
+                            console.log(`🔄 WebSocketService: Routing to ${this.messageHandlers.size} custom handlers`);
+                            this.messageHandlers.forEach(handler => handler(message));
+                        } catch (error) {
+                            console.warn('⚠️ WebSocketService: Received non-JSON string message:', data);
+                        }
+                    }
+                }
             }
         }
     }

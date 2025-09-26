@@ -71,6 +71,7 @@ dependencies = [
     "cv2-enumerate-cameras>=1.2.2",
     "nuitka>=2.6.5",
     "pyinstaller>=6.15.0",
+    "av>=15.1.0",
 ]
 requires-python = ">=3.10,<3.13"
 

@@ -1,32 +1,32 @@
-// hooks/use-frame-metadata.ts
+// hooks/use-frame-frameData.ts
 import { useState, useEffect } from 'react';
 import { frameRouter, type FrameMetadata } from '@/services/frames/frame-router';
 
 /**
- * Hook to subscribe to frame metadata for all cameras
+ * Hook to subscribe to frame frameData for all cameras
  */
-export const useFrameMetadata = () => {
-    const [metadata, setMetadata] = useState<Map<string, FrameMetadata>>(
+export const useFrameData = () => {
+    const [frameData, setFrameData] = useState<Map<string, FrameMetadata>>(
         () => frameRouter.getAllCameraMetadata()
     );
 
     useEffect(() => {
-        const unsubscribe = frameRouter.subscribeToMetadataChanges(setMetadata);
+        const unsubscribe = frameRouter.subscribeToMetadataChanges(setFrameData);
         return unsubscribe;
     }, []);
 
     return {
-        metadata,
-        cameraIds: Array.from(metadata.keys()),
-        cameraCount: metadata.size,
+        frameData,
+        cameraIds: Array.from(frameData.keys()),
+        cameraCount: frameData.size,
     };
 };
 
 /**
- * Hook to subscribe to frame metadata for a specific camera
+ * Hook to subscribe to frame data for a specific camera
  */
-export const useCameraMetadata = (cameraId: string) => {
-    const [metadata, setMetadata] = useState<FrameMetadata | undefined>(
+export const useCameraFrameData = (cameraId: string) => {
+    const [frameData, setMetadata] = useState<FrameMetadata | undefined>(
         () => frameRouter.getCameraMetadata(cameraId)
     );
 
@@ -38,15 +38,15 @@ export const useCameraMetadata = (cameraId: string) => {
         return unsubscribe;
     }, [cameraId]);
 
-    return metadata;
+    return frameData;
 };
 
 /**
  * Hook to get FPS for a specific camera
  */
 export const useCameraFPS = (cameraId: string) => {
-    const metadata = useCameraMetadata(cameraId);
-    return metadata?.fps ?? 0;
+    const frameData = useCameraFrameData(cameraId);
+    return frameData?.fps ?? 0;
 };
 
 /**
@@ -58,8 +58,8 @@ export const useActiveCameraCount = () => {
     );
 
     useEffect(() => {
-        const unsubscribe = frameRouter.subscribeToMetadataChanges((metadata) => {
-            setCount(metadata.size);
+        const unsubscribe = frameRouter.subscribeToMetadataChanges((frameData) => {
+            setCount(frameData.size);
         });
 
         return unsubscribe;

@@ -1,36 +1,19 @@
 import React from "react";
-import {
-    Box,
-    CircularProgress,
-    IconButton,
-    Stack,
-    Tooltip,
-    Typography,
-    useTheme,
-    Divider,
-} from "@mui/material";
+import {Box, CircularProgress, IconButton, Stack, Tooltip, Typography, useTheme,} from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
-import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
-import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 
-import { useAppDispatch, useAppSelector } from "@/store";
+import {useAppDispatch, useAppSelector} from "@/store";
+import {selectSelectedCameras,} from "@/store/slices/cameras/cameras-selectors";
 import {
-    selectSelectedCameras,
-    selectCameraLoadingState,
-} from "@/store/slices/cameras/cameras-selectors";
-import {
-    connectToCameras,
     closeCameras,
-    pauseUnpauseCameras,
+    connectToCameras,
     detectCameras,
-    updateCameraConfigs,
+    pauseUnpauseCameras,
 } from "@/store/slices/cameras/cameras-thunks";
 
 interface CameraConfigTreeViewHeaderProps {
@@ -55,11 +38,13 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
     const selectedCameras = useAppSelector(selectSelectedCameras);
     const hasSelected = selectedCameras.length > 0;
 
-    const handleRefreshCameras = (): void => {
+    const handleRefreshCameras = (e: React.MouseEvent): void => {
+        e.stopPropagation();
         dispatch(detectCameras({ filterVirtual: true }));
     };
 
-    const handleConnectCameras = async (): Promise<void> => {
+    const handleConnectCameras = async (e: React.MouseEvent): Promise<void> => {
+        e.stopPropagation();
         if (hasSelected) {
             try {
                 await dispatch(connectToCameras()).unwrap();
@@ -70,7 +55,8 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
         }
     };
 
-    const handleCloseCameras = async (): Promise<void> => {
+    const handleCloseCameras = async (e: React.MouseEvent): Promise<void> => {
+        e.stopPropagation();
         try {
             await dispatch(closeCameras()).unwrap();
             console.log('Closed all cameras');
@@ -79,14 +65,20 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
         }
     };
 
-    const handlePauseUnpause = (): void => {
+    const handlePauseUnpause = (e: React.MouseEvent): void => {
+        e.stopPropagation();
         dispatch(pauseUnpauseCameras());
         onPauseToggle();
     };
 
+    // Stop propagation on the entire header box to prevent any clicks from bubbling
+    const handleHeaderClick = (e: React.MouseEvent): void => {
+        e.stopPropagation();
+    };
 
     return (
         <Box
+            onClick={handleHeaderClick}
             sx={{
                 display: "flex",
                 alignItems: "center",
