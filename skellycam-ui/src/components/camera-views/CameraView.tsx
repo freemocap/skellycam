@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {FrameMetadata, frameRouter, websocketService} from "@/services";
+import {FrameMetadata, frameRouter, ParsedFrame, websocketService} from "@/services";
 
 interface CameraViewProps {
     cameraId: string;
@@ -45,7 +45,7 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
         requestAnimationFrame(() => {
             if (ctxRef.current) {
                 try {
-                    ctxRef.current.drawImage(frame.jpegData, 0, 0, width, height);
+                    ctxRef.current.drawImage(frame.bitmap, 0, 0, width, height);
 
                 } catch (error) {
                     console.error(`Render error for camera ${cameraId}:`, error);
