@@ -1,17 +1,14 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useMemo} from "react";
 import {Box} from "@mui/material";
 import {CameraView} from "./CameraView";
 import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
 
 export const CameraViewsGrid: React.FC = () => {
-    const { cameraIds } = useWebSocket();
+    const {cameraIds} = useWebSocket();
 
-
-    // Default dimensions - you may want to make these configurable
     const defaultWidth = 640;
     const defaultHeight = 480;
 
-    // Calculate  grid layout based on number of cameras
     const getGridColumns = (count: number): string => {
         if (count <= 1) return '1fr';
         if (count <= 2) return 'repeat(2, 1fr)';
@@ -21,33 +18,14 @@ export const CameraViewsGrid: React.FC = () => {
         return 'repeat(4, 1fr)';
     };
 
-    // Memoize the camera views to prevent unnecessary re-renders
-    // This will only re-render when cameraIds change
-    const cameraViews = useMemo(() => {
-        return cameraIds.map((cameraId) => {
+    // Memoize camera views to prevent re-renders
+    const cameraViews = useMemo(() =>
+            cameraIds.map(cameraId => (
+                <CameraView key={cameraId} cameraId={cameraId}/>
+            )),
+        [cameraIds, defaultWidth, defaultHeight]
+    );
 
-            return (
-                <Box
-                    key={cameraId}
-                    sx={{
-                        position: 'relative',
-                        width: '100%',
-                        height: 'fit-content',
-                        backgroundColor: 'background.paper',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        boxShadow: 1,
-                    }}
-                >
-                    <CameraView
-                        cameraId={cameraId}
-                        width={defaultWidth}
-                        height={defaultHeight}
-                    />
-                </Box>
-            );
-        });
-    }, [cameraIds, defaultWidth, defaultHeight]);
     return (
         <Box sx={{
             height: '100%',
@@ -58,30 +36,7 @@ export const CameraViewsGrid: React.FC = () => {
             padding: 1,
             overflow: 'auto',
         }}>
-            {cameraIds.map((cameraId) => {
-
-
-                return (
-                    <Box
-                        key={cameraId}
-                        sx={{
-                            position: 'relative',
-                            width: '100%',
-                            height: 'fit-content',
-                            backgroundColor: 'background.paper',
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                            boxShadow: 1,
-                        }}
-                    >
-                        <CameraView
-                            cameraId={cameraId}
-                            width={defaultWidth}
-                            height={defaultHeight}
-                        />
-                    </Box>
-                );
-            })}
+            {cameraViews}
 
             {cameraIds.length === 0 && (
                 <Box
@@ -98,7 +53,7 @@ export const CameraViewsGrid: React.FC = () => {
                 >
                     <div>
                         <div>No cameras connected</div>
-                        <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                        <div style={{fontSize: '0.9rem', marginTop: '0.5rem'}}>
                             Waiting for camera streams...
                         </div>
                     </div>

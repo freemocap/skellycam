@@ -1,126 +1,27 @@
-import React, {useCallback, useEffect, useRef} from 'react';
-import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
-import {ParsedFrame} from "@/services/websocket/frame-parser";
+import React, { useEffect, useRef } from 'react';
+import { useWebSocket } from '@/services/websocket/WebsocketContextProvider';
 
 interface CameraViewProps {
     cameraId: string;
-    width: number;
-    height: number;
 }
 
-export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height }) => {
+export const CameraView: React.FC<CameraViewProps> = ({ cameraId }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-    const { subscribeToFrames } = useWebSocket();
+    const { setCanvasForCamera } = useWebSocket();
 
-
-    // Setup canvas context with optimal settings for high framerate
     useEffect(() => {
-        if (!canvasRef.current) return;
-
-        const ctx = canvasRef.current.getContext('2d', {
-            alpha: false,                  // No transparency for better performance
-            desynchronized: true,           // Bypass browser's compositor for lower latency
-            willReadFrequently: false,      // We're only writing
-            powerPreference: 'high-performance'  // Prefer discrete GPU if available
-        }) as CanvasRenderingContext2D | null;
-
-        if (ctx) {
-            ctxRef.current = ctx;
-            // Disable smoothing for pixel-perfect rendering and better performance
-            ctx.imageSmoothingEnabled = false;
-            ctx.imageSmoothingQuality = 'low';
+        if (canvasRef.current && cameraId) {
+            // Set up the canvas for this camera
+            setCanvasForCamera(cameraId, canvasRef.current);
         }
-
-        return () => {
-            ctxRef.current = null;
-        };
-    }, []);
-
-
-
-    const handleFrame = useCallback((frame: ParsedFrame) => {
-
-        requestAnimationFrame(() => {
-            if (ctxRef.current) {
-                try {
-                    ctxRef.current.drawImage(frame.bitmap, 0, 0, width, height);
-
-                } catch (error) {
-                    console.error(`Render error for camera ${cameraId}:`, error);
-                }
-            }
-        });
-    }, [cameraId, width, height]);
-
-    // Subscribe to frame updates
-    useEffect(() => {
-        const unsubscribe = subscribeToFrames(cameraId, handleFrame);
-        return () => {
-            unsubscribe();
-        };
-    }, [cameraId, handleFrame, subscribeToFrames]);
-
-    // Resize observer for responsive canvas
-    useEffect(() => {
-        if (!canvasRef.current) return;
-
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                const { width: containerWidth } = entry.contentRect;
-                // Maintain aspect ratio
-                const scale = containerWidth / width;
-                const scaledHeight = height * scale;
-
-                if (canvasRef.current) {
-                    canvasRef.current.style.width = `${containerWidth}px`;
-                    canvasRef.current.style.height = `${scaledHeight}px`;
-                }
-            }
-        });
-
-        const container = canvasRef.current.parentElement;
-        if (container) {
-            resizeObserver.observe(container);
-        }
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [width, height]);
+    }, [cameraId, setCanvasForCamera]);
 
     return (
-        <div className="camera-view" style={{ position: 'relative', width: '100%' }}>
-            <canvas
-                ref={canvasRef}
-                width={width}
-                height={height}
-                style={{
-                    width: '100%',
-                    height: 'auto',
-                    display: 'block',
-                    imageRendering: 'pixelated', // Prevents blurring when scaled
-                }}
-            />
-                <div
-                    className="camera-stats"
-                    style={{
-                        position: 'absolute',
-                        top: 8,
-                        left: 8,
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        color: 'white',
-                        padding: '4px 8px',
-                        borderRadius: 4,
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
-                        pointerEvents: 'none',
-                        userSelect: 'none',
-                    }}
-                >
-                    <div>Camera: {cameraId}</div>
-
-                </div>
-        </div>
+        <canvas
+            ref={canvasRef}
+            width={640}
+            height={480}
+            style={{ border: '1px solid #ccc' }}
+        />
     );
 };

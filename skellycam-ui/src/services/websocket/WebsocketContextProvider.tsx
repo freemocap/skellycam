@@ -6,18 +6,16 @@ import {
     selectServerConfig,
     selectIsServerAlive,
 } from '@/store';
-import { ParsedFrame, parseFramePayload } from "@/services/websocket/frame-parser";
-
-type FrameHandler = (frame: ParsedFrame) => void;
-
+import { parseMultiFramePayload } from "@/services/websocket/frame-parser";
+import {workerCode} from "@/services/websocket/offscreen-renderer.worker";
 
 interface WebSocketContextValue {
     isConnected: boolean;
     connect: () => void;
     disconnect: () => void;
     send: (data: string | object) => void;
-    subscribeToFrames: (cameraId: string, handler: FrameHandler) => () => void;
     cameraIds: string[];
+    setCanvasForCamera: (cameraId: string, canvas: HTMLCanvasElement) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextValue | null>(null);
@@ -31,8 +29,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [cameraIds, setCameraIds] = useState<string[]>([]);
 
-    const frameHandlersRef = useRef<Map<string, Set<FrameHandler>>>(new Map());
-    const textDecoderRef = useRef<TextDecoder>(new TextDecoder());
+    const workersRef = useRef<Map<string, Worker>>(new Map());
 
     const connect = () => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -52,31 +49,54 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
             dispatch(websocketDisconnected());
             // Clear camera data on disconnect
             setCameraIds([]);
+            // Clean up workers
+            workersRef.current.forEach(worker => worker.terminate());
+            workersRef.current.clear();
         };
 
         ws.onmessage = async (event: MessageEvent) => {
             if (event.data instanceof ArrayBuffer) {
-                // Binary frame data
-                const frames = await parseFramePayload(event.data, textDecoderRef.current);
-                if (!frames) return;
+                try {
+                    // Binary frame data
+                    const frames = await parseMultiFramePayload(event.data);
+                    if (!frames) return;
 
-                // Track cameras and update metadata
-                const seenCameraIds = new Set<string>();
+                    // Track cameras and update metadata
+                    const seenCameraIds = new Set<string>();
+                    const frameNumbers = new Set<number>();
+                    for (const frameData of frames) {
+                        seenCameraIds.add(frameData.cameraId);
+                        frameNumbers.add(frameData.frameNumber);
 
-                for (const frameData of frames) {
-                    seenCameraIds.add(frameData.cameraId);
+                        // Send to worker if exists
+                        const worker = workersRef.current.get(frameData.cameraId);
+                        if (worker) {
+                            worker.postMessage({
+                                type: 'frame',
+                                bitmap: frameData.bitmap
+                            }, [frameData.bitmap]);
+                        } else {
+                            // Clean up bitmap if no worker to handle it
+                            frameData.bitmap.close();
+                        }
+                    }
 
-                    // Notify handlers
-                    const handlers = frameHandlersRef.current.get(frameData.cameraId);
-                    if (!handlers) continue;
-                    handlers.forEach(handler => handler(frameData));
-                }
+                    // Update camera IDs only if they changed
+                    const newCameraIds = Array.from(seenCameraIds).sort();
+                    const changed = newCameraIds.length !== cameraIds.length ||
+                        newCameraIds.some((id, i) => id !== cameraIds[i]);
 
-                // Update camera IDs only if they changed
-                const newCameraIds = Array.from(seenCameraIds).sort();
-
-                if (JSON.stringify(newCameraIds) !== JSON.stringify(cameraIds)) {
-                    setCameraIds(newCameraIds);
+                    if (changed) {
+                        setCameraIds(newCameraIds);
+                    }
+                    if (frameNumbers.size > 1) {
+                        console.warn(`Received multiple frame numbers in payload: ${Array.from(frameNumbers).sort((a, b) => a - b).join(', ')}`);
+                    }
+                    // Acknowledge the highest frame number received
+                    const maxFrameNumber = Math.max(...Array.from(frameNumbers));
+                    sendFrameAcknowledgment(maxFrameNumber);
+                } catch (error) {
+                    console.error('Error processing frame:', error);
                 }
             }
         };
@@ -96,19 +116,36 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
     };
 
-    const subscribeToFrames = (cameraId: string, handler: FrameHandler): (() => void) => {
-        if (!frameHandlersRef.current.has(cameraId)) {
-            frameHandlersRef.current.set(cameraId, new Set());
-        }
-        frameHandlersRef.current.get(cameraId)!.add(handler);
+    const sendFrameAcknowledgment = (frameNumber: number) => {
+        console.debug(`Acknowledging frame ${frameNumber}`);
+        send({ type: 'frameAcknowledgment', frameNumber });
+    }
 
-        return () => {
-            frameHandlersRef.current.get(cameraId)?.delete(handler);
-            // Clean up empty handler sets
-            if (frameHandlersRef.current.get(cameraId)?.size === 0) {
-                frameHandlersRef.current.delete(cameraId);
-            }
-        };
+    const setCanvasForCamera = (cameraId: string, canvas: HTMLCanvasElement) => {
+        // Clean up existing worker if any
+        const existingWorker = workersRef.current.get(cameraId);
+        if (existingWorker) {
+            existingWorker.terminate();
+        }
+
+        try {
+            // Create worker that handles offscreen rendering
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            const worker = new Worker(workerUrl);
+
+            // Transfer canvas to worker
+            const offscreen = canvas.transferControlToOffscreen();
+            worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+
+            // Store worker
+            workersRef.current.set(cameraId, worker);
+
+            // Clean up blob URL
+            URL.revokeObjectURL(workerUrl);
+        } catch (error) {
+            console.error(`Failed to create worker for camera ${cameraId}:`, error);
+        }
     };
 
     // Auto-connect when server is available
@@ -130,8 +167,8 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
             connect,
             disconnect,
             send,
-            subscribeToFrames,
             cameraIds,
+            setCanvasForCamera,
         }}>
             {children}
         </WebSocketContext.Provider>
