@@ -15,9 +15,6 @@ import { CameraConfigTreeViewHeader } from "./CameraConfigTreeViewHeader";
 import { CameraGroupTreeItem } from "./CameraGroupTreeItem";
 import { NoCamerasPlaceholder } from "./NoCamerasPlaceholder";
 import {
-    cameraSelectionToggled,
-    selectIsServerAlive,
-    selectIsWebSocketConnected,
     useAppDispatch,
     useAppSelector,
     selectAllCameras,
@@ -27,19 +24,18 @@ import {
     detectCameras,
     CameraDevice
 } from "@/store";
+import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
 
 
 export const CameraConfigTreeView: React.FC = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
-
+    const {isConnected} = useWebSocket()
     // Redux state
     const cameras = useAppSelector(selectAllCameras);
     const isLoading = useAppSelector(selectCameraLoadingState);
     const connectionStatus = useAppSelector(selectCameraConnectionStatus);
     const selectedCameras = useAppSelector(selectSelectedCameras);
-    const isWebSocketConnected = useAppSelector(selectIsWebSocketConnected);
-    const isServerAlive = useAppSelector(selectIsServerAlive);
 
     // Local state
     const [expandedItems, setExpandedItems] = useState<string[]>([
@@ -57,10 +53,10 @@ export const CameraConfigTreeView: React.FC = () => {
 
     // Initial camera detection
     useEffect(() => {
-        if (isWebSocketConnected && isServerAlive && cameras.length === 0) {
+        if (isConnected  && cameras.length === 0) {
             dispatch(detectCameras({ filterVirtual: true }));
         }
-    }, [isWebSocketConnected, isServerAlive, cameras.length, dispatch]);
+    }, [isConnected, cameras.length, dispatch]);
 
     const handleExpandedItemsChange = (
         event: React.SyntheticEvent,

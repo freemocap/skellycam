@@ -1,13 +1,9 @@
 import React, { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-    websocketConnected,
-    websocketDisconnected,
-    selectServerConfig,
-    selectIsServerAlive,
-} from '@/store';
+
 import { parseMultiFramePayload } from "@/services/websocket/frame-parser";
 import {workerCode} from "@/services/websocket/offscreen-renderer.worker";
+import {urlService} from "@/services";
 
 interface WebSocketContextValue {
     isConnected: boolean;
@@ -22,8 +18,6 @@ const WebSocketContext = createContext<WebSocketContextValue | null>(null);
 
 export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const dispatch = useDispatch();
-    const serverConfig = useSelector(selectServerConfig);
-    const isServerAlive = useSelector(selectIsServerAlive);
 
     const wsRef = useRef<WebSocket | null>(null);
     const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -35,19 +29,17 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     const connect = () => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-        const url = `ws://${serverConfig.host}:${serverConfig.port}/skellycam/websocket/connect`;
+        const url = urlService.getWebSocketUrl()
         const ws = new WebSocket(url);
         ws.binaryType = 'arraybuffer';
         wsRef.current = ws;
 
         ws.onopen = () => {
             setIsConnected(true);
-            dispatch(websocketConnected());
         };
 
         ws.onclose = () => {
             setIsConnected(false);
-            dispatch(websocketDisconnected());
             // Clear camera data on disconnect
             setCameraIds([]);
             // Clean up workers
@@ -73,7 +65,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
                         // Send to worker if exists
                         const worker = workersRef.current.get(frameData.cameraId);
                         if (worker) {
-                            console.log(`Sending frame ${frameData.frameNumber} of camera ${frameData.cameraId} to worker with size ${frameData.width}x${frameData.height}`);
                             worker.postMessage({
                                 type: 'frame',
                                 bitmap: frameData.bitmap
@@ -121,7 +112,6 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
 
     const sendFrameAcknowledgment = (frameNumber: number) => {
-        console.debug(`Acknowledging frame ${frameNumber}`);
         send({ type: 'frameAcknowledgment', frameNumber });
     }
 
@@ -163,7 +153,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Auto-connect when server is available
     useEffect(() => {
-        if (isServerAlive && !isConnected) {
+        if (!isConnected) {
             connect();
         }
 
@@ -172,7 +162,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
                 disconnect();
             }
         };
-    }, [isServerAlive]);
+    }, [isConnected]);
 
     return (
         <WebSocketContext.Provider value={{

@@ -2,7 +2,7 @@ import {createAsyncThunk} from '@reduxjs/toolkit';
 import {RootState} from '../../types';
 import {CAMERA_DEFAULT_CONSTRAINTS, CameraConfig, CameraDevice, createDefaultCameraConfig} from './cameras-types';
 import {selectSelectedCameraConfigs} from './cameras-selectors';
-import {selectServerEndpoints} from "@/store";
+import {urlService} from "@/services";
 
 interface DetectCamerasResponse {
     cameras: Array<{
@@ -19,10 +19,9 @@ export const detectCameras = createAsyncThunk<
     { state: RootState }
 >('cameras/detect', async (args = {filterVirtual: true}, {getState}) => {
     const state = getState();
-    const endpoints = selectServerEndpoints(state); // Get URLs from state
     const existingCameras = state.cameras.entities;
 
-    const response = await fetch(endpoints.detectCameras, {
+    const response = await fetch(urlService.endpoints.detectCameras, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(args),
@@ -63,14 +62,13 @@ export const connectToCameras = createAsyncThunk<
     { state: RootState }
 >('cameras/connect', async (_, {getState}) => {
     const state = getState();
-    const endpoints = selectServerEndpoints(state);
     const cameraConfigs = selectSelectedCameraConfigs(state);
 
     if (Object.keys(cameraConfigs).length === 0) {
         throw new Error('No camera devices selected for connection');
     }
 
-    const response = await fetch(endpoints.createGroup, {
+    const response = await fetch(urlService.endpoints.createGroup, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({camera_configs: cameraConfigs}),
@@ -90,10 +88,9 @@ export const updateCameraConfigs = createAsyncThunk<
     { state: RootState }
 >('cameras/updateConfigs', async (_, {getState}) => {
     const state = getState();
-    const endpoints = selectServerEndpoints(state);
     const cameraConfigs = selectSelectedCameraConfigs(state);
 
-    const response = await fetch(endpoints.updateConfigs, {
+    const response = await fetch(urlService.endpoints.updateConfigs, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({camera_configs: cameraConfigs}),
@@ -114,8 +111,7 @@ export const closeCameras = createAsyncThunk<
     'cameras/close',
     async (_, {getState}) => {
         const state = getState();
-        const endpoints = selectServerEndpoints(state);
-        const response = await fetch(endpoints.closeAll, {
+        const response = await fetch(urlService.endpoints.closeAll, {
             method: 'DELETE',
         });
 
@@ -133,8 +129,7 @@ export const pauseUnpauseCameras = createAsyncThunk<
     'cameras/pause',
     async (_, {getState}) => {
         const state = getState();
-        const endpoints = selectServerEndpoints(state);
-        const response = await fetch(endpoints.pauseUnpauseCameras, {method: 'GET'});
+        const response = await fetch(urlService.endpoints.pauseUnpauseCameras, {method: 'GET'});
 
         if (!response.ok) {
             throw new Error(`Failed to pause/unpause cameras: ${response.statusText}`);

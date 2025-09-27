@@ -8,8 +8,8 @@ import HomeIcon from '@mui/icons-material/Home';
 import {useLocation, useNavigate} from "react-router-dom";
 import VideocamIcon from '@mui/icons-material/Videocam';
 import {VideoFolderPanel} from "@/components/video-folder-panel/VideoFolderPanel";
-import {ServerSettingsPanel} from '../server-settings-panel/ServerSettingsPanel';
 import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraConfigTreeView";
+import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 
 // Extract reusable scrollbar styles
 const scrollbarStyles = {
@@ -109,7 +109,7 @@ export const LeftSidePanelContent = () => {
             </List>
 
             {/* Server Settings - Compact */}
-            <ServerSettingsPanel/>
+            <ServerConnectionStatus/>
 
             {/* Video Panel for Videos Page */}
             {location.pathname === '/videos' && (
