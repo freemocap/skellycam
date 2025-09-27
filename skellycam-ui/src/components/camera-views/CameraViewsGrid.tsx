@@ -1,24 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { Box } from "@mui/material";
-import { CameraView } from "./CameraView";
-import { frameRouter, type FrameMetadata } from "@/services/frames/frame-router";
+import React, {useEffect, useMemo, useState} from "react";
+import {Box} from "@mui/material";
+import {CameraView} from "./CameraView";
+import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
 
 export const CameraViewsGrid: React.FC = () => {
-    const [cameraMetadata, setCameraMetadata] = useState<Map<string, FrameMetadata>>(
-        () => frameRouter.getAllCameraMetadata()
-    );
+    const { cameraIds } = useWebSocket();
 
-    // Subscribe to metadata changes
-    useEffect(() => {
-        const unsubscribe = frameRouter.subscribeToMetadataChanges((metadata) => {
-            setCameraMetadata(metadata);
-        });
-
-        return unsubscribe;
-    }, []);
-
-    // Get camera IDs from the metadata
-    const cameraIds = Array.from(cameraMetadata.keys());
 
     // Default dimensions - you may want to make these configurable
     const defaultWidth = 640;
@@ -34,6 +21,33 @@ export const CameraViewsGrid: React.FC = () => {
         return 'repeat(4, 1fr)';
     };
 
+    // Memoize the camera views to prevent unnecessary re-renders
+    // This will only re-render when cameraIds change
+    const cameraViews = useMemo(() => {
+        return cameraIds.map((cameraId) => {
+
+            return (
+                <Box
+                    key={cameraId}
+                    sx={{
+                        position: 'relative',
+                        width: '100%',
+                        height: 'fit-content',
+                        backgroundColor: 'background.paper',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        boxShadow: 1,
+                    }}
+                >
+                    <CameraView
+                        cameraId={cameraId}
+                        width={defaultWidth}
+                        height={defaultHeight}
+                    />
+                </Box>
+            );
+        });
+    }, [cameraIds, defaultWidth, defaultHeight]);
     return (
         <Box sx={{
             height: '100%',
@@ -45,9 +59,7 @@ export const CameraViewsGrid: React.FC = () => {
             overflow: 'auto',
         }}>
             {cameraIds.map((cameraId) => {
-                const metadata = cameraMetadata.get(cameraId);
 
-                if (!metadata) return null;
 
                 return (
                     <Box
@@ -64,8 +76,8 @@ export const CameraViewsGrid: React.FC = () => {
                     >
                         <CameraView
                             cameraId={cameraId}
-                            width={metadata.width || defaultWidth}
-                            height={metadata.height || defaultHeight}
+                            width={defaultWidth}
+                            height={defaultHeight}
                         />
                     </Box>
                 );

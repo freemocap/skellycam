@@ -12,11 +12,10 @@ import {
     selectIsServerConnected,
     websocketStatusChanged,
 } from "@/store";
-import { websocketService } from "@/services/websocket/websocket-service";
+import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
 
 export const WebsocketConnectionStatus: React.FC = () => {
-    const dispatch = useAppDispatch();
-    const isConnected = useAppSelector(selectIsWebSocketConnected);
+
     const wsStatus = useAppSelector(selectWebSocketStatus);
     const isServerConnected = useAppSelector(selectIsServerConnected);
 
@@ -26,15 +25,6 @@ export const WebsocketConnectionStatus: React.FC = () => {
             return;
         }
 
-        if (isConnected) {
-            console.log('Disconnecting WebSocket');
-            websocketService.disconnect();
-            dispatch(websocketStatusChanged('disconnected'));
-        } else {
-            console.log('Connecting WebSocket');
-            dispatch(websocketStatusChanged('connecting'));
-            websocketService.connect();
-        }
     };
 
     const getStatusIcon = () => {

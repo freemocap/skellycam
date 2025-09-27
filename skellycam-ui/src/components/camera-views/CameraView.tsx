@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {FrameMetadata, frameRouter, ParsedFrame, websocketService} from "@/services";
+import React, {useCallback, useEffect, useRef} from 'react';
+import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
+import {ParsedFrame} from "@/services/websocket/frame-parser";
 
 interface CameraViewProps {
     cameraId: string;
@@ -10,9 +11,7 @@ interface CameraViewProps {
 export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-    const renderingRef = useRef<boolean>(false);
-    const lastRenderTimeRef = useRef<number>(0);
-
+    const { subscribeToFrames } = useWebSocket();
 
 
     // Setup canvas context with optimal settings for high framerate
@@ -49,25 +48,18 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
 
                 } catch (error) {
                     console.error(`Render error for camera ${cameraId}:`, error);
-                } finally {
-                    renderingRef.current = false;
-                    // Bitmap cleanup is handled by frame-router
                 }
-            } else {
-                renderingRef.current = false;
             }
         });
     }, [cameraId, width, height]);
 
     // Subscribe to frame updates
     useEffect(() => {
-        const unsubscribe = frameRouter.subscribe(cameraId, handleFrame);
-
+        const unsubscribe = subscribeToFrames(cameraId, handleFrame);
         return () => {
             unsubscribe();
-            renderingRef.current = false;
         };
-    }, [cameraId, handleFrame]);
+    }, [cameraId, handleFrame, subscribeToFrames]);
 
     // Resize observer for responsive canvas
     useEffect(() => {
@@ -110,7 +102,6 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
                     imageRendering: 'pixelated', // Prevents blurring when scaled
                 }}
             />
-            {metadata && (
                 <div
                     className="camera-stats"
                     style={{
@@ -128,11 +119,8 @@ export const CameraView: React.FC<CameraViewProps> = ({ cameraId, width, height 
                     }}
                 >
                     <div>Camera: {cameraId}</div>
-                    <div>Frame: {metadata.frameNumber}</div>
-                    <div>FPS: {metadata.fps || 0}</div>
-                    <div>Size: {metadata.width}x{metadata.height}</div>
+
                 </div>
-            )}
         </div>
     );
 };

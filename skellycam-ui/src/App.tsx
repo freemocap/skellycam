@@ -1,22 +1,16 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {Provider} from 'react-redux';
 import {store} from '@/store';
-import {websocketService} from '@/services/websocket/websocket-service';
-import {PaperbaseContent} from '@/layout/paperbase_theme/PaperbaseContent';
+import {WebSocketProvider} from "@/services/websocket/WebsocketContextProvider";
+import {PaperbaseContent} from "@/layout/paperbase_theme/PaperbaseContent";
 
-function AppContent() {
-    useEffect(() => {
-        // Initialize WebSocket service once
-        websocketService.initialize();
-    }, []);
-
-    return <PaperbaseContent />;
-}
 
 function App() {
     return (
         <Provider store={store}>
-            <AppContent />
+            <WebSocketProvider>
+                <PaperbaseContent/>
+            </WebSocketProvider>
         </Provider>
     );
 }

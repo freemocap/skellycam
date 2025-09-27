@@ -1,46 +1,31 @@
 // components/ServerSettingsPanel.tsx
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Alert,
     Box,
     Button,
-    Chip,
-    CircularProgress,
-    Collapse,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
-    FormControl,
     FormControlLabel,
     IconButton,
-    InputLabel,
     LinearProgress,
-    MenuItem,
     Paper,
-    Select,
     SelectChangeEvent,
     Stack,
     Switch,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import {
-    CheckCircle as CheckCircleIcon,
-    Computer as ComputerIcon,
-    Error as ErrorIcon,
     ExpandMore as ExpandMoreIcon,
-    FolderOpen as FolderOpenIcon,
-    Link as LinkIcon,
-    LinkOff as LinkOffIcon,
     PlayArrow as PlayArrowIcon,
-    Refresh as RefreshIcon,
     Settings as SettingsIcon,
     Stop as StopIcon,
     Storage as StorageIcon,
 } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import {styled} from '@mui/material/styles';
 import {
     connectToServer,
     disconnectFromServer,
@@ -69,8 +54,7 @@ import {
     useAppSelector,
     websocketStatusChanged,
 } from "@/store";
-import { websocketService } from "@/services/websocket/websocket-service";
-import { useElectronIPC } from "@/services/electron-ipc/electron-ipc";
+import {useElectronIPC} from "@/services/electron-ipc/electron-ipc";
 
 const StatusDot = styled('span')<{ status: string }>(({ theme, status }) => {
     const getStatusColor = () => {
@@ -223,23 +207,6 @@ export const ServerSettingsPanel: React.FC = () => {
         }
     };
 
-    const handleWebSocketConnect = () => {
-        dispatch(websocketStatusChanged('connecting'));
-        websocketService.connect();
-    };
-
-    const handleWebSocketDisconnect = () => {
-        websocketService.disconnect();
-    };
-
-    const handleSelectCustomExecutable = async () => {
-        if (!api) return;
-        const path = await api.fileSystem.selectExecutableFile.mutate();
-        if (path) {
-            setSelectedPath(path);
-            dispatch(updateServerConfig({ preferredExecutablePath: path }));
-        }
-    };
 
     const handleExecutableChange = (event: SelectChangeEvent) => {
         const path = event.target.value;

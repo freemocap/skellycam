@@ -1,18 +1,15 @@
 // services/connection/connection-orchestrator.ts
-import { store } from '@/store';
-import { electronIpc } from '@/services/electron-ipc/electron-ipc';
-import { websocketService } from '@/services/websocket/websocket-service';
 import {
-    connectionStatusChanged,
-    connectionModeChanged,
-    managedProcessUpdated,
-    serverUrlUpdated,
     connectionErrorSet,
-    websocketStatusChanged,
+    connectionModeChanged,
+    connectionStatusChanged,
+    managedProcessUpdated,
     selectServerConfig,
-    type ServerConnectionMode,
-    type ServerStatus
+    type ServerStatus,
+    serverUrlUpdated,
+    store
 } from '@/store';
+import {electronIpc} from '@/services/electron-ipc/electron-ipc';
 
 export interface ConnectionOptions {
     mode: 'managed' | 'external';
@@ -67,14 +64,7 @@ class ConnectionOrchestrator {
         this.connectionPromise = this.performConnection(options);
 
         try {
-            const result = await this.connectionPromise;
-
-            // Auto-connect WebSocket if requested and server is up
-            if (result.success && options.autoConnectWebSocket !== false) {
-                await this.connectWebSocket();
-            }
-
-            return result;
+            return await this.connectionPromise;
         } finally {
             this.connectionPromise = null;
             this.abortController = null;
@@ -95,8 +85,6 @@ class ConnectionOrchestrator {
         // Stop health checks
         this.stopHealthCheck();
 
-        // Disconnect WebSocket
-        websocketService.disconnect();
 
         // Get current state
         const state = store.getState();
@@ -359,11 +347,7 @@ class ConnectionOrchestrator {
         return validCandidate.path;
     }
 
-    private async connectWebSocket(): Promise<void> {
-        console.log('Auto-connecting WebSocket');
-        store.dispatch(websocketStatusChanged('connecting'));
-        websocketService.connect();
-    }
+
 
     private startHealthCheck(serverUrl: string): void {
         this.stopHealthCheck();
