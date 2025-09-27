@@ -1,4 +1,5 @@
 import logging
+from copy import copy
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -125,9 +126,13 @@ class CameraGroupSharedMemoryManager:
             logger.exception(e)
 
     def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]:
+        target_frame_number = copy(self.latest_multiframe_number) #copy to avoid index changing during read loop
         self._latest_frames = {
-            camera_id: camera_shared_memory.get_data_by_index(index=self.latest_multiframe_number,
+            camera_id: camera_shared_memory.get_data_by_index(index=target_frame_number,
                                                             rec_array=self._latest_frames[camera_id] if camera_id in self._latest_frames else None)
             for camera_id, camera_shared_memory in self.camera_shms.items()
         }
+        frame_numbers = set([frame.frame_metadata.frame_number[0] for frame in self._latest_frames.values()])
+        if len(frame_numbers) != 1:
+            raise ValueError(f"Frame numbers do not match across cameras! {frame_numbers}")
         return self._latest_frames

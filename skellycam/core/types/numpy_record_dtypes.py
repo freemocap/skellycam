@@ -1,13 +1,10 @@
 import logging
-from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 from numpy import typing as npt
 
 logger = logging.getLogger(__name__)
-if TYPE_CHECKING:
-    pass
 
 CAMERA_CONFIG_DTYPE = np.dtype([
     ('camera_id', 'U1000'),

@@ -30,6 +30,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     const [cameraIds, setCameraIds] = useState<string[]>([]);
 
     const workersRef = useRef<Map<string, Worker>>(new Map());
+    const canvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
 
     const connect = () => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -52,6 +53,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
             // Clean up workers
             workersRef.current.forEach(worker => worker.terminate());
             workersRef.current.clear();
+            canvasesRef.current.clear();
         };
 
         ws.onmessage = async (event: MessageEvent) => {
@@ -71,6 +73,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
                         // Send to worker if exists
                         const worker = workersRef.current.get(frameData.cameraId);
                         if (worker) {
+                            console.log(`Sending frame ${frameData.frameNumber} of camera ${frameData.cameraId} to worker with size ${frameData.width}x${frameData.height}`);
                             worker.postMessage({
                                 type: 'frame',
                                 bitmap: frameData.bitmap
@@ -87,6 +90,7 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
                         newCameraIds.some((id, i) => id !== cameraIds[i]);
 
                     if (changed) {
+                        console.log(`Detected cameras: ${newCameraIds.join(', ')}`);
                         setCameraIds(newCameraIds);
                     }
                     if (frameNumbers.size > 1) {
@@ -122,10 +126,18 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
 
     const setCanvasForCamera = (cameraId: string, canvas: HTMLCanvasElement) => {
-        // Clean up existing worker if any
+        // Check if this exact canvas is already being used for this camera
+        const existingCanvas = canvasesRef.current.get(cameraId);
+        if (existingCanvas === canvas) {
+            // This canvas is already set up for this camera, nothing to do
+            return;
+        }
+
+        // Clean up existing worker if switching to a different canvas
         const existingWorker = workersRef.current.get(cameraId);
         if (existingWorker) {
             existingWorker.terminate();
+            workersRef.current.delete(cameraId);
         }
 
         try {
@@ -138,8 +150,9 @@ export const WebSocketProvider: React.FC<{ children: ReactNode }> = ({ children 
             const offscreen = canvas.transferControlToOffscreen();
             worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
 
-            // Store worker
+            // Store worker and canvas reference
             workersRef.current.set(cameraId, worker);
+            canvasesRef.current.set(cameraId, canvas);
 
             // Clean up blob URL
             URL.revokeObjectURL(workerUrl);
