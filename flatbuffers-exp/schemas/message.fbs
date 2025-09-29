@@ -1,0 +1,26 @@
+namespace SharedData;
+
+table CameraFrame {
+    camera_id: uint32;
+    timestamp: uint64;
+    frame_number: uint32;
+    width: uint32;
+    height: uint32;
+    pixels: [ubyte];  // Simplified - just raw bytes
+}
+
+table SystemStatus {
+    fps: float;
+    cpu_usage: float;
+    active_cameras: uint32;
+    message: string;
+}
+
+table SharedMessage {
+    magic: uint32 = 0xDEADBEEF;  // To verify valid data
+    sequence: uint64;
+    frame: CameraFrame;
+    status: SystemStatus;
+}
+
+root_type SharedMessage;
