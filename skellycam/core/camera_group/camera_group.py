@@ -147,7 +147,7 @@ class CameraGroup:
         self.cameras.orchestrator.first_recording_frame_number.value = -1
         self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
         self.unpause(await_unpaused=True)
-        finalize_recording(ipc=self.ipc)
+        finalize_recording(ipc=self.ipc, cameras=self.cameras)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
     def close(self):
@@ -186,9 +186,9 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
     return updated_configs
 
 
-def finalize_recording(ipc: CameraGroupIPC):
+def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
     recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {camera_id: None for camera_id in
-                                                                                   ipc.camera_ids}
+                                                                                                cameras.orchestrator.camera_statuses.keys()}
     recording_info: RecordingInfo | None = None
     while any([not isinstance(response, RecordingFinishedMessage) for response in
                recording_finished_messages_by_camera.values()]) and ipc.should_continue:

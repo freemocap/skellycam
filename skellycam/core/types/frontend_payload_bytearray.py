@@ -63,7 +63,7 @@ def create_frontend_payload(latest_frames : dict[str, np.recarray],
                                          frame_recarray.frame_metadata.timestamps.post_frame_grab_ns]))
 
         if frame_recarray.frame_metadata.camera_config.rotation != -1:
-            rotated_image = cv2.rotate(frame_recarray.image[0], frame_recarray.frame_metadata.camera_config.rotation)
+            rotated_image = cv2.rotate(frame_recarray.image[0], frame_recarray.frame_metadata.camera_config.rotation[0])
         else:
             rotated_image = frame_recarray.image[0]
 

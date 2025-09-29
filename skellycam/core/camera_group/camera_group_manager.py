@@ -40,9 +40,6 @@ class CameraGroupManager:
         """
         Retrieve a camera group by its ID.
         """
-        if self.closing:
-            logger.warning("Cannot start recording, camera groups are closing.")
-            return None
         if camera_group_id not in self.camera_groups:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
         return self.camera_groups[camera_group_id]
@@ -57,9 +54,6 @@ class CameraGroupManager:
         return configs_by_group
 
     def update_camera_settings(self, camera_configs: CameraConfigs) -> CameraConfigs:
-        if self.closing:
-            logger.warning("Cannot start recording, camera groups are closing.")
-            return {}
         extracted_configs: CameraConfigs = {}
         for camera_group_id, camera_configs in self._get_configs_by_group(camera_configs).items():
             extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
@@ -72,10 +66,8 @@ class CameraGroupManager:
         """
         Close all camera groups.
         """
-        self.closing = True
         if not self.camera_groups:
             logger.warning("No camera groups to close.")
-            self.closing = False
             return
         for camera_group in self.camera_groups.values():
             camera_group.should_continue = False
@@ -84,14 +76,11 @@ class CameraGroupManager:
             self.camera_groups[camera_group_id].close()
         logger.success(f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}")
         self.camera_groups.clear()
-        self.closing = False
 
     def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """
         Start recording for all camera groups.
         """
-        if self.closing:
-            wait_100ms()
         for camera_group in self.camera_groups.values():
             camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
@@ -100,8 +89,6 @@ class CameraGroupManager:
         """
         Stop recording for all camera groups.
         """
-        while self.closing:
-            wait_100ms()
 
         for camera_group in self.camera_groups.values():
             camera_group.stop_recording()
@@ -141,9 +128,6 @@ class CameraGroupManager:
         """
         Pause all camera groups.
         """
-        if self.closing:
-            logger.warning("Cannot pause, camera groups are closing.")
-            return
         for camera_group in self.camera_groups.values():
             camera_group.pause(await_paused=await_paused)
             logger.info(f"Paused camera group ID: {camera_group.id}")
@@ -152,9 +136,6 @@ class CameraGroupManager:
         """
         Pause/Unpause all camera groups.
         """
-        if self.closing:
-            logger.warning("Cannot pause, camera groups are closing.")
-            return
         for camera_group in self.camera_groups.values():
             camera_group.pause_unpause(await_state_change=await_state_change)
             logger.info(f"Paused camera group ID: {camera_group.id}")
@@ -163,9 +144,6 @@ class CameraGroupManager:
         """
         Unpause all camera groups.
         """
-        if self.closing:
-            logger.warning("Cannot unpause, camera groups are closing.")
-            return
         for camera_group in self.camera_groups.values():
             camera_group.unpause(await_unpaused=await_unpaused)
             logger.info(f"Unpaused camera group ID: {camera_group.id}")
