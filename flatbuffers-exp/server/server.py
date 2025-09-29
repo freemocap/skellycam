@@ -2,7 +2,9 @@ import asyncio
 import struct
 import time
 import tempfile
+import mmap
 from pathlib import Path
+from collections import deque
 import numpy as np
 
 import flatbuffers
@@ -14,90 +16,152 @@ import uvicorn
 import SharedData.CameraFrame as CameraFrame
 import SharedData.SystemStatus as SystemStatus
 import SharedData.SharedMessage as SharedMessage
-
+import cv2
 
 class FileBuffer:
-    """Manages a file for sharing data (cross-platform)"""
+    """Manages a memory-mapped file for FAST sharing"""
 
-    def __init__(self, *, name: str, size: int = 1024 * 1024) -> None:
+    def __init__(self, *, name: str, size: int = 10 * 1024 * 1024) -> None:
         self.size: int = size
         self.file_path: Path = Path(tempfile.gettempdir()) / f"fbuffer_{name}.bin"
 
         # Create file if it doesn't exist
         if not self.file_path.exists():
-            self.file_path.write_bytes(b'\x00' * size)
+            with open(self.file_path, 'wb') as f:
+                f.write(b'\x00' * size)
+
+        # Open file and create memory map
+        self.file_handle = open(self.file_path, 'r+b')
+        self.mmap = mmap.mmap(self.file_handle.fileno(), size)
 
     def write_flatbuffer(self, *, builder: flatbuffers.Builder) -> None:
-        """Write FlatBuffer data to file"""
+        """Write FlatBuffer data to memory-mapped file (NO disk I/O!)"""
         buf = builder.Output()
 
         # Write size prefix (4 bytes) then data
         size_bytes = struct.pack('<I', len(buf))
 
-        with open(self.file_path, 'r+b') as f:
-            f.seek(0)
-            f.write(size_bytes)
-            f.write(bytes(buf))
-            f.flush()
+        # Write directly to memory map - FAST!
+        self.mmap.seek(0)
+        self.mmap.write(size_bytes)
+        self.mmap.write(bytes(buf))
+        # NO flush() call - memory map is already shared!
+
+    def close(self) -> None:
+        """Clean up resources"""
+        if self.mmap:
+            self.mmap.close()
+        if self.file_handle:
+            self.file_handle.close()
 
 
 class CameraSimulator:
-    """Simulates camera data generation"""
+    """Simulates camera data generation - OPTIMIZED"""
 
     def __init__(self) -> None:
         self.frame_counter: int = 0
         self.buffer: FileBuffer = FileBuffer(name="camera_data")
+        self.frame_times: deque[float] = deque(maxlen=30)
+        self.last_frame_time: float = 0.0
+
+        # 1080p settings
+        self.width: int = 1280
+        self.height: int = 720
+        self.channels: int = 3  # RGB
+
+        # OPTIMIZATION: Pre-allocate pixel buffer and reuse it
+        self.pixels: np.ndarray = np.random.randint(
+            0, 255,
+            (self.width,  self.height,  self.channels),
+            dtype=np.uint8
+        )
+        _, self.jpeg_data = cv2.imencode(
+            ext='.jpg',
+            img=self.pixels,
+            params=[int(cv2.IMWRITE_JPEG_QUALITY), 80]
+        )
+
+        # OPTIMIZATION: Pre-allocate FlatBuffer builder and reuse it
+        self.builder: flatbuffers.Builder = flatbuffers.Builder(8 * 1024 * 1024)
 
     def generate_frame(self, *, camera_id: int) -> None:
-        """Generate a test frame and write to shared file"""
-        builder = flatbuffers.Builder(1024 * 100)
+        """Generate a 1080p frame FAST - reusing buffers"""
+        current_time = time.time()
 
-        # Create fake pixel data (small for demo - 100x100 RGB)
-        width: int = 100
-        height: int = 100
-        pixels: np.ndarray = np.random.randint(0, 255, width * height * 3, dtype=np.uint8)
+        # Track frame timing
+        if self.last_frame_time > 0:
+            self.frame_times.append(current_time - self.last_frame_time)
+        self.last_frame_time = current_time
 
-        # Build pixels vector - use builder's CreateNumpyVector or CreateByteVector
-        pixels_vector = builder.CreateNumpyVector(pixels)
+        # OPTIMIZATION: Reset builder instead of creating new one
+        self.builder.Clear()
 
-        # Build CameraFrame using the correct generated API
-        CameraFrame.CameraFrameStart(builder)
-        CameraFrame.CameraFrameAddCameraId(builder, camera_id)
-        CameraFrame.CameraFrameAddTimestamp(builder, int(time.time() * 1000))
-        CameraFrame.CameraFrameAddFrameNumber(builder, self.frame_counter)
-        CameraFrame.CameraFrameAddWidth(builder, width)
-        CameraFrame.CameraFrameAddHeight(builder, height)
-        CameraFrame.CameraFrameAddPixels(builder, pixels_vector)
-        frame = CameraFrame.CameraFrameEnd(builder)
 
-        # Build SystemStatus message string first (must be created before SystemStatus)
-        message_str = builder.CreateString(f"Frame {self.frame_counter} from camera {camera_id}")
 
-        SystemStatus.SystemStatusStart(builder)
-        SystemStatus.SystemStatusAddFps(builder, 30.0)
-        SystemStatus.SystemStatusAddCpuUsage(builder, 45.5 + (self.frame_counter % 20))
-        SystemStatus.SystemStatusAddActiveCameras(builder, 1)
-        SystemStatus.SystemStatusAddMessage(builder, message_str)
-        status = SystemStatus.SystemStatusEnd(builder)
+        # Build pixels vector - reusing same buffer
+        pixels_vector = self.builder.CreateNumpyVector(self.jpeg_data)#self.pixels)
+
+        # Build CameraFrame
+        CameraFrame.CameraFrameStart(self.builder)
+        CameraFrame.CameraFrameAddCameraId(self.builder, camera_id)
+        CameraFrame.CameraFrameAddTimestamp(self.builder, int(time.time() * 1000))
+        CameraFrame.CameraFrameAddFrameNumber(self.builder, self.frame_counter)
+        CameraFrame.CameraFrameAddWidth(self.builder, self.width)
+        CameraFrame.CameraFrameAddHeight(self.builder, self.height)
+        CameraFrame.CameraFrameAddPixels(self.builder, pixels_vector)
+        frame = CameraFrame.CameraFrameEnd(self.builder)
+
+        # Build SystemStatus
+        fps = self.get_fps()
+        message_str = self.builder.CreateString(f"Frame {self.frame_counter} @ {fps:.1f} FPS")
+
+        SystemStatus.SystemStatusStart(self.builder)
+        SystemStatus.SystemStatusAddFps(self.builder, fps)
+        SystemStatus.SystemStatusAddCpuUsage(self.builder, 45.5)
+        SystemStatus.SystemStatusAddActiveCameras(self.builder, 1)
+        SystemStatus.SystemStatusAddMessage(self.builder, message_str)
+        status = SystemStatus.SystemStatusEnd(self.builder)
 
         # Build SharedMessage
-        SharedMessage.SharedMessageStart(builder)
-        SharedMessage.SharedMessageAddMagic(builder, 0xDEADBEEF)
-        SharedMessage.SharedMessageAddSequence(builder, self.frame_counter)
-        SharedMessage.SharedMessageAddFrame(builder, frame)
-        SharedMessage.SharedMessageAddStatus(builder, status)
-        message = SharedMessage.SharedMessageEnd(builder)
+        SharedMessage.SharedMessageStart(self.builder)
+        SharedMessage.SharedMessageAddMagic(self.builder, 0xDEADBEEF)
+        SharedMessage.SharedMessageAddSequence(self.builder, self.frame_counter)
+        SharedMessage.SharedMessageAddFrame(self.builder, frame)
+        SharedMessage.SharedMessageAddStatus(self.builder, status)
+        message = SharedMessage.SharedMessageEnd(self.builder)
 
-        builder.Finish(message)
+        self.builder.Finish(message)
 
-        # Write to file
-        self.buffer.write_flatbuffer(builder=builder)
+        # Write to memory-mapped file - FAST!
+        self.buffer.write_flatbuffer(builder=self.builder)
         self.frame_counter += 1
+
+    def get_fps(self) -> float:
+        """Calculate current FPS based on recent frame times"""
+        if len(self.frame_times) < 2:
+            return 0.0
+
+        avg_frame_time = sum(self.frame_times) / len(self.frame_times)
+        if avg_frame_time > 0:
+            return 1.0 / avg_frame_time
+        return 0.0
+
+    def print_stats(self) -> None:
+        """Print current performance stats"""
+        fps = self.get_fps()
+        # frame_size_mb = self.jpeg_data.shape[0] / (1024 * 1024)
+        frame_size_mb = self.pixels / (1024 * 1024)
+        bandwidth_mb_s = fps * frame_size_mb
+
+        print(f"🎬 Frame {self.frame_counter:5d} | "
+              f"FPS: {fps:6.2f} | "
+              f"Bandwidth: {bandwidth_mb_s:6.2f} MB/s | "
+              f"Frame Size: {frame_size_mb:.2f} MB")
 
 
 app = FastAPI()
 
-# Enable CORS for Electron app
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -107,7 +171,6 @@ app.add_middleware(
 
 # Global state
 simulator = CameraSimulator()
-connected_clients: set[WebSocket] = set()
 
 
 @app.get("/info")
@@ -122,29 +185,65 @@ async def get_info() -> dict[str, str | int]:
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
-    connected_clients.add(websocket)
+    print("✅ Client connected")
 
     try:
-        while True:
-            # Generate new frame
-            simulator.generate_frame(camera_id=1)
+        # Send first frame immediately
+        simulator.generate_frame(camera_id=1)
+        simulator.print_stats()
 
-            # Notify client
-            await websocket.send_json({
-                "type": "frame_update",
-                "sequence": simulator.frame_counter,
-                "timestamp": time.time()
-            })
+        await websocket.send_json({
+            "type": "frame_ready",
+            "sequence": simulator.frame_counter,
+        })
 
-            # Simulate 30 FPS
-            await asyncio.sleep(1/30)
-            
+        await_acknowledgments = False # wait for client acknowledgments before sending new frames
+        if await_acknowledgments:
+            # Wait for acknowledgments and send new frames
+            async for message in websocket.iter_text():
+                import json
+                data = json.loads(message)
+
+                if data.get("type") == "ack":
+                    # Client acknowledged last frame, send next one
+                    simulator.generate_frame(camera_id=1)
+
+                    # Only print stats every 30 frames to avoid terminal spam
+                    if simulator.frame_counter % 30 == 0:
+                        simulator.print_stats()
+
+                    await websocket.send_json({
+                        "type": "frame_ready",
+                        "sequence": simulator.frame_counter,
+                    })
+        else: #send as fast as possible
+            while True:
+                await asyncio.sleep(0.001)  # Small sleep to avoid tight loop
+                simulator.generate_frame(camera_id=1)
+
+                # Only print stats every 100 frames to avoid terminal spam
+                if simulator.frame_counter % 100 == 0:
+                    simulator.print_stats()
+
+
 
     except WebSocketDisconnect:
-        connected_clients.remove(websocket)
+        print("❌ Client disconnected")
 
 
 if __name__ == "__main__":
-    print("🚀 Starting FlatBuffer IPC Demo Server")
+    print("🚀 Starting FlatBuffer IPC Demo Server - OPTIMIZED!")
     print(f"📁 Shared file: {simulator.buffer.file_path.absolute()}")
-    uvicorn.run(app=app, host="127.0.0.1", port=8009)
+    print(
+        f"📐 Frame size: {simulator.width}x{simulator.height} RGB = {(simulator.width * simulator.height * 3) / (1024 * 1024):.2f} MB")
+    print("🔥 Optimizations enabled:")
+    print("   ✅ Memory-mapped file (no disk I/O)")
+    print("   ✅ Reused FlatBuffer builder")
+    print("   ✅ Reused pixel buffer")
+    print("   ✅ No flush() calls")
+    print("=" * 80)
+
+    try:
+        uvicorn.run(app=app, host="127.0.0.1", port=8009)
+    finally:
+        simulator.buffer.close()

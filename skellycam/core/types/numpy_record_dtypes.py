@@ -286,7 +286,6 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
     ('jpeg_string_length', '<i4'),  # 4 bytes, length of the JPEG string, little-endian int32
 ], align=True)
 
-JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
 
 FrameMetadataArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype

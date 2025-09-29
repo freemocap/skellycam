@@ -5,13 +5,13 @@ import numpy as np
 
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
 from skellycam.core.types.numpy_record_dtypes import (
-    JPEG_ENCODING_PARAMETERS,
-    logger,
     FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE,
     CAMERA_CONFIG_DTYPE, FRONTEND_FRAME_HEADER_DTYPE,
 )
 from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
+JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
+logger = logging.getLogger(__name__)
 class MessageType:
     PAYLOAD_HEADER = 0
     FRAME_METADATA = 1

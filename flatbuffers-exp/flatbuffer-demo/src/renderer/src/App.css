@@ -1,133 +1,32 @@
-body {
-  margin: 0;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-  'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #1e1e1e;
-  color: #ffffff;
-}
+/* Add these styles to your existing App.css */
 
-.app-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-h1 {
-  margin-top: 0;
-  color: #61dafb;
-}
-
-h3 {
-  margin-top: 0;
-  color: #61dafb;
-}
-
-.status-box {
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-weight: 600;
-}
-
-.status-box.connected {
-  background: #2d5016;
-  border: 1px solid #4a7c2a;
-}
-
-.status-box.disconnected {
-  background: #5c1010;
-  border: 1px solid #8a1616;
-}
-
-.error-box {
-  padding: 12px;
-  background: #5c1010;
-  border: 1px solid #8a1616;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.file-path {
-  margin-bottom: 20px;
-  font-size: 12px;
-  opacity: 0.7;
-  padding: 8px;
-  background: #2d2d2d;
-  border-radius: 4px;
-}
-
-.file-path code {
-  font-family: 'Courier New', Courier, monospace;
-  color: #61dafb;
-}
-
-.data-container {
-  background: #2d2d2d;
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #3d3d3d;
-}
-
-.data-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 15px;
+.fps-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 30px;
   margin: 20px 0;
-}
-
-.data-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 10px;
-  background: #1e1e1e;
-  border-radius: 4px;
-}
-
-.data-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.label {
-  font-size: 12px;
-  opacity: 0.7;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.value {
-  font-size: 16px;
-  font-weight: 600;
-  color: #61dafb;
-}
-
-.value.mono {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
-}
-
-.performance-note {
-  margin-top: 20px;
-  padding: 15px;
-  background: #1e1e1e;
-  border-radius: 4px;
-  border: 1px solid #61dafb;
-}
-
-.performance-note strong {
-  color: #61dafb;
-}
-
-.waiting {
   text-align: center;
-  padding: 40px;
-  opacity: 0.5;
-  font-style: italic;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-code {
-  font-family: 'Courier New', Courier, monospace;
+.fps-display h2 {
+  margin: 0 0 20px 0;
+  color: white;
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+.fps-value {
+  font-size: 4em;
+  font-weight: bold;
+  color: white;
+  font-family: 'Monaco', 'Courier New', monospace;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  margin: 10px 0;
+}
+
+.fps-detail {
+  font-size: 1.1em;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 10px;
 }

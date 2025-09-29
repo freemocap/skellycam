@@ -2,11 +2,11 @@ import { useSharedMemory } from './SharedMemoryProvider'
 import './App.css'
 
 export const App = (): React.JSX.Element => {
-  const { data, connected, error, filePath } = useSharedMemory()
+  const { data, connected, error, filePath, fps } = useSharedMemory()
 
   return (
     <div className="app-container">
-      <h1>🚀 FlatBuffer IPC Demo</h1>
+      <h1>🚀 FlatBuffer IPC Demo - 1080p Streaming</h1>
 
       <div className={`status-box ${connected ? 'connected' : 'disconnected'}`}>
         Status: {connected ? '✅ Connected' : '❌ Disconnected'}
@@ -20,33 +20,35 @@ export const App = (): React.JSX.Element => {
         </div>
       )}
 
+      {data && (
+        <div className="fps-display">
+          <h2>⚡ Streaming Performance</h2>
+          <div className="fps-value">{fps.toFixed(1)} FPS</div>
+          <div className="fps-detail">
+            1920x1080 RGB • {((1920 * 1080 * 3 * fps) / (1024 * 1024)).toFixed(2)} MB/s
+          </div>
+        </div>
+      )}
+
       {data ? (
         <div className="data-container">
-          <h3>📊 Live Data from Python Process:</h3>
+          <h3>📊 Live Data:</h3>
           <div className="data-grid">
             <div className="data-item">
-              <span className="label">Sequence:</span>
-              <span className="value">{data.sequence}</span>
+              <span className="label">Frame Number:</span>
+              <span className="value">{data.frameNumber}</span>
             </div>
             <div className="data-item">
               <span className="label">Camera ID:</span>
               <span className="value">{data.cameraId}</span>
             </div>
             <div className="data-item">
-              <span className="label">Frame Number:</span>
-              <span className="value">{data.frameNumber}</span>
+              <span className="label">Width:</span>
+              <span className="value">1920</span>
             </div>
             <div className="data-item">
-              <span className="label">Timestamp:</span>
-              <span className="value">{new Date(data.timestamp).toLocaleTimeString()}</span>
-            </div>
-            <div className="data-item">
-              <span className="label">FPS:</span>
-              <span className="value">{data.fps.toFixed(1)}</span>
-            </div>
-            <div className="data-item">
-              <span className="label">CPU Usage:</span>
-              <span className="value">{data.cpuUsage.toFixed(1)}%</span>
+              <span className="label">Height:</span>
+              <span className="value">1080</span>
             </div>
             <div className="data-item full-width">
               <span className="label">Message:</span>
@@ -59,8 +61,7 @@ export const App = (): React.JSX.Element => {
           </div>
 
           <div className="performance-note">
-            <strong>🎯 Cross-Platform Zero-Copy Performance:</strong> Reading directly from Pythons
-            shared file!
+            <strong>🎯 Zero-Copy IPC:</strong> 1080p frames streamed via shared memory
           </div>
         </div>
       ) : (
