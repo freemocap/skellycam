@@ -72,6 +72,7 @@ dependencies = [
     "nuitka>=2.6.5",
     "pyinstaller>=6.15.0",
     "av>=15.1.0",
+    "flatbuffers>=25.9.23",
 ]
 requires-python = ">=3.10,<3.13"
 
@@ -106,6 +107,11 @@ py-modules = ["skellycam"]
 
 [tool.uv]
 dev-dependencies = [
+]
+
+[tool.uv.workspace]
+members = [
+    "flatbuffers-exp",
 ]
 
 [dependency-groups]

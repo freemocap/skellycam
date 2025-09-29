@@ -1,0 +1,13 @@
+[project]
+name = "flatbuffers-exp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.116.1",
+    "flatbuffers>=25.9.23",
+    "numpy>=1.26.2",
+    "uvicorn[standard]>=0.35.0",
+    "websockets>=15.0.1",
+]
