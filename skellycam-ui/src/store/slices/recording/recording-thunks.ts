@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { z } from 'zod';
 import { RootState } from '@/store/types';
-import {urlService} from "@/services";
+import {serverUrls} from "@/services";
 
 const RecordStartRequestSchema = z.object({
     recording_name: z.string(),
@@ -30,7 +30,7 @@ export const startRecording = createAsyncThunk<
             mic_device_index: micDeviceIndex,
         });
 
-        const response = await fetch(urlService.endpoints.startRecording, {
+        const response = await fetch(serverUrls.endpoints.startRecording, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -51,7 +51,7 @@ export const stopRecording = createAsyncThunk<
     async (_, { getState }) => {
         const state = getState();
 
-        const response = await fetch(urlService.endpoints.stopRecording, {
+        const response = await fetch(serverUrls.endpoints.stopRecording, {
             method: 'GET',
         });
 

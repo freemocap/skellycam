@@ -1,10 +1,13 @@
+// cameras-slice.ts
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
-    createSlice,
-    PayloadAction,
-    EntityState,
-} from '@reduxjs/toolkit';
-import { CameraDevice, CameraConfig } from './cameras-types';
-import { cameraAdapter } from './cameras-adapter';
+    Camera,
+    CamerasState,
+    CameraConfig,
+    createDefaultCameraConfig,
+    areConfigsEqual,
+    extractConfigSettings
+} from './cameras-types';
 import {
     detectCameras,
     connectToCameras,
@@ -12,158 +15,278 @@ import {
     closeCameras,
 } from './cameras-thunks';
 
-interface CameraState extends EntityState<CameraDevice, string> {
-    isLoading: boolean;
-    error: string | null;
-    connectionStatus: 'disconnected' | 'connecting' | 'connected';
-}
-
-const initialState: CameraState = cameraAdapter.getInitialState({
+const initialState: CamerasState = {
+    cameras: [],
     isLoading: false,
     error: null,
-    connectionStatus: 'disconnected',
-});
+};
 
 export const cameraSlice = createSlice({
     name: 'cameras',
     initialState,
     reducers: {
-        cameraStatusUpdated: (
-            state,
-            action: PayloadAction<{ cameraId: string; status: CameraDevice['status'] }>
-        ) => {
-            cameraAdapter.updateOne(state, {
-                id: action.payload.cameraId,
-                changes: { status: action.payload.status },
-            });
-        },
-        cameraSelectionToggled: (state, action: PayloadAction<string>) => {
-            const camera = state.entities[action.payload];
-            if (camera) {
-                const newSelected = !camera.selected;
-                cameraAdapter.updateOne(state, {
-                    id: action.payload,
-                    changes: {
-                        selected: newSelected,
-                        config: {
-                            ...camera.config,
-                            use_this_camera: newSelected,
-                        },
-                    },
-                });
+        // ========== Camera Management ==========
+        cameraAdded: (state, action: PayloadAction<Camera>) => {
+            const existingIndex = state.cameras.findIndex(
+                cam => cam.id === action.payload.id
+            );
+
+            if (existingIndex >= 0) {
+                state.cameras[existingIndex] = action.payload;
+            } else {
+                state.cameras.push(action.payload);
             }
         },
-        cameraConfigUpdated: (
+
+        cameraRemoved: (state, action: PayloadAction<string>) => {
+            state.cameras = state.cameras.filter(cam => cam.id !== action.payload);
+        },
+
+        // ========== Selection ==========
+        cameraSelectionToggled: (state, action: PayloadAction<string>) => {
+            const camera = state.cameras.find(cam => cam.id === action.payload);
+            if (camera) {
+                camera.selected = !camera.selected;
+                camera.desiredConfig.use_this_camera = camera.selected;
+            }
+        },
+
+        allCamerasSelected: (state) => {
+            state.cameras.forEach(camera => {
+                camera.selected = true;
+                camera.desiredConfig.use_this_camera = true;
+            });
+        },
+
+        allCamerasDeselected: (state) => {
+            state.cameras.forEach(camera => {
+                camera.selected = false;
+                camera.desiredConfig.use_this_camera = false;
+            });
+        },
+
+        // ========== Configuration ==========
+        // User updates desired config
+        cameraDesiredConfigUpdated: (
             state,
             action: PayloadAction<{
                 cameraId: string;
-                config: Partial<CameraConfig>;
+                config: Partial<CameraConfig>
             }>
         ) => {
-            const camera = state.entities[action.payload.cameraId];
+            const camera = state.cameras.find(
+                cam => cam.id === action.payload.cameraId
+            );
             if (camera) {
-                cameraAdapter.updateOne(state, {
-                    id: action.payload.cameraId,
-                    changes: {
-                        config: {
-                            ...camera.config,
-                            ...action.payload.config,
-                        },
-                    },
-                });
+                camera.desiredConfig = { ...camera.desiredConfig, ...action.payload.config };
+                // Check if there's now a mismatch
+                camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, camera.desiredConfig);
             }
         },
-        configCopiedToAllCameras: (state, action: PayloadAction<string>) => {
-            const sourceCamera = state.entities[action.payload];
-            if (sourceCamera) {
-                const configToCopy = {
-                    resolution: sourceCamera.config.resolution,
-                    color_channels: sourceCamera.config.color_channels,
-                    pixel_format: sourceCamera.config.pixel_format,
-                    exposure_mode: sourceCamera.config.exposure_mode,
-                    exposure: sourceCamera.config.exposure,
-                    framerate: sourceCamera.config.framerate,
-                    rotation: sourceCamera.config.rotation,
-                    capture_fourcc: sourceCamera.config.capture_fourcc,
-                    writer_fourcc: sourceCamera.config.writer_fourcc,
-                };
 
-                const updates = Object.values(state.entities)
-                    .filter((cam) =>
-                        cam !== undefined && cam.cameraId !== action.payload
-                    )
-                    .map((camera) => ({
-                        id: camera.cameraId,
-                        changes: {
-                            config: {
-                                ...camera.config,
-                                ...configToCopy,
-                            },
-                        },
-                    }));
-                cameraAdapter.updateMany(state, updates);
+        // Actual config updated from stream
+        cameraActualConfigUpdated: (
+            state,
+            action: PayloadAction<{
+                cameraId: string;
+                config: CameraConfig
+            }>
+        ) => {
+            const camera = state.cameras.find(
+                cam => cam.id === action.payload.cameraId
+            );
+            if (camera) {
+                camera.actualConfig = action.payload.config;
+                // Check if there's a mismatch with desired
+                camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, camera.desiredConfig);
             }
         },
+
+        // Apply desired config to actual (when user clicks "apply" button)
+        applyDesiredConfigToActual: (state, action: PayloadAction<string>) => {
+            const camera = state.cameras.find(cam => cam.id === action.payload);
+            if (camera) {
+                // This will trigger the API call to update the camera
+                // The actual config will be updated when we receive it from stream
+                camera.hasConfigMismatch = false;
+            }
+        },
+
+        // Reset desired config to match actual
+        resetDesiredConfigToActual: (state, action: PayloadAction<string>) => {
+            const camera = state.cameras.find(cam => cam.id === action.payload);
+            if (camera) {
+                camera.desiredConfig = { ...camera.actualConfig };
+                camera.hasConfigMismatch = false;
+            }
+        },
+
+        configCopiedToAll: (state, action: PayloadAction<string>) => {
+            const sourceCamera = state.cameras.find(cam => cam.id === action.payload);
+            if (!sourceCamera) return;
+
+            // Extract copyable settings (exclude identity fields)
+            const settings = extractConfigSettings(sourceCamera.desiredConfig);
+
+            state.cameras.forEach(camera => {
+                if (camera.id !== action.payload) {
+                    camera.desiredConfig = {
+                        ...camera.desiredConfig,
+                        ...settings
+                    };
+                    camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, camera.desiredConfig);
+                }
+            });
+        },
+
+        // ========== Metrics (from WebSocket) ==========
+        cameraMetricsUpdated: (
+            state,
+            action: PayloadAction<{
+                cameraId: string;
+                fps: number;
+                droppedFrames: number;
+                lastFrameTime: number;
+            }>
+        ) => {
+            const camera = state.cameras.find(
+                cam => cam.id === action.payload.cameraId
+            );
+            if (camera) {
+                camera.metrics = {
+                    fps: action.payload.fps,
+                    droppedFrames: action.payload.droppedFrames,
+                    lastFrameTime: action.payload.lastFrameTime,
+                };
+            }
+        },
+
+        // ========== Cameras from WebSocket Stream ==========
+        camerasDetectedFromStream: (state, action: PayloadAction<CameraConfig[]>) => {
+            action.payload.forEach(config => {
+                const exists = state.cameras.some(cam => cam.id === config.camera_id);
+                if (!exists) {
+                    state.cameras.push({
+                        id: config.camera_id,
+                        index: config.camera_index,
+                        name: config.camera_name,
+                        actualConfig: config,
+                        desiredConfig: { ...config },  // Start with desired = actual
+                        hasConfigMismatch: false,
+                        connectionStatus: 'connected',
+                        selected: true,
+                        deviceInfo: {},
+                    });
+                }
+            });
+        },
+
+        // Batch update actual configs from stream
+        actualConfigsUpdatedFromStream: (
+            state,
+            action: PayloadAction<Map<string, CameraConfig>>
+        ) => {
+            action.payload.forEach((config: CameraConfig, cameraId: string) => {
+                const camera = state.cameras.find(cam => cam.id === cameraId);
+                if (camera) {
+                    camera.actualConfig = config;
+                    camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, camera.desiredConfig);
+                }
+            });
+        },
+
+        // ========== Error Handling ==========
         errorCleared: (state) => {
             state.error = null;
         },
     },
+
     extraReducers: (builder) => {
         builder
-            // Detect cameras
+            // ========== Detect Cameras ==========
             .addCase(detectCameras.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
             })
             .addCase(detectCameras.fulfilled, (state, action) => {
                 state.isLoading = false;
-                cameraAdapter.setAll(state, action.payload);
+                state.cameras = action.payload;
             })
             .addCase(detectCameras.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.error.message || 'Failed to detect cameras';
             })
-            // Connect to cameras
+
+            // ========== Connect Cameras ==========
             .addCase(connectToCameras.pending, (state) => {
-                state.connectionStatus = 'connecting';
+                state.isLoading = true;
                 state.error = null;
             })
             .addCase(connectToCameras.fulfilled, (state, action) => {
-                state.connectionStatus = 'connected';
-                // Update configs from server response
-                const updates = Object.entries(action.payload.camera_configs).map(
-                    ([cameraId, config]) => ({
-                        id: cameraId,
-                        changes: { config: config as CameraConfig },
-                    })
+                state.isLoading = false;
+                // Update both actual and desired configs from server response
+                Object.entries(action.payload.camera_configs).forEach(
+                    ([cameraId, config]) => {
+                        const camera = state.cameras.find(cam => cam.id === cameraId);
+                        if (camera) {
+                            camera.actualConfig = config as CameraConfig;
+                            camera.desiredConfig = { ...config as CameraConfig };
+                            camera.hasConfigMismatch = false;
+                            camera.connectionStatus = 'connected';
+                        }
+                    }
                 );
-                cameraAdapter.updateMany(state, updates);
             })
             .addCase(connectToCameras.rejected, (state, action) => {
-                state.connectionStatus = 'disconnected';
+                state.isLoading = false;
                 state.error = action.error.message || 'Failed to connect to cameras';
             })
-            // Update camera configs
-            .addCase(updateCameraConfigs.fulfilled, (state, action) => {
-                const updates = Object.entries(action.payload.camera_configs).map(
-                    ([cameraId, config]) => ({
-                        id: cameraId,
-                        changes: { config: config as CameraConfig },
-                    })
-                );
-                cameraAdapter.updateMany(state, updates);
+
+            // ========== Update Configs ==========
+            .addCase(updateCameraConfigs.pending, (state) => {
+                state.isLoading = true;
             })
-            // Close cameras
+            .addCase(updateCameraConfigs.fulfilled, (state, action) => {
+                state.isLoading = false;
+                // When configs are successfully updated, sync desired to actual
+                Object.entries(action.payload.camera_configs).forEach(
+                    ([cameraId, config]) => {
+                        const camera = state.cameras.find(cam => cam.id === cameraId);
+                        if (camera) {
+                            camera.actualConfig = config as CameraConfig;
+                            camera.desiredConfig = { ...config as CameraConfig };
+                            camera.hasConfigMismatch = false;
+                        }
+                    }
+                );
+            })
+            .addCase(updateCameraConfigs.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.error.message || 'Failed to update camera configs';
+            })
+
+            // ========== Close Cameras ==========
             .addCase(closeCameras.fulfilled, (state) => {
-                state.connectionStatus = 'disconnected';
+                state.cameras.forEach(camera => {
+                    camera.connectionStatus = 'available';
+                    camera.metrics = undefined;
+                    camera.hasConfigMismatch = false;
+                });
             });
     },
 });
 
 export const {
-    cameraStatusUpdated,
     cameraSelectionToggled,
-    cameraConfigUpdated,
-    configCopiedToAllCameras,
+    allCamerasSelected,
+    allCamerasDeselected,
+    cameraDesiredConfigUpdated,
+    cameraActualConfigUpdated,
+    applyDesiredConfigToActual,
+    resetDesiredConfigToActual,
+    configCopiedToAll,
+    cameraMetricsUpdated,
+    camerasDetectedFromStream,
+    actualConfigsUpdatedFromStream,
     errorCleared,
 } = cameraSlice.actions;

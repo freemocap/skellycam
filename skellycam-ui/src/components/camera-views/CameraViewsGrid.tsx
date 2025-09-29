@@ -1,10 +1,10 @@
 import React, {useMemo} from "react";
 import {Box} from "@mui/material";
 import {CameraView} from "./CameraView";
-import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
+import {useServer} from "@/services/server/ServerContextProvider";
 
 export const CameraViewsGrid: React.FC = () => {
-    const {cameraIds} = useWebSocket();
+    const {cameraIds} = useServer();
 
     const defaultWidth = 640;
     const defaultHeight = 480;

@@ -2,22 +2,22 @@ import React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { Box, Tooltip, useTheme } from '@mui/material';
-import { RotationOptions, RotationLabels } from "@/store/slices/cameras/cameras-types";
+import { ROTATION_OPTIONS } from '@/store/slices/cameras/cameras-types';
 
 interface CameraConfigRotationProps {
-    rotation?: number;
-    onChange: (rotation: number) => void;
+    rotation?: string;
+    onChange: (rotation: string) => void;
 }
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-                                                                              rotation = -1, // Default to -1 for NO_ROTATION
+                                                                              rotation = 'None',
                                                                               onChange
                                                                           }) => {
     const theme = useTheme();
 
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,
-        newRotation: number | null,
+        newRotation: string | null,
     ): void => {
         if (newRotation !== null) {
             onChange(newRotation);
@@ -45,9 +45,9 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                         }
                     }}
                 >
-                    {RotationOptions.map((value: number, index: number) => (
-                        <ToggleButton key={value} value={value}>
-                            {RotationLabels[index]}
+                    {ROTATION_OPTIONS.map((option) => (
+                        <ToggleButton key={option} value={option}>
+                            {option === 'None' ? 'None' : `${option}°`}
                         </ToggleButton>
                     ))}
                 </ToggleButtonGroup>

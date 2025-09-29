@@ -12,9 +12,8 @@ import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
 import { CameraConfigRotation } from "./CameraConfigRotation";
 import { CameraConfig, ExposureMode } from "@/store/slices/cameras/cameras-types";
-import { configCopiedToAllCameras } from "@/store/slices/cameras/cameras-slice";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { selectAllCameras } from "@/store/slices/cameras/cameras-selectors";
+import { selectCameras, configCopiedToAll } from "@/store/slices/cameras";
 
 interface CameraConfigPanelProps {
     config: CameraConfig;
@@ -31,7 +30,7 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
     const dispatch = useAppDispatch();
 
     // Get total camera count for UI feedback
-    const allCameras = useAppSelector(selectAllCameras);
+    const allCameras = useAppSelector(selectCameras);
     const otherCamerasCount = allCameras.length - 1;
 
     const handleChange = <K extends keyof CameraConfig>(
@@ -45,15 +44,15 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
     };
 
     const handleCopyToAllCameras = (): void => {
-        dispatch(configCopiedToAllCameras(config.camera_id));
+        dispatch(configCopiedToAll(config.camera_id));
     };
 
     const handleResolutionChange = (width: number, height: number): void => {
         handleChange("resolution", { width, height });
     };
 
-    const handleRotationChange = (value: number): void => {
-        handleChange("rotation", value);
+    const handleRotationChange = (value: string): void => {
+        handleChange("rotation", value as CameraConfig['rotation']);
     };
 
     const handleExposureModeChange = (mode: ExposureMode): void => {

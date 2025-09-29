@@ -1,9 +1,4 @@
-// services/url/url-service.ts
-
-/**
- * Simple stateless service for building server URLs
- */
-class UrlService {
+class ServerUrls {
     private readonly host = 'localhost';
     private readonly port = 53117;
 
@@ -46,4 +41,4 @@ class UrlService {
 }
 
 // Export singleton instance
-export const urlService = new UrlService();
+export const serverUrls = new ServerUrls();

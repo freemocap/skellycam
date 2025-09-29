@@ -2,12 +2,12 @@ import React from "react";
 import { Box, Typography } from "@mui/material";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import { CameraTreeItem } from "./CameraTreeItem";
-import { CameraDevice } from "@/store/slices/cameras/cameras-types";
+import { Camera } from "@/store/slices/cameras/cameras-types";
 
 interface CameraGroupTreeItemProps {
     groupId: string;
     title: string;
-    cameras: CameraDevice[];
+    cameras: Camera[];
     icon?: React.ReactNode;
     expandedItems?: string[];
 }
@@ -31,11 +31,11 @@ export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
                 </Box>
             }
         >
-            {cameras.map((camera: CameraDevice) => (
+            {cameras.map((camera: Camera) => (
                 <CameraTreeItem
-                    key={camera.cameraId}
+                    key={camera.id}
                     camera={camera}
-                    isExpanded={expandedItems?.includes(`camera-${camera.cameraId}`)}
+                    isExpanded={expandedItems?.includes(`camera-${camera.id}`)}
                 />
             ))}
         </TreeItem>

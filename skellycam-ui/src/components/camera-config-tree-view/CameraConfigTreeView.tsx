@@ -17,24 +17,24 @@ import { NoCamerasPlaceholder } from "./NoCamerasPlaceholder";
 import {
     useAppDispatch,
     useAppSelector,
-    selectAllCameras,
-    selectCameraLoadingState,
-    selectCameraConnectionStatus,
+    selectCameras,
+    selectIsLoading,
+    selectConnectedCameras,
     selectSelectedCameras,
     detectCameras,
-    CameraDevice
+    Camera
 } from "@/store";
-import {useWebSocket} from "@/services/websocket/WebsocketContextProvider";
+import {useServer} from "@/services/server/ServerContextProvider";
 
 
 export const CameraConfigTreeView: React.FC = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
-    const {isConnected} = useWebSocket()
+    const {isConnected} = useServer()
     // Redux state
-    const cameras = useAppSelector(selectAllCameras);
-    const isLoading = useAppSelector(selectCameraLoadingState);
-    const connectionStatus = useAppSelector(selectCameraConnectionStatus);
+    const cameras = useAppSelector(selectCameras);
+    const isLoading = useAppSelector(selectIsLoading);
+    const connectedCameras = useAppSelector(selectConnectedCameras);
     const selectedCameras = useAppSelector(selectSelectedCameras);
 
     // Local state
@@ -46,9 +46,8 @@ export const CameraConfigTreeView: React.FC = () => {
     const [isPaused, setIsPaused] = useState<boolean>(false);
 
     // Group cameras by status
-    const connectedCameras = cameras.filter((cam: CameraDevice) => cam.status === "CONNECTED");
-    const availableCameras = cameras.filter((cam: CameraDevice) => cam.status !== "CONNECTED");
-    const isConnectedToCameras = connectionStatus === "connected";
+    const availableCameras = cameras.filter((cam: Camera) => cam.connectionStatus !== "connected");
+    const isConnectedToCameras = connectedCameras.length > 0;
     const hasSelectedCameras = selectedCameras.length > 0;
 
     // Initial camera detection

@@ -3,11 +3,11 @@ import {ThemeProvider} from '@mui/material/styles';
 import {HashRouter} from 'react-router-dom';
 import {CssBaseline} from "@mui/material";
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
-import {createExtendedTheme} from "@/layout/paperbase_theme/paperbase-theme";
+import {createExtendedTheme} from "@/layout/paperbase-theme";
 import {useAppSelector} from "@/store";
 import {BaseContentRouter} from "@/layout/BaseContentRouter";
 
-export const PaperbaseContent = function () {
+export const AppContent = function () {
 
     const themeMode = useAppSelector(state => state.theme.mode);
     // Create theme dynamically based on current mode

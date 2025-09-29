@@ -1,117 +1,168 @@
-import {createAsyncThunk} from '@reduxjs/toolkit';
-import {RootState} from '../../types';
-import {CAMERA_DEFAULT_CONSTRAINTS, CameraConfig, CameraDevice, createDefaultCameraConfig} from './cameras-types';
-import {selectSelectedCameraConfigs} from './cameras-selectors';
-import {urlService} from "@/services";
-
-interface DetectCamerasResponse {
-    cameras: Array<{
-        index: number;
-        name: string;
-        vendor_id?: string;
-        product_id?: string;
-    }>;
-}
+// cameras-thunks.ts
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import { RootState } from '../../types';
+import { serverUrls } from '@/services';
+import {
+    Camera,
+    CameraConfig,
+    DetectCamerasRequest,
+    DetectCamerasResponse,
+    ConnectCamerasRequest,
+    ConnectCamerasResponse,
+    createDefaultCameraConfig,
+} from './cameras-types';
+import { selectSelectedCameraConfigs } from './cameras-selectors';
 
 export const detectCameras = createAsyncThunk<
-    CameraDevice[],
-    { filterVirtual?: boolean } | undefined,
+    Camera[],
+    DetectCamerasRequest | undefined,
     { state: RootState }
->('cameras/detect', async (args = {filterVirtual: true}, {getState}) => {
-    const state = getState();
-    const existingCameras = state.cameras.entities;
+>(
+    'cameras/detect',
+    async (request = { filterVirtual: true }, { getState }) => {
+        const state = getState();
+        const existingCameras = state.cameras.cameras;
 
-    const response = await fetch(urlService.endpoints.detectCameras, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(args),
-    });
+        const response = await fetch(serverUrls.endpoints.detectCameras, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+        });
 
-    if (!response.ok) {
-        throw new Error(`Failed to detect cameras: ${response.statusText}`);
-    }
+        if (!response.ok) {
+            throw new Error(`Failed to detect cameras: ${response.statusText}`);
+        }
 
-    const data: DetectCamerasResponse = await response.json();
+        const data: DetectCamerasResponse = await response.json();
 
-    return data.cameras.map((serverCamera) => {
-        const cameraId = serverCamera.index.toString();
-        const existingCamera = existingCameras[cameraId];
+        return data.cameras.map((serverCamera): Camera => {
+            const cameraId = serverCamera.index.toString();
+            const existing = existingCameras.find(cam => cam.id === cameraId);
 
-        return {
-            index: serverCamera.index,
-            deviceId: `${serverCamera.vendor_id || ''}${serverCamera.product_id || ''}`,
-            cameraId,
-            selected: existingCamera?.selected ?? true,
-            status: 'AVAILABLE' as const,
-            label: serverCamera.name,
-            groupId: '',
-            kind: 'videoinput',
-            constraints: CAMERA_DEFAULT_CONSTRAINTS,
-            config: existingCamera?.config || createDefaultCameraConfig(
+            const defaultConfig = createDefaultCameraConfig(
+                cameraId,
                 serverCamera.index,
                 serverCamera.name,
-                cameraId
-            ),
-        };
-    });
-});
+            );
+
+            return {
+                id: cameraId,
+                name: serverCamera.name,
+                index: serverCamera.index,
+                // If camera exists, preserve its configs, otherwise use defaults
+                actualConfig: existing?.actualConfig || defaultConfig,
+                desiredConfig: existing?.desiredConfig || { ...defaultConfig },
+                hasConfigMismatch: existing?.hasConfigMismatch ?? false,
+                connectionStatus: 'available',
+                selected: existing?.selected ?? true,
+                deviceInfo: {
+                    vendorId: serverCamera.vendor_id,
+                    productId: serverCamera.product_id,
+                },
+                metrics: existing?.metrics,
+            };
+        });
+    }
+);
 
 export const connectToCameras = createAsyncThunk<
-    { camera_configs: Record<string, CameraConfig> },
+    ConnectCamerasResponse,
     void,
     { state: RootState }
->('cameras/connect', async (_, {getState}) => {
-    const state = getState();
-    const cameraConfigs = selectSelectedCameraConfigs(state);
+>(
+    'cameras/connect',
+    async (_, { getState }) => {
+        const state = getState();
+        const cameraConfigs = selectSelectedCameraConfigs(state);
 
-    if (Object.keys(cameraConfigs).length === 0) {
-        throw new Error('No camera devices selected for connection');
+        if (Object.keys(cameraConfigs).length === 0) {
+            throw new Error('No cameras selected for connection');
+        }
+
+        const request: ConnectCamerasRequest = { camera_configs: cameraConfigs };
+
+        const response = await fetch(serverUrls.endpoints.createGroup, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to connect to cameras');
+        }
+
+        return response.json() as Promise<ConnectCamerasResponse>;
     }
-
-    const response = await fetch(urlService.endpoints.createGroup, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({camera_configs: cameraConfigs}),
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to connect to cameras');
-    }
-
-    return response.json();
-});
+);
 
 export const updateCameraConfigs = createAsyncThunk<
-    { camera_configs: Record<string, CameraConfig> },
+    ConnectCamerasResponse,
     void,
     { state: RootState }
->('cameras/updateConfigs', async (_, {getState}) => {
-    const state = getState();
-    const cameraConfigs = selectSelectedCameraConfigs(state);
-
-    const response = await fetch(urlService.endpoints.updateConfigs, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({camera_configs: cameraConfigs}),
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to update camera configs');
-    }
-
-    return response.json();
-});
-export const closeCameras = createAsyncThunk<
-    void,                    // Return type
-    void,                    // Argument type (no arguments)
-    { state: RootState }     // ThunkAPI config
 >(
-    'cameras/close',
-    async (_, {getState}) => {
+    'cameras/updateConfigs',
+    async (_, { getState }) => {
         const state = getState();
-        const response = await fetch(urlService.endpoints.closeAll, {
+        const cameraConfigs = selectSelectedCameraConfigs(state);
+
+        const request: ConnectCamerasRequest = { camera_configs: cameraConfigs };
+
+        const response = await fetch(serverUrls.endpoints.updateConfigs, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to update camera configs');
+        }
+
+        return response.json() as Promise<ConnectCamerasResponse>;
+    }
+);
+
+// New thunk to apply a single camera's desired config
+export const applyCameraConfig = createAsyncThunk<
+    ConnectCamerasResponse,
+    string,  // camera ID
+    { state: RootState }
+>(
+    'cameras/applyConfig',
+    async (cameraId, { getState }) => {
+        const state = getState();
+        const camera = state.cameras.cameras.find(cam => cam.id === cameraId);
+
+        if (!camera) {
+            throw new Error(`Camera ${cameraId} not found`);
+        }
+
+        const request: ConnectCamerasRequest = {
+            camera_configs: {
+                [cameraId]: camera.desiredConfig
+            }
+        };
+
+        const response = await fetch(serverUrls.endpoints.updateConfigs, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || `Failed to apply config for camera ${cameraId}`);
+        }
+
+        return response.json() as Promise<ConnectCamerasResponse>;
+    }
+);
+
+export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
+    'cameras/close',
+    async () => {
+        const response = await fetch(serverUrls.endpoints.closeAll, {
             method: 'DELETE',
         });
 
@@ -121,15 +172,12 @@ export const closeCameras = createAsyncThunk<
     }
 );
 
-export const pauseUnpauseCameras = createAsyncThunk<
-    void,                    // Return type
-    void,                    // Argument type (no arguments)
-    { state: RootState }     // ThunkAPI config
->(
+export const pauseUnpauseCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/pause',
-    async (_, {getState}) => {
-        const state = getState();
-        const response = await fetch(urlService.endpoints.pauseUnpauseCameras, {method: 'GET'});
+    async () => {
+        const response = await fetch(serverUrls.endpoints.pauseUnpauseCameras, {
+            method: 'GET',
+        });
 
         if (!response.ok) {
             throw new Error(`Failed to pause/unpause cameras: ${response.statusText}`);

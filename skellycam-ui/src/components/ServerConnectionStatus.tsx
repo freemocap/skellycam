@@ -5,10 +5,10 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import { useWebSocket } from "@/services/websocket/WebsocketContextProvider";
+import { useServer } from "@/services/server/ServerContextProvider";
 
 export const ServerConnectionStatus: React.FC = () => {
-    const { isConnected, connect, disconnect, cameraIds } = useWebSocket();
+    const { isConnected, connect, disconnect, cameraIds } = useServer();
 
     const handleClick = (): void => {
         if (isConnected) {

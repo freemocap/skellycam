@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme } from '@mui/material';
-import { CAMERA_DEFAULT_CONSTRAINTS, ExposureMode } from "@/store/slices/cameras/cameras-types";
+import { ExposureMode } from "@/store/slices/cameras/cameras-types";
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
@@ -28,9 +28,16 @@ const ValueLabelComponent = (props: {
     );
 };
 
+// Default constraints for exposure
+const EXPOSURE_CONSTRAINTS = {
+    min: -13,
+    max: -1,
+    default: -7
+};
+
 export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
-                                                                              exposureMode = CAMERA_DEFAULT_CONSTRAINTS.exposure_modes[0], // MANUAL
-                                                                              exposure = CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
+                                                                              exposureMode = 'MANUAL',
+                                                                              exposure = EXPOSURE_CONSTRAINTS.default,
                                                                               onExposureModeChange,
                                                                               onExposureValueChange
                                                                           }) => {
@@ -50,20 +57,20 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
     };
 
     const baseMarks = [
-        { value: CAMERA_DEFAULT_CONSTRAINTS.exposure.min, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.min) },
+        { value: EXPOSURE_CONSTRAINTS.min, label: String(EXPOSURE_CONSTRAINTS.min) },
         {
-            value: CAMERA_DEFAULT_CONSTRAINTS.exposure.default,
-            label: `${CAMERA_DEFAULT_CONSTRAINTS.exposure.default} (default)`
+            value: EXPOSURE_CONSTRAINTS.default,
+            label: `${EXPOSURE_CONSTRAINTS.default} (default)`
         },
-        { value: CAMERA_DEFAULT_CONSTRAINTS.exposure.max, label: String(CAMERA_DEFAULT_CONSTRAINTS.exposure.max) }
+        { value: EXPOSURE_CONSTRAINTS.max, label: String(EXPOSURE_CONSTRAINTS.max) }
     ];
 
     const marks = [
         ...baseMarks,
         ...(![
-                CAMERA_DEFAULT_CONSTRAINTS.exposure.min as number,
-                CAMERA_DEFAULT_CONSTRAINTS.exposure.default as number,
-                CAMERA_DEFAULT_CONSTRAINTS.exposure.max as number
+                EXPOSURE_CONSTRAINTS.min as number,
+                EXPOSURE_CONSTRAINTS.default as number,
+                EXPOSURE_CONSTRAINTS.max as number
             ].includes(exposure)
                 ? [{
                     value: exposure,
@@ -106,8 +113,8 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                     <Slider
                         value={exposure}
                         disabled={exposureMode === 'AUTO' || exposureMode === 'RECOMMEND'}
-                        min={CAMERA_DEFAULT_CONSTRAINTS.exposure.min}
-                        max={CAMERA_DEFAULT_CONSTRAINTS.exposure.max}
+                        min={EXPOSURE_CONSTRAINTS.min}
+                        max={EXPOSURE_CONSTRAINTS.max}
                         step={1}
                         marks={marks}
                         valueLabelDisplay="auto"

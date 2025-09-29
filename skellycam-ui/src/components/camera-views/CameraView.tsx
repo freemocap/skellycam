@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { useWebSocket } from '@/services/websocket/WebsocketContextProvider';
+import { useServer } from '@/services/server/ServerContextProvider';
 
 interface CameraViewProps {
     cameraId: string;
@@ -7,7 +7,7 @@ interface CameraViewProps {
 
 export const CameraView: React.FC<CameraViewProps> = ({ cameraId }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { setCanvasForCamera } = useWebSocket();
+    const { setCanvasForCamera } = useServer();
 
     useEffect(() => {
         if (canvasRef.current && cameraId) {

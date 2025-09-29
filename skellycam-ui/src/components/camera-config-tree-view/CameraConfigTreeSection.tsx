@@ -2,11 +2,11 @@ import React from "react";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import { useAppDispatch } from "@/store";
 import { cameraConfigUpdated } from "@/store/slices/cameras/cameras-slice";
-import { CameraDevice, CameraConfig } from "@/store/slices/cameras/cameras-types";
-import {CameraConfigPanel} from "@/components/available-cameras-panel/CameraConfigPanel";
+import { Camera, CameraConfig } from "@/store/slices/cameras/cameras-types";
+import {CameraConfigPanel} from "@/components/camera-config-panel/CameraConfigPanel";
 
 interface CameraConfigTreeSectionProps {
-    camera: CameraDevice;
+    camera: Camera;
 }
 
 export const CameraConfigTreeSection: React.FC<CameraConfigTreeSectionProps> = ({
@@ -17,7 +17,7 @@ export const CameraConfigTreeSection: React.FC<CameraConfigTreeSectionProps> = (
     const handleConfigChange = (newConfig: CameraConfig): void => {
         dispatch(
             cameraConfigUpdated({
-                cameraId: camera.cameraId,
+                cameraId: camera.id,
                 config: newConfig,
             })
         );
@@ -25,7 +25,7 @@ export const CameraConfigTreeSection: React.FC<CameraConfigTreeSectionProps> = (
 
     return (
         <TreeItem
-            itemId={`camera-${camera.cameraId}-config`}
+            itemId={`camera-${camera.id}-config`}
             label={
                 <CameraConfigPanel
                     config={camera.config}

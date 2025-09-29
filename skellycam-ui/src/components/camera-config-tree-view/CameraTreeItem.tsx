@@ -9,10 +9,10 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import { CameraConfigTreeSection } from "./CameraConfigTreeSection";
 import { useAppDispatch } from "@/store";
 import { cameraSelectionToggled } from "@/store/slices/cameras/cameras-slice";
-import { CameraDevice } from "@/store/slices/cameras/cameras-types";
+import { Camera } from "@/store/slices/cameras/cameras-types";
 
 interface CameraTreeItemProps {
-    camera: CameraDevice;
+    camera: Camera;
     isExpanded?: boolean;
 }
 
@@ -43,9 +43,8 @@ const getConfigSummary = (config: any): string[] => {
     }
 
     // Add rotation if not default
-    if (config.rotation && config.rotation !== -1) {
-        const rotationLabels = ['', '90°', '180°', '270°'];
-        summary.push(rotationLabels[config.rotation] || '');
+    if (config.rotation && config.rotation !== 'None') {
+        summary.push(config.rotation);
     }
 
     // Add capture format if different from default
@@ -62,19 +61,17 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
 
     const handleToggleSelection = (e: React.MouseEvent): void => {
         e.stopPropagation();
-        dispatch(cameraSelectionToggled(camera.cameraId));
+        dispatch(cameraSelectionToggled(camera.id));
     };
 
     const getStatusColor = (): string => {
-        switch (camera.status) {
-            case "CONNECTED":
+        switch (camera.connectionStatus) {
+            case "connected":
                 return theme.palette.success.main;
-            case "AVAILABLE":
+            case "available":
                 return theme.palette.info.main;
-            case "ERROR":
+            case "error":
                 return theme.palette.error.main;
-            case "IN_USE":
-                return theme.palette.warning.main;
             default:
                 return theme.palette.grey[500];
         }
@@ -85,7 +82,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
 
     return (
         <TreeItem
-            itemId={`camera-${camera.cameraId}`}
+            itemId={`camera-${camera.id}`}
             label={
                 <Box
                     sx={{
@@ -131,7 +128,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                                 maxWidth: "200px" // Limit name width
                             }}
                         >
-                            {camera.label || `Camera ${camera.index}`}
+                            {camera.name || `Camera ${camera.index}`}
                         </Typography>
 
                         {/* Config summary - only show when collapsed */}
@@ -181,7 +178,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
 
                     {/* Status chip */}
                     <Chip
-                        label={camera.status}
+                        label={camera.connectionStatus.toUpperCase()}
                         size="small"
                         sx={{
                             ml: 1,
