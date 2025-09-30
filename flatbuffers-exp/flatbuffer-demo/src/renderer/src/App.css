@@ -1,32 +1,377 @@
-/* Add these styles to your existing App.css */
-
-.fps-display {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 30px;
-  margin: 20px 0;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+.app-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
-.fps-display h2 {
-  margin: 0 0 20px 0;
+h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #2c3e50;
+  font-size: 1.8rem;
+}
+
+.controls {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.start-button,
+.stop-button {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+
+.start-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  font-size: 1.5em;
+}
+
+.start-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.stop-button {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.stop-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+.sampling-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.sampling-control label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 500;
+}
+
+.sampling-control select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.sampling-control small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.error-box {
+  background: #fee;
+  border: 2px solid #fcc;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #c33;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.file-path,
+.server-info {
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.file-path code {
+  background: #e9ecef;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+/* Pipeline visualization - 4 stages */
+.pipeline-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.arrow {
+  font-size: 2rem;
+  color: #666;
+  font-weight: bold;
+}
+
+.metric-box {
+  flex: 1;
+  min-width: 220px;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.server-metric {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.main-metric {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+}
+
+.ipc-metric {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  color: #333;
+}
+
+.renderer-metric {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.metric-box h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.metric-label-top {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   font-weight: 600;
 }
 
-.fps-value {
-  font-size: 4em;
+.metric-value {
+  font-size: 2.5rem;
   font-weight: bold;
-  color: white;
-  font-family: 'Monaco', 'Courier New', monospace;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  margin: 10px 0;
+  margin: 0.5rem 0;
+  line-height: 1;
 }
 
-.fps-detail {
-  font-size: 1.1em;
-  color: rgba(255, 255, 255, 0.9);
-  margin-top: 10px;
+.metric-label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin-bottom: 0.75rem;
+}
+
+.metric-detail {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  margin: 0.2rem 0;
+}
+
+/* Bottleneck analysis */
+.bottleneck-box {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin: 2rem 0;
+}
+
+.bottleneck-box h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.bottleneck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.bottleneck-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 8px;
+  gap: 1rem;
+}
+
+.bottleneck-item .label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.bottleneck-item .value {
+  font-weight: bold;
+  text-align: right;
+  font-size: 0.85rem;
+}
+
+.bottleneck-item .value.good {
+  color: #28a745;
+}
+
+.bottleneck-item .value.warning {
+  color: #fd7e14;
+}
+
+.bottleneck-item .value.info {
+  color: #17a2b8;
+}
+
+/* Comparison box */
+.comparison-box {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin: 2rem 0;
+}
+
+.comparison-box h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.comparison-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  gap: 1rem;
+}
+
+.comparison-item .label {
+  font-weight: 600;
+  color: #555;
+}
+
+.comparison-item .value {
+  font-weight: bold;
+  color: #667eea;
+  text-align: right;
+}
+
+.comparison-item .note {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+/* Data display */
+.data-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 2rem 0;
+}
+
+.data-container h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.data-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.data-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.data-item .label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.data-item .value {
+  font-size: 1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.data-item .value.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.performance-note {
+  background: #e7f3ff;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: #004085;
+}
+
+.performance-note strong {
+  color: #003366;
+}
+
+.waiting {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .pipeline-container {
+    flex-direction: column;
+  }
+
+  .arrow {
+    transform: rotate(90deg);
+  }
+
+  .metric-box {
+    width: 100%;
+    max-width: 500px;
+  }
 }

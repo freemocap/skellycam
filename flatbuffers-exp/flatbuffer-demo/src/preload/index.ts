@@ -1,23 +1,48 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import * as fs from 'fs'
+
+export interface FrameData {
+  buffer: Buffer
+  // Main process metrics
+  mainReadFps: number
+  mainReadFrameCount: number
+  mainTotalBytesRead: number
+}
+
+export interface MainProcessStats {
+  readFrameCount: number
+  readFps: number
+  totalBytesRead: number
+  avgReadTimeMs: number
+}
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
-  readFile: (filePath: string): Buffer => {
-    return fs.readFileSync(filePath)
+  // Start reading the file in the main process
+  startFileReader: async (filePath: string, pollRateMs: number): Promise<{ success: boolean }> => {
+    return await ipcRenderer.invoke('start-file-reader', filePath, pollRateMs)
   },
 
-  fileExists: (filePath: string): boolean => {
-    return fs.existsSync(filePath)
+  // Stop reading the file
+  stopFileReader: async (): Promise<{ success: boolean }> => {
+    return await ipcRenderer.invoke('stop-file-reader')
   },
 
-  onFileUpdate: (callback: () => void) => {
-    ipcRenderer.on('file-updated', callback)
+  // Get current main process read statistics
+  getMainProcessStats: async (): Promise<MainProcessStats> => {
+    return await ipcRenderer.invoke('get-main-process-stats')
   },
 
-  removeFileUpdateListener: (callback: () => void) => {
-    ipcRenderer.removeListener('file-updated', callback)
+  // Listen for frame data from main process
+  onFrameData: (callback: (data: FrameData) => void): void => {
+    ipcRenderer.on('frame-data', (_event, data: FrameData) => {
+      callback(data)
+    })
+  },
+
+  // Remove frame data listener
+  removeFrameDataListener: (): void => {
+    ipcRenderer.removeAllListeners('frame-data')
   }
 })
 
@@ -25,10 +50,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 declare global {
   interface Window {
     electronAPI: {
-      readFile: (filePath: string) => Buffer
-      fileExists: (filePath: string) => boolean
-      onFileUpdate: (callback: () => void) => void
-      removeFileUpdateListener: (callback: () => void) => void
+      startFileReader: (filePath: string, pollRateMs: number) => Promise<{ success: boolean }>
+      stopFileReader: () => Promise<{ success: boolean }>
+      getMainProcessStats: () => Promise<MainProcessStats>
+      onFrameData: (callback: (data: FrameData) => void) => void
+      removeFrameDataListener: () => void
     }
   }
 }

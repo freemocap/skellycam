@@ -6,7 +6,8 @@ table CameraFrame {
     frame_number: uint32;
     width: uint32;
     height: uint32;
-    pixels: [ubyte];  // Simplified - just raw bytes
+    channels: uint32 = 3;  // RGB = 3, RGBA = 4
+    pixels: [ubyte];  // Raw RGB/RGBA bytes (width * height * channels)
 }
 
 table SystemStatus {
@@ -17,7 +18,7 @@ table SystemStatus {
 }
 
 table SharedMessage {
-    magic: uint32 = 0xDEADBEEF;  // To verify valid data
+    magic: uint32 = 0xDEADBEEF;
     sequence: uint64;
     frame: CameraFrame;
     status: SystemStatus;

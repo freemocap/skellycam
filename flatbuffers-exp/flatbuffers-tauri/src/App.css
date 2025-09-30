@@ -1,0 +1,177 @@
+.app-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.start-button {
+  background: #10b981;
+  color: white;
+}
+
+.start-button:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.stop-button {
+  background: #ef4444;
+  color: white;
+}
+
+.stop-button:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.error-box {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c00;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.server-info {
+  background: #f3f4f6;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.server-info code {
+  background: #e5e7eb;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+}
+
+.performance-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.main-metric {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.9;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value-large {
+  font-size: 6rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.metric-unit {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  opacity: 0.9;
+}
+
+.secondary-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.metric-item .label {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.metric-item .value {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.performance-status {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+}
+
+.status-excellent {
+  color: #10b981;
+}
+
+.status-good {
+  color: #fbbf24;
+}
+
+.status-low {
+  color: #f87171;
+}
+
+.waiting {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #999;
+  font-size: 1.25rem;
+}

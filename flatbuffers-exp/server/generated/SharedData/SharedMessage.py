@@ -10,12 +10,16 @@ class SharedMessage(object):
     __slots__ = ['_tab']
 
     @classmethod
-    def GetRootAsSharedMessage(cls, buf, offset):
+    def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
         x = SharedMessage()
         x.Init(buf, n + offset)
         return x
 
+    @classmethod
+    def GetRootAsSharedMessage(cls, buf, offset=0):
+        """This method is deprecated. Please switch to GetRootAs."""
+        return cls.GetRootAs(buf, offset)
     # SharedMessage
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -56,9 +60,38 @@ class SharedMessage(object):
             return obj
         return None
 
-def SharedMessageStart(builder): builder.StartObject(4)
-def SharedMessageAddMagic(builder, magic): builder.PrependUint32Slot(0, magic, 3735928559)
-def SharedMessageAddSequence(builder, sequence): builder.PrependUint64Slot(1, sequence, 0)
-def SharedMessageAddFrame(builder, frame): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(frame), 0)
-def SharedMessageAddStatus(builder, status): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(status), 0)
-def SharedMessageEnd(builder): return builder.EndObject()
+def SharedMessageStart(builder):
+    builder.StartObject(4)
+
+def Start(builder):
+    SharedMessageStart(builder)
+
+def SharedMessageAddMagic(builder, magic):
+    builder.PrependUint32Slot(0, magic, 3735928559)
+
+def AddMagic(builder, magic):
+    SharedMessageAddMagic(builder, magic)
+
+def SharedMessageAddSequence(builder, sequence):
+    builder.PrependUint64Slot(1, sequence, 0)
+
+def AddSequence(builder, sequence):
+    SharedMessageAddSequence(builder, sequence)
+
+def SharedMessageAddFrame(builder, frame):
+    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(frame), 0)
+
+def AddFrame(builder, frame):
+    SharedMessageAddFrame(builder, frame)
+
+def SharedMessageAddStatus(builder, status):
+    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(status), 0)
+
+def AddStatus(builder, status):
+    SharedMessageAddStatus(builder, status)
+
+def SharedMessageEnd(builder):
+    return builder.EndObject()
+
+def End(builder):
+    return SharedMessageEnd(builder)

@@ -1,0 +1,25 @@
+[package]
+name = "flatbuffers-tauri"
+version = "0.1.0"
+description = "High-performance FlatBuffer IPC"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "flatbuffers_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-fs = "2.4.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+memmap2 = "0.9"
+flatbuffers = "25.9"
+
+# Note: After running flatc, you'll have generated/message_generated.rs
+# Make sure to include the generated module in your lib.rs

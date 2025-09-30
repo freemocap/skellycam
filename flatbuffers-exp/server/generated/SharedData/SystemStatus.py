@@ -10,12 +10,16 @@ class SystemStatus(object):
     __slots__ = ['_tab']
 
     @classmethod
-    def GetRootAsSystemStatus(cls, buf, offset):
+    def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
         x = SystemStatus()
         x.Init(buf, n + offset)
         return x
 
+    @classmethod
+    def GetRootAsSystemStatus(cls, buf, offset=0):
+        """This method is deprecated. Please switch to GetRootAs."""
+        return cls.GetRootAs(buf, offset)
     # SystemStatus
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -48,9 +52,38 @@ class SystemStatus(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
-def SystemStatusStart(builder): builder.StartObject(4)
-def SystemStatusAddFps(builder, fps): builder.PrependFloat32Slot(0, fps, 0.0)
-def SystemStatusAddCpuUsage(builder, cpuUsage): builder.PrependFloat32Slot(1, cpuUsage, 0.0)
-def SystemStatusAddActiveCameras(builder, activeCameras): builder.PrependUint32Slot(2, activeCameras, 0)
-def SystemStatusAddMessage(builder, message): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(message), 0)
-def SystemStatusEnd(builder): return builder.EndObject()
+def SystemStatusStart(builder):
+    builder.StartObject(4)
+
+def Start(builder):
+    SystemStatusStart(builder)
+
+def SystemStatusAddFps(builder, fps):
+    builder.PrependFloat32Slot(0, fps, 0.0)
+
+def AddFps(builder, fps):
+    SystemStatusAddFps(builder, fps)
+
+def SystemStatusAddCpuUsage(builder, cpuUsage):
+    builder.PrependFloat32Slot(1, cpuUsage, 0.0)
+
+def AddCpuUsage(builder, cpuUsage):
+    SystemStatusAddCpuUsage(builder, cpuUsage)
+
+def SystemStatusAddActiveCameras(builder, activeCameras):
+    builder.PrependUint32Slot(2, activeCameras, 0)
+
+def AddActiveCameras(builder, activeCameras):
+    SystemStatusAddActiveCameras(builder, activeCameras)
+
+def SystemStatusAddMessage(builder, message):
+    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(message), 0)
+
+def AddMessage(builder, message):
+    SystemStatusAddMessage(builder, message)
+
+def SystemStatusEnd(builder):
+    return builder.EndObject()
+
+def End(builder):
+    return SystemStatusEnd(builder)
