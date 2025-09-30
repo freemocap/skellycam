@@ -1,12 +1,12 @@
 // ServerContextProvider.tsx
-import React, {createContext, ReactNode, useContext, useEffect, useRef} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
-import {AppDispatch} from '@/store/types';
+import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch } from '@/store/types';
 
-import {ConnectionState, WebSocketConnection} from "@/services/server/server-helpers/websocket-connection";
-import {FrameProcessor} from "@/services/server/server-helpers/frame-processor/frame-processor";
-import {CanvasManager} from "@/services/server/server-helpers/canvas-manager";
-import {serverUrls} from "@/services";
+import { ConnectionState, WebSocketConnection } from "@/services/server/server-helpers/websocket-connection";
+import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
+import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
+import { serverUrls } from "@/services";
 import {
     camerasDetectedFromStream,
     cameraMetricsUpdated,
@@ -21,136 +21,156 @@ interface ServerContextValue {
     disconnect: () => void;
     send: (data: string | object) => void;
     setCanvasForCamera: (cameraId: string, canvas: HTMLCanvasElement) => void;
+    connectedCameraIds: string[];
 }
 
 const ServerContext = createContext<ServerContextValue | null>(null);
+
+// Helper to compare arrays efficiently
+function arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((val, idx) => val === sortedB[idx]);
+}
 
 export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const dispatch = useDispatch<AppDispatch>();
     const cameras = useSelector(selectCameras);
 
-    // Use the service classes
-    const wsConnectionRef = useRef<WebSocketConnection>(
-        new WebSocketConnection({
+    // Reactive state - only updates when camera list actually changes
+    const [isConnected, setIsConnected] = useState<boolean>(false);
+    const [connectedCameraIds, setConnectedCameraIds] = useState<string[]>([]);
+
+    // Service instances
+    const wsConnectionRef = useRef<WebSocketConnection | null>(null);
+    const frameProcessorRef = useRef<FrameProcessor | null>(null);
+    const canvasManagerRef = useRef<CanvasManager | null>(null);
+
+    // Initialize services once
+    useEffect(() => {
+        wsConnectionRef.current = new WebSocketConnection({
             url: serverUrls.getWebSocketUrl(),
             reconnectDelay: 1000,
             maxReconnectAttempts: 5,
             heartbeatInterval: 30000
-        })
-    );
-    const frameProcessorRef = useRef<FrameProcessor>(new FrameProcessor());
-    const canvasManagerRef = useRef<CanvasManager>(new CanvasManager());
+        });
+        frameProcessorRef.current = new FrameProcessor();
+        canvasManagerRef.current = new CanvasManager();
 
-    useEffect(() => {
-        const ws = wsConnectionRef.current;
-
-        // Set up event listeners
-        ws.on('state-change', (newState: ConnectionState) => {
-            if (newState === ConnectionState.DISCONNECTED || newState === ConnectionState.FAILED) {
-                // When disconnected, just clean up resources
+        return () => {
+            if (wsConnectionRef.current) {
+                wsConnectionRef.current.disconnect();
+            }
+            if (canvasManagerRef.current) {
                 canvasManagerRef.current.terminateAllWorkers();
+            }
+            if (frameProcessorRef.current) {
                 frameProcessorRef.current.reset();
             }
-        });
+        };
+    }, []);
 
-        ws.on('message', async (event: MessageEvent) => {
+    // Set up WebSocket connection and handlers
+    useEffect(() => {
+        const ws = wsConnectionRef.current;
+        if (!ws) return;
+
+        const handleStateChange = (newState: ConnectionState): void => {
+            const connected = newState === ConnectionState.CONNECTED;
+            setIsConnected(connected);
+
+            if (newState === ConnectionState.DISCONNECTED || newState === ConnectionState.FAILED) {
+                canvasManagerRef.current?.terminateAllWorkers();
+                frameProcessorRef.current?.reset();
+                setConnectedCameraIds([]);
+            }
+        };
+
+        const handleMessage = async (event: MessageEvent): Promise<void> => {
             if (event.data instanceof ArrayBuffer) {
                 try {
-                    const result = await frameProcessorRef.current.processFramePayload(event.data);
+                    const result = await frameProcessorRef.current!.processFramePayload(event.data);
                     if (!result) return;
 
-                    const { frames, cameraIds: seenCameraIds, frameNumbers, configUpdates } = result;
+                    const { frames, cameraIds, frameNumbers } = result;
 
-                    // Check if we have new cameras that aren't in the store
-                    const newCameraIds = Array.from(seenCameraIds).filter(
-                        id => !cameras.find(cam => cam.id === id)
-                    );
+                    // Convert Set to sorted array for comparison
+                    const currentCameraIds = Array.from(cameraIds).sort();
 
-                    if (newCameraIds.length > 0) {
-                        console.log(`Detected new cameras from stream: ${newCameraIds.join(', ')}`);
+                    // Update state only if camera list has changed
+                    setConnectedCameraIds(prevIds => {
+                        if (!arraysEqual(prevIds, currentCameraIds)) {
+                            console.log(`Camera list updated: ${currentCameraIds.join(', ')}`);
 
-                        // Get configs for the new cameras from the configUpdates map
-                        const newCameraConfigs = newCameraIds.map(id => {
-                            const config = configUpdates.get(id);
-                            if (config) {
-                                return config;
-                            } else {
-                                // Fallback to default config if not in updates
-                                return createDefaultCameraConfig(
-                                    id,
-                                    parseInt(id),
-                                    `Camera ${id}`
-                                );
+                            // Clean up workers for cameras that are no longer in the payload
+                            const removedCameras = prevIds.filter(id => !cameraIds.has(id));
+                            for (const cameraId of removedCameras) {
+                                console.log(`Removing camera ${cameraId} - not in latest payload`);
+                                canvasManagerRef.current?.terminateWorker(cameraId);
                             }
-                        });
 
-                        dispatch(camerasDetectedFromStream(newCameraConfigs));
-                    }
+                            return currentCameraIds;
+                        }
+                        return prevIds; // Return same reference to prevent re-render
+                    });
 
-                    // Update actual configs for existing cameras if they changed
-                    if (configUpdates.size > 0) {
-                        dispatch(actualConfigsUpdatedFromStream(configUpdates));
-                    }
-
-                    // Send frames to canvas workers and update metrics
+                    // Send frames to canvas workers
                     for (const frameData of frames) {
-                        const sent = canvasManagerRef.current.sendFrameToWorker(
+                        canvasManagerRef.current!.sendFrameToWorker(
                             frameData.cameraId,
                             frameData.bitmap
                         );
-
-                        const camera = cameras.find(cam => cam.id === frameData.cameraId);
-
-                        if (!sent) {
-                            frameProcessorRef.current.recordDroppedFrame(frameData.cameraId);
-                        }
-
-                        // Update camera metrics if we have frame stats
-                        if (camera) {
-                            const frameStats = frameProcessorRef.current.getFrameStats(frameData.cameraId);
-                            if (frameStats) {
-                                dispatch(cameraMetricsUpdated({
-                                    cameraId: frameData.cameraId,
-                                    fps: frameStats.fps || 0,
-                                    droppedFrames: frameStats.droppedFrames || 0,
-                                    lastFrameTime: Date.now(),
-                                }));
-                            }
-                        }
-                    }
-
-                    if (frameNumbers.size > 1) {
-                        console.warn(`Received multiple frame numbers in payload: ${Array.from(frameNumbers).sort((a, b) => a - b).join(', ')}`);
                     }
 
                     // Acknowledge the highest frame number
-                    const maxFrameNumber = Math.max(...Array.from(frameNumbers));
-                    ws.send({ type: 'frameAcknowledgment', frameNumber: maxFrameNumber });
+                    if (frameNumbers.size > 0) {
+                        const maxFrameNumber = Math.max(...Array.from(frameNumbers));
+                        ws.send({ type: 'frameAcknowledgment', frameNumber: maxFrameNumber });
+                    }
                 } catch (error) {
                     console.error('Error processing frame:', error);
                 }
             }
-        });
+        };
+
+        ws.on('state-change', handleStateChange);
+        ws.on('message', handleMessage);
 
         // Auto-connect
         ws.connect();
 
         return () => {
+            ws.off('state-change', handleStateChange);
+            ws.off('message', handleMessage);
             ws.disconnect();
-            canvasManagerRef.current.terminateAllWorkers();
-            frameProcessorRef.current.reset();
         };
     }, [dispatch, cameras]);
 
+    const connect = useCallback((): void => {
+        wsConnectionRef.current?.connect();
+    }, []);
+
+    const disconnect = useCallback((): void => {
+        wsConnectionRef.current?.disconnect();
+    }, []);
+
+    const send = useCallback((data: string | object): void => {
+        wsConnectionRef.current?.send(data);
+    }, []);
+
+    const setCanvasForCamera = useCallback((cameraId: string, canvas: HTMLCanvasElement): void => {
+        canvasManagerRef.current?.setCanvasForCamera(cameraId, canvas);
+    }, []);
+
     return (
         <ServerContext.Provider value={{
-            isConnected: wsConnectionRef.current.isConnected(),
-            connect: () => wsConnectionRef.current.connect(),
-            disconnect: () => wsConnectionRef.current.disconnect(),
-            send: (data: string | object) => wsConnectionRef.current.send(data),
-            setCanvasForCamera: (cameraId: string, canvas: HTMLCanvasElement) => {
-                canvasManagerRef.current.setCanvasForCamera(cameraId, canvas);
-            },
+            isConnected,
+            connect,
+            disconnect,
+            send,
+            setCanvasForCamera,
+            connectedCameraIds
         }}>
             {children}
         </ServerContext.Provider>

@@ -1,16 +1,12 @@
 // binary-frame-parser.ts
-import { CameraConfig } from '@/store/slices/cameras';
 import {
     MESSAGE_TYPE,
-    CAMERA_CONFIG_FIELDS,
-    CAMERA_CONFIG_SIZE,
     PAYLOAD_HEADER_FIELDS,
     PAYLOAD_HEADER_SIZE,
     FRAME_HEADER_FIELDS,
     FRAME_HEADER_SIZE,
-    ROTATION_VALUES,
-    PROTOCOL_LIMITS,
-    type RotationOption,
+    PAYLOAD_FOOTER_FIELDS,
+    PAYLOAD_FOOTER_SIZE,
 } from './binary-protocol';
 
 export interface ParsedFrame {
@@ -19,8 +15,8 @@ export interface ParsedFrame {
     frameNumber: number;
     width: number;
     height: number;
+    colorChannels: number;
     bitmap: ImageBitmap;
-    config: CameraConfig;
 }
 
 // Single reusable TextDecoder - created once, used forever
@@ -34,35 +30,7 @@ const BITMAP_OPTIONS: ImageBitmapOptions = {
 };
 
 /**
- * Parse a Unicode string field from the buffer
- * Handles numpy's UTF-32 encoding (4 bytes per character)
- */
-function parseUnicodeField(view: DataView, baseOffset: number, fieldOffset: number, size: number): string {
-    const offset = baseOffset + fieldOffset;
-
-    // For numpy U128 fields, we need to handle UTF-32 encoding
-    // Find the actual string length (until null terminator or max size)
-    let actualLength = 0;
-    for (let i = 0; i < size; i += 4) {
-        const codePoint = view.getUint32(offset + i, true);
-        if (codePoint === 0) break;
-        actualLength += 4;
-    }
-
-    if (actualLength === 0) return '';
-
-    // Extract the string data
-    const codePoints: number[] = [];
-    for (let i = 0; i < actualLength; i += 4) {
-        codePoints.push(view.getUint32(offset + i, true));
-    }
-
-    // Convert code points to string
-    return String.fromCodePoint(...codePoints);
-}
-
-/**
- * Parse an ASCII string field from the buffer
+ * Parse an ASCII string field from the buffer (16-byte fixed-length camera_id)
  */
 function parseAsciiField(view: DataView, baseOffset: number, fieldOffset: number, size: number): string {
     const offset = baseOffset + fieldOffset;
@@ -80,135 +48,19 @@ function parseAsciiField(view: DataView, baseOffset: number, fieldOffset: number
 }
 
 /**
- * Parse a FOURCC code from 4 bytes
- */
-function parseFourcc(view: DataView, baseOffset: number, fieldOffset: number): string {
-    const offset = baseOffset + fieldOffset;
-    let str = '';
-
-    for (let i = 0; i < 4; i++) {
-        const byte = view.getUint8(offset + i);
-        if (byte !== 0) {
-            str += String.fromCharCode(byte);
-        }
-    }
-
-    return str || 'MJPG'; // Default to MJPG if empty
-}
-
-/**
- * Parse camera configuration from buffer using protocol offsets
- */
-function parseCameraConfig(view: DataView, baseOffset: number): CameraConfig {
-    // Parse each field using the predefined offsets
-    const cameraId = parseUnicodeField(
-        view,
-        baseOffset,
-        CAMERA_CONFIG_FIELDS.camera_id.offset,
-        CAMERA_CONFIG_FIELDS.camera_id.size
-    );
-
-    const cameraIndex = view.getInt32(
-        baseOffset + CAMERA_CONFIG_FIELDS.camera_index.offset,
-        true
-    );
-
-    const cameraName = parseUnicodeField(
-        view,
-        baseOffset,
-        CAMERA_CONFIG_FIELDS.camera_name.offset,
-        CAMERA_CONFIG_FIELDS.camera_name.size
-    );
-
-    const useThisCamera = view.getUint8(
-        baseOffset + CAMERA_CONFIG_FIELDS.use_this_camera.offset
-    ) !== 0;
-
-    const resolutionHeight = view.getInt32(
-        baseOffset + CAMERA_CONFIG_FIELDS.resolution_height.offset,
-        true
-    );
-
-    const resolutionWidth = view.getInt32(
-        baseOffset + CAMERA_CONFIG_FIELDS.resolution_width.offset,
-        true
-    );
-
-    const colorChannels = view.getInt32(
-        baseOffset + CAMERA_CONFIG_FIELDS.color_channels.offset,
-        true
-    );
-
-    const pixelFormat = parseAsciiField(
-        view,
-        baseOffset,
-        CAMERA_CONFIG_FIELDS.pixel_format.offset,
-        CAMERA_CONFIG_FIELDS.pixel_format.size
-    ).trim() as 'RGB' | 'BGR' | 'GRAY';
-
-    const exposureMode = parseAsciiField(
-        view,
-        baseOffset,
-        CAMERA_CONFIG_FIELDS.exposure_mode.offset,
-        CAMERA_CONFIG_FIELDS.exposure_mode.size
-    ).trim() as 'MANUAL' | 'AUTO' | 'RECOMMEND';
-
-    const exposure = view.getInt32(
-        baseOffset + CAMERA_CONFIG_FIELDS.exposure.offset,
-        true
-    );
-
-    const framerate = view.getFloat32(
-        baseOffset + CAMERA_CONFIG_FIELDS.framerate.offset,
-        true
-    );
-
-    const rotationValue = view.getInt32(
-        baseOffset + CAMERA_CONFIG_FIELDS.rotation.offset,
-        true
-    );
-
-    const rotation = (ROTATION_VALUES[rotationValue as keyof typeof ROTATION_VALUES] || 'None') as RotationOption;
-
-    const captureFourcc = parseFourcc(
-        view,
-        baseOffset,
-        CAMERA_CONFIG_FIELDS.capture_fourcc.offset
-    ) as 'MJPG' | 'X264' | 'YUYV' | 'H264';
-
-    const writerFourcc = parseFourcc(
-        view,
-        baseOffset,
-        CAMERA_CONFIG_FIELDS.writer_fourcc.offset
-    ) as 'MJPG' | 'X264' | 'YUYV' | 'H264';
-
-    return {
-        camera_id: cameraId,
-        camera_index: cameraIndex,
-        camera_name: cameraName,
-        use_this_camera: useThisCamera,
-        resolution: {
-            width: resolutionWidth,
-            height: resolutionHeight
-        },
-        framerate: framerate,
-        color_channels: colorChannels,
-        pixel_format: pixelFormat,
-        rotation: rotation,
-        exposure_mode: exposureMode,
-        exposure: exposure,
-        capture_fourcc: captureFourcc,
-        writer_fourcc: writerFourcc,
-    };
-}
-
-/**
  * Parse a multi-frame payload from binary data
+ * Matches the Python create_frontend_payload function's output format
  */
 export async function parseMultiFramePayload(
     data: ArrayBuffer
 ): Promise<ParsedFrame[] | null> {
     const view = new DataView(data);
+
+    // Validate minimum size
+    if (data.byteLength < PAYLOAD_HEADER_SIZE) {
+        console.warn(`Payload too small: ${data.byteLength} bytes`);
+        return null;
+    }
 
     // Validate payload header
     const messageType = view.getUint8(PAYLOAD_HEADER_FIELDS.message_type.offset);
@@ -228,7 +80,7 @@ export async function parseMultiFramePayload(
     );
 
     // Validate camera count
-    if (numCameras <= 0 || numCameras > PROTOCOL_LIMITS.MAX_CAMERAS) {
+    if (numCameras <= 0 ) {
         console.warn(`Invalid camera count: ${numCameras}`);
         return null;
     }
@@ -240,7 +92,7 @@ export async function parseMultiFramePayload(
         frameNumber: number;
         width: number;
         height: number;
-        config: CameraConfig;
+        colorChannels: number;
         jpegStart: number;
         jpegLength: number;
     }> = new Array(numCameras);
@@ -250,13 +102,22 @@ export async function parseMultiFramePayload(
 
     // Parse each frame header
     for (let i = 0; i < numCameras; i++) {
+        // Check if we have enough bytes for the frame header
+        if (currentOffset + FRAME_HEADER_SIZE > data.byteLength) {
+            console.warn(`Not enough bytes for frame header at offset ${currentOffset}`);
+            break;
+        }
+
         // Validate frame header message type
         const frameMessageType = view.getUint8(
             currentOffset + FRAME_HEADER_FIELDS.message_type.offset
         );
 
         if (frameMessageType !== MESSAGE_TYPE.FRAME_METADATA) {
-            console.warn(`Invalid frame header at offset ${currentOffset}: expected ${MESSAGE_TYPE.FRAME_METADATA}, got ${frameMessageType}`);
+            console.warn(
+                `Invalid frame header at offset ${currentOffset}: ` +
+                `expected ${MESSAGE_TYPE.FRAME_METADATA}, got ${frameMessageType}`
+            );
             break;
         }
 
@@ -268,10 +129,18 @@ export async function parseMultiFramePayload(
             )
         );
 
-        // Parse camera config
-        const config = parseCameraConfig(
+        // Extract camera_id (16-byte ASCII string)
+        const cameraId = parseAsciiField(
             view,
-            currentOffset + FRAME_HEADER_FIELDS.camera_config.offset
+            currentOffset,
+            FRAME_HEADER_FIELDS.camera_id.offset,
+            FRAME_HEADER_FIELDS.camera_id.size
+        );
+
+        // Extract camera_index
+        const cameraIndex = view.getInt32(
+            currentOffset + FRAME_HEADER_FIELDS.camera_index.offset,
+            true
         );
 
         // Extract image metadata
@@ -285,26 +154,41 @@ export async function parseMultiFramePayload(
             true
         );
 
+        const colorChannels = view.getInt32(
+            currentOffset + FRAME_HEADER_FIELDS.color_channels.offset,
+            true
+        );
+
         const jpegLength = view.getInt32(
             currentOffset + FRAME_HEADER_FIELDS.jpeg_string_length.offset,
             true
         );
 
         // Validate JPEG length
-        if (jpegLength <= 0 || jpegLength > PROTOCOL_LIMITS.MAX_FRAME_SIZE) {
+        if (jpegLength <= 0 ) {
             console.warn(`Invalid JPEG length: ${jpegLength}`);
+            break;
+        }
+
+        // Check if we have enough bytes for the JPEG data
+        const jpegStart = currentOffset + FRAME_HEADER_SIZE;
+        if (jpegStart + jpegLength > data.byteLength) {
+            console.warn(
+                `Not enough bytes for JPEG data: need ${jpegLength} bytes ` +
+                `at offset ${jpegStart}, but buffer only has ${data.byteLength} bytes`
+            );
             break;
         }
 
         // Store metadata
         frameMetadata[validFrameCount] = {
-            cameraId: config.camera_id,
-            cameraIndex: config.camera_index,
+            cameraId: cameraId,
+            cameraIndex: cameraIndex,
             frameNumber: frameNum,
             width: width,
             height: height,
-            config: config,
-            jpegStart: currentOffset + FRAME_HEADER_SIZE,
+            colorChannels: colorChannels,
+            jpegStart: jpegStart,
             jpegLength: jpegLength
         };
 
@@ -315,6 +199,27 @@ export async function parseMultiFramePayload(
     if (validFrameCount === 0) {
         console.warn('No valid frames found in payload');
         return null;
+    }
+
+    // Optional: Validate footer if present
+    if (currentOffset + PAYLOAD_FOOTER_SIZE <= data.byteLength) {
+        const footerMessageType = view.getUint8(currentOffset + PAYLOAD_FOOTER_FIELDS.message_type.offset);
+        if (footerMessageType === MESSAGE_TYPE.PAYLOAD_FOOTER) {
+            const footerFrameNumber = Number(
+                view.getBigInt64(currentOffset + PAYLOAD_FOOTER_FIELDS.frame_number.offset, true)
+            );
+            const footerNumCameras = view.getInt32(
+                currentOffset + PAYLOAD_FOOTER_FIELDS.number_of_cameras.offset,
+                true
+            );
+
+            if (footerFrameNumber !== frameNumber || footerNumCameras !== numCameras) {
+                console.warn(
+                    `Footer mismatch: header(frame=${frameNumber}, cameras=${numCameras}) ` +
+                    `footer(frame=${footerFrameNumber}, cameras=${footerNumCameras})`
+                );
+            }
+        }
     }
 
     // Trim array to actual size
@@ -333,8 +238,8 @@ export async function parseMultiFramePayload(
                 frameNumber: metadata.frameNumber,
                 width: metadata.width,
                 height: metadata.height,
+                colorChannels: metadata.colorChannels,
                 bitmap: bitmap,
-                config: metadata.config
             } as ParsedFrame;
         } catch (error) {
             console.error(`Failed to create bitmap for camera ${metadata.cameraId}:`, error);

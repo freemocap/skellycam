@@ -8,7 +8,7 @@ import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { useServer } from "@/services/server/ServerContextProvider";
 
 export const ServerConnectionStatus: React.FC = () => {
-    const { isConnected, connect, disconnect, cameraIds } = useServer();
+    const { isConnected, connect, disconnect, connectedCameraIds } = useServer();
 
     const handleClick = (): void => {
         if (isConnected) {
@@ -86,9 +86,9 @@ export const ServerConnectionStatus: React.FC = () => {
                     )}
                 </Typography>
 
-                {isConnected && cameraIds.length > 0 && (
+                {isConnected && connectedCameraIds.size > 0 && (
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {cameraIds.length} camera{cameraIds.length !== 1 ? 's' : ''} active
+                        {connectedCameraIds.size} camera{connectedCameraIds.size !== 1 ? 's' : ''} active
                     </Typography>
                 )}
 

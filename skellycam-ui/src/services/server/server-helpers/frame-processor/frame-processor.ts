@@ -1,5 +1,16 @@
-import {parseMultiFramePayload} from "@/services/server/server-helpers/frame-processor/binary-frame-parser";
-import {FrameData} from "@/services/server/server-helpers/canvas-manager";
+// frame-processor.ts
+import { parseMultiFramePayload, ParsedFrame } from "@/services/server/server-helpers/frame-processor/binary-frame-parser";
+
+export interface FrameData {
+    cameraId: string;
+    cameraIndex: number;
+    frameNumber: number;
+    width: number;
+    height: number;
+    colorChannels: number;
+    bitmap: ImageBitmap;
+}
+
 export interface ProcessedFrameResult {
     frames: FrameData[];
     cameraIds: Set<string>;
@@ -7,19 +18,29 @@ export interface ProcessedFrameResult {
 }
 
 export class FrameProcessor {
-    private frameDropCount: Map<string, number> = new Map();
     private lastFrameTime: Map<string, number> = new Map();
 
     public async processFramePayload(data: ArrayBuffer): Promise<ProcessedFrameResult | null> {
         try {
-            const frames = await parseMultiFramePayload(data);
-            if (!frames) {
+            const parsedFrames = await parseMultiFramePayload(data);
+            if (!parsedFrames) {
                 console.warn('Failed to parse frame payload');
                 return null;
             }
 
             const cameraIds = new Set<string>();
             const frameNumbers = new Set<number>();
+
+            // Convert ParsedFrame to FrameData (they have the same structure now)
+            const frames: FrameData[] = parsedFrames.map((frame: ParsedFrame) => ({
+                cameraId: frame.cameraId,
+                cameraIndex: frame.cameraIndex,
+                frameNumber: frame.frameNumber,
+                width: frame.width,
+                height: frame.height,
+                colorChannels: frame.colorChannels,
+                bitmap: frame.bitmap
+            }));
 
             for (const frame of frames) {
                 cameraIds.add(frame.cameraId);
@@ -37,31 +58,16 @@ export class FrameProcessor {
                 this.lastFrameTime.set(frame.cameraId, now);
             }
 
-            return {frames, cameraIds, frameNumbers};
+            return { frames, cameraIds, frameNumbers };
         } catch (error) {
             console.error('Error processing frame payload:', error);
             throw new Error(`Frame processing failed: ${error}`);
         }
     }
 
-    public recordDroppedFrame(cameraId: string): void {
-        const current = this.frameDropCount.get(cameraId) ?? 0;
-        this.frameDropCount.set(cameraId, current + 1);
 
-        if ((current + 1) % 100 === 0) {
-            console.warn(`Camera ${cameraId} has dropped ${current + 1} frames`);
-        }
-    }
-
-    public getStats(cameraId: string): { droppedFrames: number; lastFrameTime: number | undefined } {
-        return {
-            droppedFrames: this.frameDropCount.get(cameraId) ?? 0,
-            lastFrameTime: this.lastFrameTime.get(cameraId)
-        };
-    }
 
     public reset(): void {
-        this.frameDropCount.clear();
         this.lastFrameTime.clear();
     }
 }

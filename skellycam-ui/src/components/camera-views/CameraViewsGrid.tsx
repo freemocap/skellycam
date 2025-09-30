@@ -1,13 +1,10 @@
-import React, {useMemo} from "react";
-import {Box} from "@mui/material";
-import {CameraView} from "./CameraView";
-import {useServer} from "@/services/server/ServerContextProvider";
+import React, { useMemo } from "react";
+import { Box } from "@mui/material";
+import { CameraView } from "./CameraView";
+import { useServer } from "@/services/server/ServerContextProvider";
 
 export const CameraViewsGrid: React.FC = () => {
-    const {cameraIds} = useServer();
-
-    const defaultWidth = 640;
-    const defaultHeight = 480;
+    const { connectedCameraIds } = useServer();
 
     const getGridColumns = (count: number): string => {
         if (count <= 1) return '1fr';
@@ -18,12 +15,17 @@ export const CameraViewsGrid: React.FC = () => {
         return 'repeat(4, 1fr)';
     };
 
-    // Memoize camera views to prevent re-renders
+    // Memoize camera views - only recreates when camera IDs array changes
     const cameraViews = useMemo(() =>
-            cameraIds.map(cameraId => (
-                <CameraView key={cameraId} cameraId={cameraId}/>
+            connectedCameraIds.map(cameraId => (
+                <CameraView key={cameraId} cameraId={cameraId} />
             )),
-        [cameraIds, defaultWidth, defaultHeight]
+        [connectedCameraIds]
+    );
+
+    const gridColumns = useMemo(
+        () => getGridColumns(connectedCameraIds.length),
+        [connectedCameraIds.length]
     );
 
     return (
@@ -31,14 +33,14 @@ export const CameraViewsGrid: React.FC = () => {
             height: '100%',
             width: '100%',
             display: 'grid',
-            gridTemplateColumns: getGridColumns(cameraIds.length),
+            gridTemplateColumns: gridColumns,
             gap: 1,
             padding: 1,
             overflow: 'auto',
         }}>
             {cameraViews}
 
-            {cameraIds.length === 0 && (
+            {connectedCameraIds.length === 0 && (
                 <Box
                     sx={{
                         gridColumn: '1 / -1',
@@ -53,7 +55,7 @@ export const CameraViewsGrid: React.FC = () => {
                 >
                     <div>
                         <div>No cameras connected</div>
-                        <div style={{fontSize: '0.9rem', marginTop: '0.5rem'}}>
+                        <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
                             Waiting for camera streams...
                         </div>
                     </div>

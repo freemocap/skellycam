@@ -1,7 +1,7 @@
 import React from "react";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import { useAppDispatch } from "@/store";
-import { cameraConfigUpdated } from "@/store/slices/cameras/cameras-slice";
+import { cameraDesiredConfigUpdated } from "@/store/slices/cameras/cameras-slice";
 import { Camera, CameraConfig } from "@/store/slices/cameras/cameras-types";
 import {CameraConfigPanel} from "@/components/camera-config-panel/CameraConfigPanel";
 
@@ -16,7 +16,7 @@ export const CameraConfigTreeSection: React.FC<CameraConfigTreeSectionProps> = (
 
     const handleConfigChange = (newConfig: CameraConfig): void => {
         dispatch(
-            cameraConfigUpdated({
+            cameraDesiredConfigUpdated({
                 cameraId: camera.id,
                 config: newConfig,
             })
@@ -28,7 +28,7 @@ export const CameraConfigTreeSection: React.FC<CameraConfigTreeSectionProps> = (
             itemId={`camera-${camera.id}-config`}
             label={
                 <CameraConfigPanel
-                    config={camera.config}
+                    config={camera.desiredConfig}
                     onConfigChange={handleConfigChange}
                     isExpanded={true}
                 />

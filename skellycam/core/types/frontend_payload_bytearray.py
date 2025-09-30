@@ -4,28 +4,36 @@ import cv2
 import numpy as np
 
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
-from skellycam.core.types.numpy_record_dtypes import (
-    JPEG_ENCODING_PARAMETERS,
-    logger,
-    FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE,
-    CAMERA_CONFIG_DTYPE, FRONTEND_FRAME_HEADER_DTYPE,
-)
+
+logger = logging.getLogger(__name__)
 from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
+
 
 class MessageType:
     PAYLOAD_HEADER = 0
-    FRAME_METADATA = 1
+    FRAME_HEADER = 1
     PAYLOAD_FOOTER = 2
 
-# New frame header that includes the full camera config
-FRONTEND_FRAME_HEADER_WITH_CONFIG_DTYPE = np.dtype([
-    ('message_type', '<u1'),
-    ('frame_number', '<i8'),
-    ('camera_config', CAMERA_CONFIG_DTYPE),
-    ('image_width', '<i4'),
-    ('image_height', '<i4'),
-    ('jpeg_string_length', '<i4'),
+FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE = np.dtype([
+    ('message_type', '<u1'),  # 1 byte: 0 = payload_header, 1 = frame_header, 2 = payload_footer
+    ('frame_number', '<i8'),  # 8 bytes, little-endian int64
+    ('number_of_cameras', '<i4'),  # 4 bytes, little-endian int32
 ], align=True)
+
+FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
+    ('message_type', '<u1'),  # 1 byte: 0 = payload_header, 1 = frame_header, 2 = payload_footer
+    ('frame_number', '<i8'),  # 8 bytes, little-endian int64
+    ('camera_id', 'S16'),  # 16 bytes fixed-length camera ID
+    ('camera_index', '<i4'),  # 4 bytes, little-endian int32
+    ('image_width', '<i4'),  # 4 bytes, little-endian int32
+    ('image_height', '<i4'),  # 4 bytes, little-endian int32
+    ('color_channels', '<i4'),  # 4 bytes, little-endian int32
+    ('jpeg_string_length', '<i4'),  # 4 bytes, length of the JPEG string, little-endian int32
+], align=True)
+
+JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
+
+
 
 _reusable_bytes_payload: bytearray = bytearray(0)
 
@@ -76,10 +84,10 @@ def create_frontend_payload(
     current_pos = 0
 
     # Add header with proper message type
-    payload_header = np.array(
-        [(MessageType.PAYLOAD_HEADER, frame_number, number_of_cameras)],
-        dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE
-    )
+    payload_header = np.recarray(1, dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
+    payload_header.message_type = MessageType.PAYLOAD_HEADER
+    payload_header.frame_number = frame_number
+    payload_header.number_of_cameras = number_of_cameras
     header_bytes = payload_header.tobytes()
     _reusable_bytes_payload[current_pos:current_pos + len(header_bytes)] = header_bytes
     current_pos += len(header_bytes)
@@ -127,14 +135,16 @@ def create_frontend_payload(
         jpeg_string = jpeg_data.tobytes()
         jpeg_string_length = len(jpeg_string)
 
-        # Create frame header with full config
-        frame_header = np.zeros(1, dtype=FRONTEND_FRAME_HEADER_DTYPE)
-        frame_header['message_type'] = MessageType.FRAME_METADATA
-        frame_header['frame_number'] = frame_number
-        frame_header['camera_config'] = frame_recarray.frame_metadata.camera_config
-        frame_header['image_width'] = resize_image_width
-        frame_header['image_height'] = resize_image_height
-        frame_header['jpeg_string_length'] = jpeg_string_length
+        # Create frame header
+        frame_header = np.recarray(1, dtype=FRONTEND_FRAME_HEADER_DTYPE)
+        frame_header.message_type = MessageType.FRAME_HEADER
+        frame_header.frame_number = frame_number
+        frame_header.camera_id = camera_id.encode('utf-8')[:16]  # Truncate if necessary
+        frame_header.camera_index = frame_recarray.frame_metadata.camera_config.camera_index[0]
+        frame_header.color_channels = frame_recarray.frame_metadata.camera_config.color_channels[0]
+        frame_header.image_width = resize_image_width
+        frame_header.image_height = resize_image_height
+        frame_header.jpeg_string_length = jpeg_string_length
 
         frame_header_bytes = frame_header.tobytes()
 

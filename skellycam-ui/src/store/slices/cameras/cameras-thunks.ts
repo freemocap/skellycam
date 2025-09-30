@@ -119,7 +119,7 @@ export const updateCameraConfigs = createAsyncThunk<
             throw new Error(error.detail || 'Failed to update camera configs');
         }
 
-        return response.json() as Promise<ConnectCamerasResponse>;
+        return await response.json() as Promise<ConnectCamerasResponse>;
     }
 );
 

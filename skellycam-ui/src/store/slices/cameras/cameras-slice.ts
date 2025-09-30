@@ -3,10 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
     Camera,
     CamerasState,
-    CameraConfig,
-    createDefaultCameraConfig,
-    areConfigsEqual,
-    extractConfigSettings
+    CameraConfig, extractConfigSettings, areConfigsEqual,
 } from './cameras-types';
 import {
     detectCameras,

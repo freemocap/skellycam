@@ -64,7 +64,24 @@ class WebSocketQueueHandler(logging.Handler):
                 log_record_dict['msg'] = str(log_record_dict['msg'])
             
             log_record_dict['type'] = record.__class__.__name__
-            
+            # Convert exc_info tuple to string to make it picklable
+            if log_record_dict.get('exc_info'):
+                if isinstance(log_record_dict['exc_info'], tuple):
+                    # Format the exception info as a string
+                    log_record_dict['exc_info'] = self.formatter.formatException(
+                        ei=log_record_dict['exc_info']
+                    )
+                elif not isinstance(log_record_dict['exc_info'], str):
+                    # If it's not a tuple or string, set to None
+                    log_record_dict['exc_info'] = None
+
+            # Also handle exc_text if present
+            if log_record_dict.get('exc_text') and not isinstance(log_record_dict['exc_text'], str):
+                log_record_dict['exc_text'] = str(log_record_dict['exc_text'])
+
+            # Handle stack_info if present
+            if log_record_dict.get('stack_info') and not isinstance(log_record_dict['stack_info'], str):
+                log_record_dict['stack_info'] = str(log_record_dict['stack_info'])
             self.queue.put(LogRecordModel(**log_record_dict).model_dump())
 
 MAX_WEBSOCKET_LOG_QUEUE_SIZE = 1000

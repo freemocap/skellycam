@@ -5,14 +5,31 @@ import { z } from 'zod';
 export const PIXEL_FORMATS = ['RGB', 'BGR', 'GRAY'] as const;
 export const EXPOSURE_MODES = ['MANUAL', 'AUTO', 'RECOMMEND'] as const;
 export const CONNECTION_STATUS = ['disconnected', 'connecting', 'connected', 'error'] as const;
-export const ROTATION_OPTIONS = ['None', '90', '180', '270'] as const;
+
+// Rotation as integers (matching backend expectations)
+export const ROTATION_VALUES = {
+    NO_ROTATION: -1,
+    ROTATE_90: 0,
+    ROTATE_180: 1,
+    ROTATE_270: 2,
+} as const;
+
+export const ROTATION_OPTIONS = [-1, 0, 1, 2] as const;
 export const FOURCC_OPTIONS = ['MJPG', 'X264', 'YUYV', 'H264'] as const;
 
 export type PixelFormat = typeof PIXEL_FORMATS[number];
 export type ExposureMode = typeof EXPOSURE_MODES[number];
 export type ConnectionStatus = typeof CONNECTION_STATUS[number];
-export type RotationOption = typeof ROTATION_OPTIONS[number];
+export type RotationValue = typeof ROTATION_OPTIONS[number];
 export type FourccOption = typeof FOURCC_OPTIONS[number];
+
+// Helper to get rotation label for UI
+export const ROTATION_LABELS: Record<RotationValue, string> = {
+    [-1]: 'No Rotation',
+    [0]: '90°',
+    [1]: '180°',
+    [2]: '270°',
+};
 
 // ==================== Camera Configuration ====================
 export const CameraConfigSchema = z.object({
@@ -32,7 +49,7 @@ export const CameraConfigSchema = z.object({
     // Image settings
     color_channels: z.number().int().min(1).max(4),
     pixel_format: z.enum(PIXEL_FORMATS),
-    rotation: z.enum(ROTATION_OPTIONS),
+    rotation: z.union([z.literal(-1), z.literal(0), z.literal(1), z.literal(2)]),
 
     // Exposure settings
     exposure_mode: z.enum(EXPOSURE_MODES),
@@ -115,10 +132,44 @@ export function createDefaultCameraConfig(
         framerate: 30,
         color_channels: 3,
         pixel_format: 'RGB',
-        rotation: 'None',
+        rotation: -1,  // Changed from 'NO_ROTATION' to -1
         exposure_mode: 'AUTO',
         exposure: -7,
         capture_fourcc: 'MJPG',
         writer_fourcc: 'X264',
+    };
+}
+
+export function areConfigsEqual(
+    config1: CameraConfig,
+    config2: CameraConfig
+): boolean {
+    return (
+        config1.resolution.width === config2.resolution.width &&
+        config1.resolution.height === config2.resolution.height &&
+        config1.framerate === config2.framerate &&
+        config1.exposure_mode === config2.exposure_mode &&
+        config1.exposure === config2.exposure &&
+        config1.rotation === config2.rotation &&
+        config1.pixel_format === config2.pixel_format &&
+        config1.capture_fourcc === config2.capture_fourcc &&
+        config1.writer_fourcc === config2.writer_fourcc
+    );
+}
+
+export function extractConfigSettings(
+    config: CameraConfig
+): Partial<CameraConfig> {
+    // Extract copyable settings (exclude identity fields)
+    return {
+        resolution: { ...config.resolution },
+        framerate: config.framerate,
+        color_channels: config.color_channels,
+        pixel_format: config.pixel_format,
+        rotation: config.rotation,
+        exposure_mode: config.exposure_mode,
+        exposure: config.exposure,
+        capture_fourcc: config.capture_fourcc,
+        writer_fourcc: config.writer_fourcc,
     };
 }
