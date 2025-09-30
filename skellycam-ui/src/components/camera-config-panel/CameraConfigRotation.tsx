@@ -2,22 +2,30 @@ import React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { Box, Tooltip, useTheme } from '@mui/material';
-import { ROTATION_OPTIONS } from '@/store/slices/cameras/cameras-types';
+import { ROTATION_OPTIONS, RotationValue } from '@/store/slices/cameras/cameras-types';
 
 interface CameraConfigRotationProps {
-    rotation?: string;
-    onChange: (rotation: string) => void;
+    rotation?: RotationValue;
+    onChange: (rotation: RotationValue) => void;
 }
 
+// Map rotation values to degree labels
+const ROTATION_DEGREE_LABELS: Record<RotationValue, string> = {
+    [-1]: '0°',
+    [0]: '90°',
+    [1]: '180°',
+    [2]: '270°',
+};
+
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-                                                                              rotation = 'None',
+                                                                              rotation = -1,
                                                                               onChange
                                                                           }) => {
     const theme = useTheme();
 
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,
-        newRotation: string | null,
+        newRotation: RotationValue | null,
     ): void => {
         if (newRotation !== null) {
             onChange(newRotation);
@@ -45,9 +53,9 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                         }
                     }}
                 >
-                    {ROTATION_OPTIONS.map((option) => (
+                    {ROTATION_OPTIONS.map((option: RotationValue) => (
                         <ToggleButton key={option} value={option}>
-                            {option === 'None' ? 'None' : `${option}°`}
+                            {ROTATION_DEGREE_LABELS[option]}
                         </ToggleButton>
                     ))}
                 </ToggleButtonGroup>

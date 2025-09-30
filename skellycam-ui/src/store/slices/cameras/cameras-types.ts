@@ -132,8 +132,8 @@ export function createDefaultCameraConfig(
         framerate: 30,
         color_channels: 3,
         pixel_format: 'RGB',
-        rotation: -1,  // Changed from 'NO_ROTATION' to -1
-        exposure_mode: 'AUTO',
+        rotation: -1,
+        exposure_mode: 'MANUAL',
         exposure: -7,
         capture_fourcc: 'MJPG',
         writer_fourcc: 'X264',

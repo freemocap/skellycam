@@ -31,7 +31,7 @@ const ValueLabelComponent = (props: {
 // Default constraints for exposure
 const EXPOSURE_CONSTRAINTS = {
     min: -13,
-    max: -1,
+    max: -4,
     default: -7
 };
 

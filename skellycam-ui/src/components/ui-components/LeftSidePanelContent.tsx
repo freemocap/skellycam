@@ -52,7 +52,9 @@ export const LeftSidePanelContent = () => {
             color: theme.palette.text.primary,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden'
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            ...scrollbarStyles
         }}>
             {/* Header */}
             <List disablePadding>
@@ -114,12 +116,8 @@ export const LeftSidePanelContent = () => {
             {/* Video Panel for Videos Page */}
             {location.pathname === '/videos' && (
                 <Box sx={{
-                    flex: 0.3,
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
                     borderTop: '1px solid',
                     borderColor: theme.palette.divider,
-                    ...scrollbarStyles
                 }}>
                     <VideoFolderPanel/>
                 </Box>
@@ -127,14 +125,11 @@ export const LeftSidePanelContent = () => {
 
             {/* Main Content Area */}
             <Box sx={{
-                flex: 1,
-                overflowY: 'auto',
-                overflowX: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 0.5,
                 pt: 0.5,
-                ...scrollbarStyles
+                pb: 2,
             }}>
                 <RecordingInfoPanel/>
                 <CameraConfigTreeView/>

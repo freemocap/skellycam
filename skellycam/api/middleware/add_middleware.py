@@ -9,15 +9,20 @@ logger = logging.getLogger(__name__)
 
 
 def add_middleware(app: FastAPI) -> None:
-    logger.debug("Adding middleware...")
+    logger.info("Adding middleware...")
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next) -> Response:
-        start_time = time.time()
+        start_time = time.perf_counter()
 
         try:
+            logger.api("Incoming API request", extra={
+                "method": request.method,
+                "url": str(request.url),
+                "headers": dict(request.headers),
+            })
             response: Response = await call_next(request)
-            process_time = time.time() - start_time
+            process_time = time.perf_counter() - start_time
 
             # Don't log /health requests
             if request.url.path == "/health":
@@ -25,7 +30,7 @@ def add_middleware(app: FastAPI) -> None:
 
             # Log successful requests
             if response.status_code < 400:
-                logger.debug(
+                logger.api(
                     f"Request: {request.url} processed in {process_time:.6f} seconds "
                     f"and returned status code: {response.status_code}"
                 )

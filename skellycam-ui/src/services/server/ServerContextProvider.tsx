@@ -145,7 +145,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             ws.off('message', handleMessage);
             ws.disconnect();
         };
-    }, [dispatch, cameras]);
+    }, [dispatch]);
 
     const connect = useCallback((): void => {
         wsConnectionRef.current?.connect();

@@ -3,7 +3,6 @@ import multiprocessing
 
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
-from skellycam.core.camera.config.camera_config import CameraConfigs, validate_camera_configs
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.ipc.pubsub.pubsub_manager import create_camera_group_pubsub_manager, TopicTypes, PubSubTopicManager
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
@@ -55,7 +54,7 @@ class CameraGroupIPC(BaseModel):
 
     @should_continue.setter
     def should_continue(self, value: bool) -> None:
-        logger.api(f"Setting should_continue to {value} for camera group {self.group_id}")
+        logger.info(f"Setting should_continue to {value} for camera group {self.group_id}")
         self.shutdown_camera_group_flag.value = not value
 
     def publish_shm_message(self, shm_dto) -> None:
