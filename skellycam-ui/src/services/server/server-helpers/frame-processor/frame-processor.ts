@@ -19,6 +19,7 @@ export interface ProcessedFrameResult {
 
 export class FrameProcessor {
     private lastFrameTime: Map<string, number> = new Map();
+    private currentFps: Map<string, number> = new Map();
 
     public async processFramePayload(data: ArrayBuffer): Promise<ProcessedFrameResult | null> {
         try {
@@ -46,14 +47,12 @@ export class FrameProcessor {
                 cameraIds.add(frame.cameraId);
                 frameNumbers.add(frame.frameNumber);
 
-                // Track frame timing for performance monitoring
+                // Track frame timing and calculate FPS
                 const now = performance.now();
                 const lastTime = this.lastFrameTime.get(frame.cameraId);
                 if (lastTime) {
                     const fps = 1000 / (now - lastTime);
-                    if (fps < 20) { // Below 20 FPS warning
-                        console.warn(`Low FPS for camera ${frame.cameraId}: ${fps.toFixed(1)}`);
-                    }
+                    this.currentFps.set(frame.cameraId, fps);
                 }
                 this.lastFrameTime.set(frame.cameraId, now);
             }
@@ -65,9 +64,12 @@ export class FrameProcessor {
         }
     }
 
-
+    public getFps(cameraId: string): number | null {
+        return this.currentFps.get(cameraId) ?? null;
+    }
 
     public reset(): void {
         this.lastFrameTime.clear();
+        this.currentFps.clear();
     }
 }

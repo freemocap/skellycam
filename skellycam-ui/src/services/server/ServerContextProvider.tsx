@@ -1,19 +1,12 @@
 // ServerContextProvider.tsx
 import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/store/types';
 
 import { ConnectionState, WebSocketConnection } from "@/services/server/server-helpers/websocket-connection";
 import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
 import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
 import { serverUrls } from "@/services";
-import {
-    camerasDetectedFromStream,
-    cameraMetricsUpdated,
-    actualConfigsUpdatedFromStream,
-    selectCameras,
-    createDefaultCameraConfig,
-} from '@/store/slices/cameras';
 
 interface ServerContextValue {
     isConnected: boolean;
@@ -21,6 +14,7 @@ interface ServerContextValue {
     disconnect: () => void;
     send: (data: string | object) => void;
     setCanvasForCamera: (cameraId: string, canvas: HTMLCanvasElement) => void;
+    getFps: (cameraId: string) => number | null;
     connectedCameraIds: string[];
 }
 
@@ -36,7 +30,6 @@ function arraysEqual(a: string[], b: string[]): boolean {
 
 export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const dispatch = useDispatch<AppDispatch>();
-    const cameras = useSelector(selectCameras);
 
     // Reactive state - only updates when camera list actually changes
     const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -163,6 +156,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         canvasManagerRef.current?.setCanvasForCamera(cameraId, canvas);
     }, []);
 
+    const getFps = useCallback((cameraId: string): number | null => {
+        return frameProcessorRef.current?.getFps(cameraId) ?? null;
+    }, []);
+
     return (
         <ServerContext.Provider value={{
             isConnected,
@@ -170,6 +167,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             disconnect,
             send,
             setCanvasForCamera,
+            getFps,
             connectedCameraIds
         }}>
             {children}

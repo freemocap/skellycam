@@ -41,12 +41,29 @@ function initCanvas(data) {
 }
 
 function handleFrame(data) {
+    const bitmap = data.bitmap;
+    
+    // Validate bitmap dimensions
+    if (!bitmap || bitmap.width <= 0 || bitmap.height <= 0) {
+        console.error('Invalid bitmap dimensions:', bitmap?.width, bitmap?.height);
+        if (bitmap) bitmap.close();
+        return;
+    }
+    
+    // Resize canvas to match bitmap dimensions if they differ
+    // This handles rotation changes and different camera resolutions
+    if (offscreenCanvas.width !== bitmap.width || offscreenCanvas.height !== bitmap.height) {
+        offscreenCanvas.width = bitmap.width;
+        offscreenCanvas.height = bitmap.height;
+        // Resizing automatically clears the canvas, preventing old frame artifacts
+    }
+    
     // Frame dropping strategy: keep only latest frame
     if (pendingFrame) {
         pendingFrame.close(); // Clean up skipped frame
         stats.framesDropped++;
     }
-    pendingFrame = data.bitmap;
+    pendingFrame = bitmap;
 }
 
 function renderLoop() {

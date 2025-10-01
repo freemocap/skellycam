@@ -12,8 +12,10 @@ interface CameraViewProps {
  */
 export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { setCanvasForCamera } = useServer();
+    const fpsDisplayRef = useRef<HTMLSpanElement>(null);
+    const { setCanvasForCamera, getFps } = useServer();
     const hasSetCanvas = useRef<boolean>(false);
+    const animationFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -31,6 +33,25 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
         };
     }, [cameraId, setCanvasForCamera]);
 
+    // Update FPS display using direct DOM manipulation to avoid React re-renders
+    useEffect(() => {
+        const updateFps = () => {
+            const fps = getFps(cameraId);
+            if (fpsDisplayRef.current && fps !== null) {
+                fpsDisplayRef.current.textContent = `${fps.toFixed(1)} FPS`;
+            }
+            animationFrameRef.current = requestAnimationFrame(updateFps);
+        };
+
+        animationFrameRef.current = requestAnimationFrame(updateFps);
+
+        return () => {
+            if (animationFrameRef.current !== null) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, [cameraId, getFps]);
+
     return (
         <div
             style={{
@@ -47,8 +68,6 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
         >
             <canvas
                 ref={canvasRef}
-                width={640}
-                height={480}
                 style={{
                     width: '100%',
                     height: '100%',
@@ -68,7 +87,10 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
                     fontFamily: 'monospace'
                 }}
             >
-                {cameraId}
+                <div>{cameraId}</div>
+                <div style={{ fontSize: '10px', marginTop: '2px', color: '#0f0' }}>
+                    <span ref={fpsDisplayRef}>-- FPS</span>
+                </div>
             </div>
         </div>
     );

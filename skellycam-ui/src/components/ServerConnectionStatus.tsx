@@ -86,9 +86,9 @@ export const ServerConnectionStatus: React.FC = () => {
                     )}
                 </Typography>
 
-                {isConnected && connectedCameraIds.size > 0 && (
+                {isConnected && connectedCameraIds.length > 0 && (
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {connectedCameraIds.size} camera{connectedCameraIds.size !== 1 ? 's' : ''} active
+                        {connectedCameraIds.length} camera{connectedCameraIds.length !== 1 ? 's' : ''} active
                     </Typography>
                 )}
 
