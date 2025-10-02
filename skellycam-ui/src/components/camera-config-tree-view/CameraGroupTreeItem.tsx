@@ -23,7 +23,7 @@ export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
         <TreeItem
             itemId={groupId}
             label={
-                <Box sx={{ display: "flex", alignItems: "center", py: 0.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
                     {icon}
                     <Typography variant="subtitle2" sx={{ ml: 1 }}>
                         {title} ({cameras.length})

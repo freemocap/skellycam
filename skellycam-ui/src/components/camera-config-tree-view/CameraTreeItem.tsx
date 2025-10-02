@@ -1,15 +1,15 @@
 import React from "react";
-import { Box, IconButton, Tooltip, Typography, Chip, useTheme, Stack } from "@mui/material";
-import { TreeItem } from "@mui/x-tree-view/TreeItem";
+import {Box, Chip, IconButton, Typography, useTheme} from "@mui/material";
+import {TreeItem} from "@mui/x-tree-view/TreeItem";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import SettingsIcon from "@mui/icons-material/Settings";
 
-import { CameraConfigTreeSection } from "./CameraConfigTreeSection";
-import { useAppDispatch } from "@/store";
-import { cameraSelectionToggled } from "@/store/slices/cameras/cameras-slice";
-import { Camera } from "@/store/slices/cameras/cameras-types";
+import {CameraConfigTreeSection} from "./CameraConfigTreeSection";
+import {ROTATION_DEGREE_LABELS, RotationValue, useAppDispatch} from "@/store";
+import {cameraSelectionToggled} from "@/store/slices/cameras/cameras-slice";
+import {Camera} from "@/store/slices/cameras/cameras-types";
 
 interface CameraTreeItemProps {
     camera: Camera;
@@ -27,9 +27,8 @@ const getConfigSummary = (config: any): string[] => {
         summary.push(`${config.resolution.width}×${config.resolution.height}`);
     }
 
-    // Add FPS/framerate if available
     if (config.framerate) {
-        summary.push(`${config.framerate}fps`);
+        summary.push(`${parseFloat(config.framerate).toFixed(2)}fps`);
     }
 
     // Add exposure if available and not AUTO
@@ -42,20 +41,18 @@ const getConfigSummary = (config: any): string[] => {
         summary.push(config.pixel_format);
     }
 
-    // Add rotation if not default
-    if (config.rotation && config.rotation !== 'None') {
-        summary.push(config.rotation);
+    if (config.rotation) {
+        summary.push(ROTATION_DEGREE_LABELS[config.rotation as RotationValue]);
     }
-
     // Add capture format if different from default
-    if (config.capture_fourcc && config.capture_fourcc !== 'MJPG') {
+    if (config.capture_fourcc) {
         summary.push(config.capture_fourcc);
     }
 
     return summary.filter(item => item); // Remove empty strings
 };
 
-export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpanded = false }) => {
+export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({camera, isExpanded = false}) => {
     const dispatch = useAppDispatch();
     const theme = useTheme();
 
@@ -77,7 +74,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
         }
     };
 
-    const configSummary = getConfigSummary(camera.config);
+    const configSummary = getConfigSummary(camera.desiredConfig);
     const showConfigSummary = !isExpanded && configSummary.length > 0;
 
     return (
@@ -88,7 +85,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                     sx={{
                         display: "flex",
                         alignItems: "center",
-                        py: 0.5,
+                        py: 0.2,
                         pr: 1,
                         minHeight: 32,
                     }}
@@ -97,17 +94,17 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                     <IconButton
                         size="small"
                         onClick={handleToggleSelection}
-                        sx={{ mr: 1, flexShrink: 0 }}
+                        sx={{mr: 1, flexShrink: 0}}
                     >
                         {camera.selected ? (
-                            <CheckCircleIcon color="info" />
+                            <CheckCircleIcon color="info"/>
                         ) : (
-                            <RadioButtonUncheckedIcon color="info" />
+                            <RadioButtonUncheckedIcon color="info"/>
                         )}
                     </IconButton>
 
                     {/* Camera icon */}
-                    <VideocamIcon sx={{ mr: 1, color: getStatusColor(), flexShrink: 0 }} />
+                    <VideocamIcon sx={{mr: 1, color: getStatusColor(), flexShrink: 0}}/>
 
                     {/* Camera name and config summary container */}
                     <Box sx={{
@@ -128,7 +125,14 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                                 maxWidth: "200px" // Limit name width
                             }}
                         >
-                            {camera.name || `Camera ${camera.index}`}
+                            <span style={{fontSize: '0.75rem'}}>
+
+                            Camera {camera.index}
+                            </span>
+                            <br/>
+                            <span style={{fontSize: '0.6rem'}}>
+                                {camera.name} (id: {camera.id})
+                            </span>
                         </Typography>
 
                         {/* Config summary - only show when collapsed */}
@@ -136,7 +140,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                             <Box sx={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 0.5,
+                                gap: 0.25,
                                 flexGrow: 1,
                                 minWidth: 0,
                                 overflow: "hidden"
@@ -161,8 +165,8 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                                             size="small"
                                             variant="outlined"
                                             sx={{
-                                                height: 18,
-                                                fontSize: 10,
+                                                height: 10,
+                                                fontSize: 8,
                                                 '& .MuiChip-label': {
                                                     px: 0.75,
                                                 },
@@ -192,7 +196,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera, isExpand
                 </Box>
             }
         >
-            <CameraConfigTreeSection camera={camera} />
+            <CameraConfigTreeSection camera={camera}/>
         </TreeItem>
     );
 };

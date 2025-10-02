@@ -21,9 +21,9 @@ export const ServerConnectionStatus: React.FC = () => {
     const getStatusColor = (): { bg: string; border: string; text: string } => {
         if (isConnected) {
             return {
-                bg: 'rgba(0, 255, 0, 0.1)',
-                border: 'rgba(0, 255, 0, 0.3)',
-                text: '#4caf50'
+                bg: 'rgba(0, 255, 255, 0.05)',
+                border: 'rgba(0, 255, 255, 0.3)',
+                text: '#00ffff'
             };
         }
         return {

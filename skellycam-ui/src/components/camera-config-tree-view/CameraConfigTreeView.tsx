@@ -75,7 +75,6 @@ export const CameraConfigTreeView: React.FC = () => {
             sx={{
                 borderRadius: 2,
                 overflow: "hidden",
-                mb: 2,
             }}
         >
             <SimpleTreeView

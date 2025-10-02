@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.wait_functions import wait_10ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,7 @@ class CameraOrchestrator:
     @property
     def camera_frame_counts(self) -> dict[CameraIdString, int]:
         return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
+
 
     def pause(self, await_paused: bool = True) -> None:
         logger.info("Pausing all cameras...")
@@ -101,3 +102,13 @@ class CameraOrchestrator:
         if all(self.camera_frame_counts[camera_id] <= count for count in self.camera_frame_counts.values()):
             return True
         return False
+
+    def close(self):
+        self.pause(await_paused=True)
+        for status in self.camera_statuses.values():
+            status.should_close.value = True
+        logger.info("Waiting for all cameras to close...")
+        self.unpause(await_unpaused=True)
+        while self.any_cameras_alive:
+            wait_100ms()
+        logger.info("All cameras closed.")

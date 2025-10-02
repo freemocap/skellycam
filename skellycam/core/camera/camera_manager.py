@@ -58,6 +58,12 @@ class CameraManager:
         for worker in self.camera_workers.values():
             worker.start()
 
+    def pause_unpause(self, await_state: bool = True):
+        if self.orchestrator.any_cameras_paused:
+            self.unpause(await_unpaused=await_state)
+        else:
+            self.pause(await_paused=await_state)
+
     def pause(self, await_paused: bool):
         self.orchestrator.pause(await_paused=await_paused)
 
@@ -67,20 +73,22 @@ class CameraManager:
     def close(self):
         logger.info("Closing camera manager and all camera processes...")
         self.ipc.should_continue = False
-        for worker in self.camera_workers.values():
-            if worker.is_alive():
-                worker.worker.join(timeout=2.0)
-                if worker.is_alive():
-                    logger.warning(f"Camera worker {worker.camera_id} did not shutdown gracefully, terminating...")
-                    worker.worker.terminate()
-                    worker.worker.join(timeout=2.0)
-                    if worker.is_alive():
-                        pid = worker.worker.pid
+        self.orchestrator.close()
+
+        for camera_worker in self.camera_workers.values():
+            if camera_worker.is_alive():
+                camera_worker.worker.join(timeout=2.0)
+                if camera_worker.is_alive():
+                    logger.warning(f"Camera worker {camera_worker.camera_id} did not shutdown gracefully, terminating...")
+                    camera_worker.worker.terminate()
+                    camera_worker.worker.join(timeout=2.0)
+                    if camera_worker.is_alive():
+                        pid = camera_worker.worker.pid
                         os.kill(pid, 9)  # Force kill
-                        logger.error(f"Camera worker {worker.camera_id} (PID: {pid}) had to be force killed.")
+                        logger.error(f"Camera worker {camera_worker.camera_id} (PID: {pid}) had to be force killed.")
                 else:
-                    logger.info(f"Camera worker {worker.camera_id} terminated successfully.")
+                    logger.info(f"Camera worker {camera_worker.camera_id} terminated successfully.")
             else:
-                logger.info(f"Camera worker {worker.camera_id} was not alive.")
+                logger.info(f"Camera worker {camera_worker.camera_id} was not alive.")
         self.camera_workers.clear()
         logger.success("Camera manager closed all camera processes successfully.")

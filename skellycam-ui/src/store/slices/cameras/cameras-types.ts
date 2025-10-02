@@ -6,13 +6,13 @@ export const PIXEL_FORMATS = ['RGB', 'BGR', 'GRAY'] as const;
 export const EXPOSURE_MODES = ['MANUAL', 'AUTO', 'RECOMMEND'] as const;
 export const CONNECTION_STATUS = ['disconnected', 'connecting', 'connected', 'error'] as const;
 
-// Rotation as integers (matching backend expectations)
-export const ROTATION_VALUES = {
-    NO_ROTATION: -1,
-    ROTATE_90: 0,
-    ROTATE_180: 1,
-    ROTATE_270: 2,
-} as const;
+
+export const ROTATION_DEGREE_LABELS: Record<RotationValue, string> = {
+    [-1]: '0°',
+    [0]: '90°',
+    [1]: '180°',
+    [2]: '270°',
+};
 
 export const ROTATION_OPTIONS = [-1, 0, 1, 2] as const;
 export const FOURCC_OPTIONS = ['MJPG', 'X264', 'YUYV', 'H264'] as const;

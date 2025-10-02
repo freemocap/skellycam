@@ -63,5 +63,3 @@ class CameraWorker:
     def join(self, timeout: float | None = None):
         self.worker.join(timeout=timeout)
 
-    def close(self):
-        pass

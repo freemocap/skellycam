@@ -82,25 +82,8 @@ class CameraGroup:
         )
 
     def pause_unpause(self, await_state_change: bool = True):
-        if self.cameras.any_paused:
-            self.unpause(await_unpaused=await_state_change)
-        else:
-            self.pause(await_paused=await_state_change)
-    def pause(self, await_paused: bool = True):
-        """
-        Pause the camera group operations.
-        """
-        logger.info(f"Pausing camera group ID: {self.id}")
-        self.cameras.pause(await_paused=await_paused)
-        logger.info(f"Camera group ID: {self.id} is paused.")
+        self.cameras.pause_unpause(await_state_change)
 
-    def unpause(self, await_unpaused: bool = True):
-        """
-        Unpause the camera group operations.
-        """
-        logger.info(f"Unpausing camera group ID: {self.id}")
-        self.cameras.unpause(await_unpaused)
-        logger.info(f"Camera group ID: {self.id} is unpaused.")
 
     def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:
         """
@@ -125,10 +108,8 @@ class CameraGroup:
         self.cameras.orchestrator.first_recording_frame_number.value = frame_count+ 3 # + a few to avoid off-by-one errors
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
 
-        logger.api(f"All cameras are ready to record for camera group ID: {self.id}")
 
         wait_10ms()
-        logger.api("Unpausing camera group to start recording...")
         self.cameras.unpause(await_unpaused=True)
         logger.info("Camera group unpaused - Recording successfully started.")
 
@@ -141,14 +122,15 @@ class CameraGroup:
         """
 
         logger.debug(f"Stopping recording for all cameras in orchestrator...")
-        self.pause(await_paused=True)
+        self.cameras.pause(await_paused=True)
         frame_count = max(
             [status.frame_count.value for status in self.cameras.orchestrator.camera_statuses.values()])
         self.cameras.orchestrator.first_recording_frame_number.value = -1
         self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
-        self.unpause(await_unpaused=True)
+        self.cameras.unpause(await_unpaused=True)
         finalize_recording(ipc=self.ipc, cameras=self.cameras)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
+
 
     def close(self):
         logger.debug("Closing camera group")

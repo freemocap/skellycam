@@ -2,20 +2,14 @@ import React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { Box, Tooltip, useTheme } from '@mui/material';
-import { ROTATION_OPTIONS, RotationValue } from '@/store/slices/cameras/cameras-types';
+import {ROTATION_DEGREE_LABELS, ROTATION_OPTIONS, RotationValue} from '@/store/slices/cameras/cameras-types';
 
 interface CameraConfigRotationProps {
     rotation?: RotationValue;
     onChange: (rotation: RotationValue) => void;
 }
 
-// Map rotation values to degree labels
-const ROTATION_DEGREE_LABELS: Record<RotationValue, string> = {
-    [-1]: '0°',
-    [0]: '90°',
-    [1]: '180°',
-    [2]: '270°',
-};
+
 
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                                                                               rotation = -1,

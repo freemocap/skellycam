@@ -52,6 +52,9 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                                            video_recorder=video_recorder,
                                            )
 
+            if self_status.should_close.value:
+                logger.info(f"Camera {config.camera_id} received shutdown signal.")
+                break
             if self_status.is_paused.value:
                 wait_1ms()
                 continue
@@ -109,6 +112,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
         raise
     finally:
         self_status.connected.value = False
+        self_status.closed.value = True
         logger.debug(f"Camera {config.camera_id} loop ended.")
 
 

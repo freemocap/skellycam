@@ -90,14 +90,12 @@ export const RecordingInfoPanel: React.FC = () => {
         });
 
         // Build the timestamp string in a filename-friendly format
-        const timestamp = `${partMap.year}-${partMap.month}-${partMap.day}_${
+        return `${partMap.year}-${partMap.month}-${partMap.day}_${
             partMap.hour
         }-${partMap.minute}-${partMap.second}_${partMap.timeZoneName.replace(
             ":",
             ""
         )}`;
-
-        return timestamp;
     };
 
     const handleRecordingTagChange = (tag: string) => {
@@ -202,6 +200,7 @@ export const RecordingInfoPanel: React.FC = () => {
                                 alignItems: "center",
                                 width: "100%",
                                 py: 0.25,
+
                             }}
                         >
                             <VideocamIcon sx={{ fontSize: 16, mr: 0.5 }} />

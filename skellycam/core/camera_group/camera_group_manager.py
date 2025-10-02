@@ -22,7 +22,7 @@ class CameraGroupManager:
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
         default_factory=dict)
 
-    def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+    def _create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
@@ -35,6 +35,23 @@ class CameraGroupManager:
 
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group
+
+    def connect_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+        """
+        Create a camera group with the provided configuration settings.
+        """
+        camera_groups = self._get_configs_by_group(camera_configs)
+        if not camera_groups:
+            return self._create_and_start_camera_group(camera_configs)
+        if len(camera_groups) > 1:
+            raise NotImplementedError("Cannot update multiple camera groups at once (yet).")
+        camera_group_id, configs = next(iter(camera_groups.items()))
+        camera_group = self.get_camera_group(camera_group_id)
+        if camera_group is None:
+            raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
+        camera_group.update_camera_settings(requested_configs=configs)
+        return camera_group
+
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup | None:
         """
@@ -69,9 +86,7 @@ class CameraGroupManager:
         if not self.camera_groups:
             logger.warning("No camera groups to close.")
             return
-        for camera_group in self.camera_groups.values():
-            camera_group.should_continue = False
-            wait_100ms()
+
         for camera_group_id in list(self.camera_groups.keys()):
             self.camera_groups[camera_group_id].close()
         logger.success(f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}")

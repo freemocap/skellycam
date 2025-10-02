@@ -85,7 +85,7 @@ async def camera_group_apply_post_endpoint(
         configs = request_body.camera_configs
         camera_group = get_or_create_camera_group_manager(
             request.app.state.global_kill_flag
-        ).create_and_start_camera_group(camera_configs=configs)
+        ).connect_or_update_camera_group(camera_configs=configs)
 
         return CreateCameraGroupResponse(
             group_id=camera_group.id,
@@ -129,7 +129,7 @@ def stop_recording(request: Request) -> bool:
 
 
 @camera_router.delete("/group/close/all", summary="Close all camera groups")
-def camera_group_close_all_delete_endpoint(request: Request) -> bool:
+def close_all_camera_groups(request: Request) -> bool:
     try:
         get_or_create_camera_group_manager(request.app.state.global_kill_flag).close_all_camera_groups()
         return True
@@ -137,24 +137,6 @@ def camera_group_close_all_delete_endpoint(request: Request) -> bool:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@camera_router.put("/update", summary="Update camera configs")
-async def camera_update_put_endpoint(
-        request: Request,
-        request_body: CameraUpdateRequest = Body(..., examples=[CameraUpdateRequest.example()])
-) -> CameraConfigs:
-    try:
-        raw_body = await request.body()
-        logger.info(f"Request to {request.url}: {raw_body.decode('utf-8')}")
-
-        extracted_configs = get_or_create_camera_group_manager(
-            request.app.state.global_kill_flag
-        ).update_camera_settings(camera_configs=request_body.camera_configs)
-
-        return extracted_configs
-    except Exception as e:
-        logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @camera_router.get("/group/all/pause_unpause", summary="Pause/unpause cameras")
