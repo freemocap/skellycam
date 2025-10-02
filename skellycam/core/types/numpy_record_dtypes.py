@@ -1,30 +1,27 @@
 import logging
-from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 from numpy import typing as npt
 
 logger = logging.getLogger(__name__)
-if TYPE_CHECKING:
-    pass
 
 CAMERA_CONFIG_DTYPE = np.dtype([
-    ('camera_id', 'U1000'),
-    ('camera_index', np.int32),
-    ('camera_name', 'U1000'),
-    ('use_this_camera', np.bool_),
-    ('resolution_height', np.int32),
-    ('resolution_width', np.int32),
-    ('color_channels', np.int32),
-    ('pixel_format', 'U8'),
-    ('exposure_mode', 'U32'),
-    ('exposure', np.int32),
-    ('framerate', np.float32),
-    ('rotation', np.int32),
-    ('capture_fourcc', 'U4'),
-    ('writer_fourcc', 'U4'),
-], align=True)
+    ('camera_id', 'U128'),
+    ('camera_index', '<i4'),
+    ('camera_name', 'U128'),
+    ('use_this_camera', '?'),
+    ('resolution_height', '<i4'),
+    ('resolution_width', '<i4'),
+    ('color_channels', '<i4'),
+    ('pixel_format', 'S8'),
+    ('exposure_mode', 'S32'),
+    ('exposure', '<i4'),
+    ('framerate', '<f4'),
+    ('rotation', '<i4'),
+    ('capture_fourcc', 'S4'),
+    ('writer_fourcc', 'S4'),
+], align=True)  # Total: ~269 bytes
 
 TIMEBASE_MAPPING_DTYPE = np.dtype([
     ('utc_time_ns', np.int64),
@@ -272,24 +269,7 @@ def create_multiframe_dtype(camera_configs: dict[str, 'CameraConfig']) -> MULTIF
     return np.dtype(fields, align=True)
 
 
-FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE = np.dtype([
-    ('message_type', '<u1'),  # 1 byte: 0 = payload_header, 1 = frame_metadata, 2 = payload_footer
-    ('frame_number', '<i8'),  # 8 bytes, little-endian int64
-    ('number_of_cameras', '<i4'),  # 4 bytes, little-endian int32
-], align=True)
 
-FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
-    ('message_type', '<u1'),  # 1 byte: 0 = payload_header, 1 = frame_metadata, 2 = payload_footer
-    ('frame_number', '<i8'),  # 8 bytes, little-endian int64
-    ('camera_id', 'S16'),  # 16 bytes fixed-length camera ID
-    ('camera_index', '<i4'),  # 4 bytes, little-endian int32
-    ('image_width', '<i4'),  # 4 bytes, little-endian int32
-    ('image_height', '<i4'),  # 4 bytes, little-endian int32
-    ('color_channels', '<i4'),  # 4 bytes, little-endian int32
-    ('jpeg_string_length', '<i4'),  # 4 bytes, length of the JPEG string, little-endian int32
-], align=True)
-
-JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
 
 FrameMetadataArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype

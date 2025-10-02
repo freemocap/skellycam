@@ -1,7 +1,37 @@
-import {alpha, Box, Chip, Collapse, ToggleButton, ToggleButtonGroup, useTheme,} from "@mui/material";
-import {useEffect, useRef, useState} from "react";
-import {LogRecord} from "@/store/slices/logRecordsSlice";
-import {useAppSelector} from "@/store/AppStateStore";
+// LogTerminal.tsx
+import {
+    alpha,
+    Box,
+    Chip,
+    Collapse,
+    IconButton,
+    TextField,
+    ToggleButton,
+    ToggleButtonGroup,
+    Tooltip,
+    useTheme,
+} from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { useAppSelector, useAppDispatch } from "@/store";
+import {
+    selectFilteredLogs,
+    selectLogsPaused,
+    selectHasErrors,
+    selectLogCountsByLevel
+} from "@/store/slices/log-records/logs-selectors";
+import {
+    logsFiltered,
+    logsPaused,
+    logsCleared
+} from "@/store/slices/log-records/log-records-slice";
+import { LogRecord } from "@/store/slices/log-records/logs-types";
+import {
+    Delete as DeleteIcon,
+    Pause as PauseIcon,
+    PlayArrow as PlayArrowIcon,
+    Search as SearchIcon,
+    Warning as WarningIcon
+} from "@mui/icons-material";
 
 const LOG_COLORS = {
     TRACE: "#ccc",
@@ -14,13 +44,13 @@ const LOG_COLORS = {
     CRITICAL: "#FF0000",
 } as const;
 
-const LogEntryComponent = ({log}: { log: LogRecord }) => {
+const LogEntryComponent = ({ log }: { log: LogRecord }) => {
     const [expanded, setExpanded] = useState(false);
     const color =
-        LOG_COLORS[log.levelname.toUpperCase() as keyof typeof LOG_COLORS];
+        LOG_COLORS[log.levelname.toUpperCase() as keyof typeof LOG_COLORS] || "#ccc";
     const theme = useTheme();
 
-    const renderWithFormatting = (text: string) => {
+    const renderWithFormatting = (text: string | null | undefined): React.ReactNode => {
         if (!text) return null;
 
         return text.split("\n").map((line, i) => (
@@ -59,15 +89,16 @@ const LogEntryComponent = ({log}: { log: LogRecord }) => {
             }}
             onClick={() => setExpanded(!expanded)}
         >
-            <Box sx={{display: "flex", gap: 1, alignItems: "center", py: 0.5}}>
-        <span
-            style={{
-                color: theme.palette.mode === "dark" ? "#888" : "#555",
-                fontSize: "0.9em",
-            }}
-        >
-          {log.asctime}
-        </span>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", py: 0.5 }}>
+                <span
+                    style={{
+                        color: theme.palette.mode === "dark" ? "#888" : "#555",
+                        fontSize: "0.9em",
+                        minWidth: "140px",
+                    }}
+                >
+                    {log.asctime}
+                </span>
                 <Chip
                     size="small"
                     label={log.levelname}
@@ -76,6 +107,7 @@ const LogEntryComponent = ({log}: { log: LogRecord }) => {
                         color: "#000",
                         height: 16,
                         fontSize: "0.8em",
+                        minWidth: "60px",
                         ".MuiChip-label": {
                             px: 1,
                         },
@@ -88,8 +120,8 @@ const LogEntryComponent = ({log}: { log: LogRecord }) => {
                         fontSize: "0.9em",
                     }}
                 >
-          {renderWithFormatting(log.message)}
-        </span>
+                    {renderWithFormatting(log.message)}
+                </span>
             </Box>
 
             <Collapse in={expanded}>
@@ -113,7 +145,9 @@ const LogEntryComponent = ({log}: { log: LogRecord }) => {
                     <div>File: {log.filename}</div>
                     <div>Time delta: {log.delta_t}</div>
                     <div>Path: {log.pathname}</div>
-                    <div>Raw message: {renderWithFormatting(log.formatted_message)}</div>
+                    {log.formatted_message && (
+                        <div>Raw message: {renderWithFormatting(log.formatted_message)}</div>
+                    )}
                     <div>
                         Thread: {log.threadName} (ID: {log.thread})
                     </div>
@@ -142,8 +176,8 @@ const LogEntryComponent = ({log}: { log: LogRecord }) => {
                                     margin: "8px 0",
                                 }}
                             >
-                {renderWithFormatting(log.stack_info)}
-              </pre>
+                                {renderWithFormatting(log.stack_info)}
+                            </pre>
                         </div>
                     )}
                 </Box>
@@ -154,20 +188,50 @@ const LogEntryComponent = ({log}: { log: LogRecord }) => {
 
 export const LogTerminal = () => {
     const theme = useTheme();
-    const logs = useAppSelector((state) => state.logRecords.entries);
+    const dispatch = useAppDispatch();
+    const logs = useAppSelector(selectFilteredLogs);
+    const isPaused = useAppSelector(selectLogsPaused);
+    const hasErrors = useAppSelector(selectHasErrors);
+    const logCounts = useAppSelector(selectLogCountsByLevel);
+
     const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+    const [searchText, setSearchText] = useState<string>("");
+    const [showSearch, setShowSearch] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
+    const shouldAutoScroll = useRef(true);
 
-    const filteredLogs = logs.filter(
-        (log) =>
-            selectedLevels.length === 0 ||
-            selectedLevels.includes(log.levelname.toLowerCase())
-    );
-
+    // Update filter when levels or search text changes
     useEffect(() => {
-        logEndRef.current?.scrollIntoView({behavior: "instant"});
-    }, [filteredLogs]);
+        dispatch(logsFiltered({
+            levels: selectedLevels,
+            searchText: searchText
+        }));
+    }, [selectedLevels, searchText, dispatch]);
 
+    // Auto-scroll to bottom when new logs arrive (if not paused)
+    useEffect(() => {
+        if (!isPaused && shouldAutoScroll.current) {
+            logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [logs, isPaused]);
+
+    const handleLevelToggle = (_: React.MouseEvent<HTMLElement>, newLevels: string[]): void => {
+        setSelectedLevels(newLevels);
+    };
+
+    const handlePauseToggle = (): void => {
+        dispatch(logsPaused(!isPaused));
+    };
+
+    const handleClear = (): void => {
+        dispatch(logsCleared());
+    };
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
+        const element = e.currentTarget;
+        const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+        shouldAutoScroll.current = isAtBottom;
+    };
 
     return (
         <Box
@@ -187,20 +251,39 @@ export const LogTerminal = () => {
                     display: "flex",
                     gap: 1,
                     alignItems: "center",
+                    flexWrap: "wrap",
                 }}
             >
-        <span
-            style={{
-                color: theme.palette.text.primary,
-                fontSize: "0.9em",
-            }}
-        >
-          Server Logs
-        </span>
+                <span
+                    style={{
+                        color: theme.palette.text.primary,
+                        fontSize: "0.9em",
+                        fontWeight: "bold",
+                    }}
+                >
+                    Server Logs
+                </span>
+
+                {hasErrors && (
+                    <Tooltip title="Errors detected">
+                        <WarningIcon
+                            sx={{
+                                color: LOG_COLORS.ERROR,
+                                fontSize: "1.2em",
+                                animation: "pulse 2s infinite",
+                                "@keyframes pulse": {
+                                    "0%, 100%": { opacity: 1 },
+                                    "50%": { opacity: 0.5 },
+                                },
+                            }}
+                        />
+                    </Tooltip>
+                )}
+
                 <ToggleButtonGroup
                     size="small"
                     value={selectedLevels}
-                    onChange={(_, val) => setSelectedLevels(val)}
+                    onChange={handleLevelToggle}
                     sx={{
                         ".MuiToggleButtonGroup-grouped": {
                             border: `1px solid ${theme.palette.divider} !important`,
@@ -214,33 +297,91 @@ export const LogTerminal = () => {
                         },
                     }}
                 >
-                    {Object.entries(LOG_COLORS).map(([level, color]) => (
-                        <ToggleButton
-                            key={level}
-                            value={level.toLowerCase()}
-                            sx={{
-                                py: 0.25,
-                                px: 1,
-                                minWidth: 0,
-                                fontSize: "0.75em",
-                                color: alpha(color, 0.7),
-                                "&.Mui-selected": {
-                                    backgroundColor: alpha(color, 0.15),
-                                    color: color,
-                                    "&:hover": {
-                                        backgroundColor: alpha(color, 0.2),
+                    {Object.entries(LOG_COLORS).map(([level, color]) => {
+                        const count = logCounts[level] || 0;
+                        return (
+                            <ToggleButton
+                                key={level}
+                                value={level.toLowerCase()}
+                                sx={{
+                                    py: 0.25,
+                                    px: 1,
+                                    minWidth: 0,
+                                    fontSize: "0.75em",
+                                    position: "relative",
+                                    color: alpha(color, 0.7),
+                                    "&.Mui-selected": {
+                                        backgroundColor: alpha(color, 0.15),
+                                        color: color,
+                                        "&:hover": {
+                                            backgroundColor: alpha(color, 0.2),
+                                        },
                                     },
-                                },
-                                "&:hover": {
-                                    backgroundColor: alpha(color, 0.1),
-                                },
-                            }}
-                        >
-                            {level}
-                        </ToggleButton>
-                    ))}
+                                    "&:hover": {
+                                        backgroundColor: alpha(color, 0.1),
+                                    },
+                                }}
+                            >
+                                {level}
+                                {count > 0 && (
+                                    <span
+                                        style={{
+                                            marginLeft: "4px",
+                                            fontSize: "0.8em",
+                                            opacity: 0.7,
+                                        }}
+                                    >
+                                        ({count})
+                                    </span>
+                                )}
+                            </ToggleButton>
+                        );
+                    })}
                 </ToggleButtonGroup>
+
+                <Box sx={{ ml: "auto", display: "flex", gap: 0.5 }}>
+                    <IconButton
+                        size="small"
+                        onClick={() => setShowSearch(!showSearch)}
+                        sx={{ color: theme.palette.text.secondary }}
+                    >
+                        <SearchIcon fontSize="small" />
+                    </IconButton>
+
+                    <IconButton
+                        size="small"
+                        onClick={handlePauseToggle}
+                        sx={{
+                            color: isPaused ? theme.palette.warning.main : theme.palette.text.secondary
+                        }}
+                    >
+                        {isPaused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
+                    </IconButton>
+
+                    <IconButton
+                        size="small"
+                        onClick={handleClear}
+                        sx={{ color: theme.palette.text.secondary }}
+                    >
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
+                </Box>
             </Box>
+
+            {showSearch && (
+                <Box sx={{ p: 1, borderBottom: "1px solid", borderColor: theme.palette.divider }}>
+                    <TextField
+                        size="small"
+                        fullWidth
+                        placeholder="Search logs..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        InputProps={{
+                            startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
+                        }}
+                    />
+                </Box>
+            )}
 
             <Box
                 sx={{
@@ -274,11 +415,28 @@ export const LogTerminal = () => {
                             ? "rgba(255, 255, 255, 0.2) transparent"
                             : "rgba(0, 0, 0, 0.2) transparent",
                 }}
+                onScroll={handleScroll}
             >
-                {filteredLogs.map((log, i) => (
-                    <LogEntryComponent key={i} log={log}/>
-                ))}
-                <div ref={logEndRef}/>
+                {logs.length === 0 ? (
+                    <Box
+                        sx={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            height: "100%",
+                            color: theme.palette.text.disabled,
+                        }}
+                    >
+                        {isPaused ? "Logging paused" : "No logs to display"}
+                    </Box>
+                ) : (
+                    <>
+                        {logs.map((log, i) => (
+                            <LogEntryComponent key={`${log.created}-${log.thread}-${i}`} log={log} />
+                        ))}
+                        <div ref={logEndRef} />
+                    </>
+                )}
             </Box>
         </Box>
     );

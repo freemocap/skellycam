@@ -21,15 +21,11 @@ class CameraGroupManager:
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
         default_factory=dict)
-    closing: bool = False
 
-    def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+    def _create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
-        if self.closing:
-            logger.warning("Cannot start recording, camera groups are closing.")
-            return None
         camera_group = CameraGroup.create(camera_configs=camera_configs,
                                           global_kill_flag=self.global_kill_flag)
         self.camera_group_framerate_subscriptions[camera_group.id] = camera_group.ipc.pubsub.get_subscription(
@@ -40,13 +36,27 @@ class CameraGroupManager:
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group
 
+    def connect_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+        """
+        Create a camera group with the provided configuration settings.
+        """
+        camera_groups = self._get_configs_by_group(camera_configs)
+        if not camera_groups:
+            return self._create_and_start_camera_group(camera_configs)
+        if len(camera_groups) > 1:
+            raise NotImplementedError("Cannot update multiple camera groups at once (yet).")
+        camera_group_id, configs = next(iter(camera_groups.items()))
+        camera_group = self.get_camera_group(camera_group_id)
+        if camera_group is None:
+            raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
+        camera_group.update_camera_settings(requested_configs=configs)
+        return camera_group
+
+
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup | None:
         """
         Retrieve a camera group by its ID.
         """
-        if self.closing:
-            logger.warning("Cannot start recording, camera groups are closing.")
-            return None
         if camera_group_id not in self.camera_groups:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
         return self.camera_groups[camera_group_id]
@@ -61,9 +71,6 @@ class CameraGroupManager:
         return configs_by_group
 
     def update_camera_settings(self, camera_configs: CameraConfigs) -> CameraConfigs:
-        if self.closing:
-            logger.warning("Cannot start recording, camera groups are closing.")
-            return {}
         extracted_configs: CameraConfigs = {}
         for camera_group_id, camera_configs in self._get_configs_by_group(camera_configs).items():
             extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
@@ -76,26 +83,19 @@ class CameraGroupManager:
         """
         Close all camera groups.
         """
-        self.closing = True
         if not self.camera_groups:
             logger.warning("No camera groups to close.")
-            self.closing = False
             return
-        for camera_group in self.camera_groups.values():
-            camera_group.should_continue = False
-        wait_100ms()
+
         for camera_group_id in list(self.camera_groups.keys()):
             self.camera_groups[camera_group_id].close()
         logger.success(f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}")
         self.camera_groups.clear()
-        self.closing = False
 
     def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """
         Start recording for all camera groups.
         """
-        if self.closing:
-            wait_100ms()
         for camera_group in self.camera_groups.values():
             camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
@@ -104,8 +104,7 @@ class CameraGroupManager:
         """
         Stop recording for all camera groups.
         """
-        while self.closing:
-            wait_100ms()
+
         for camera_group in self.camera_groups.values():
             camera_group.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
@@ -115,8 +114,6 @@ class CameraGroupManager:
                                      display_image_sizes: dict[CameraIdString, dict[str, float]]) -> dict[
         CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
         fe_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]] = {}
-        if self.closing:
-            return fe_payloads
         for camera_group in self.camera_groups.values():
             fe_return = camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,
                                                                  display_image_sizes=display_image_sizes)
@@ -131,8 +128,6 @@ class CameraGroupManager:
         """
         Get the latest framerate updates for all camera groups.
         """
-        if self.closing:
-            return {}
         framerate_updates: dict[CameraGroupIdString, CurrentFramerate] = {}
         for camera_group_id, subscription in self.camera_group_framerate_subscriptions.items():
             if not subscription.empty():
@@ -148,19 +143,14 @@ class CameraGroupManager:
         """
         Pause all camera groups.
         """
-        if self.closing:
-            logger.warning("Cannot pause, camera groups are closing.")
-            return
         for camera_group in self.camera_groups.values():
             camera_group.pause(await_paused=await_paused)
             logger.info(f"Paused camera group ID: {camera_group.id}")
+
     def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
         """
         Pause/Unpause all camera groups.
         """
-        if self.closing:
-            logger.warning("Cannot pause, camera groups are closing.")
-            return
         for camera_group in self.camera_groups.values():
             camera_group.pause_unpause(await_state_change=await_state_change)
             logger.info(f"Paused camera group ID: {camera_group.id}")
@@ -169,14 +159,11 @@ class CameraGroupManager:
         """
         Unpause all camera groups.
         """
-        if self.closing:
-            logger.warning("Cannot unpause, camera groups are closing.")
-            return
         for camera_group in self.camera_groups.values():
             camera_group.unpause(await_unpaused=await_unpaused)
             logger.info(f"Unpaused camera group ID: {camera_group.id}")
 
-    def find_camera_group_by_camera_ids(self, camera_ids:list[CameraIdString]) -> CameraGroup|None:
+    def find_camera_group_by_camera_ids(self, camera_ids: list[CameraIdString]) -> CameraGroup | None:
         """
         Find a camera group that contains all the specified camera IDs.
         """
@@ -185,3 +172,36 @@ class CameraGroupManager:
                 return camera_group
         return None
 
+
+_CAMERA_GROUP_MANAGER: CameraGroupManager | None = None
+
+def get_or_create_camera_group_manager(
+        global_kill_flag: multiprocessing.Value
+) -> CameraGroupManager:
+    """
+    Create the singleton CameraGroupManager instance.
+        global_kill_flag: Shared flag for coordinated shutdown
+
+    Returns:
+        Created or existing CameraGroupManager instance
+
+    """
+    global _CAMERA_GROUP_MANAGER
+
+    if _CAMERA_GROUP_MANAGER is not None:
+        return _CAMERA_GROUP_MANAGER
+
+    _CAMERA_GROUP_MANAGER = CameraGroupManager(
+        global_kill_flag=global_kill_flag
+    )
+    return _CAMERA_GROUP_MANAGER
+
+def reset_camera_group_manager() -> CameraGroupManager:
+    """
+    Reset the singleton CameraGroupManager instance.
+    """
+    global _CAMERA_GROUP_MANAGER
+    _CAMERA_GROUP_MANAGER.close_all_camera_groups()
+    _CAMERA_GROUP_MANAGER = CameraGroupManager(global_kill_flag=_CAMERA_GROUP_MANAGER.global_kill_flag)
+    logger.info("CameraGroupManager has been reset.")
+    return _CAMERA_GROUP_MANAGER

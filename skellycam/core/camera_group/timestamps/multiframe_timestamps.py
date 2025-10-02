@@ -2,9 +2,10 @@ import logging
 from dataclasses import dataclass
 from functools import cached_property
 
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
+
 from skellycam.core.camera_group.timestamps.frame_timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.types.type_overloads import CameraIdString
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 from skellycam.utilities.time_unit_conversion import ns_to_ms

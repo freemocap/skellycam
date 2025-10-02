@@ -10,16 +10,18 @@ from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import
 from skellycam.core.camera.opencv.opencv_helpers.handle_video_recording_loop import handle_video_recording
 from skellycam.core.camera.opencv.opencv_helpers.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import FramePayloadSharedMemoryRingBuffer
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
 
 logger = logging.getLogger(__name__) 
 
+MAX_FAIL_COUNT = 30
 
-def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
+def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                            config: CameraConfig,
                            cv2_video_capture: cv2.VideoCapture,
                            frame_rec_array: np.recarray,
@@ -50,6 +52,9 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                                            video_recorder=video_recorder,
                                            )
 
+            if self_status.should_close.value:
+                logger.info(f"Camera {config.camera_id} received shutdown signal.")
+                break
             if self_status.is_paused.value:
                 wait_1ms()
                 continue
@@ -59,7 +64,7 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
                 continue
             self_status.grabbing_frame.value = True
             frame_success = False
-            while not frame_success and ipc.should_continue and fail_count < 30:
+            while not frame_success and ipc.should_continue and fail_count < MAX_FAIL_COUNT:
                 fail_count += 1
                 frame_success, frame_rec_array = opencv_get_frame(cap=cv2_video_capture,
                                                                   frame_rec_array=frame_rec_array, )
@@ -100,16 +105,14 @@ def run_opencv_camera_loop(camera_shm: FramePayloadSharedMemoryRingBuffer,
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
             previous_tik = time.perf_counter_ns()
 
-
-
-
     except Exception as e:
         self_status.signal_error()
         logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")
         ipc.kill_everything()
         raise
     finally:
-        self_status.running.value = False
+        self_status.connected.value = False
+        self_status.closed.value = True
         logger.debug(f"Camera {config.camera_id} loop ended.")
 
 

@@ -2,11 +2,11 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera_group.timestamps import FrameTimestamps
 from skellycam.core.camera_group.timestamps import TimebaseMapping
-from skellycam.core.frame_payloads.frame_metadata import FrameMetadata
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE, CAMERA_CONFIG_DTYPE
 
 

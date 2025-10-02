@@ -4,7 +4,7 @@ import {Button, CircularProgress, keyframes, Tooltip} from '@mui/material';
 import {styled} from '@mui/system';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import {pauseUnpauseThunk} from "@/store/thunks/pause-unpause-thunk";
+import {pauseUnpauseThunk} from "@/store/slices/cameras/old-camera-thunks/pause-unpause-thunk";
 
 interface PauseUnpauseButtonProps {
     disabled?: boolean;

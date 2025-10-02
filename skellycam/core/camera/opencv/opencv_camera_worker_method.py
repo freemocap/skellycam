@@ -4,10 +4,11 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_camera_loop import run_opencv_camera_loop
 from skellycam.core.camera.opencv.opencv_helpers.setup_opencv_camera_loop import setup_opencv_camera_loop
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator, CameraStatus
+from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.shared_memory.frame_payload_shared_memory_ring_buffer import \
-    FramePayloadSharedMemoryRingBuffer
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import \
+    CameraSharedMemoryRingBuffer
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue, WorkerStrategy
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 def opencv_camera_worker_method(camera_id: CameraIdString,
                                 config: CameraConfig,
                                 ipc: CameraGroupIPC,
+                                orchestrator: CameraOrchestrator,
                                 update_camera_settings_subscription: TopicSubscriptionQueue,
                                 shm_subscription: TopicSubscriptionQueue,
                                 recording_info_subscription: TopicSubscriptionQueue,
@@ -28,10 +30,8 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         from skellycam import LOG_LEVEL
         configure_logging(LOG_LEVEL, ws_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication)
     logger.trace(f"Camera {camera_id} worker started")
-    orchestrator: CameraOrchestrator = ipc.camera_orchestrator
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
-    self_status.running.value = True
-    camera_shm: FramePayloadSharedMemoryRingBuffer | None = None
+    camera_shm: CameraSharedMemoryRingBuffer | None = None
 
     (camera_shm,
      config,
@@ -39,6 +39,7 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
      frame_rec_array) = setup_opencv_camera_loop(camera_shm=camera_shm,
                                                  config=config,
                                                  ipc=ipc,
+                                                 orchestrator=orchestrator,
                                                  self_status=self_status,
                                                  shm_subscription=shm_subscription)
 
@@ -71,5 +72,3 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         self_status.closed.value = True
 
         logger.debug(f"Camera {config.camera_index} process completed")
-
-

@@ -2,7 +2,6 @@
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import {LogTerminal} from "@/components/LogTerminal";
-import FramerateViewerPanel from "@/components/framerate-viewer/FrameRateViewer";
 import {Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
 import {useTheme} from "@mui/material/styles";
 
@@ -15,7 +14,8 @@ export default function BottomPanelContent() {
                 {/* Framerate Viewer Panel */}
                 <Panel defaultSize={30} minSize={20}>
                     <Box sx={{height: '100%', overflow: 'auto'}}>
-                        <FramerateViewerPanel/>
+                        {/*<FramerateViewerPanel/>*/}
+                        Framerate  Viewer
                     </Box>
                 </Panel>
 

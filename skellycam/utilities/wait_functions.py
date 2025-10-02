@@ -36,15 +36,18 @@ def wait_1us():
 
 
 
-async def async_wait_1_sec():
+async def await_1s():
     await asyncio.sleep(1.0)
 
 
-async def async_wait_10ms():
+async def await_100ms():
+    await asyncio.sleep(1e-1)
+
+async def await_10ms():
     await asyncio.sleep(1e-2)
 
 
-async def async_wait_1ms():
+async def await_1ms():
     await asyncio.sleep(1e-3)
 
 

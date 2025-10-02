@@ -28,21 +28,26 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import VideoFileIcon from '@mui/icons-material/VideoFile';
-import {useAppDispatch, useAppSelector} from "@/store/AppStateStore";
-import {loadVideos, openVideoFile, selectVideoFolder} from "@/store/thunks/video-loading-thunks";
+import {useAppDispatch, useAppSelector} from "@/store";
+// Updated imports - using the videos thunks and selectors from the store barrel export
+import {loadVideos, openVideoFile, selectVideoLoadFolder} from "@/store";
 
 export const VideoFolderPanel: React.FC = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
 
-    const {videoFolder, videoFiles, isLoading, error} = useAppSelector(state => state.videoLoading);
+    // Updated selectors to match the store structure
+    const videoFolder = useAppSelector(state => state.videos.folder);
+    const videoFiles = useAppSelector(state => state.videos.files);
+    const isLoading = useAppSelector(state => state.videos.isLoading);
+    const error = useAppSelector(state => state.videos.error);
 
     const [showSettings, setShowSettings] = useState(false);
     const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
     const [filterText, setFilterText] = useState('');
 
     const handleSelectFolder = async () => {
-        dispatch(selectVideoFolder());
+        dispatch(selectVideoLoadFolder());
         setSelectedVideos([]);
     };
 

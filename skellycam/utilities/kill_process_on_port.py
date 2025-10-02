@@ -2,6 +2,7 @@ import logging
 
 import psutil
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +22,5 @@ def kill_process_on_port(port: int):
 
 
 if __name__ == "__main__":
-    from skellycam.api.server.server_constants import PORT
-
+    from skellycam.api.server_constants import PORT
     kill_process_on_port(PORT)

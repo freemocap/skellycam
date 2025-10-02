@@ -13,7 +13,7 @@ import {
     Typography,
 } from "@mui/material";
 import {alpha, useTheme} from "@mui/material/styles";
-import {CurrentFramerate} from "@/store/slices/framerateTrackerSlice";
+import {CurrentFramerate} from "@/store/slices/framerate/framerate-slice";
 import {useState} from "react";
 
 type FramerateStatisticsViewProps = {

@@ -1,4 +1,4 @@
-# SPECIAL INSTRUCTIONS FOR THE `development` BRANCH 
+# SPECIAL INSTRUCTIONS FOR THE `jon/development` BRANCH 
 
 ## Installation
 
