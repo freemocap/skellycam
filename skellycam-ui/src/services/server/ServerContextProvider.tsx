@@ -90,7 +90,6 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
 
                     // Convert Set to sorted array for comparison
                     const currentCameraIds = Array.from(cameraIds).sort();
-
                     // Update state only if camera list has changed
                     setConnectedCameraIds(prevIds => {
                         if (!arraysEqual(prevIds, currentCameraIds)) {

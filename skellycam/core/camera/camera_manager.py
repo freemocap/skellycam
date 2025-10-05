@@ -89,6 +89,6 @@ class CameraManager:
                 else:
                     logger.info(f"Camera worker {camera_worker.camera_id} terminated successfully.")
             else:
-                logger.info(f"Camera worker {camera_worker.camera_id} was not alive.")
+                logger.info(f"Camera worker {camera_worker.camera_id} shut down gracefully")
         self.camera_workers.clear()
         logger.success("Camera manager closed all camera processes successfully.")

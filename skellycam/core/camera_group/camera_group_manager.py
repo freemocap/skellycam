@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupManager:
     global_kill_flag: multiprocessing.Value
+    closing: bool = False
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
         default_factory=dict)
@@ -83,6 +84,7 @@ class CameraGroupManager:
         """
         Close all camera groups.
         """
+        self.closing = True
         if not self.camera_groups:
             logger.warning("No camera groups to close.")
             return
@@ -91,6 +93,7 @@ class CameraGroupManager:
             self.camera_groups[camera_group_id].close()
         logger.success(f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}")
         self.camera_groups.clear()
+        self.closing = False
 
     def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """
@@ -113,6 +116,8 @@ class CameraGroupManager:
                                      if_newer_than: int,
                                      display_image_sizes: dict[CameraIdString, dict[str, float]]) -> dict[
         CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
+        if self.closing:
+            return {}
         fe_payloads: dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]] = {}
         for camera_group in self.camera_groups.values():
             fe_return = camera_group.get_latest_frontend_payload(if_newer_than=if_newer_than,

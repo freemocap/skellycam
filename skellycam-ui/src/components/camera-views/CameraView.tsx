@@ -14,23 +14,15 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fpsDisplayRef = useRef<HTMLSpanElement>(null);
     const { setCanvasForCamera, getFps } = useServer();
-    const hasSetCanvas = useRef<boolean>(false);
     const animationFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
 
-        if (canvas && cameraId && !hasSetCanvas.current) {
+        if (canvas && cameraId) {
             console.log(`Setting up canvas for camera: ${cameraId}`);
             setCanvasForCamera(cameraId, canvas);
-            hasSetCanvas.current = true;
         }
-
-        // Cleanup: The ServerContext will handle worker termination
-        // when the camera stops sending frames (via timeout mechanism)
-        return () => {
-            hasSetCanvas.current = false;
-        };
     }, [cameraId, setCanvasForCamera]);
 
     // Update FPS display using direct DOM manipulation to avoid React re-renders
