@@ -16,11 +16,7 @@ def add_middleware(app: FastAPI) -> None:
         start_time = time.perf_counter()
 
         try:
-            logger.api("Incoming API request", extra={
-                "method": request.method,
-                "url": str(request.url),
-                "headers": dict(request.headers),
-            })
+            logger.api(f"Incoming API request from {request.client.host}: {request.method} {request.url}")
             response: Response = await call_next(request)
             process_time = time.perf_counter() - start_time
 
@@ -31,8 +27,10 @@ def add_middleware(app: FastAPI) -> None:
             # Log successful requests
             if response.status_code < 400:
                 logger.api(
-                    f"Request: {request.url} processed in {process_time:.6f} seconds "
-                    f"and returned status code: {response.status_code}"
+                    f"Request from {request.client.host} completed: "
+                    f"{request.method} {request.url} - "
+                    f"Status: {response.status_code} - "
+                    f"Process time: {process_time:.6f}s"
                 )
             else:
                 # Log failed requests with more details

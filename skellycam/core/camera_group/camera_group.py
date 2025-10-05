@@ -134,7 +134,6 @@ class CameraGroup:
 
     def close(self):
         logger.debug("Closing camera group")
-        self.cameras.pause(await_paused=True)
         self.ipc.should_continue = False
         wait_1s()
         self.cameras.close()

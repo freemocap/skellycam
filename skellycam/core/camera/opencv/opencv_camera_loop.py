@@ -7,6 +7,7 @@ import numpy as np
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.camera_loop_update_checks import camera_loop_update_checks
 from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import create_cv2_video_capture
+from skellycam.core.camera.opencv.opencv_helpers.handle_recording_updates import finish_recording
 from skellycam.core.camera.opencv.opencv_helpers.handle_video_recording_loop import handle_video_recording
 from skellycam.core.camera.opencv.opencv_helpers.opencv_get_frame import opencv_get_frame
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
@@ -111,6 +112,9 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
         ipc.kill_everything()
         raise
     finally:
+        if video_recorder:
+            finish_recording(ipc=ipc, video_recorder=video_recorder)
+            logger.warning(f"Camera {config.camera_id} closed mid-recording!"   )
         self_status.connected.value = False
         self_status.closed.value = True
         logger.debug(f"Camera {config.camera_id} loop ended.")
