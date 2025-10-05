@@ -109,7 +109,7 @@ export interface DetectCamerasResponse {
     }>;
 }
 
-export interface ConnectCamerasRequest {
+export interface CamerasConnectOrUpdateRequest {
     camera_configs: Record<string, CameraConfig>;
 }
 

@@ -7,8 +7,7 @@ import {
 } from './cameras-types';
 import {
     detectCameras,
-    connectToCameras,
-    updateCameraConfigs,
+    camerasConnectOrUpdate,
     closeCameras,
 } from './cameras-thunks';
 
@@ -215,11 +214,11 @@ export const cameraSlice = createSlice({
             })
 
             // ========== Connect Cameras ==========
-            .addCase(connectToCameras.pending, (state) => {
+            .addCase(camerasConnectOrUpdate.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(connectToCameras.fulfilled, (state, action) => {
+            .addCase(camerasConnectOrUpdate.fulfilled, (state, action) => {
                 state.isLoading = false;
                 // Update both actual and desired configs from server response
                 Object.entries(action.payload.camera_configs).forEach(
@@ -234,33 +233,11 @@ export const cameraSlice = createSlice({
                     }
                 );
             })
-            .addCase(connectToCameras.rejected, (state, action) => {
+            .addCase(camerasConnectOrUpdate.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.error.message || 'Failed to connect to cameras';
             })
 
-            // ========== Update Configs ==========
-            .addCase(updateCameraConfigs.pending, (state) => {
-                state.isLoading = true;
-            })
-            .addCase(updateCameraConfigs.fulfilled, (state, action) => {
-                state.isLoading = false;
-                // When configs are successfully updated, sync desired to actual
-                Object.entries(action.payload.camera_configs).forEach(
-                    ([cameraId, config]) => {
-                        const camera = state.cameras.find(cam => cam.id === cameraId);
-                        if (camera) {
-                            camera.actualConfig = config as CameraConfig;
-                            camera.desiredConfig = { ...config as CameraConfig };
-                            camera.hasConfigMismatch = false;
-                        }
-                    }
-                );
-            })
-            .addCase(updateCameraConfigs.rejected, (state, action) => {
-                state.isLoading = false;
-                state.error = action.error.message || 'Failed to update camera configs';
-            })
 
             // ========== Close Cameras ==========
             .addCase(closeCameras.fulfilled, (state) => {

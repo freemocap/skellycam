@@ -25,7 +25,7 @@ class ServerUrls {
 
             // Camera endpoints
             detectCameras: `${baseUrl}/skellycam/camera/detect`,
-            createGroup: `${baseUrl}/skellycam/camera/group/apply`,
+            camerasConnectOrUpdate: `${baseUrl}/skellycam/camera/group/apply`,
             closeAll: `${baseUrl}/skellycam/camera/group/close/all`,
             updateConfigs: `${baseUrl}/skellycam/camera/update`,
             pauseUnpauseCameras: `${baseUrl}/skellycam/camera/group/all/pause_unpause`,

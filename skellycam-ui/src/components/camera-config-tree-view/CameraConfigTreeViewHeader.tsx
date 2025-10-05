@@ -11,14 +11,13 @@ import {useAppDispatch, useAppSelector} from "@/store";
 import {selectSelectedCameras} from "@/store/slices/cameras/cameras-selectors";
 import {
     closeCameras,
-    connectToCameras,
+    camerasConnectOrUpdate,
     detectCameras,
     pauseUnpauseCameras,
 } from "@/store/slices/cameras/cameras-thunks";
 
 interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
-    isConnected: boolean;
     isLoading: boolean;
     isPaused: boolean;
     onPauseToggle: () => void;
@@ -27,23 +26,19 @@ interface CameraConfigTreeViewHeaderProps {
 
 export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProps> = ({
     cameraCount,
-    isConnected,
     isLoading,
     isPaused,
     onPauseToggle,
-    hasSelectedCameras,
 }) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
     const selectedCameras = useAppSelector(selectSelectedCameras);
     const hasSelected = selectedCameras.length > 0;
 
-    // Track if an action is in progress to prevent duplicate calls
     const [isActionInProgress, setIsActionInProgress] = React.useState(false);
 
     const handleRefreshCameras = async (e: React.MouseEvent): Promise<void> => {
         e.stopPropagation();
-        if (isActionInProgress || isLoading) return;
 
         setIsActionInProgress(true);
         try {
@@ -57,12 +52,10 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 
     const handleConnectOrApply = async (e: React.MouseEvent): Promise<void> => {
         e.stopPropagation();
-        if (isActionInProgress || !hasSelected) return;
 
         setIsActionInProgress(true);
         try {
-            await dispatch(connectToCameras()).unwrap();
-            console.log(isConnected ? 'Applied configs to cameras' : 'Connected to cameras');
+            await dispatch(camerasConnectOrUpdate()).unwrap();
         } catch (error) {
             console.error('Error with camera operation:', error);
         } finally {
@@ -72,7 +65,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 
     const handleCloseCameras = async (e: React.MouseEvent): Promise<void> => {
         e.stopPropagation();
-        if (isActionInProgress || !isConnected) return;
 
         setIsActionInProgress(true);
         try {
@@ -87,7 +79,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 
     const handlePauseUnpause = async (e: React.MouseEvent): Promise<void> => {
         e.stopPropagation();
-        if (isActionInProgress || !isConnected) return;
 
         setIsActionInProgress(true);
         try {
@@ -122,7 +113,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 
             <Stack direction="row" spacing={1} sx={{mr: 2}}>
                 {/* Connect/Apply Button - Always visible, changes icon and behavior */}
-                <Tooltip title={isConnected ? "Apply configuration changes" : "Connect to selected cameras"}>
+                <Tooltip title={"Connect to selected cameras or update connected cameras"}>
                     <span>
                         <IconButton
                             size="small"
@@ -130,9 +121,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             disabled={!hasSelected || isActionInProgress}
                             sx={{color: "inherit"}}
                         >
-                            {isConnected ? (
-                                <SystemUpdateAltIcon />
-                            ) : (
+
                                 <VideocamIcon
                                     sx={{
                                         color: theme.palette.secondary.main,
@@ -142,21 +131,19 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                         scale: '1.6'
                                     }}
                                 />
-                            )}
+                            )
                         </IconButton>
                     </span>
                 </Tooltip>
 
                 {/* Pause/Play Button - Always visible, disabled when not connected */}
-                <Tooltip title={!isConnected ? "Not connected" : isPaused ? "Resume streaming" : "Pause streaming"}>
+                <Tooltip title={isPaused ? "Resume streaming" : "Pause streaming"}>
                     <span>
                         <IconButton
                             size="small"
                             onClick={handlePauseUnpause}
-                            disabled={!isConnected || isActionInProgress}
                             sx={{
                                 color: "inherit",
-                                opacity: !isConnected ? 0.4 : 1
                             }}
                         >
                             {isPaused ? <PlayArrowIcon /> : <PauseIcon />}
@@ -165,15 +152,14 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 </Tooltip>
 
                 {/* Close Button - Always visible, disabled when not connected */}
-                <Tooltip title={!isConnected ? "Not connected" : "Disconnect all cameras"}>
+                <Tooltip title={"Close all cameras"}>
                     <span>
                         <IconButton
                             size="small"
                             onClick={handleCloseCameras}
-                            disabled={!isConnected || isActionInProgress}
+                            disabled={isActionInProgress}
                             sx={{
                                 color: "inherit",
-                                opacity: !isConnected ? 0.4 : 1
                             }}
                         >
                             <VideocamOffIcon />
