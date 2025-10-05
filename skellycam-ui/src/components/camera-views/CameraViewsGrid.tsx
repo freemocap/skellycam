@@ -1,66 +1,81 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Box } from "@mui/material";
 import { CameraView } from "./CameraView";
 import { useServer } from "@/services/server/ServerContextProvider";
 
-export const CameraViewsGrid: React.FC = () => {
+interface CameraSettings {
+    columns: number | null;
+}
+
+interface CameraViewsGridProps {
+    settings?: CameraSettings;
+}
+
+export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({
+                                                                    settings
+                                                                }) => {
     const { connectedCameraIds } = useServer();
 
-    const getGridColumns = (count: number): string => {
-        if (count <= 1) return '1fr';
-        if (count <= 2) return 'repeat(2, 1fr)';
-        if (count <= 4) return 'repeat(2, 1fr)';
-        if (count <= 6) return 'repeat(3, 1fr)';
-        if (count <= 9) return 'repeat(3, 1fr)';
-        return 'repeat(4, 1fr)';
+    const getColumns = (total: number): number => {
+        // If manual columns setting is provided, use it
+        if (settings?.columns !== null && settings?.columns !== undefined) {
+            return settings.columns;
+        }
+
+        // Otherwise, auto-calculate
+        if (total <= 1) return 1;
+        if (total <= 4) return 2;
+        if (total <= 9) return 3;
+        return 4;
     };
 
-    // Memoize camera views - only recreates when camera IDs array changes
-    const cameraViews = useMemo(() =>
-            connectedCameraIds.map(cameraId => (
-                <CameraView key={cameraId} cameraId={cameraId} />
-            )),
-        [connectedCameraIds]
-    );
+    const columns = getColumns(connectedCameraIds.length);
 
-    const gridColumns = useMemo(
-        () => getGridColumns(connectedCameraIds.length),
-        [connectedCameraIds.length]
-    );
+    if (connectedCameraIds.length === 0) {
+        return (
+            <Box sx={{
+                height: '100%',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.secondary',
+                fontSize: '1.2rem',
+                padding: 4,
+                textAlign: 'center',
+            }}>
+                <div>
+                    <div>No cameras connected</div>
+                    <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                        Waiting for camera streams...
+                    </div>
+                </div>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{
             height: '100%',
             width: '100%',
             display: 'grid',
-            gridTemplateColumns: gridColumns,
+            gridTemplateColumns: `repeat(${columns}, 1fr)`,
+            gridAutoRows: 'minmax(200px, 420px)',
             gap: 1,
             padding: 1,
             overflow: 'auto',
         }}>
-            {cameraViews}
-
-            {connectedCameraIds.length === 0 && (
-                <Box
-                    sx={{
-                        gridColumn: '1 / -1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'text.secondary',
-                        fontSize: '1.2rem',
-                        padding: 4,
-                        textAlign: 'center',
-                    }}
-                >
-                    <div>
-                        <div>No cameras connected</div>
-                        <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                            Waiting for camera streams...
-                        </div>
-                    </div>
+            {connectedCameraIds.map(cameraId => (
+                <Box key={cameraId} sx={{
+                    maxHeight: '420px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
+                }}>
+                    <CameraView cameraId={cameraId} />
                 </Box>
-            )}
+            ))}
         </Box>
     );
 };

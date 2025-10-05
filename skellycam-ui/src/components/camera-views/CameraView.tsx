@@ -3,6 +3,8 @@ import { useServer } from '@/services/server/ServerContextProvider';
 
 interface CameraViewProps {
     cameraId: string;
+    scale?: number;
+    maxWidth?: boolean;
 }
 
 /**
@@ -10,7 +12,7 @@ interface CameraViewProps {
  * Wrapped in memo to prevent re-renders when props haven't changed.
  * This is critical for performance when multiple cameras are streaming.
  */
-export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
+export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId, scale, maxWidth }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fpsDisplayRef = useRef<HTMLSpanElement>(null);
     const { setCanvasForCamera, getFps } = useServer();
@@ -44,6 +46,32 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
         };
     }, [cameraId, getFps]);
 
+    // Calculate canvas styles based on scale and maxWidth settings
+    const getCanvasStyle = (): React.CSSProperties => {
+        if (maxWidth) {
+            return {
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+            };
+        }
+
+        if (scale !== undefined && scale !== 1.0) {
+            return {
+                width: `${scale * 100}%`,
+                height: `${scale * 100}%`,
+                objectFit: 'contain',
+            };
+        }
+
+        // Default
+        return {
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+        };
+    };
+
     return (
         <div
             style={{
@@ -60,11 +88,7 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
         >
             <canvas
                 ref={canvasRef}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                }}
+                style={getCanvasStyle()}
             />
             <div
                 style={{
@@ -87,8 +111,10 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId }) => {
         </div>
     );
 }, (prevProps, nextProps) => {
-    // Custom comparison: only re-render if cameraId changes
-    return prevProps.cameraId === nextProps.cameraId;
+    // Custom comparison: only re-render if relevant props change
+    return prevProps.cameraId === nextProps.cameraId &&
+        prevProps.scale === nextProps.scale &&
+        prevProps.maxWidth === nextProps.maxWidth;
 });
 
 CameraView.displayName = 'CameraView';
