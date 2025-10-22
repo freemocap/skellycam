@@ -23,7 +23,7 @@ class CameraGroupManager:
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
         default_factory=dict)
 
-    def _create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+    def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
@@ -43,7 +43,7 @@ class CameraGroupManager:
         """
         camera_groups = self._get_configs_by_group(camera_configs)
         if not camera_groups:
-            return self._create_and_start_camera_group(camera_configs)
+            return self.create_and_start_camera_group(camera_configs)
         if len(camera_groups) > 1:
             raise NotImplementedError("Cannot update multiple camera groups at once (yet).")
         camera_group_id, configs = next(iter(camera_groups.items()))

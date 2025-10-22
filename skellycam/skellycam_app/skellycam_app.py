@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
-from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
+from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, get_or_create_camera_group_manager
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, CameraIdString, \
     MultiframeTimestampFloat
@@ -27,7 +27,7 @@ class SkellycamApplication:
     @classmethod
     def initialize_skellycam_app(cls, global_kill_flag: multiprocessing.Value):
         return cls(global_kill_flag=global_kill_flag,
-                     camera_group_manager=CameraGroupManager(global_kill_flag=global_kill_flag))
+                     camera_group_manager=get_or_create_camera_group_manager(global_kill_flag=global_kill_flag))
 
     @property
     def should_continue(self) -> bool:
