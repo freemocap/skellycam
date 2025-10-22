@@ -5,7 +5,6 @@ import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor";
-import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 
 import {useAppDispatch, useAppSelector} from "@/store";
 import {selectSelectedCameras} from "@/store/slices/cameras/cameras-selectors";
