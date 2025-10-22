@@ -1,23 +1,21 @@
 // framerate-slice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { DetailedFramerate } from './framerate-types';
 
-interface FramerateData {
-    mean: number;
-    std: number;
-    current: number;
-}
+// Export DetailedFramerate as CurrentFramerate for component compatibility
+export type CurrentFramerate = DetailedFramerate;
 
 interface FramerateState {
-    backend: FramerateData | null;
-    frontend: FramerateData | null;
-    // Add arrays for historical data if you want to calculate averages
+    currentBackendFramerate: DetailedFramerate | null;
+    currentFrontendFramerate: DetailedFramerate | null;
+    // Arrays for historical data to calculate averages and render charts
     recentFrontendFrameDurations: number[];
     recentBackendFrameDurations: number[];
 }
 
 const initialState: FramerateState = {
-    backend: null,
-    frontend: null,
+    currentBackendFramerate: null,
+    currentFrontendFramerate: null,
     recentFrontendFrameDurations: [],
     recentBackendFrameDurations: [],
 };
@@ -28,25 +26,23 @@ export const framerateSlice = createSlice({
     name: 'framerate',
     initialState,
     reducers: {
-        backendFramerateUpdated: (state, action: PayloadAction<FramerateData>) => {
-            state.backend = action.payload;
-            // If current framerate exists, calculate duration and add to history
-            if (action.payload.current > 0) {
-                const duration = 1000 / action.payload.current; // Convert FPS to ms
+        backendFramerateUpdated: (state, action: PayloadAction<DetailedFramerate>) => {
+            state.currentBackendFramerate = action.payload;
+            // Add mean frame duration to history
+            if (action.payload.mean_frame_duration_ms > 0) {
                 state.recentBackendFrameDurations = [
                     ...state.recentBackendFrameDurations.slice(-(MAX_DURATION_HISTORY - 1)),
-                    duration
+                    action.payload.mean_frame_duration_ms
                 ];
             }
         },
-        frontendFramerateUpdated: (state, action: PayloadAction<FramerateData>) => {
-            state.frontend = action.payload;
-            // If current framerate exists, calculate duration and add to history
-            if (action.payload.current > 0) {
-                const duration = 1000 / action.payload.current; // Convert FPS to ms
+        frontendFramerateUpdated: (state, action: PayloadAction<DetailedFramerate>) => {
+            state.currentFrontendFramerate = action.payload;
+            // Add mean frame duration to history
+            if (action.payload.mean_frame_duration_ms > 0) {
                 state.recentFrontendFrameDurations = [
                     ...state.recentFrontendFrameDurations.slice(-(MAX_DURATION_HISTORY - 1)),
-                    duration
+                    action.payload.mean_frame_duration_ms
                 ];
             }
         },

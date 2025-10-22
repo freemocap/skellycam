@@ -6,7 +6,7 @@ import {alpha, useTheme} from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
 import FramerateStatisticsView from "./FramerateStatisticsView"
-import {useAppSelector} from "@/store";
+import {useAppSelector, selectFramerateViewerData} from "@/store";
 
 type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"
@@ -16,12 +16,14 @@ export const FramerateViewerPanel = () => {
     const theme = useTheme()
     const [viewType, setViewType] = useState<ViewType>("both")
 
+    // Use the new selector to get all framerate data
     const {
         currentFrontendFramerate,
         currentBackendFramerate,
         recentFrontendFrameDurations,
         recentBackendFrameDurations
-    } = useAppSelector((state) => state.framerate);
+    } = useAppSelector(selectFramerateViewerData);
+
     return (
         <Box sx={{
             height: '100%',

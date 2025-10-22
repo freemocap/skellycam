@@ -7,6 +7,13 @@ import { ConnectionState, WebSocketConnection } from "@/services/server/server-h
 import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
 import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
 import { serverUrls } from "@/services";
+import {
+    logAdded,
+    LogRecord,
+    backendFramerateUpdated,
+    frontendFramerateUpdated,
+    DetailedFramerate
+} from '@/store';
 
 interface ServerContextValue {
     isConnected: boolean;
@@ -26,6 +33,39 @@ function arraysEqual(a: string[], b: string[]): boolean {
     const sortedA = [...a].sort();
     const sortedB = [...b].sort();
     return sortedA.every((val, idx) => val === sortedB[idx]);
+}
+
+// Type guard to check if a message is a log record
+function isLogRecord(data: any): data is LogRecord {
+    return (
+        data &&
+        typeof data === 'object' &&
+        data.message_type === 'log_record' &&
+        typeof data.levelname === 'string' &&
+        typeof data.message === 'string'
+    );
+}
+
+// Type for framerate update message from backend
+interface FramerateUpdateMessage {
+    message_type: 'framerate_update';
+    camera_group_id: string;
+    backend_framerate: DetailedFramerate;
+    frontend_framerate: DetailedFramerate;
+}
+
+// Type guard to check if a message is a framerate update
+function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
+    return (
+        data &&
+        typeof data === 'object' &&
+        data.message_type === 'framerate_update' &&
+        typeof data.camera_group_id === 'string' &&
+        data.backend_framerate &&
+        typeof data.backend_framerate === 'object' &&
+        data.frontend_framerate &&
+        typeof data.frontend_framerate === 'object'
+    );
 }
 
 export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -81,6 +121,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         };
 
         const handleMessage = async (event: MessageEvent): Promise<void> => {
+            // Handle binary frame data
             if (event.data instanceof ArrayBuffer) {
                 try {
                     const result = await frameProcessorRef.current!.processFramePayload(event.data);
@@ -122,6 +163,29 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                     }
                 } catch (error) {
                     console.error('Error processing frame:', error);
+                }
+            }
+            // Handle text/JSON messages (logs, framerate updates, etc.)
+            else if (typeof event.data === 'string') {
+                try {
+                    const jsonData = JSON.parse(event.data);
+
+                    // Handle log records
+                    if (isLogRecord(jsonData)) {
+                        dispatch(logAdded(jsonData));
+                    }
+                    // Handle framerate updates
+                    else if (isFramerateUpdate(jsonData)) {
+                        // Dispatch full detailed framerate data to Redux store
+                        dispatch(backendFramerateUpdated(jsonData.backend_framerate));
+                        dispatch(frontendFramerateUpdated(jsonData.frontend_framerate));
+                    }
+                    // Handle other message types
+                    else {
+                        console.debug('Received unhandled JSON message:', jsonData);
+                    }
+                } catch (error) {
+                    console.error('Error parsing JSON message:', error);
                 }
             }
         };

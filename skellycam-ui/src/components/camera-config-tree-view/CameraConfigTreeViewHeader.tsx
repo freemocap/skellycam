@@ -118,7 +118,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                         <IconButton
                             size="small"
                             onClick={handleConnectOrApply}
-                            disabled={!hasSelected || isActionInProgress}
                             sx={{color: "inherit"}}
                         >
 
@@ -157,7 +156,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                         <IconButton
                             size="small"
                             onClick={handleCloseCameras}
-                            disabled={isActionInProgress}
                             sx={{
                                 color: "inherit",
                             }}
@@ -173,7 +171,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                         <IconButton
                             size="small"
                             onClick={handleRefreshCameras}
-                            disabled={isActionInProgress}
                             sx={{color: "inherit"}}
                         >
                             {isLoading || isActionInProgress ? (
