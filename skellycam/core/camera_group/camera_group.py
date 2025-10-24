@@ -2,13 +2,14 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 
+import numpy as np
 from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage, RecordingFinishedMessage
-from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
@@ -24,7 +25,7 @@ class CameraGroup:
     ipc: CameraGroupIPC
     configs: CameraConfigs
     cameras: CameraManager
-    shm: CameraGroupSharedMemoryManager | None = None
+    shm: CameraGroupSharedMemory | None = None
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -55,9 +56,9 @@ class CameraGroup:
         self.cameras.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
-        self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
-                                                         timebase_mapping=self.ipc.timebase_mapping,
-                                                         read_only=True)
+        self.shm = CameraGroupSharedMemory.create(camera_configs=extracted_configs,
+                                                  timebase_mapping=self.ipc.timebase_mapping,
+                                                  read_only=True)
         self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
         self.configs = extracted_configs
         return extracted_configs
@@ -66,14 +67,16 @@ class CameraGroup:
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.configs.keys())
 
-
-    def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
+    def get_latest_frames(self) -> dict[CameraIdString, np.recarray] | None:
         if self.shm is None or not self.shm.valid:
             return None
-        if self.shm.latest_multiframe_number <= if_newer_than:
-            return None
-
         latest_frames = self.shm.get_latest_multiframe()
+        if not latest_frames:
+            return None
+        return latest_frames
+
+    def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
+        latest_frames = self.get_latest_multiframe()
         if not latest_frames:
             return None
         return create_frontend_payload(

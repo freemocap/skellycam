@@ -22,7 +22,7 @@ class CameraGroupSharedMemoryDTO:
 
 
 @dataclass
-class CameraGroupSharedMemoryManager:
+class CameraGroupSharedMemory:
     camera_shms: dict[CameraIdString, CameraSharedMemoryRingBuffer]
     camera_configs: CameraConfigs
     read_only: bool
@@ -139,3 +139,14 @@ class CameraGroupSharedMemoryManager:
         if len(frame_numbers) != 1:
             raise ValueError(f"Frame numbers do not match across cameras! {frame_numbers}")
         return self._latest_frames
+
+    def get_images_by_frame_number(self, frame_number: int, frame_recarrays:dict[CameraIdString, np.recarray]|None) -> dict[CameraIdString, np.recarray]:
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+        if not frame_recarrays:
+            frame_recarrays = {camera_id: None for camera_id in self.camera_shms.keys()}
+
+        for camera_id, camera_shared_memory in self.camera_shms.items():
+            frame_recarrays[camera_id] = camera_shared_memory.get_data_by_index(index=frame_number,
+                                                                               rec_array=frame_recarrays[camera_id])
+        return frame_recarrays
