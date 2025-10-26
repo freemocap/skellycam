@@ -128,8 +128,10 @@ class CameraGroupSharedMemory:
             logger.error(f"Error during shared memory cleanup: {type(e).__name__} - {e}")
             logger.exception(e)
 
-    def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]:
+    def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]|None:
         target_frame_number = copy(self.latest_multiframe_number) #copy to avoid index changing during read loop
+        if target_frame_number < 0:
+            return None
         self._latest_frames = {
             camera_id: camera_shared_memory.get_data_by_index(index=target_frame_number,
                                                             rec_array=self._latest_frames[camera_id] if camera_id in self._latest_frames else None)

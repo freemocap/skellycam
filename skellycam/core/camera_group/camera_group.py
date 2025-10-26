@@ -76,7 +76,9 @@ class CameraGroup:
         return latest_frames
 
     def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
-        latest_frames = self.get_latest_multiframe()
+        if not self.cameras.all_ready:
+            return None
+        latest_frames = self.get_latest_frames()
         if not latest_frames:
             return None
         return create_frontend_payload(

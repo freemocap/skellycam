@@ -30,7 +30,6 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
         cv2_video_capture, config = create_cv2_video_capture(config)
 
         ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(DeviceExtractedConfigMessage(extracted_config=config))
-        self_status.connected.value = True
         logger.debug(f"Camera {config.camera_id} connected, awaiting shm message...")
         while camera_shm is None and ipc.should_continue and not self_status.should_close.value:
             wait_10ms()
@@ -49,6 +48,7 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
             raise RuntimeError("Failed to initialize camera_group_shm")
         if not cv2_video_capture.isOpened():
             raise RuntimeError(f"cv2.VideoCapture for camera {config.camera_id} is not opened")
+        self_status.connected.value = True
         logger.success(f"Camera {config.camera_id} ready!")
         while not orchestrator.all_ready and ipc.should_continue and not self_status.should_close.value:
             _, _ = cv2_video_capture.read()  # Clear the buffer

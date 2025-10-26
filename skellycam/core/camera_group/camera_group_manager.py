@@ -201,12 +201,3 @@ def get_or_create_camera_group_manager(
     )
     return _CAMERA_GROUP_MANAGER
 
-def reset_camera_group_manager() -> CameraGroupManager:
-    """
-    Reset the singleton CameraGroupManager instance.
-    """
-    global _CAMERA_GROUP_MANAGER
-    _CAMERA_GROUP_MANAGER.close_all_camera_groups()
-    _CAMERA_GROUP_MANAGER = CameraGroupManager(global_kill_flag=_CAMERA_GROUP_MANAGER.global_kill_flag)
-    logger.info("CameraGroupManager has been reset.")
-    return _CAMERA_GROUP_MANAGER

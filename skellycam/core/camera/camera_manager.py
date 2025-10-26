@@ -19,6 +19,10 @@ class CameraManager:
     orchestrator: CameraOrchestrator
     camera_workers: dict[CameraIdString, CameraWorker]
 
+    @property
+    def all_ready(self)->bool:
+        return self.orchestrator.all_ready
+
     @classmethod
     def create(cls,
                ipc: CameraGroupIPC,
