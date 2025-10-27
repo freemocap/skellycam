@@ -114,7 +114,7 @@ class CameraGroupManager:
 
     def get_latest_frontend_payloads(self,
                                      if_newer_than: int,
-                                     display_image_sizes: dict[CameraIdString, dict[str, float]]) -> dict[
+                                     display_image_sizes: dict[CameraIdString, dict[str, float]]|None=None) -> dict[
         CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
         if self.closing:
             return {}
