@@ -101,7 +101,7 @@ class CameraGroup:
             display_image_sizes=display_image_sizes,
         )
         if frame_number_out != frame_number:
-            logger.error(f"Requested frame number {frame_number} but got {frame_number_out}")
+            logger.warning(f"Requested frame number {frame_number} but got {frame_number_out}")
         return frames_bytearray
 
     def pause_unpause(self, await_state_change: bool = True):
