@@ -143,7 +143,9 @@ class CameraGroupSharedMemory:
             raise ValueError(f"Frame numbers do not match across cameras! {frame_numbers}")
         return self._latest_frames
 
-    def get_images_by_frame_number(self, frame_number: int, frame_recarrays:dict[CameraIdString, np.recarray]|None=None) -> dict[CameraIdString, np.recarray]:
+    def get_images_by_frame_number(self,
+                                   frame_number: int,
+                                   frame_recarrays:dict[CameraIdString, np.recarray]|None=None) -> dict[CameraIdString, np.recarray]:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         if not frame_recarrays:

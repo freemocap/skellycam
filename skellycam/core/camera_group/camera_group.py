@@ -86,7 +86,9 @@ class CameraGroup:
             display_image_sizes=display_image_sizes,
         )
 
-    def get_frontend_payload_by_frame_number(self, frame_number:FrameNumberInt) -> bytes | None:
+    def get_frontend_payload_by_frame_number(self,
+                                             frame_number:FrameNumberInt,
+                                             display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> bytes | None:
         if not self.cameras.all_ready:
             return None
         if frame_number > self.shm.latest_multiframe_number:
