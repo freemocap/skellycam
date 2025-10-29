@@ -86,6 +86,19 @@ class CameraGroup:
             display_image_sizes=display_image_sizes,
         )
 
+    def get_frontend_payload_by_frame_number(self, frame_number:FrameNumberInt) -> bytes | None:
+        if not self.cameras.all_ready:
+            return None
+        if frame_number > self.shm.latest_multiframe_number:
+            return None
+        latest_frames = self.shm.get_images_by_frame_number(frame_number)
+        if not latest_frames:
+            return None
+        return create_frontend_payload(
+            latest_frames = latest_frames,
+            display_image_sizes=display_image_sizes,
+        )
+
     def pause_unpause(self, await_state_change: bool = True):
         self.cameras.pause_unpause(await_state_change)
 

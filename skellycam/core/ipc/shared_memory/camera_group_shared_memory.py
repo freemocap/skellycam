@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 CameraSharedMemoryDTOs = dict[CameraIdString, SharedMemoryRingBufferDTO]
 
+_frame_recarray_cache: dict[CameraIdString, np.recarray] = {} # Cache for reusable recarrays per camera, to avoid reallocating on each read
 
 @dataclass
 class CameraGroupSharedMemoryDTO:
@@ -146,7 +147,10 @@ class CameraGroupSharedMemory:
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
         if not frame_recarrays:
-            frame_recarrays = {camera_id: None for camera_id in self.camera_shms.keys()}
+            if not set(_frame_recarray_cache.keys()) == set(self.camera_shms.keys()):
+                frame_recarrays = {camera_id: None for camera_id in self.camera_shms.keys()}
+            else:
+                frame_recarrays =  _frame_recarray_cache
 
         for camera_id, camera_shared_memory in self.camera_shms.items():
             frame_recarrays[camera_id] = camera_shared_memory.get_data_by_index(index=frame_number,
