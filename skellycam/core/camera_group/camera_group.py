@@ -91,7 +91,7 @@ class CameraGroup:
             return None
         if frame_number > self.shm.latest_multiframe_number:
             return None
-        latest_frames = self.shm.get_images_by_frame_number(frame_number)
+        latest_frames = self.shm.get_images_by_frame_number(frame_number=frame_number)
         if not latest_frames:
             return None
         return create_frontend_payload(
