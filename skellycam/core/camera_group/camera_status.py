@@ -2,6 +2,7 @@ import multiprocessing
 from dataclasses import dataclass, field
 
 
+
 @dataclass
 class CameraStatus:
     connected: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
@@ -51,3 +52,11 @@ class CameraStatus:
         self.is_recording_frame.value = False
         self.error.value = False
 
+    def serialize(self):
+        return {
+            "connected": self.connected.value,
+            "closed": self.closed.value,
+            "recording_in_progress": self.recording_in_progress.value,
+            "is_paused": self.is_paused.value,
+            "error": self.error.value,
+        }

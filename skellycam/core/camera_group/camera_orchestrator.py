@@ -110,3 +110,4 @@ class CameraOrchestrator:
         while self.any_cameras_alive:
             wait_100ms()
         logger.info("All cameras closed.")
+

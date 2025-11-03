@@ -86,12 +86,15 @@ async def app_lifespan(
     logger.success("SkellyCam API shutdown complete - Goodbye! 👋")
 
 
-def create_fastapi_app(global_kill_flag: multiprocessing.Value) -> FastAPI:
+def create_fastapi_app(global_kill_flag: multiprocessing.Value,
+                       subprocess_registry: list[multiprocessing.Process]
+                       ) -> FastAPI:
     """
     Create and configure the FastAPI application.
 
     Args:
         global_kill_flag: Shared flag for coordinated shutdown
+        subprocess_registry: list[multiprocessing.Process]
 
     Returns:
         Configured FastAPI application
@@ -101,6 +104,7 @@ def create_fastapi_app(global_kill_flag: multiprocessing.Value) -> FastAPI:
 
     # Store dependencies in app state
     app.state.global_kill_flag = global_kill_flag
+    app.state.subprocess_registry = subprocess_registry
 
     # Configure CORS
     cors(app)

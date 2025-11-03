@@ -2,14 +2,14 @@ import logging
 import os
 from dataclasses import dataclass
 
-from skellycam.core.camera.camera_worker import CameraWorker
+from skellycam.core.camera.camera_worker import CameraWorker, CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.types.type_overloads import WorkerStrategy, CameraIdString
-
+import multiprocessing
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +26,7 @@ class CameraManager:
     @classmethod
     def create(cls,
                ipc: CameraGroupIPC,
+               subprocess_registry: list[multiprocessing.Process],
                camera_strategy: WorkerStrategy,
                camera_configs: CameraConfigs):
 
@@ -38,6 +39,7 @@ class CameraManager:
         camera_workers = {camera_id: CameraWorker.create(
             camera_id=camera_id,
             ipc=ipc,
+            subprocess_registry=subprocess_registry,
             orchestrator=orchestrator,
             config=camera_config,
             camera_worker_type=camera_strategy,
@@ -96,3 +98,6 @@ class CameraManager:
                 logger.info(f"Camera worker {camera_worker.camera_id} shut down gracefully")
         self.camera_workers.clear()
         logger.success("Camera manager closed all camera processes successfully.")
+
+    def to_state(self) -> dict[CameraIdString, CameraState]:
+        return {camera_id: self.camera_workers[camera_id].to_state() for camera_id in self.camera_workers}

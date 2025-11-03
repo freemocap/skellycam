@@ -2,7 +2,6 @@ import logging
 import time
 
 import numpy as np
-
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.timestamps.numpy_timestamps.create_camera_csvs import create_and_save_camera_csvs
 from skellycam.core.camera_group.timestamps.numpy_timestamps.create_multi_frame_csvs import \
@@ -11,6 +10,7 @@ from skellycam.core.camera_group.timestamps.numpy_timestamps.process_recording_t
     process_recording_timestamps
 from skellycam.core.camera_group.timestamps.numpy_timestamps.save_timestamps_statistics_summary import \
     save_timestamp_statistics_summary
+from skellycam.core.camera_group.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
@@ -32,7 +32,7 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
     num_frames = None
 
     frame_count_by_camera = {camera_id: len(frame_metadatas) for camera_id, frame_metadatas in
-                                                    frame_metadatas_by_camera.items()}
+                             frame_metadatas_by_camera.items()}
     number_of_frames_set = set(frame_count_by_camera.values())
     if len(number_of_frames_set) != 1:
         raise ValueError(f"Inconsistent number of frames found across cameras: {frame_count_by_camera}. "
@@ -65,12 +65,11 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
 
     return frame_numbers, TimebaseMapping.from_numpy_record_array(timebase_mapping_recarray)
 
- 
+
 def process_and_save_recording_timestamps(
         frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
         camera_configs: CameraConfigs,
-        recording_info: RecordingInfo,
-) -> None:
+        recording_info: RecordingInfo, ) -> RecordingTimestampsStats:
     tik = time.perf_counter()
     (frame_numbers, timebase_mapping) = validate_frame_metadatas(frame_metadatas_by_camera=frame_metadatas_by_camera,
                                                                  camera_configs=camera_configs)
@@ -107,12 +106,7 @@ def process_and_save_recording_timestamps(
     tok_mf = time.perf_counter()
     print(f"Processed multiframe timestamps in {tok_mf - tik_mf:.3f} seconds.")
 
-    tik_stats = time.perf_counter()
     # Save statistics summary
-    save_timestamp_statistics_summary(multiframe_rows_recarray=multiframe_rows,
-                                      recording_info=recording_info,
-                                      number_of_cameras=len(frame_metadatas_by_camera))
-    tok_stats = time.perf_counter()
-    print(f"Saved timestamp statistics in {tok_stats - tik_stats:.3f} seconds")
-    # logger.info(
-    #     f"Successfully processed and saved timestamps for recording {recording_info.recording_name} - processed {len(frame_numbers)} frames across {len(frame_metadatas_by_camera)} cameras in {time.perf_counter() - tik:.3f} seconds.")
+    return save_timestamp_statistics_summary(multiframe_rows_recarray=multiframe_rows,
+                                             recording_info=recording_info,
+                                             number_of_cameras=len(frame_metadatas_by_camera))

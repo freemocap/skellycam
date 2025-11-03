@@ -3,7 +3,9 @@ import multiprocessing
 from dataclasses import dataclass
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera.camera_manager import CameraManager
+from skellycam.core.camera.camera_worker import CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -16,8 +18,21 @@ from skellycam.core.types.frontend_payload_bytearray import create_frontend_payl
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
 from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
-
+from skellycam.core.camera_group.camera_status import CameraStatus
 logger = logging.getLogger(__name__)
+
+
+
+class CameraGroupState(BaseModel):
+    """Serializable representation of a camera group state."""
+    model_config = ConfigDict(
+        validate_assignment=True,
+        frozen=True
+    )
+    id: CameraGroupIdString
+    configs: dict[CameraIdString, CameraConfig]
+    cameras: dict[CameraIdString, CameraState]
+    alive: bool
 
 
 @dataclass
@@ -35,12 +50,14 @@ class CameraGroup:
     def create(cls,
                camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
+               subprocess_registry: list[multiprocessing.Process],
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
         validate_camera_configs(camera_configs)
         ipc = CameraGroupIPC.create(global_kill_flag=global_kill_flag)
 
         # note - create cameras last so others can subscribe to camera updates
         cameras = CameraManager.create(ipc=ipc,
+                                        subprocess_registry=subprocess_registry,
                                        camera_configs=camera_configs,
                                        camera_strategy=camera_strategy,
                                        )
@@ -170,6 +187,14 @@ class CameraGroup:
             logger.success("Shared memory closed and unlinked if applicable.")
 
         logger.success("Camera group closed successfully.")
+
+    def to_state(self) -> CameraGroupState:
+        return CameraGroupState(
+            id=self.id,
+            configs=self.configs,
+            cameras={camera_id: worker.to_state() for camera_id, worker in self.cameras.camera_workers.items()},
+            alive=all([worker.is_alive() for worker in self.cameras.camera_workers.values()]),
+        )
 
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
