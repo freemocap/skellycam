@@ -11,6 +11,7 @@ import MediationIcon from "@mui/icons-material/Mediation";
 import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
 import { CameraConfigRotation } from "./CameraConfigRotation";
+import { CameraConfigFramerate } from "./CameraConfigFramerate";
 import { CameraConfig, ExposureMode } from "@/store/slices/cameras/cameras-types";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { selectCameras, configCopiedToAll } from "@/store/slices/cameras";
@@ -22,10 +23,10 @@ interface CameraConfigPanelProps {
 }
 
 export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
-                                                                        config,
-                                                                        onConfigChange,
-                                                                        isExpanded,
-                                                                    }) => {
+    config,
+    onConfigChange,
+    isExpanded,
+}) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
 
@@ -52,7 +53,11 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
     };
 
     const handleRotationChange = (value: string): void => {
-        handleChange("rotation", value as CameraConfig['rotation']);
+        handleChange("rotation", value as unknown as CameraConfig['rotation']);
+    };
+
+    const handleFramerateChange = (value: number): void => {
+        handleChange("framerate", value);
     };
 
     const handleExposureModeChange = (mode: ExposureMode): void => {
@@ -77,15 +82,22 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                 }}
             >
                 <Grid container spacing={2}>
-                    {/* Top row with Resolution and Rotation */}
-                    <Grid size={{ xs: 12, md: 5 }}>
+                    {/* Top row with Resolution, Framerate, and Rotation */}
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <CameraConfigResolution
                             resolution={config.resolution}
                             onChange={handleResolutionChange}
                         />
                     </Grid>
 
-                    <Grid size={{ xs: 12, md: 5 }}>
+                    <Grid size={{ xs: 12, md: 3 }}>
+                        <CameraConfigFramerate
+                            framerate={config.framerate}
+                            onChange={handleFramerateChange}
+                        />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 3 }}>
                         <CameraConfigRotation
                             rotation={config.rotation}
                             onChange={handleRotationChange}
