@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import deque
 
 import cv2
 import numpy as np
@@ -36,6 +37,8 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
 
     number_of_frames_outside_acceptable_range = 0
     fail_count = 0
+    frame_durations_seconds= deque(maxlen=1000)
+    framerate: float | None = None #median framerate of the past 1000
     try:
         while ipc.should_continue:
             (config,
@@ -51,6 +54,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                                            self_status=self_status,
                                            update_camera_settings_subscription=update_camera_settings_subscription,
                                            video_recorder=video_recorder,
+                                           framerate=framerate
                                            )
 
             if self_status.should_close.value:
@@ -73,6 +77,12 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                     logger.error(f"Failed to grab frame from camera {config.camera_id}. Retrying...")
                     if not cv2_video_capture.isOpened():
                         raise RuntimeError(f"Camera {config.camera_id} shutdown unexpectedly - exiting camera loop.")
+                current_tik = time.perf_counter_ns()
+                frame_durations_seconds.append((current_tik - previous_tik) / 1e9)
+                previous_tik = current_tik
+                if len(frame_durations_seconds) >= 30:
+                    framerate = 1.0 / np.median(np.array(frame_durations_seconds))
+
             fail_count = 0
             # NOTE - Get `should_record` flags BEFORE unsetting 'grabbing_frame' to avoid
             # potential race-condition-generating flag setting gaps between cameras
@@ -142,7 +152,8 @@ def check_framerate_reset(config: CameraConfig,
                           frame_rec_array: np.recarray,
                           number_of_frames_outside_acceptable_range: int,
                           previous_tik: int) -> tuple[CameraConfig, cv2.VideoCapture, int]:
-    target_frame_duration_ms = (config.framerate ** -1) * 1e3  # Convert framerate to nanoseconds per frame
+    #TODO - FIGURE OUT A BETTER WAY TO GET TARGET FPS
+    target_frame_duration_ms = (30 ** -1) * 1e3  # Convert framerate to nanoseconds per frame
     max_acceptable_frame_duration_ms = target_frame_duration_ms * 2
     if frame_rec_array.frame_metadata.frame_number[0] > 100:
         frame_duration_ms = (time.perf_counter_ns() - previous_tik) / 1e6  # Convert to milliseconds

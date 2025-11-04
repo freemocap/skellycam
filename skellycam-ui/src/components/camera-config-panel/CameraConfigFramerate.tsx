@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Box, TextField, Tooltip, useTheme } from '@mui/material';
+import { Box, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme } from '@mui/material';
 
 interface CameraConfigFramerateProps {
-    framerate: number;
-    onChange: (value: number) => void;
+    framerate: number | null;
+    onChange: (value: number | null) => void;
 }
 
 const FRAMERATE_CONSTRAINTS = {
@@ -17,7 +17,11 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
     onChange
 }) => {
     const theme = useTheme();
-    const [localValue, setLocalValue] = useState<string>(framerate.toFixed(2));
+    const isAuto = framerate === null;
+    const [mode, setMode] = useState<'AUTO' | 'MANUAL'>(isAuto ? 'AUTO' : 'MANUAL');
+    const [localValue, setLocalValue] = useState<string>(
+        isAuto ? FRAMERATE_CONSTRAINTS.default.toFixed(2) : framerate.toFixed(2)
+    );
     const [error, setError] = useState<string>('');
 
     const validateAndUpdate = (value: string): void => {
@@ -43,6 +47,23 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
         onChange(roundedValue);
     };
 
+    const handleModeChange = (
+        event: React.MouseEvent<HTMLElement>,
+        newMode: 'AUTO' | 'MANUAL' | null
+    ): void => {
+        if (newMode === null) return;
+
+        setMode(newMode);
+
+        if (newMode === 'AUTO') {
+            setError('');
+            onChange(null);
+        } else {
+            // Switch to manual mode with the last valid value
+            validateAndUpdate(localValue);
+        }
+    };
+
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const value = event.target.value;
         setLocalValue(value);
@@ -53,7 +74,8 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
 
         // Reset to valid value if invalid, otherwise format to 2 decimals
         if (error) {
-            setLocalValue(framerate.toFixed(2));
+            const validValue = framerate === null ? FRAMERATE_CONSTRAINTS.default : framerate;
+            setLocalValue(validValue.toFixed(2));
             setError('');
         } else {
             setLocalValue(parseFloat(localValue).toFixed(2));
@@ -64,7 +86,8 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
         if (event.key === 'Enter') {
             validateAndUpdate(localValue);
             if (error) {
-                setLocalValue(framerate.toFixed(2));
+                const validValue = framerate === null ? FRAMERATE_CONSTRAINTS.default : framerate;
+                setLocalValue(validValue.toFixed(2));
                 setError('');
             } else {
                 setLocalValue(parseFloat(localValue).toFixed(2));
@@ -75,44 +98,75 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
 
     return (
         <Box>
-            <Tooltip title="Set target frames per second (FPS) for camera capture">
-                <TextField
-                    label="Framerate"
-                    value={localValue}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                    type="number"
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+                Framerate
+            </Typography>
+            <Tooltip title="Choose between automatic or manual framerate control">
+                <ToggleButtonGroup
+                    color={theme.palette.primary.main as any}
+                    value={mode}
+                    exclusive
+                    onChange={handleModeChange}
                     size="small"
-                    error={!!error}
                     fullWidth
-                    inputProps={{
-                        min: FRAMERATE_CONSTRAINTS.min,
-                        max: FRAMERATE_CONSTRAINTS.max,
-                        step: 0.01,
-                    }}
                     sx={{
-                        '& .MuiInputLabel-root': {
-                            color: theme.palette.text.primary,
-                        },
-                        '& .MuiOutlinedInput-root': {
-                            color: theme.palette.text.primary,
-                            '& fieldset': {
-                                borderColor: theme.palette.divider,
+                        mb: mode === 'MANUAL' ? 1 : 0,
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            backgroundColor: theme.palette.primary.main,
+                            border: `1px solid ${theme.palette.text.secondary}`,
+                            color: theme.palette.primary.contrastText,
+                            '&:hover': {
+                                backgroundColor: theme.palette.primary.light,
                             },
-                            '&:hover fieldset': {
-                                borderColor: theme.palette.primary.main,
-                            },
-                            '&.Mui-focused fieldset': {
-                                borderColor: theme.palette.primary.main,
-                            },
-                        },
-                        '& .MuiFormHelperText-root': {
-                            color: error ? theme.palette.error.main : theme.palette.text.secondary,
-                        },
+                        }
                     }}
-                />
+                >
+                    <ToggleButton value="AUTO">Auto</ToggleButton>
+                    <ToggleButton value="MANUAL">Manual</ToggleButton>
+                </ToggleButtonGroup>
             </Tooltip>
+
+            {mode === 'MANUAL' && (
+                <Tooltip title="Set target frames per second (FPS) for camera capture">
+                    <TextField
+                        label="FPS"
+                        value={localValue}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        onKeyDown={handleKeyDown}
+                        type="number"
+                        size="small"
+                        error={!!error}
+                        helperText={error}
+                        fullWidth
+                        inputProps={{
+                            min: FRAMERATE_CONSTRAINTS.min,
+                            max: FRAMERATE_CONSTRAINTS.max,
+                            step: 0.01,
+                        }}
+                        sx={{
+                            '& .MuiInputLabel-root': {
+                                color: theme.palette.text.primary,
+                            },
+                            '& .MuiOutlinedInput-root': {
+                                color: theme.palette.text.primary,
+                                '& fieldset': {
+                                    borderColor: theme.palette.divider,
+                                },
+                                '&:hover fieldset': {
+                                    borderColor: theme.palette.primary.main,
+                                },
+                                '&.Mui-focused fieldset': {
+                                    borderColor: theme.palette.primary.main,
+                                },
+                            },
+                            '& .MuiFormHelperText-root': {
+                                color: error ? theme.palette.error.main : theme.palette.text.secondary,
+                            },
+                        }}
+                    />
+                </Tooltip>
+            )}
         </Box>
     );
 };
