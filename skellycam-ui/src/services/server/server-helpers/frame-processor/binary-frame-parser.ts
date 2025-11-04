@@ -222,7 +222,7 @@ export async function parseMultiFramePayload(
         }
     }
 
-    // Trim array to actual size
+    // Trim array to actual size.
     frameMetadata.length = validFrameCount;
 
     // Create ImageBitmaps in parallel

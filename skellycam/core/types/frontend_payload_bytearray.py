@@ -63,7 +63,7 @@ def create_frontend_payload(
     frame_numbers = [latest_frames[camera_id].frame_metadata.frame_number[0] for camera_id in camera_ids]
 
     if len(set(frame_numbers)) != 1:
-        raise ValueError("All cameras in the multi-frame record array must have the same frame number.")
+        logger.warning(f"All cameras in the multi-frame record array must have the same frame number: {frame_numbers}")
 
     frame_number = frame_numbers[0]
     number_of_cameras = len(camera_ids)

@@ -45,9 +45,9 @@ class RecordingFinalizer(BaseModel):
 
     def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
-        self.recording_info.save_to_file(camera_configs = self.camera_configs)
+        self.recording_info.save_to_file(camera_configs=self.camera_configs)
 
-        process_and_save_recording_timestamps(
+        timestamp_stats: RecordingTimestampsStats = process_and_save_recording_timestamps(
             recording_info=self.recording_info,
             camera_configs=self.camera_configs,
             frame_metadatas_by_camera=self.frame_metadatas_by_camera,
@@ -55,10 +55,13 @@ class RecordingFinalizer(BaseModel):
 
         self._save_folder_readme()
         self.validate_recording()
+        logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{timestamp_stats}\n\n--------------------------------------------------------\n")
+
 
     def _save_folder_readme(self):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
+
 
     def validate_recording(self):
         """

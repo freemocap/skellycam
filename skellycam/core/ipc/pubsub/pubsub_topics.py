@@ -13,7 +13,7 @@ from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 from skellycam.core.types.type_overloads import TopicPublicationQueue, CameraIdString
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue
-
+from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
 
 class DeviceExtractedConfigMessage(TopicMessageABC):
     extracted_config: CameraConfig
@@ -25,7 +25,8 @@ class UpdateCamerasSettingsMessage(TopicMessageABC):
 
 class SetShmMessage(TopicMessageABC):
     camera_group_shm_dto: CameraGroupSharedMemoryDTO
-
+    def get_shm_dto_by_camera_id(self, camera_id: CameraIdString) -> SharedMemoryRingBufferDTO:
+        return self.camera_group_shm_dto.camera_shm_dtos[camera_id]
 
 class RecordingInfoMessage(TopicMessageABC):
     recording_info: RecordingInfo
@@ -81,6 +82,7 @@ class DeviceExtractedConfigTopic(PubSubTopicABC):
 
 class SetShmTopic(PubSubTopicABC):
     message_type: Type[SetShmMessage] = SetShmMessage
+
 
 
 class RecordingInfoTopic(PubSubTopicABC):

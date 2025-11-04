@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 def save_timestamp_statistics_summary(
         multiframe_rows_recarray: np.recarray,
         recording_info: RecordingInfo,
-        number_of_cameras: int,
-) -> None:
+        number_of_cameras: int,) -> RecordingTimestampsStats:
     stats = RecordingTimestampsStats.from_multiframe_rows(
         multiframe_rows=multiframe_rows_recarray,
         recording_info=recording_info,
@@ -26,6 +25,6 @@ def save_timestamp_statistics_summary(
     stats_text_path = recording_info.timestamp_stats_text_file_path
     with open(stats_text_path, 'w', encoding='utf-8') as f:
         f.write(str(stats))
-#     logger.debug(f"Saved timestamp statistics summary to {stats_text_path}")
+    logger.debug(f"Saved timestamp statistics summary to {stats_text_path}")
+    return stats
 
-    logger.success(f"Recording timestamps statistics summary:\n\n{stats}\n\n--------------------------------------------------------\n")

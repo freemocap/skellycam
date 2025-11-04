@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
 from skellycam.system.default_paths import get_default_recording_folder_path
+from skellycam.core.camera.config.image_rotation_types import rotation_int_to_name
 
 logger = logging.getLogger(__name__)
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
@@ -80,7 +81,7 @@ class RecordingInfo(BaseModel):
         recording_info_dict["camera_configs"] = {camera_id: config.model_dump() for camera_id, config in
                                                  camera_configs.items()}
         for camera_id, config in recording_info_dict["camera_configs"].items():
-            recording_info_dict["camera_configs"][camera_id]["rotation"] = config["rotation"].name
+            recording_info_dict["camera_configs"][camera_id]["rotation"] = rotation_int_to_name(recording_info_dict["camera_configs"][camera_id]["rotation"])
 
         with open(self.recording_info_path, "w") as f:
             f.write(json.dumps(recording_info_dict, indent=4))

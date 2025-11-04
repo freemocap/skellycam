@@ -104,11 +104,10 @@ class CameraOrchestrator:
         return False
 
     def close(self):
-        self.pause(await_paused=True)
         for status in self.camera_statuses.values():
             status.should_close.value = True
         logger.info("Waiting for all cameras to close...")
-        self.unpause(await_unpaused=True)
         while self.any_cameras_alive:
             wait_100ms()
         logger.info("All cameras closed.")
+

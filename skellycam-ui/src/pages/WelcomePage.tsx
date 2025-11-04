@@ -1,15 +1,32 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {Box, Container, Fade, Grow, Paper, Typography} from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
 import {Footer} from '@/components/ui-components/Footer';
 import {useElectronIPC} from "@/services";
+import {useServer} from "@/services/server/ServerContextProvider"; // Adjust import path as needed
 
 const WelcomePage: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     const {isElectron, api} = useElectronIPC();
+    const {connectedCameraIds} = useServer();
+
+    // Track previous camera count to detect 0 -> >0 transition
+    const prevCountRef = useRef(connectedCameraIds.length);
+
+    useEffect(() => {
+        const prevCount = prevCountRef.current;
+        const currentCount = connectedCameraIds.length;
+
+        // Auto-navigate to cameras page only when first camera connects (0 -> >0 transition)
+        if (prevCount === 0 && currentCount > 0) {
+            navigate('/cameras');
+        }
+
+        prevCountRef.current = currentCount;
+    }, [connectedCameraIds, navigate]);
 
     useEffect(() => {
         const fetchLogo = async (): Promise<void> => {

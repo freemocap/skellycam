@@ -24,7 +24,7 @@ from skellycam.core.camera_group.timestamps import TimebaseMapping
 from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.video_recorder import VideoRecorder
-from skellycam.core.types.image_rotation_types import RotationTypes
+from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.types.type_overloads import CameraIdString, CameraIndexInt
 
 

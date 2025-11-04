@@ -3,7 +3,6 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
-
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
 from skellycam.core.camera_group.camera_group_manager import get_or_create_camera_group_manager
 from skellycam.core.device_detection.detect_cameras_devices import CameraDeviceInfo, detect_available_cameras
@@ -83,9 +82,7 @@ async def camera_group_apply_post_endpoint(
         logger.info(f"Request to {request.url}: {raw_body.decode('utf-8')}")
 
         configs = request_body.camera_configs
-        camera_group = get_or_create_camera_group_manager(
-            request.app.state.global_kill_flag
-        ).connect_or_update_camera_group(camera_configs=configs)
+        camera_group = get_or_create_camera_group_manager(app=request.app).connect_or_update_camera_group(camera_configs=configs)
 
         return CreateCameraGroupResponse(
             group_id=camera_group.id,
@@ -108,9 +105,7 @@ def start_recording(
             )
 
         Path(request_body.recording_directory).mkdir(parents=True, exist_ok=True)
-        get_or_create_camera_group_manager(
-            request.app.state.global_kill_flag
-        ).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
+        get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
 
         return True
     except Exception as e:
@@ -121,7 +116,7 @@ def start_recording(
 @camera_router.get("/group/all/record/stop", summary="Stop recording")
 def stop_recording(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(request.app.state.global_kill_flag).stop_recording_all_groups()
+        get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
@@ -131,18 +126,17 @@ def stop_recording(request: Request) -> bool:
 @camera_router.delete("/group/close/all", summary="Close all camera groups")
 def close_all_camera_groups(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(request.app.state.global_kill_flag).close_all_camera_groups()
+        get_or_create_camera_group_manager(app=request.app).close_all_camera_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 @camera_router.get("/group/all/pause_unpause", summary="Pause/unpause cameras")
 def pause_camera_groups(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(request.app.state.global_kill_flag).pause_unpause_all_groups()
+        get_or_create_camera_group_manager(app=request.app).pause_unpause_all_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)

@@ -3,10 +3,10 @@ from typing import Tuple, Self, Any
 
 import cv2
 import numpy as np
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, field_serializer
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
-from skellycam.core.types.image_rotation_types import RotationTypes
+from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.types.numpy_record_dtypes import CAMERA_CONFIG_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
@@ -88,6 +88,7 @@ class SettableCameraParameters(BaseModel):
 
 
 class CameraConfig(BaseModel):
+
     camera_id: CameraIdString = Field(
         default=DEFAULT_CAMERA_ID,
         description="The ID of the camera. May be used for display purposes, must be unique.")
@@ -414,6 +415,10 @@ class CameraConfig(BaseModel):
         out_str += f"\t\timage_shape: {self.image_shape}\n"
         out_str += f"\t\timage_size: {self.image_size_bytes / 1024:.3f}KB\n"
         return out_str
+
+    @field_serializer('rotation')
+    def serialize_rotation(self, rotation: RotationTypes) -> int:
+        return int(rotation.value)
 
 
 def default_camera_configs_factory():

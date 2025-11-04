@@ -2,21 +2,37 @@ import logging
 import multiprocessing
 from dataclasses import dataclass
 
+import numpy as np
+from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera.camera_manager import CameraManager
+from skellycam.core.camera.camera_worker import CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import DeviceExtractedConfigMessage, UpdateCamerasSettingsMessage, \
     RecordingInfoMessage, RecordingFinishedMessage
-from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryManager
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
 from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
-
+from skellycam.core.camera_group.camera_status import CameraStatus
 logger = logging.getLogger(__name__)
+
+
+
+class CameraGroupState(BaseModel):
+    """Serializable representation of a camera group state."""
+    model_config = ConfigDict(
+        validate_assignment=True,
+        frozen=True
+    )
+    id: CameraGroupIdString
+    configs: dict[CameraIdString, CameraConfig]
+    cameras: dict[CameraIdString, CameraState]
+    alive: bool
 
 
 @dataclass
@@ -24,7 +40,7 @@ class CameraGroup:
     ipc: CameraGroupIPC
     configs: CameraConfigs
     cameras: CameraManager
-    shm: CameraGroupSharedMemoryManager | None = None
+    shm: CameraGroupSharedMemory | None = None
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -34,12 +50,14 @@ class CameraGroup:
     def create(cls,
                camera_configs: CameraConfigs,
                global_kill_flag: multiprocessing.Value,
+               subprocess_registry: list[multiprocessing.Process],
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
         validate_camera_configs(camera_configs)
         ipc = CameraGroupIPC.create(global_kill_flag=global_kill_flag)
 
         # note - create cameras last so others can subscribe to camera updates
         cameras = CameraManager.create(ipc=ipc,
+                                        subprocess_registry=subprocess_registry,
                                        camera_configs=camera_configs,
                                        camera_strategy=camera_strategy,
                                        )
@@ -55,9 +73,9 @@ class CameraGroup:
         self.cameras.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
-        self.shm = CameraGroupSharedMemoryManager.create(camera_configs=extracted_configs,
-                                                         timebase_mapping=self.ipc.timebase_mapping,
-                                                         read_only=True)
+        self.shm = CameraGroupSharedMemory.create(camera_configs=extracted_configs,
+                                                  timebase_mapping=self.ipc.timebase_mapping,
+                                                  read_only=True)
         self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
         self.configs = extracted_configs
         return extracted_configs
@@ -66,20 +84,42 @@ class CameraGroup:
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.configs.keys())
 
-
-    def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
+    def get_latest_frames(self) -> dict[CameraIdString, np.recarray] | None:
         if self.shm is None or not self.shm.valid:
             return None
-        if self.shm.latest_multiframe_number <= if_newer_than:
-            return None
-
         latest_frames = self.shm.get_latest_multiframe()
+        if not latest_frames:
+            return None
+        return latest_frames
+
+    def get_latest_frontend_payload(self, if_newer_than: int, display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> tuple[FrameNumberInt,MultiframeTimestampFloat, bytes] | None:
+        if not self.cameras.all_ready:
+            return None
+        latest_frames = self.get_latest_frames()
         if not latest_frames:
             return None
         return create_frontend_payload(
             latest_frames = latest_frames,
             display_image_sizes=display_image_sizes,
         )
+
+    def get_frontend_payload_by_frame_number(self,
+                                             frame_number:FrameNumberInt,
+                                             display_image_sizes:dict[CameraIdString, dict[str,float]]|None = None) -> bytes | None:
+        if not self.cameras.all_ready:
+            return None
+        if frame_number > self.shm.latest_multiframe_number:
+            return None
+        latest_frames = self.shm.get_images_by_frame_number(frame_number=frame_number)
+        if not latest_frames:
+            return None
+        frame_number_out, _, frames_bytearray= create_frontend_payload(
+            latest_frames = latest_frames,
+            display_image_sizes=display_image_sizes,
+        )
+        if frame_number_out != frame_number:
+            logger.warning(f"Requested frame number {frame_number} but got {frame_number_out}")
+        return frames_bytearray
 
     def pause_unpause(self, await_state_change: bool = True):
         self.cameras.pause_unpause(await_state_change)
@@ -134,7 +174,6 @@ class CameraGroup:
 
     def close(self):
         logger.debug("Closing camera group")
-        self.cameras.pause(await_paused=True)
         self.ipc.should_continue = False
         wait_1s()
         self.cameras.close()
@@ -148,6 +187,14 @@ class CameraGroup:
             logger.success("Shared memory closed and unlinked if applicable.")
 
         logger.success("Camera group closed successfully.")
+
+    def to_state(self) -> CameraGroupState:
+        return CameraGroupState(
+            id=self.id,
+            configs=self.configs,
+            cameras={camera_id: worker.to_state() for camera_id, worker in self.cameras.camera_workers.items()},
+            alive=all([worker.is_alive() for worker in self.cameras.camera_workers.values()]),
+        )
 
 
 def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:

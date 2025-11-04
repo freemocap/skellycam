@@ -76,7 +76,7 @@ export const LeftSidePanelContent = () => {
                         sx={{
                             fontSize: 16,
                             fontWeight: 600,
-                            color: theme.palette.primary.main
+                            color: theme.palette.text.primary
                         }}
                     >
                         SkellyCam 💀📸
@@ -88,7 +88,7 @@ export const LeftSidePanelContent = () => {
                             onClick={() => navigate('/')}
                             sx={{
                                 padding: '4px',
-                                color: location.pathname === '/' ? theme.palette.primary.main : theme.palette.text.secondary
+                                color: location.pathname === '/' ?  theme.palette.success.main : theme.palette.text.secondary
                             }}
                         >
                             <HomeIcon sx={{ fontSize: 18 }} />
@@ -99,7 +99,7 @@ export const LeftSidePanelContent = () => {
                             onClick={() => navigate('/cameras')}
                             sx={{
                                 padding: '4px',
-                                color: location.pathname === '/cameras' ? theme.palette.primary.main : theme.palette.text.secondary
+                                color: location.pathname === '/cameras' ? theme.palette.success.main : theme.palette.text.secondary
                             }}
                         >
                             <VideocamIcon sx={{ fontSize: 18 }} />

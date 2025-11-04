@@ -22,7 +22,7 @@ class WebsocketServer:
 
         self.websocket = websocket
         self._global_kill_flag = app.state.global_kill_flag
-        self._cgm: CameraGroupManager= get_or_create_camera_group_manager(self._global_kill_flag)
+        self._cgm: CameraGroupManager= get_or_create_camera_group_manager(app=app)
 
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []
@@ -62,17 +62,20 @@ class WebsocketServer:
         logger.info("Starting websocket runner...")
         self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
                          asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
-                         asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler")]
+                         asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler"),
+                         asyncio.create_task(self._app_state_sender(), name="WebsocketStateSender")]
 
         try:
             await asyncio.gather(*self.ws_tasks, return_exceptions=True)
         except Exception as e:
             logger.exception(f"Error in websocket runner: {e.__class__}: {e}")
+            raise
+        finally:
             # Cancel all tasks when exiting
             for task in self.ws_tasks:
                 if not task.done():
                     task.cancel()
-            raise
+
 
     def check_frame_acknowledgment_status(self) -> bool:
         if self.last_sent_frame_number == -1:
@@ -160,6 +163,32 @@ class WebsocketServer:
             logger.exception(f"Error in websocket log relay: {e.__class__}: {e}")
             self._global_kill_flag.value = True
             raise
+
+    async def _app_state_sender(self):
+        """
+        Periodically send the application state to the frontend.
+        """
+        logger.info("Starting state sender task...")
+        previous_state: dict|None = None
+        try:
+            while self.should_continue:
+                state_dict = self._cgm.to_state_dict()
+                if previous_state is None or state_dict != previous_state:
+                    state_message = {
+                        "message_type": "app_state",
+                        "state": state_dict
+                    }
+                    await self.websocket.send_json(state_message)
+                await asyncio.sleep(1.0)  # Chck for state changes every second
+                previous_state = state_dict
+        except asyncio.CancelledError:
+            logger.debug("State sender task cancelled")
+        except Exception as e:
+            logger.exception(f"Error in state sender: {e.__class__}: {e}")
+            self._global_kill_flag.value = True
+            raise
+        finally:
+            logger.info("Ending state sender task...")
 
     async def _client_message_handler(self):
         """

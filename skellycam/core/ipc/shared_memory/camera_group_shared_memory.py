@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 CameraSharedMemoryDTOs = dict[CameraIdString, SharedMemoryRingBufferDTO]
 
+_frame_recarray_cache: dict[CameraIdString, np.recarray] = {} # Cache for reusable recarrays per camera, to avoid reallocating on each read
 
 @dataclass
 class CameraGroupSharedMemoryDTO:
@@ -22,7 +23,7 @@ class CameraGroupSharedMemoryDTO:
 
 
 @dataclass
-class CameraGroupSharedMemoryManager:
+class CameraGroupSharedMemory:
     camera_shms: dict[CameraIdString, CameraSharedMemoryRingBuffer]
     camera_configs: CameraConfigs
     read_only: bool
@@ -31,6 +32,9 @@ class CameraGroupSharedMemoryManager:
 
     @property
     def latest_multiframe_number(self) -> int:
+        return min([camera_shared_memory.latest_frame_number for camera_shared_memory in self.camera_shms.values()])
+
+    def get_latest_multiframe_number(self) -> int:
         return min([camera_shared_memory.latest_frame_number for camera_shared_memory in self.camera_shms.values()])
 
     @property
@@ -125,8 +129,10 @@ class CameraGroupSharedMemoryManager:
             logger.error(f"Error during shared memory cleanup: {type(e).__name__} - {e}")
             logger.exception(e)
 
-    def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]:
+    def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]|None:
         target_frame_number = copy(self.latest_multiframe_number) #copy to avoid index changing during read loop
+        if target_frame_number < 0:
+            return None
         self._latest_frames = {
             camera_id: camera_shared_memory.get_data_by_index(index=target_frame_number,
                                                             rec_array=self._latest_frames[camera_id] if camera_id in self._latest_frames else None)
@@ -136,3 +142,19 @@ class CameraGroupSharedMemoryManager:
         if len(frame_numbers) != 1:
             raise ValueError(f"Frame numbers do not match across cameras! {frame_numbers}")
         return self._latest_frames
+
+    def get_images_by_frame_number(self,
+                                   frame_number: int,
+                                   frame_recarrays:dict[CameraIdString, np.recarray]|None=None) -> dict[CameraIdString, np.recarray]:
+        if not self.valid:
+            raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
+        if not frame_recarrays:
+            if not set(_frame_recarray_cache.keys()) == set(self.camera_shms.keys()):
+                frame_recarrays = {camera_id: None for camera_id in self.camera_shms.keys()}
+            else:
+                frame_recarrays =  _frame_recarray_cache
+
+        for camera_id, camera_shared_memory in self.camera_shms.items():
+            frame_recarrays[camera_id] = camera_shared_memory.get_data_by_index(index=frame_number,
+                                                                               rec_array=frame_recarrays[camera_id])
+        return frame_recarrays

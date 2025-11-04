@@ -68,7 +68,9 @@ def opencv_camera_worker_method(camera_id: CameraIdString,
         ipc.should_continue = False
         if cv2_video_capture:
             cv2_video_capture.release()
-        camera_shm.close()
+        if camera_shm:
+            logger.trace(f"Closing camera {config.camera_index} shared memory")
+            camera_shm.close() #close, don't unlink - parent will unlink
         self_status.closed.value = True
 
         logger.debug(f"Camera {config.camera_index} process completed")
