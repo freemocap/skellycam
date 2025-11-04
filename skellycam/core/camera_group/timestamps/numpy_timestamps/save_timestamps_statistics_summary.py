@@ -26,4 +26,5 @@ def save_timestamp_statistics_summary(
     with open(stats_text_path, 'w', encoding='utf-8') as f:
         f.write(str(stats))
     logger.debug(f"Saved timestamp statistics summary to {stats_text_path}")
+    return stats
 

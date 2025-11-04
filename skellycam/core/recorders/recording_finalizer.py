@@ -55,7 +55,7 @@ class RecordingFinalizer(BaseModel):
 
         self._save_folder_readme()
         self.validate_recording()
-        logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{stats}\n\n--------------------------------------------------------\n")
+        logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{timestamp_stats}\n\n--------------------------------------------------------\n")
 
 
     def _save_folder_readme(self):

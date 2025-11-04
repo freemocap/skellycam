@@ -6,7 +6,7 @@ import numpy as np
 from pydantic import BaseModel, Field, model_validator, field_serializer
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
-from skellycam.core.types.image_rotation_types import RotationTypes
+from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.types.numpy_record_dtypes import CAMERA_CONFIG_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
