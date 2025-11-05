@@ -32,7 +32,7 @@ const ValueLabelComponent = (props: {
 const EXPOSURE_CONSTRAINTS = {
     min: -13,
     max: -4,
-    default: -7
+    default: -6
 };
 
 export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
