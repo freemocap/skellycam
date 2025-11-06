@@ -46,6 +46,10 @@ class CameraGroup:
     def id(self) -> CameraGroupIdString:
         return self.ipc.group_id
 
+    @property
+    def alive(self) -> bool:
+        return self.cameras.all_ready and all([worker.is_alive() for worker in self.cameras.camera_workers.values()])
+
     @classmethod
     def create(cls,
                camera_configs: CameraConfigs,
