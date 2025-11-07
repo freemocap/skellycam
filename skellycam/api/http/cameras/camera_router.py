@@ -82,7 +82,7 @@ async def camera_group_apply_post_endpoint(
         logger.info(f"Request to {request.url}: {raw_body.decode('utf-8')}")
 
         configs = request_body.camera_configs
-        camera_group = get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(camera_configs=configs)
+        camera_group = await get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(camera_configs=configs)
 
         return CreateCameraGroupResponse(
             group_id=camera_group.id,

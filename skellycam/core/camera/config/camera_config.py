@@ -447,6 +447,4 @@ def validate_camera_configs(camera_configs: CameraConfigs) -> None:
     if len(camera_indexes) != len(set(camera_indexes)):
         raise ValueError(f"Camera indexes must be unique across all camera configurations, received: {camera_indexes_by_camera}")
 
-0
-if __name__ == "__main__":
-    print(CameraConfig(camera_index=0))
+

@@ -17,7 +17,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
-from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms, await_100ms
 from skellycam.core.camera_group.camera_status import CameraStatus
 logger = logging.getLogger(__name__)
 
@@ -54,18 +54,26 @@ class CameraGroup:
     @classmethod
     def create(cls,
                camera_configs: CameraConfigs,
+               heartbeat_timestamp: multiprocessing.Value,
                global_kill_flag: multiprocessing.Value,
                subprocess_registry: list[multiprocessing.Process],
                camera_strategy: WorkerStrategy = WorkerStrategy.PROCESS) -> 'CameraGroup':
-        validate_camera_configs(camera_configs)
-        ipc = CameraGroupIPC.create(global_kill_flag=global_kill_flag)
+        try:
+            validate_camera_configs(camera_configs)
+            ipc = CameraGroupIPC.create(global_kill_flag=global_kill_flag,
+                                        heartbeat_timestamp=heartbeat_timestamp,
+                                        )
 
-        # note - create cameras last so others can subscribe to camera updates
-        cameras = CameraManager.create(ipc=ipc,
-                                        subprocess_registry=subprocess_registry,
-                                       camera_configs=camera_configs,
-                                       camera_strategy=camera_strategy,
-                                       )
+            # note - create cameras last so others can subscribe to camera updates
+            cameras = CameraManager.create(ipc=ipc,
+                                            subprocess_registry=subprocess_registry,
+                                           camera_configs=camera_configs,
+                                           camera_strategy=camera_strategy,
+                                           )
+        except Exception as e:
+            logger.error(f"Error creating camera group: {type(e).__name__} - {e}")
+            global_kill_flag.value = True
+            raise e
 
         return cls(
             ipc=ipc,
@@ -73,12 +81,12 @@ class CameraGroup:
             configs=camera_configs,
         )
 
-    def start(self) -> CameraConfigs:
+    async def start(self) -> CameraConfigs:
         self.started = True
         logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
         self.cameras.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
-        extracted_configs: CameraConfigs = await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
+        extracted_configs: CameraConfigs =await await_extracted_configs(ipc=self.ipc, requested_configs=self.configs)
         self.shm = CameraGroupSharedMemory.create(camera_configs=extracted_configs,
                                                   timebase_mapping=self.ipc.timebase_mapping,
                                                   read_only=True)
@@ -131,14 +139,14 @@ class CameraGroup:
         self.cameras.pause_unpause(await_state_change)
 
 
-    def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:
+    async def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:
         """
         Update camera settings and await the extracted configurations.
         """
         self.ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].publish(
             UpdateCamerasSettingsMessage(requested_configs=requested_configs))
 
-        updated_configs = await_extracted_configs(ipc=self.ipc, requested_configs=requested_configs)
+        updated_configs = await await_extracted_configs(ipc=self.ipc, requested_configs=requested_configs)
         self.configs = updated_configs
         logger.info(f"Updated camera configs - {list(requested_configs.keys())}")
         return self.configs
@@ -203,7 +211,7 @@ class CameraGroup:
         )
 
 
-def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
+async def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfigs) -> CameraConfigs:
     updated_configs: dict[CameraIdString, CameraConfig | None] = {camera_id: None for camera_id in
                                                                   requested_configs.keys()}
     while any([not isinstance(config, CameraConfig) for config in updated_configs.values()]) and ipc.should_continue:
@@ -214,7 +222,7 @@ def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: CameraConfig
             else:
                 updated_configs[
                     extracted_config_message.extracted_config.camera_id] = extracted_config_message.extracted_config
-        wait_10ms()
+        await await_100ms()
     if not ipc.should_continue:
         validate_camera_configs(updated_configs)
 
