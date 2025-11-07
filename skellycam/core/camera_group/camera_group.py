@@ -41,6 +41,7 @@ class CameraGroup:
     configs: CameraConfigs
     cameras: CameraManager
     shm: CameraGroupSharedMemory | None = None
+    started: bool = False
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -73,6 +74,7 @@ class CameraGroup:
         )
 
     def start(self) -> CameraConfigs:
+        if self.started:
         logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
         self.cameras.start()
         logger.debug(f"Awaiting extracted configs so we can create shared memory...")
