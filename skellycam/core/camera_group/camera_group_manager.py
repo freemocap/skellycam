@@ -39,7 +39,7 @@ class CameraGroupManager:
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group
 
-    def connect_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+    def create_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
