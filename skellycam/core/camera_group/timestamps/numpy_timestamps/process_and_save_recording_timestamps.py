@@ -66,7 +66,7 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
     return frame_numbers, TimebaseMapping.from_numpy_record_array(timebase_mapping_recarray)
 
 
-def process_and_save_recording_timestamps(
+async def process_and_save_recording_timestamps(
         frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
         camera_configs: CameraConfigs,
         recording_info: RecordingInfo, ) -> RecordingTimestampsStats:
@@ -82,7 +82,7 @@ def process_and_save_recording_timestamps(
     tik_cams = time.perf_counter()
     # Process timestamps
     (all_timestamps,
-     all_durations) = process_recording_timestamps(
+     all_durations) =  await process_recording_timestamps(
         frame_metadatas_by_camera=frame_metadatas_by_camera,
         frame_numbers=frame_numbers,
     )

@@ -91,21 +91,21 @@ class CameraGroupManager:
         self.camera_groups.clear()
         self.closing = False
 
-    def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
+    async def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """
         Start recording for all camera groups.
         """
         for camera_group in self.camera_groups.values():
-            camera_group.start_recording(recording_info=recording_info)
+            await camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
 
-    def stop_recording_all_groups(self) -> None:
+    async def stop_recording_all_groups(self) -> None:
         """
         Stop recording for all camera groups.
         """
 
         for camera_group in self.camera_groups.values():
-            camera_group.stop_recording()
+            await camera_group.stop_recording()
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
 
     def get_latest_frontend_payloads(self,

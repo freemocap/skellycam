@@ -94,7 +94,7 @@ async def camera_group_apply_post_endpoint(
 
 
 @camera_router.post("/group/all/record/start", summary="Start recording")
-def start_recording(
+async def start_recording(
         request: Request,
         request_body: StartRecordingRequest = Body(..., examples=[StartRecordingRequest()])
 ) -> bool:
@@ -105,7 +105,7 @@ def start_recording(
             )
 
         Path(request_body.recording_directory).mkdir(parents=True, exist_ok=True)
-        get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
+        await get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
 
         return True
     except Exception as e:
@@ -114,9 +114,9 @@ def start_recording(
 
 
 @camera_router.get("/group/all/record/stop", summary="Stop recording")
-def stop_recording(request: Request) -> bool:
+async def stop_recording(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
+        await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, await_10ms
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class CameraOrchestrator:
         return {camera_id: status.frame_count.value for camera_id, status in self.camera_statuses.items()}
 
 
-    def pause(self, await_paused: bool = True) -> None:
+    async def pause(self, await_paused: bool = True) -> None:
         logger.info("Pausing all cameras...")
         for status in self.camera_statuses.values():
             status.should_pause.value = True
@@ -59,9 +59,10 @@ class CameraOrchestrator:
         if await_paused:
             logger.info("Waiting for all cameras to pause...")
             while not self.all_cameras_paused:
-                wait_10ms()
+                await await_10ms()
             logger.trace("All cameras paused.")
-    def unpause(self, await_unpaused: bool = True) -> None:
+
+    async def unpause(self, await_unpaused: bool = True) -> None:
         logger.info("Unpausing all cameras...")
         for status in self.camera_statuses.values():
             status.should_pause.value = False
@@ -69,7 +70,7 @@ class CameraOrchestrator:
         if await_unpaused:
             logger.info("Waiting for all cameras to unpause...")
             while self.any_cameras_paused:
-                wait_10ms()
+                await await_10ms()
             logger.trace("All cameras unpaused.")
 
     def should_record_frame_number(self, frame_number: int) -> tuple[bool, bool]:

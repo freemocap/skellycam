@@ -17,7 +17,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.types.type_overloads import CameraIdString, CameraGroupIdString, WorkerStrategy, FrameNumberInt, \
     MultiframeTimestampFloat
-from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms, await_100ms
+from skellycam.utilities.wait_functions import wait_10ms, wait_1s, wait_30ms, await_100ms, await_10ms
 from skellycam.core.camera_group.camera_status import CameraStatus
 logger = logging.getLogger(__name__)
 
@@ -151,11 +151,11 @@ class CameraGroup:
         logger.info(f"Updated camera configs - {list(requested_configs.keys())}")
         return self.configs
 
-    def start_recording(self, recording_info: RecordingInfo):
+    async def start_recording(self, recording_info: RecordingInfo):
         """
         Start recording for the camera group.
         """
-        self.cameras.pause(await_paused=True)
+        await self.cameras.pause(await_paused=True)
         logger.info("Publishing recording info message...")
         frame_count = max([status.frame_count.value for status in self.cameras.orchestrator.camera_statuses.values()])
         self.cameras.orchestrator.last_recording_frame_number.value  = -1  # Reset last recording frame number
@@ -163,26 +163,26 @@ class CameraGroup:
         self.ipc.pubsub.topics[TopicTypes.RECORDING_INFO].publish(RecordingInfoMessage(recording_info=recording_info))
 
 
-        wait_10ms()
-        self.cameras.unpause(await_unpaused=True)
+        await await_10ms()
+        await self.cameras.unpause(await_unpaused=True)
         logger.info("Camera group unpaused - Recording successfully started.")
 
         logger.info(
             f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")
 
-    def stop_recording(self):
+    async def stop_recording(self):
         """
         Stop recording for the camera group.
         """
 
         logger.debug(f"Stopping recording for all cameras in orchestrator...")
-        self.cameras.pause(await_paused=True)
+        await self.cameras.pause(await_paused=True)
         frame_count = max(
             [status.frame_count.value for status in self.cameras.orchestrator.camera_statuses.values()])
         self.cameras.orchestrator.first_recording_frame_number.value = -1
         self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
-        self.cameras.unpause(await_unpaused=True)
-        finalize_recording(ipc=self.ipc, cameras=self.cameras)
+        await self.cameras.unpause(await_unpaused=True)
+        await finalize_recording(ipc=self.ipc, cameras=self.cameras)
         logger.info(f"Stopped recording for camera group ID: {self.id}")
 
 
@@ -229,7 +229,7 @@ async def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: Camera
     return updated_configs
 
 
-def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
+async def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
     recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {camera_id: None for camera_id in
                                                                                                 cameras.orchestrator.camera_statuses.keys()}
     recording_info: RecordingInfo | None = None
@@ -252,7 +252,7 @@ def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
                 raise RuntimeError(
                     f"Received multiple recording info messages with different recording names: "
                     f"{recording_info.recording_name} and {recording_finished_message.recording_info.recording_name}")
-        wait_30ms()
+        await await_100ms()
 
     if not all([isinstance(response, RecordingFinishedMessage) for response in
                recording_finished_messages_by_camera.values()]):
@@ -261,5 +261,5 @@ def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
         recording_info=recording_info,
         frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items()},
     )
-    recording_finalizer.finalize_recording()
+    await recording_finalizer.finalize_recording()
     # logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")

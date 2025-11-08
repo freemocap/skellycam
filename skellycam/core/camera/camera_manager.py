@@ -70,11 +70,11 @@ class CameraManager:
         else:
             self.pause(await_paused=await_state)
 
-    def pause(self, await_paused: bool):
-        self.orchestrator.pause(await_paused=await_paused)
+    async def pause(self, await_paused: bool):
+        await self.orchestrator.pause(await_paused=await_paused)
 
-    def unpause(self, await_unpaused: bool):
-        self.orchestrator.unpause(await_unpaused=await_unpaused)
+    async def unpause(self, await_unpaused: bool):
+        await self.orchestrator.unpause(await_unpaused=await_unpaused)
 
     def close(self):
         logger.info("Closing camera manager and all camera processes...")

@@ -5,7 +5,7 @@ from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_
 from skellycam.core.types.type_overloads import CameraIdString
 
 
-def process_recording_timestamps(
+async def process_recording_timestamps(
         frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
         frame_numbers: list[int]
 ) -> tuple[TimestampsArray, DurationArray]:
@@ -24,7 +24,7 @@ def process_recording_timestamps(
             all_timestamps[camera_index, frame_number] = frame_metadatas_by_camera[camera_id][frame_number].timestamps[0]
 
     # Calculate durations
-    all_durations = calculate_durations(all_timestamps=all_timestamps)
+    all_durations = await calculate_durations(all_timestamps=all_timestamps)
 
     # # Calculate statistics
     # timestamp_statistics = calculate_frame_timestamps_statistics(all_timestamps=all_timestamps,
