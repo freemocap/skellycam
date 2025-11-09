@@ -98,3 +98,6 @@ class RecordingInfo(BaseModel):
         if not isinstance(other, RecordingInfo):
             return NotImplemented
         return self.model_dump_json() == other.model_dump_json()
+
+    def __str__(self):
+        return f"RecordingInfo(name={self.recording_name},\n directory={self.recording_directory},\n uuid={self.recording_uuid})"
