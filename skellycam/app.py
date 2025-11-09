@@ -75,7 +75,7 @@ async def app_lifespan(
     with app.state.heartbeat_timestamp.get_lock():
         app.state.heartbeat_timestamp.value = time.perf_counter()
 
-    # Start heartbeat task IN THE APP CONTEXT
+    # Start heartbeat task
     heartbeat_task = asyncio.create_task(
         keep_alive_task(
             heartbeat_timestamp=app.state.heartbeat_timestamp,

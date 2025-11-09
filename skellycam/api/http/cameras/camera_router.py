@@ -134,9 +134,9 @@ def close_all_camera_groups(request: Request) -> bool:
 
 
 @camera_router.get("/group/all/pause_unpause", summary="Pause/unpause cameras")
-def pause_camera_groups(request: Request) -> bool:
+async def pause_camera_groups(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(app=request.app).pause_unpause_all_groups()
+        await get_or_create_camera_group_manager(app=request.app).pause_unpause_all_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)

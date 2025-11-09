@@ -135,8 +135,8 @@ class CameraGroup:
             logger.warning(f"Requested frame number {frame_number} but got {frame_number_out}")
         return frames_bytearray
 
-    def pause_unpause(self, await_state_change: bool = True):
-        self.cameras.pause_unpause(await_state_change)
+    async def pause_unpause(self, await_state_change: bool = True):
+        await self.cameras.pause_unpause(await_state_change)
 
 
     async def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:

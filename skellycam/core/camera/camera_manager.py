@@ -64,11 +64,11 @@ class CameraManager:
         for worker in self.camera_workers.values():
             worker.start()
 
-    def pause_unpause(self, await_state: bool = True):
+    async def pause_unpause(self, await_state: bool = True):
         if self.orchestrator.any_cameras_paused:
-            self.unpause(await_unpaused=await_state)
+            await self.unpause(await_unpaused=await_state)
         else:
-            self.pause(await_paused=await_state)
+            await self.pause(await_paused=await_state)
 
     async def pause(self, await_paused: bool):
         await self.orchestrator.pause(await_paused=await_paused)
