@@ -170,7 +170,7 @@ class CameraGroup:
         logger.info(
             f"Started recording for camera group ID: {self.id} wit recording name: {recording_info.recording_name}")
 
-    async def stop_recording(self):
+    async def stop_recording(self) -> RecordingInfo:
         """
         Stop recording for the camera group.
         """
@@ -182,8 +182,9 @@ class CameraGroup:
         self.cameras.orchestrator.first_recording_frame_number.value = -1
         self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
         await self.cameras.unpause(await_unpaused=True)
-        await finalize_recording(ipc=self.ipc, cameras=self.cameras)
-        logger.info(f"Stopped recording for camera group ID: {self.id}")
+        recording_info = await finalize_recording(ipc=self.ipc, cameras=self.cameras)
+        logger.info(f"Stopped recording for camera group ID: {self.id} with recording name: {recording_info.recording_name}")
+        return recording_info
 
 
     def close(self):
@@ -229,7 +230,7 @@ async def await_extracted_configs(ipc: CameraGroupIPC, requested_configs: Camera
     return updated_configs
 
 
-async def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
+async def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager) -> RecordingInfo:
     recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {camera_id: None for camera_id in
                                                                                                 cameras.orchestrator.camera_statuses.keys()}
     recording_info: RecordingInfo | None = None
@@ -262,4 +263,4 @@ async def finalize_recording(ipc: CameraGroupIPC, cameras: CameraManager):
         frame_metadatas_by_camera={camera_id: message.frame_metadatas for camera_id, message in recording_finished_messages_by_camera.items()},
     )
     await recording_finalizer.finalize_recording()
-    # logger.success(f"Recording finalized for recording name: {recording_info.recording_name}\n\n{recording_finalizer.recording_timestamps.to_stats()}.")
+    return recording_info

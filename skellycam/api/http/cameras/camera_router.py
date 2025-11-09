@@ -116,7 +116,8 @@ async def start_recording(
 @camera_router.get("/group/all/record/stop", summary="Stop recording")
 async def stop_recording(request: Request) -> bool:
     try:
-        await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
+        recording_infos = await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
+
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)

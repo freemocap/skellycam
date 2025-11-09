@@ -99,14 +99,15 @@ class CameraGroupManager:
             await camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
 
-    async def stop_recording_all_groups(self) -> None:
+    async def stop_recording_all_groups(self) -> list[RecordingInfo]:
         """
         Stop recording for all camera groups.
         """
-
+        recording_infos:list[RecordingInfo] = []
         for camera_group in self.camera_groups.values():
-            await camera_group.stop_recording()
+            recording_infos.append(await camera_group.stop_recording())
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
+        return recording_infos
 
     def get_latest_frontend_payloads(self,
                                      if_newer_than: int,
