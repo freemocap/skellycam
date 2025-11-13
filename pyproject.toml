@@ -54,7 +54,7 @@ dependencies = [
     "numpy==1.26.2",
     "opencv-contrib-python==4.10.*",
     "pydantic==2.*",
-    "Pillow==10.0.1",
+    "Pillow",
     "psutil==5.9.6",
     "setproctitle==1.3.3",
     "scipy==1.11.4",
