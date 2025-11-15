@@ -18,41 +18,43 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupManager:
     global_kill_flag: multiprocessing.Value
+    heartbeat_timestamp: multiprocessing.Value
     subprocess_registry: list[multiprocessing.Process]
     closing: bool = False
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
         default_factory=dict)
 
-    def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+    async def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
         camera_group = CameraGroup.create(camera_configs=camera_configs,
+                                            heartbeat_timestamp=self.heartbeat_timestamp,
                                           global_kill_flag=self.global_kill_flag,
                                           subprocess_registry=self.subprocess_registry)
         self.camera_group_framerate_subscriptions[camera_group.id] = camera_group.ipc.pubsub.get_subscription(
             TopicTypes.FRAMERATE)
         self.camera_groups[camera_group.id] = camera_group
-        self.camera_groups[camera_group.id].start()
+        await self.camera_groups[camera_group.id].start()
 
         logger.info(f"Creating camera group with ID: {camera_group.id} and cameras: {camera_group.camera_ids}")
         return camera_group
 
-    def connect_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
+    async def create_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup | None:
         """
         Create a camera group with the provided configuration settings.
         """
         camera_groups = self._get_configs_by_group(camera_configs)
         if not camera_groups:
-            return self.create_and_start_camera_group(camera_configs)
+            return await self.create_and_start_camera_group(camera_configs)
         if len(camera_groups) > 1:
             raise NotImplementedError("Cannot update multiple camera groups at once (yet).")
         camera_group_id, configs = next(iter(camera_groups.items()))
         camera_group = self.get_camera_group(camera_group_id)
         if camera_group is None:
             raise ValueError(f"Camera group with ID {camera_group_id} does not exist.")
-        camera_group.update_camera_settings(requested_configs=configs)
+        await camera_group.update_camera_settings(requested_configs=configs)
         return camera_group
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup | None:
@@ -72,14 +74,7 @@ class CameraGroupManager:
                     configs_by_group[camera_group.id][camera_id] = camera_config
         return configs_by_group
 
-    def update_camera_settings(self, camera_configs: CameraConfigs) -> CameraConfigs:
-        extracted_configs: CameraConfigs = {}
-        for camera_group_id, camera_configs in self._get_configs_by_group(camera_configs).items():
-            extracted_configs.update(self.camera_groups[camera_group_id].update_camera_settings(
-                requested_configs=camera_configs))
-            logger.info(
-                f"Camera Group ID: {camera_group_id} - Updated Camera Configs for Cameras: {list(camera_configs.keys())}")
-        return extracted_configs
+
 
     def close_all_camera_groups(self) -> None:
         """
@@ -96,22 +91,23 @@ class CameraGroupManager:
         self.camera_groups.clear()
         self.closing = False
 
-    def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
+    async def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """
         Start recording for all camera groups.
         """
         for camera_group in self.camera_groups.values():
-            camera_group.start_recording(recording_info=recording_info)
+            await camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
 
-    def stop_recording_all_groups(self) -> None:
+    async def stop_recording_all_groups(self) -> list[RecordingInfo]:
         """
         Stop recording for all camera groups.
         """
-
+        recording_infos:list[RecordingInfo] = []
         for camera_group in self.camera_groups.values():
-            camera_group.stop_recording()
+            recording_infos.append(await camera_group.stop_recording())
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
+        return recording_infos
 
     def get_latest_frontend_payloads(self,
                                      if_newer_than: int,
@@ -153,12 +149,12 @@ class CameraGroupManager:
             camera_group.pause(await_paused=await_paused)
             logger.info(f"Paused camera group ID: {camera_group.id}")
 
-    def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
+    async def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
         """
         Pause/Unpause all camera groups.
         """
         for camera_group in self.camera_groups.values():
-            camera_group.pause_unpause(await_state_change=await_state_change)
+            await camera_group.pause_unpause(await_state_change=await_state_change)
             logger.info(f"Paused camera group ID: {camera_group.id}")
 
     def unpause_all_groups(self, await_unpaused: bool = True) -> None:
@@ -205,6 +201,7 @@ def get_or_create_camera_group_manager(app: FastAPI) -> CameraGroupManager:
 
     _CAMERA_GROUP_MANAGER = CameraGroupManager(
         global_kill_flag=app.state.global_kill_flag,
+        heartbeat_timestamp=app.state.heartbeat_timestamp,
         subprocess_registry=app.state.subprocess_registry
     )
     return _CAMERA_GROUP_MANAGER

@@ -22,7 +22,7 @@ DEFAULT_CAMERA_NAME: CameraNameString = "Default Camera"
 DEFAULT_RESOLUTION: ImageResolution = ImageResolution(height=DEFAULT_IMAGE_HEIGHT, width=DEFAULT_IMAGE_WIDTH)
 DEFAULT_EXPOSURE_MODE: str = ExposureModes.MANUAL.name
 DEFAULT_EXPOSURE: int = -7
-DEFAULT_FRAMERATE: float = 0.0
+DEFAULT_FRAMERATE: float = -1.0  # Use camera default framerate
 DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
 DEFAULT_WRITER_FOURCC: str = "X264"  # Need set up our installer and whanot so we can us `X264` (or H264, if its easier to set up) skellycam/system/diagnostics/run_cv2_video_writer_diagnostics.py
@@ -447,6 +447,4 @@ def validate_camera_configs(camera_configs: CameraConfigs) -> None:
     if len(camera_indexes) != len(set(camera_indexes)):
         raise ValueError(f"Camera indexes must be unique across all camera configurations, received: {camera_indexes_by_camera}")
 
-0
-if __name__ == "__main__":
-    print(CameraConfig(camera_index=0))
+

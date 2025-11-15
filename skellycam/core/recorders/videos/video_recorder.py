@@ -39,6 +39,7 @@ class VideoRecorder:
     def create(cls,
                recording_info: RecordingInfo|None,
                config: CameraConfig,
+               framerate: float|None = None
                ):
         if recording_info is None:
             recording_info = RecordingInfo.create_temp()
@@ -56,7 +57,7 @@ class VideoRecorder:
                         camera_index=config.camera_index,
                         video_file_path=video_file_path,
                         video_image_shape=video_image_shape,
-                        framerate=config.framerate,
+                        framerate=config.framerate if framerate is None else framerate,
                         writer_fourcc=config.writer_fourcc,
                         recording_info=recording_info,
                         )

@@ -26,11 +26,10 @@ def extract_config_from_cv2_capture(camera_index: CameraIndexInt,
     if any([
         width == 0, 
         height == 0, 
-        framerate == 0,
         not (platform == "darwin") and exposure == 0  # macOS always returns 0 for exposure
     ]):
         logger.error(f"Failed to extract configuration from cv2.VideoCapture object - "
-                     f"width: {width}, height: {height}, exposure: {exposure}, framerate: {framerate}")
+                     f"width: {width}, height: {height}, exposure: {exposure}")
         raise ValueError("Invalid camera configuration detected. Please check the camera settings.")
     try:
         return CameraConfig(

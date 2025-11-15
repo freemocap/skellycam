@@ -7,6 +7,7 @@ from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapp
 from skellycam.core.ipc.pubsub.pubsub_manager import create_camera_group_pubsub_manager, TopicTypes, PubSubTopicManager
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.types.type_overloads import CameraGroupIdString, TopicSubscriptionQueue
+from skellycam.utilities.check_main_processs_heartbeat import check_main_process_heartbeat
 from skellycam.utilities.create_camera_group_id import create_camera_group_id
 
 logger = logging.getLogger(__name__)
@@ -27,14 +28,14 @@ class CameraGroupIPC(BaseModel):
     shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
         default_factory=lambda: multiprocessing.Value("b", False))
 
-
     global_kill_flag: SkipValidation[multiprocessing.Value]
+    heartbeat_timestamp: SkipValidation[multiprocessing.Value]
 
     @classmethod
     def create(cls,
                global_kill_flag: multiprocessing.Value,
+               heartbeat_timestamp: multiprocessing.Value,
                group_id: CameraGroupIdString | None = None) -> 'CameraGroupIPC':
-
         if group_id is None:
             group_id = create_camera_group_id()
         pubsub = create_camera_group_pubsub_manager(group_id=group_id)
@@ -44,13 +45,18 @@ class CameraGroupIPC(BaseModel):
             pubsub=pubsub,
             extracted_config_subscription=pubsub.topics[TopicTypes.EXTRACTED_CONFIG].get_subscription(),
             recording_finished_subscription=pubsub.topics[TopicTypes.RECORDING_FINISHED].get_subscription(),
+            heartbeat_timestamp=heartbeat_timestamp,
             global_kill_flag=global_kill_flag,
 
         )
 
     @property
     def should_continue(self) -> bool:
-        return not self.shutdown_camera_group_flag.value and not self.global_kill_flag.value
+        return (not self.shutdown_camera_group_flag.value
+                and not self.global_kill_flag.value
+                and check_main_process_heartbeat(global_kill_flag=self.global_kill_flag,
+                                                 heartbeat_timestamp=self.heartbeat_timestamp, )
+                )
 
     @should_continue.setter
     def should_continue(self, value: bool) -> None:
@@ -68,4 +74,3 @@ class CameraGroupIPC(BaseModel):
 
     def kill_everything(self) -> None:
         self.global_kill_flag.value = True
-

@@ -44,7 +44,7 @@ export const CameraConfigSchema = z.object({
         width: z.number().int(),
         height: z.number().int()
     }),
-    framerate: z.number().min(1).max(1000),
+    framerate: z.number().min(-1).max(1000), // -1 for auto
 
     // Image settings
     color_channels: z.number().int().min(1).max(4),
@@ -129,7 +129,7 @@ export function createDefaultCameraConfig(
         camera_name: name,
         use_this_camera: true,
         resolution: { width: 1280, height: 720 },
-        framerate: 30,
+        framerate: -1,
         color_channels: 3,
         pixel_format: 'RGB',
         rotation: -1,

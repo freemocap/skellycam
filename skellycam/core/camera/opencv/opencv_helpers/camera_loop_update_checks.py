@@ -24,6 +24,7 @@ def camera_loop_update_checks(config: CameraConfig,
                               self_status: CameraStatus,
                               update_camera_settings_subscription: TopicSubscriptionQueue,
                               video_recorder: VideoRecorder | None,
+                                framerate: float | None = None
                               ) -> tuple[
     CameraConfig, np.recarray, VideoRecorder | None, CameraStatus]:
     video_recorder = check_for_new_recording_info(config=config,
@@ -31,7 +32,8 @@ def camera_loop_update_checks(config: CameraConfig,
                                                   orchestrator=orchestrator,
                                                   recording_info_subscription=recording_info_subscription,
                                                   self_status=self_status,
-                                                  video_recorder=video_recorder)
+                                                  video_recorder=video_recorder,
+                                                  framerate=framerate)
 
     frame_rec_array, config = check_for_new_config(current_config=config,
                                                    frame_rec_array=frame_rec_array,

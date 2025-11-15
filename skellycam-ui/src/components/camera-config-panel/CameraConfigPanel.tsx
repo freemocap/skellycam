@@ -4,6 +4,7 @@ import {
     Collapse,
     IconButton,
     Tooltip,
+    Typography,
     useTheme,
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
@@ -72,7 +73,7 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <Box
                 sx={{
-                    p: 1.5,
+                    p: 2.5,
                     ml: 7,
                     mr: 2,
                     mb: 1,
@@ -81,77 +82,90 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                     backgroundColor: theme.palette.background.paper,
                 }}
             >
-                <Grid container spacing={2}>
-                    {/* Top row with Resolution, Framerate, and Rotation */}
-                    <Grid size={{ xs: 12, md: 4 }}>
+                <Grid container spacing={2.5}>
+                    {/* Top row with Resolution, Framerate, Rotation, and Copy button */}
+                    <Grid size={{ xs: 12, sm: 6, md: 3.5, lg: 3.5 }}>
                         <CameraConfigResolution
                             resolution={config.resolution}
                             onChange={handleResolutionChange}
                         />
                     </Grid>
 
-                    <Grid size={{ xs: 12, md: 3 }}>
-                        <CameraConfigFramerate
-                            framerate={config.framerate}
-                            onChange={handleFramerateChange}
-                        />
-                    </Grid>
+                    {/*<Grid size={{ xs: 12, sm: 6, md: 2.5, lg: 2.5 }}>*/}
+                    {/*    <CameraConfigFramerate*/}
+                    {/*        framerate={config.framerate}*/}
+                    {/*        onChange={handleFramerateChange}*/}
+                    {/*    />*/}
+                    {/*</Grid>*/}
 
-                    <Grid size={{ xs: 12, md: 3 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3 }}>
                         <CameraConfigRotation
                             rotation={config.rotation}
                             onChange={handleRotationChange}
                         />
                     </Grid>
 
-                    <Grid
-                        size={{ xs: 12, md: 2 }}
-                        sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}
-                    >
-                        <Tooltip
-                            title={
-                                otherCamerasCount > 0
-                                    ? `Copy settings to ${otherCamerasCount} other camera${
-                                        otherCamerasCount > 1 ? "s" : ""
-                                    }`
-                                    : "No other cameras to copy to"
-                            }
+                    <Grid size={{ xs: 12, sm: 6, md: 3, lg: 3 }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'flex-start',
+                                alignItems: 'center',
+                            }}
                         >
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={handleCopyToAllCameras}
-                                    disabled={otherCamerasCount === 0}
-                                    aria-label="Copy settings to all cameras"
-                                    sx={{
-                                        color: theme.palette.primary.main,
-                                        "&:hover": {
-                                            backgroundColor: theme.palette.primary.light,
+                            <Tooltip
+                                title={
+                                    otherCamerasCount > 0
+                                        ? `Copy settings to ${otherCamerasCount} other camera${
+                                            otherCamerasCount > 1 ? "s" : ""
+                                        }`
+                                        : "No other cameras to copy to"
+                                }
+                            >
+                                <span>
+                                    <IconButton
+                                        size="medium"
+                                        onClick={handleCopyToAllCameras}
+                                        disabled={otherCamerasCount === 0}
+                                        aria-label="Copy settings to all cameras"
+                                        sx={{
                                             color: theme.palette.primary.contrastText,
-                                        },
-                                        "&:disabled": {
-                                            color: theme.palette.action.disabled,
-                                        },
-                                    }}
-                                >
-                                    <MediationIcon />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                                            border: `1px solid ${theme.palette.divider}`,
+                                            '&:hover': {
+                                                backgroundColor: theme.palette.primary.main,
+                                                color: theme.palette.primary.contrastText,
+                                                borderColor: theme.palette.primary.main,
+                                            },
+                                            '&:disabled': {
+                                                color: theme.palette.action.disabled,
+                                            },
+                                        }}
+                                    >
+                                        <MediationIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ mt: 0.5, textAlign: 'center' }}
+                            >
+                                Copy to All
+                            </Typography>
+                        </Box>
                     </Grid>
 
-                    {/* Bottom row with Exposure controls */}
+                    {/* Bottom row with Exposure controls (full width with separator) */}
                     <Grid size={12}>
-                        <CameraConfigExposure
-                            exposureMode={config.exposure_mode}
-                            exposure={config.exposure}
-                            onExposureModeChange={handleExposureModeChange}
-                            onExposureValueChange={handleExposureValueChange}
-                        />
+                        <Box sx={{ pt: 1.5, borderTop: `1px solid ${theme.palette.divider}` }}>
+                            <CameraConfigExposure
+                                exposureMode={config.exposure_mode}
+                                exposure={config.exposure}
+                                onExposureModeChange={handleExposureModeChange}
+                                onExposureValueChange={handleExposureValueChange}
+                            />
+                        </Box>
                     </Grid>
                 </Grid>
             </Box>

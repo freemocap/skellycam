@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+import time
 
+from skellycam.utilities.check_main_processs_heartbeat import check_main_process_heartbeat
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from fastapi import FastAPI
 
@@ -21,12 +23,15 @@ class WebsocketServer:
     def __init__(self, app:FastAPI, websocket: WebSocket):
 
         self.websocket = websocket
-        self._global_kill_flag = app.state.global_kill_flag
+        self.global_kill_flag = app.state.global_kill_flag
+        self.last_heartbeat_check=time.perf_counter()
+        self.heartbeat_timestamp = app.state.heartbeat_timestamp
         self._cgm: CameraGroupManager= get_or_create_camera_group_manager(app=app)
 
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []
         self.last_received_frontend_confirmation: int = -1
+
         self.last_sent_frame_number: int = -1
         self._display_image_sizes: dict[CameraGroupIdString, dict[str, float]] | None = None
         self._frontend_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
@@ -52,10 +57,13 @@ class WebsocketServer:
 
     @property
     def should_continue(self):
+
         return (
-                not self._global_kill_flag.value
+                not self.global_kill_flag.value
                 and self._websocket_should_continue
                 and self.websocket.client_state == WebSocketState.CONNECTED
+                and check_main_process_heartbeat(global_kill_flag=self.global_kill_flag,
+                                     heartbeat_timestamp=self.heartbeat_timestamp,)
         )
 
     async def run(self):
@@ -137,7 +145,7 @@ class WebsocketServer:
             pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
-            self._global_kill_flag.value = True
+            self.global_kill_flag.value = True
             raise
 
     async def _logs_relay(self, ws_log_level: int = MIN_LOG_LEVEL_FOR_WEBSOCKET):
@@ -161,7 +169,7 @@ class WebsocketServer:
             logger.info("Client disconnected, ending log relay task...")
         except Exception as e:
             logger.exception(f"Error in websocket log relay: {e.__class__}: {e}")
-            self._global_kill_flag.value = True
+            self.global_kill_flag.value = True
             raise
 
     async def _app_state_sender(self):
@@ -185,7 +193,7 @@ class WebsocketServer:
             logger.debug("State sender task cancelled")
         except Exception as e:
             logger.exception(f"Error in state sender: {e.__class__}: {e}")
-            self._global_kill_flag.value = True
+            self.global_kill_flag.value = True
             raise
         finally:
             logger.info("Ending state sender task...")
@@ -230,7 +238,7 @@ class WebsocketServer:
             logger.debug("Client message handler task cancelled")
         except Exception as e:
             logger.exception(f"Error handling client message: {e.__class__}: {e}")
-            self._global_kill_flag.value = True
+            self.global_kill_flag.value = True
             raise
         finally:
             logger.info("Ending client message handler...")

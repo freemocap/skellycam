@@ -82,7 +82,7 @@ async def camera_group_apply_post_endpoint(
         logger.info(f"Request to {request.url}: {raw_body.decode('utf-8')}")
 
         configs = request_body.camera_configs
-        camera_group = get_or_create_camera_group_manager(app=request.app).connect_or_update_camera_group(camera_configs=configs)
+        camera_group = await get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(camera_configs=configs)
 
         return CreateCameraGroupResponse(
             group_id=camera_group.id,
@@ -94,7 +94,7 @@ async def camera_group_apply_post_endpoint(
 
 
 @camera_router.post("/group/all/record/start", summary="Start recording")
-def start_recording(
+async def start_recording(
         request: Request,
         request_body: StartRecordingRequest = Body(..., examples=[StartRecordingRequest()])
 ) -> bool:
@@ -105,7 +105,7 @@ def start_recording(
             )
 
         Path(request_body.recording_directory).mkdir(parents=True, exist_ok=True)
-        get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
+        await get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
 
         return True
     except Exception as e:
@@ -114,9 +114,10 @@ def start_recording(
 
 
 @camera_router.get("/group/all/record/stop", summary="Stop recording")
-def stop_recording(request: Request) -> bool:
+async def stop_recording(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
+        recording_infos = await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
+
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
@@ -134,9 +135,9 @@ def close_all_camera_groups(request: Request) -> bool:
 
 
 @camera_router.get("/group/all/pause_unpause", summary="Pause/unpause cameras")
-def pause_camera_groups(request: Request) -> bool:
+async def pause_camera_groups(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(app=request.app).pause_unpause_all_groups()
+        await get_or_create_camera_group_manager(app=request.app).pause_unpause_all_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)

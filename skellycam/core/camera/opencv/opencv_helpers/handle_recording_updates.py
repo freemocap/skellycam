@@ -17,7 +17,9 @@ def check_for_new_recording_info(config: CameraConfig,
                                  orchestrator: CameraOrchestrator,
                                  recording_info_subscription: TopicSubscriptionQueue,
                                  self_status: CameraStatus,
-                                 video_recorder: VideoRecorder | None) -> VideoRecorder | None:
+                                 video_recorder: VideoRecorder | None,
+                                    framerate: float | None = None
+                                 ) -> VideoRecorder | None:
 
     if not recording_info_subscription.empty():
         recording_info_message = recording_info_subscription.get()
@@ -37,6 +39,7 @@ def check_for_new_recording_info(config: CameraConfig,
         video_recorder = VideoRecorder.create(
             recording_info=recording_info,
             config=config,
+            framerate=framerate
         )
         self_status.recording_in_progress.value = True
         while not orchestrator.all_cameras_recording and ipc.should_continue:

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
     process_and_save_recording_timestamps
+from skellycam.core.camera_group.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -43,11 +44,11 @@ class RecordingFinalizer(BaseModel):
                                    for camera_id, metadata in frame_metadatas_by_camera.items()}
                    )
 
-    def finalize_recording(self):
+    async def finalize_recording(self):
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file(camera_configs=self.camera_configs)
 
-        timestamp_stats: RecordingTimestampsStats = process_and_save_recording_timestamps(
+        timestamp_stats: RecordingTimestampsStats = await process_and_save_recording_timestamps(
             recording_info=self.recording_info,
             camera_configs=self.camera_configs,
             frame_metadatas_by_camera=self.frame_metadatas_by_camera,

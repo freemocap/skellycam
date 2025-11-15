@@ -34,7 +34,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
     should_apply_exposure_mode = initial_config or prior_config.exposure_mode != config.exposure_mode
     should_apply_exposure_value = initial_config or prior_config.exposure != config.exposure
     should_apply_resolution = initial_config or prior_config.resolution != config.resolution
-    should_apply_framerate = initial_config or prior_config.framerate != config.framerate
+    should_apply_framerate = False#initial_config or prior_config.framerate != config.framerate
     should_apply_capture_fourcc = initial_config or prior_config.capture_fourcc != config.capture_fourcc
 
     try:

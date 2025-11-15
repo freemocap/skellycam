@@ -6,6 +6,7 @@ import numpy.typing as npt
 from skellycam.core.types.numpy_record_dtypes import FRAME_DURATION_DTYPE, DurationArray, FloatArray, IntArray, \
     AllTimestampsArray, AllFrameGrabTimestampsArray
 from skellycam.core.types.numpy_record_dtypes import STATS_DTYPE
+from skellycam.utilities.wait_functions import await_10ms, await_1ms
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def calculate_frame_grab_timestamps(all_timestamps: AllTimestampsArray) -> AllFr
     return frame_grab_timestamps
 
 
-def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
+async def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
     """
     Calculate all duration metrics from raw timestamps.
 
@@ -47,6 +48,8 @@ def calculate_durations(all_timestamps: AllTimestampsArray) -> DurationArray:
 
     for camera_number in range(num_cameras):
         for frame_number in range(num_frames):
+            if frame_number % 1000 == 0:
+                await await_1ms() # Yield to event loop every 1000 frames to avoid blocking
             # Extract timestamps for the current camera and frame
             timestamps = all_timestamps[camera_number, frame_number]
             durations = np.recarray(1, dtype=FRAME_DURATION_DTYPE)
