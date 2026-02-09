@@ -125,9 +125,9 @@ async def stop_recording(request: Request) -> bool:
 
 
 @camera_router.delete("/group/close/all", summary="Close all camera groups")
-def close_all_camera_groups(request: Request) -> bool:
+async def close_all_camera_groups(request: Request) -> bool:
     try:
-        get_or_create_camera_group_manager(app=request.app).close_all_camera_groups()
+        await get_or_create_camera_group_manager(app=request.app).close_all_camera_groups()
         return True
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)

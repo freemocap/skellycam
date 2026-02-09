@@ -1,9 +1,7 @@
 import asyncio
 import json
 import logging
-import time
 
-from skellycam.utilities.check_main_processs_heartbeat import check_main_process_heartbeat
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from fastapi import FastAPI
 
@@ -20,13 +18,10 @@ BACKPRESSURE_WARNING_THRESHOLD: int = 1000  # Number of frames before we warn ab
 
 
 class WebsocketServer:
-    def __init__(self, app:FastAPI, websocket: WebSocket):
-
+    def __init__(self, app: FastAPI, websocket: WebSocket):
         self.websocket = websocket
         self.global_kill_flag = app.state.global_kill_flag
-        self.last_heartbeat_check=time.perf_counter()
-        self.heartbeat_timestamp = app.state.heartbeat_timestamp
-        self._cgm: CameraGroupManager= get_or_create_camera_group_manager(app=app)
+        self._cgm: CameraGroupManager = get_or_create_camera_group_manager(app=app)
 
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []
@@ -35,7 +30,6 @@ class WebsocketServer:
         self.last_sent_frame_number: int = -1
         self._display_image_sizes: dict[CameraGroupIdString, dict[str, float]] | None = None
         self._frontend_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
-
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -56,22 +50,21 @@ class WebsocketServer:
         logger.debug("WebsocketRunner context manager exited.")
 
     @property
-    def should_continue(self):
-
+    def should_continue(self) -> bool:
         return (
-                not self.global_kill_flag.value
-                and self._websocket_should_continue
-                and self.websocket.client_state == WebSocketState.CONNECTED
-                and check_main_process_heartbeat(global_kill_flag=self.global_kill_flag,
-                                     heartbeat_timestamp=self.heartbeat_timestamp,)
+            not self.global_kill_flag.value
+            and self._websocket_should_continue
+            and self.websocket.client_state == WebSocketState.CONNECTED
         )
 
     async def run(self):
         logger.info("Starting websocket runner...")
-        self.ws_tasks = [asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
-                         asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
-                         asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler"),
-                         asyncio.create_task(self._app_state_sender(), name="WebsocketStateSender")]
+        self.ws_tasks = [
+            asyncio.create_task(self._frontend_image_relay(), name="WebsocketFrontendImageRelay"),
+            asyncio.create_task(self._logs_relay(), name="WebsocketLogsRelay"),
+            asyncio.create_task(self._client_message_handler(), name="WebsocketClientMessageHandler"),
+            asyncio.create_task(self._app_state_sender(), name="WebsocketStateSender"),
+        ]
 
         try:
             await asyncio.gather(*self.ws_tasks, return_exceptions=True)
@@ -79,11 +72,9 @@ class WebsocketServer:
             logger.exception(f"Error in websocket runner: {e.__class__}: {e}")
             raise
         finally:
-            # Cancel all tasks when exiting
             for task in self.ws_tasks:
                 if not task.done():
                     task.cancel()
-
 
     def check_frame_acknowledgment_status(self) -> bool:
         if self.last_sent_frame_number == -1:
@@ -94,8 +85,7 @@ class WebsocketServer:
         """
         Relay image payloads from the shared memory to the frontend via the websocket.
         """
-        logger.info(
-            f"Starting frontend image payload relay...")
+        logger.info("Starting frontend image payload relay...")
         try:
             skipped_previous = False
             while self.should_continue:
@@ -124,9 +114,11 @@ class WebsocketServer:
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
                     if backpressure > BACKPRESSURE_WARNING_THRESHOLD and backpressure % BACKPRESSURE_WARNING_THRESHOLD == 0:
                         logger.trace(
-                            f"Backpressure detected: {backpressure} frames not acknowledged by frontend! Last sent frame: {self.last_sent_frame_number}, last received confirmation: {self.last_received_frontend_confirmation}")
+                            f"Backpressure detected: {backpressure} frames not acknowledged by frontend! "
+                            f"Last sent frame: {self.last_sent_frame_number}, "
+                            f"last received confirmation: {self.last_received_frontend_confirmation}")
 
-                backend_framerate_updates:dict[CameraGroupIdString,CurrentFramerate] = self._cgm.get_backend_framerate_updates()
+                backend_framerate_updates: dict[CameraGroupIdString, CurrentFramerate] = self._cgm.get_backend_framerate_updates()
                 if backend_framerate_updates:
                     for camera_group_id, backend_framerate in backend_framerate_updates.items():
                         if camera_group_id not in self._frontend_framerate_trackers:
@@ -157,8 +149,7 @@ class WebsocketServer:
                     log_record: LogRecordModel = LogRecordModel(**logs_queue.get_nowait())
                     if log_record.levelno < ws_log_level:
                         continue  # Skip logs below the specified level
-                    
-                    # Convert to JSON with ensure_ascii=False to preserve formatting
+
                     log_data = log_record.model_dump()
                     await self.websocket.send_json(log_data)
                 else:
@@ -177,7 +168,7 @@ class WebsocketServer:
         Periodically send the application state to the frontend.
         """
         logger.info("Starting state sender task...")
-        previous_state: dict|None = None
+        previous_state: dict | None = None
         try:
             while self.should_continue:
                 state_dict = self._cgm.to_state_dict()
@@ -187,7 +178,7 @@ class WebsocketServer:
                         "state": state_dict
                     }
                     await self.websocket.send_json(state_message)
-                await asyncio.sleep(1.0)  # Chck for state changes every second
+                await asyncio.sleep(1.0)
                 previous_state = state_dict
         except asyncio.CancelledError:
             logger.debug("State sender task cancelled")
@@ -209,20 +200,15 @@ class WebsocketServer:
                 if message:
                     if "text" in message:
                         text_content = message.get("text", "")
-                        # Try to parse as JSON if it looks like JSON
                         if text_content.strip().startswith('{') or text_content.strip().startswith('['):
                             try:
                                 data = json.loads(text_content)
-                                # Handle received_frame acknowledgment
                                 if 'frameNumber' in data:
                                     self.last_received_frontend_confirmation = data['frameNumber']
                                     self._display_image_sizes = data.get('displayImageSizes', None)
-
-
                             except json.JSONDecodeError as e:
                                 logger.error(f"Failed to decode JSON message: {e}")
                         else:
-                            # Handle plain text messages
                             if text_content.startswith("ping"):
                                 await self.websocket.send_text("pong")
                             elif text_content.startswith("pong"):
