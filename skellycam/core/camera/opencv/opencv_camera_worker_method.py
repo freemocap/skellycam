@@ -21,8 +21,6 @@ def opencv_camera_worker_method(
     shm_subscription: TopicSubscriptionQueue,
     recording_info_subscription: TopicSubscriptionQueue,
 ) -> None:
-    # NOTE: Logging (including ws_queue forwarding) is now configured
-    # automatically by ManagedProcess.run() before this function is called.
 
     logger.trace(f"Camera {camera_id} worker started")
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
