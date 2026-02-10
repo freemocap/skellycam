@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 from dataclasses import dataclass
+from copy import deepcopy
 
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
@@ -99,8 +100,8 @@ class CameraOrchestrator:
         return self._all_camera_counts_greater_than_or_equal_to_camera(camera_id)
 
     def _all_camera_counts_greater_than_or_equal_to_camera(self, camera_id: CameraIdString) -> bool:
-
-        if all(self.camera_frame_counts[camera_id] <= count for count in self.camera_frame_counts.values()):
+        counts = deepcopy(self.camera_frame_counts)
+        if all(counts[camera_id] <= count for count in counts.values()):
             return True
         return False
 
@@ -111,4 +112,3 @@ class CameraOrchestrator:
         while self.any_cameras_alive:
             wait_100ms()
         logger.info("All cameras closed.")
-

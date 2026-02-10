@@ -112,9 +112,11 @@ class SharedMemoryRingBuffer(BaseModel):
     def new_data_indicies(self) -> list[int]:
         if not self.first_data_written:
             return []
-        if not self.new_data_available:
+        read_idx = self.last_read_index.value
+        write_idx = self.last_written_index.value
+        if write_idx <= read_idx:
             return []
-        return list(range(self.last_read_index.value, self.last_written_index.value))
+        return list(range(read_idx, write_idx))
 
     def _check_for_overwrite(self, next_index: int) -> bool:
         return next_index % self.ring_buffer_length == self.last_read_index.value % self.ring_buffer_length
@@ -126,8 +128,12 @@ class SharedMemoryRingBuffer(BaseModel):
             raise ValueError(f"Data type {data.dtype} does not match SharedMemoryRingBuffer data type {self.dtype}.")
 
         index_to_write = self.last_written_index.value + 1
-        if self._check_for_overwrite(index_to_write) and not overwrite_allowed and False:
-            raise ValueError("Cannot overwrite data that hasn't been read yet.")
+        if self._check_for_overwrite(index_to_write) and not overwrite_allowed:
+            raise ValueError(
+                f"Cannot overwrite data that hasn't been read yet. "
+                f"Write index: {index_to_write}, read index: {self.last_read_index.value}, "
+                f"ring length: {self.ring_buffer_length}"
+            )
 
         self.ring_shm.buffer[index_to_write % self.ring_buffer_length] = copy(data)
         self.last_written_index.value = index_to_write
@@ -159,17 +165,17 @@ class SharedMemoryRingBuffer(BaseModel):
 
     def get_latest_data(self, rec_array: np.recarray | None = None) -> np.recarray:
         """
-        NOTE - this method does NOT update the 'last_read_index' value.
+        Returns the most recently written data. Does NOT update 'last_read_index'.
 
-        'Get Latest ...'  is intended to get the most up-to-date data (e.g. to keep the images displayed on the screen up-to-date)
-
-        The task of making sure we get ALL the data without overwriting to the 'get_next_data' method (e.g. for making sure we save all the frames to disk/video).
+        Intended for "show me the latest" use cases (e.g. live display). For sequential
+        consumption of every frame, use get_next_data() instead.
         """
-        if self.last_written_index.value == -1:
+        latest_idx = self.last_written_index.value
+        if latest_idx == -1:
             raise ValueError("No data available to read.")
         if rec_array is None:
             rec_array = np.recarray(1, dtype=self.dtype)
-        np.copyto(rec_array,self.ring_shm.buffer[self.last_written_index.value % self.ring_buffer_length])
+        np.copyto(rec_array, self.ring_shm.buffer[latest_idx % self.ring_buffer_length])
         return rec_array
 
     def get_data_by_index(self,
@@ -177,16 +183,25 @@ class SharedMemoryRingBuffer(BaseModel):
                           rec_array: np.recarray | None = None) -> np.recarray:
         """
         Get data at a specific index in the ring buffer.
-        :param index: Index of the data to retrieve. # Note this is the APPARENT index from the User's perspective, not the actual index in the ring buffer
-        :param rec_array: Optional pre-allocated recarray to store the result.
-        :return: The data at the specified index. # NOTE - Caller should verify index of returned data based on structure of stored data
+        :param index: Apparent index from the caller's perspective (not the physical ring slot).
+        :param rec_array: Pre-allocated recarray to store the result, or None to allocate one.
+        :return: The data at the specified index.
+
+        NOTE: Caller should verify the returned data's frame number matches the requested index,
+        as a safeguard against races not caught by the staleness check below.
         """
         if not self.first_data_written:
             raise ValueError("Ring buffer is not ready to read yet.")
         if not self.valid:
             raise ValueError("Shared memory instance has been invalidated, cannot read from it!")
-        if index < 0 or index > self.last_written_index.value:
-            raise IndexError(f"Index {index} is out of bounds for the ring buffer.")
+        current_write_head = self.last_written_index.value
+        if index < 0 or index > current_write_head:
+            raise IndexError(f"Index {index} is out of bounds for the ring buffer (write head: {current_write_head}).")
+        if current_write_head - index >= self.ring_buffer_length:
+            raise IndexError(
+                f"Index {index} has been overwritten by the ring buffer wrapping. "
+                f"Write head: {current_write_head}, ring length: {self.ring_buffer_length}"
+            )
         if rec_array is None:
             rec_array = np.recarray(1, dtype=self.dtype)
         np.copyto(rec_array, self.ring_shm.buffer[ index % self.ring_buffer_length ])

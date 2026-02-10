@@ -157,4 +157,16 @@ class CameraGroupSharedMemory:
         for camera_id, camera_shared_memory in self.camera_shms.items():
             frame_recarrays[camera_id] = camera_shared_memory.get_data_by_index(index=frame_number,
                                                                                rec_array=frame_recarrays[camera_id])
+
+        actual_frame_numbers = {
+            camera_id: int(frame.frame_metadata.frame_number[0])
+            for camera_id, frame in frame_recarrays.items()
+        }
+        mismatched = {cam_id: fn for cam_id, fn in actual_frame_numbers.items() if fn != frame_number}
+        if mismatched:
+            logger.warning(
+                f"get_images_by_frame_number({frame_number}): frame number mismatch in ring buffer — "
+                f"mismatched cameras: {mismatched}"
+            )
+
         return frame_recarrays

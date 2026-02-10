@@ -150,7 +150,8 @@ class SharedMemoryElement(BaseModel):
         if rec_array is not None:
             if data.shape == (1,):
                 np.copyto(rec_array, data[0])
-            np.copyto(rec_array, data)
+            else:
+                np.copyto(rec_array, data)
             return rec_array
         if data.shape == (1,):
             return data[0]
