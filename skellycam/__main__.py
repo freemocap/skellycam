@@ -4,18 +4,17 @@ import multiprocessing
 import os
 import signal
 
-import uvicorn
-
-from skellycam.api.server_constants import HOSTNAME, PORT
-from skellycam.app import create_fastapi_app
-from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
-from skellycam.utilities.kill_process_on_port import kill_process_on_port
-from skellycam.utilities.wait_functions import await_1s
-
 logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
+    import uvicorn
+    from skellycam.api.server_constants import HOSTNAME, PORT
+    from skellycam.app import create_fastapi_app
+    from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
+    from skellycam.utilities.kill_process_on_port import kill_process_on_port
+    from skellycam.utilities.wait_functions import await_1s
+
     global_kill_flag = multiprocessing.Value("b", False)
     process_registry = ProcessRegistry(
         global_kill_flag=global_kill_flag,

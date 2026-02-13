@@ -9,15 +9,15 @@ just handles the process plumbing that was missing from raw mp.Process:
   - Auto child-process logging config (including ws log forwarding)
   - atexit safety net (only fires on unclean exit, not normal camera group close)
   - Escalating shutdown from parent (wait → SIGTERM → SIGKILL, always joins)
+  - Queue feeder thread cancellation so processes exit promptly
 """
 import atexit
 import logging
 import multiprocessing
 import os
-import sys
 import signal
 import time
-from typing import Callable, Optional,ClassVar
+from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,9 @@ class ManagedProcess(multiprocessing.Process):
             self._global_kill_flag.value = True
             raise
         finally:
+            # Cancel queue feeder threads so the process can exit promptly
+            # instead of blocking while waiting for pipe buffers to flush.
+            self._cancel_queue_join_threads()
             logger.debug(f"ManagedProcess {self.name} (PID: {os.getpid()}) exiting")
 
     def _install_signal_handlers(self) -> None:
@@ -98,6 +101,23 @@ class ManagedProcess(multiprocessing.Process):
             from skellycam import LOG_LEVEL
 
             configure_logging(LOG_LEVEL, ws_queue=self._log_queue)
+
+    def _cancel_queue_join_threads(self) -> None:
+        """
+        Cancel feeder threads on queues this process writes to.
+
+        When a child process calls queue.put(), data is buffered and a
+        background daemon thread writes it to the underlying pipe. On
+        process exit, Python blocks waiting for this thread to flush.
+        If the consumer isn't draining the queue, the process hangs
+        until SIGTERM/SIGKILL. cancel_join_thread() tells Python to
+        skip that blocking join, allowing the process to exit promptly.
+        """
+        if self._log_queue is not None:
+            try:
+                self._log_queue.cancel_join_thread()
+            except Exception:
+                pass
 
     # ──────────────────────────────────────────────
     # Parent-side: called from the parent process

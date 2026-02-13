@@ -27,7 +27,7 @@ from skellycam.core.types.type_overloads import (
     FrameNumberInt,
     MultiframeTimestampFloat,
 )
-from skellycam.utilities.wait_functions import wait_1s, await_100ms, await_10ms
+from skellycam.utilities.wait_functions import await_100ms, await_10ms
 from skellycam.core.camera_group.camera_status import CameraStatus
 
 logger = logging.getLogger(__name__)
@@ -228,7 +228,6 @@ class CameraGroup:
                 logger.error(f"Error stopping recording during close: {type(e).__name__} - {e}")
 
         self.ipc.should_continue = False
-        wait_1s()
         self.cameras.close()
 
         if self.shm is not None:

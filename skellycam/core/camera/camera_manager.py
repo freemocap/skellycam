@@ -99,8 +99,43 @@ class CameraManager:
         self.ipc.should_continue = False
         self.orchestrator.close()
 
+        # Mark all workers as intentionally terminated before shutdown
+        # so the child monitor doesn't trigger a cascade kill
         for camera_worker in self.camera_workers.values():
-            camera_worker.worker.terminate_gracefully()
+            camera_worker.worker._intentionally_terminated = True
+
+        # Phase 1: Wait for all processes to exit on their own (parallel)
+        for camera_worker in self.camera_workers.values():
+            camera_worker.worker.join(timeout=3.0)
+
+        # Phase 2: SIGTERM any stragglers (parallel)
+        still_alive = [w for w in self.camera_workers.values() if w.worker.is_alive()]
+        if still_alive:
+            logger.warning(
+                f"{len(still_alive)} camera process(es) didn't exit in time, sending SIGTERM"
+            )
+            for camera_worker in still_alive:
+                camera_worker.worker.terminate()
+            for camera_worker in still_alive:
+                camera_worker.worker.join(timeout=3.0)
+
+        # Phase 3: SIGKILL any remaining (parallel)
+        still_alive = [w for w in self.camera_workers.values() if w.worker.is_alive()]
+        if still_alive:
+            logger.error(
+                f"{len(still_alive)} camera process(es) didn't respond to SIGTERM, sending SIGKILL"
+            )
+            for camera_worker in still_alive:
+                camera_worker.worker.kill()
+            for camera_worker in still_alive:
+                camera_worker.worker.join(timeout=2.0)
+
+        zombies = [w for w in self.camera_workers.values() if w.worker.is_alive()]
+        if zombies:
+            raise RuntimeError(
+                f"{len(zombies)} camera process(es) could not be killed: "
+                f"{[w.camera_id for w in zombies]}"
+            )
 
         self.camera_workers.clear()
         logger.success("Camera manager closed all camera processes successfully.")
