@@ -7,12 +7,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
+import skellycam
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import RedirectResponse
-from starlette.responses import FileResponse
-
-import skellycam
 from skellycam.api.http.app.health import health_router
 from skellycam.api.http.app.shutdown import shutdown_router
 from skellycam.api.middleware.add_middleware import add_middleware
@@ -24,6 +22,8 @@ from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
     get_default_skellycam_base_folder_path,
 )
+from skellycam.utilities.ensure_compiled import ensure_bytecode_compiled
+from starlette.responses import FileResponse
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,10 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage the application lifecycle."""
     # ===== STARTUP =====
     logger.api("SkellyCam API starting...")
+
+    # Pre-compile .py → .pyc so spawned child processes hit fast .pyc reads
+    # instead of racing on .py file access (Windows multiprocessing.spawn issue)
+    ensure_bytecode_compiled()
 
     base_path = Path(get_default_skellycam_base_folder_path())
     base_path.mkdir(parents=True, exist_ok=True)
@@ -55,9 +59,9 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_fastapi_app(
-    *,
-    global_kill_flag: multiprocessing.Value,
-    process_registry: ProcessRegistry,
+        *,
+        global_kill_flag: multiprocessing.Value,
+        process_registry: ProcessRegistry,
 ) -> FastAPI:
     """
     Create and configure the FastAPI application.

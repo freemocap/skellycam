@@ -14,10 +14,19 @@ import atexit
 import logging
 import multiprocessing
 import os
+import sys
 import signal
-from typing import Callable, Optional
+import time
+from typing import Callable, Optional,ClassVar
 
 logger = logging.getLogger(__name__)
+# On Windows, multiprocessing.spawn causes each child process to
+# re-import the full module tree. Spawning many children simultaneously
+# creates a file-locking race (PermissionError) because Windows holds
+# brief exclusive locks during file reads, and antivirus real-time
+# scanning amplifies the contention. Staggering spawns lets each child
+# finish its import phase before the next one starts.
+_SPAWN_STAGGER_SECONDS: ClassVar[float] = 0.25 if sys.platform == "win32" else 0.0
 
 
 class ManagedProcess(multiprocessing.Process):
@@ -47,6 +56,10 @@ class ManagedProcess(multiprocessing.Process):
     # Child-side: runs inside the spawned process
     # ──────────────────────────────────────────────
 
+    def start(self):
+        if _SPAWN_STAGGER_SECONDS > 0:
+            time.sleep(_SPAWN_STAGGER_SECONDS)
+        super().start()
     def run(self) -> None:
         self._install_signal_handlers()
         self._configure_child_logging()
