@@ -102,9 +102,7 @@ push = true
 
 [dependency-groups]
 dev = [
-    "black",
     "bumpver",
-    "isort",
     "pip-tools",
     "pytest>=8.4.0",
     "nuitka>=2.7.7",

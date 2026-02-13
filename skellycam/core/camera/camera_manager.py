@@ -1,14 +1,16 @@
 import logging
+import sys
 import time
 from dataclasses import dataclass
+from typing import ClassVar
 
 from skellycam.core.camera.camera_worker import CameraWorker, CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.process_management.process_registry import  ProcessRegistry
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
