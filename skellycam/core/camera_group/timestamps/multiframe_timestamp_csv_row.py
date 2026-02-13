@@ -6,8 +6,6 @@ from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFr
 from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.utilities.time_unit_conversion import ns_to_ms
 
-if TYPE_CHECKING:
-    pass
 
 class MultiframeTimestampsCSVRow(BaseModel):
 

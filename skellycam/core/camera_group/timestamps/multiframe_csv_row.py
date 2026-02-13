@@ -1,8 +1,11 @@
 from pydantic import BaseModel, Field
 
 from skellycam.core.camera_group.timestamps.multiframe_timestamps import MultiFrameTimestamps
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.utilities.time_unit_conversion import ns_to_ms, ns_to_sec
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
 
 
 class MultiFrameTimestampsCSVRow(BaseModel):

@@ -7,10 +7,13 @@ from fastapi import FastAPI
 
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, get_or_create_camera_group_manager
 from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
-from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
     get_websocket_log_queue, MIN_LOG_LEVEL_FOR_WEBSOCKET
 from skellycam.utilities.wait_functions import await_10ms
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 
 logger = logging.getLogger(__name__)
 
