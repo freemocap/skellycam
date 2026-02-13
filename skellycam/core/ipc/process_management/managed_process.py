@@ -49,6 +49,36 @@ class ManagedProcess(multiprocessing.Process):
     # Child-side: runs inside the spawned process
     # ──────────────────────────────────────────────
 
+    def run(self) -> None:
+        self._install_signal_handlers()
+        self._configure_child_logging()
+
+        _clean_exit = False
+
+        def _atexit_safety_net() -> None:
+            if not _clean_exit and not self._global_kill_flag.value:
+                logger.warning(
+                    f"ManagedProcess {self.name} (PID: {os.getpid()}) "
+                    f"exiting uncleanly — setting global kill flag"
+                )
+                self._global_kill_flag.value = True
+
+        atexit.register(_atexit_safety_net)
+
+        logger.debug(f"ManagedProcess {self.name} (PID: {os.getpid()}) started")
+
+        try:
+            self._target_fn(**self._worker_kwargs)
+            _clean_exit = True
+        except Exception as e:
+            logger.exception(
+                f"Unhandled exception in ManagedProcess {self.name} "
+                f"(PID: {os.getpid()}): {e}"
+            )
+            self._global_kill_flag.value = True
+            raise
+        finally:
+            logger.debug(f"ManagedProcess {self.name} (PID: {os.getpid()}) exiting")
 
     def _install_signal_handlers(self) -> None:
         def _on_signal(signum: int, frame: object) -> None:

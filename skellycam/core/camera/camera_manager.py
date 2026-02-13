@@ -75,7 +75,7 @@ class CameraManager:
         # brief exclusive locks during file reads, and antivirus real-time
         # scanning amplifies the contention. Staggering spawns lets each child
         # finish its import phase before the next one starts.
-        _SPAWN_STAGGER_SECONDS: ClassVar[float] = 0.25 if sys.platform == "win32" else 0.0
+        _SPAWN_STAGGER_SECONDS: float = 0.25 if sys.platform == "win32" else 0.0
 
         for worker in self.camera_workers.values():
             if _SPAWN_STAGGER_SECONDS >= 0:
