@@ -1,4 +1,5 @@
 import logging
+import time
 from dataclasses import dataclass
 
 from skellycam.core.camera.camera_worker import CameraWorker, CameraState
@@ -66,7 +67,17 @@ class CameraManager:
 
     def start(self) -> None:
         logger.info("Starting camera processes...")
+        # On Windows, multiprocessing.spawn causes each child process to
+        # re-import the full module tree. Spawning many children simultaneously
+        # creates a file-locking race (PermissionError) because Windows holds
+        # brief exclusive locks during file reads, and antivirus real-time
+        # scanning amplifies the contention. Staggering spawns lets each child
+        # finish its import phase before the next one starts.
+        _SPAWN_STAGGER_SECONDS: ClassVar[float] = 0.25 if sys.platform == "win32" else 0.0
+
         for worker in self.camera_workers.values():
+            if _SPAWN_STAGGER_SECONDS >= 0:
+                time.sleep(_SPAWN_STAGGER_SECONDS)
             worker.start()
 
     async def pause_unpause(self, await_state: bool = True) -> None:

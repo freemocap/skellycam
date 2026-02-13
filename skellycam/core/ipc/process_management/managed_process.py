@@ -20,13 +20,6 @@ import time
 from typing import Callable, Optional,ClassVar
 
 logger = logging.getLogger(__name__)
-# On Windows, multiprocessing.spawn causes each child process to
-# re-import the full module tree. Spawning many children simultaneously
-# creates a file-locking race (PermissionError) because Windows holds
-# brief exclusive locks during file reads, and antivirus real-time
-# scanning amplifies the contention. Staggering spawns lets each child
-# finish its import phase before the next one starts.
-_SPAWN_STAGGER_SECONDS: ClassVar[float] = 0.25 if sys.platform == "win32" else 0.0
 
 
 class ManagedProcess(multiprocessing.Process):
@@ -56,40 +49,6 @@ class ManagedProcess(multiprocessing.Process):
     # Child-side: runs inside the spawned process
     # ──────────────────────────────────────────────
 
-    def start(self):
-        if _SPAWN_STAGGER_SECONDS > 0:
-            time.sleep(_SPAWN_STAGGER_SECONDS)
-        super().start()
-    def run(self) -> None:
-        self._install_signal_handlers()
-        self._configure_child_logging()
-
-        _clean_exit = False
-
-        def _atexit_safety_net() -> None:
-            if not _clean_exit and not self._global_kill_flag.value:
-                logger.warning(
-                    f"ManagedProcess {self.name} (PID: {os.getpid()}) "
-                    f"exiting uncleanly — setting global kill flag"
-                )
-                self._global_kill_flag.value = True
-
-        atexit.register(_atexit_safety_net)
-
-        logger.debug(f"ManagedProcess {self.name} (PID: {os.getpid()}) started")
-
-        try:
-            self._target_fn(**self._worker_kwargs)
-            _clean_exit = True
-        except Exception as e:
-            logger.exception(
-                f"Unhandled exception in ManagedProcess {self.name} "
-                f"(PID: {os.getpid()}): {e}"
-            )
-            self._global_kill_flag.value = True
-            raise
-        finally:
-            logger.debug(f"ManagedProcess {self.name} (PID: {os.getpid()}) exiting")
 
     def _install_signal_handlers(self) -> None:
         def _on_signal(signum: int, frame: object) -> None:
