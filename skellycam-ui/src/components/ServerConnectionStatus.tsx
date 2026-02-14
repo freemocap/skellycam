@@ -1,103 +1,700 @@
-// components/ServerConnectionStatus.tsx
-import React from 'react';
-import { Box, Typography, IconButton } from "@mui/material";
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+    Box,
+    Typography,
+    IconButton,
+    Button,
+    Collapse,
+    Tooltip,
+    CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    Chip,
+    Switch,
+    FormControlLabel,
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import { useServer } from "@/services/server/ServerContextProvider";
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import { useServer } from '@/services/server/ServerContextProvider';
+import { useElectronIPC } from '@/services';
+
+interface ExecutableCandidate {
+    name: string;
+    path: string;
+    description: string;
+    isValid?: boolean;
+    error?: string;
+    resolvedPath?: string;
+}
+
+const AUTO_CONNECT_DELAY_MS = 2000;
+const WS_RECONNECT_INTERVAL_MS = 3000;
+
+const STORAGE_KEYS = {
+    SELECTED_EXE_PATH: 'skellycam:selectedExePath',
+    PANEL_EXPANDED: 'skellycam:serverPanelExpanded',
+    AUTO_LAUNCH_SERVER: 'skellycam:autoLaunchServer',
+    AUTO_CONNECT_WS: 'skellycam:autoConnectWs',
+} as const;
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+    try {
+        const raw = localStorage.getItem(key);
+        if (raw === null) return fallback;
+        return JSON.parse(raw) as T;
+    } catch {
+        return fallback;
+    }
+}
+
+function saveToStorage(key: string, value: unknown): void {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (err) {
+        console.error(`Failed to save ${key} to localStorage:`, err);
+    }
+}
 
 export const ServerConnectionStatus: React.FC = () => {
+    const theme = useTheme();
     const { isConnected, connect, disconnect, connectedCameraIds } = useServer();
+    const { isElectron, api } = useElectronIPC();
 
-    const handleClick = (): void => {
+    // Persisted UI state
+    const [expanded, setExpanded] = useState(() => loadFromStorage(STORAGE_KEYS.PANEL_EXPANDED, false));
+    const [selectedExePath, setSelectedExePath] = useState(() => loadFromStorage(STORAGE_KEYS.SELECTED_EXE_PATH, ''));
+    const [autoLaunchServer, setAutoLaunchServer] = useState(() => loadFromStorage(STORAGE_KEYS.AUTO_LAUNCH_SERVER, true));
+    const [autoConnectWs, setAutoConnectWs] = useState(() => loadFromStorage(STORAGE_KEYS.AUTO_CONNECT_WS, true));
+
+    // Transient state
+    const [serverRunning, setServerRunning] = useState(false);
+    const [serverLoading, setServerLoading] = useState(false);
+    const [currentExePath, setCurrentExePath] = useState<string | null>(null);
+    const [candidates, setCandidates] = useState<ExecutableCandidate[]>([]);
+    const [candidatesLoading, setCandidatesLoading] = useState(false);
+    const [processInfo, setProcessInfo] = useState<{ pid: number | undefined; killed: boolean } | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // Track whether the initial auto-launch has been attempted so we only fire once
+    const autoLaunchFiredRef = useRef(false);
+    // Guard against concurrent startServer calls from the auto-launch effect
+    const serverLaunchingRef = useRef(false);
+
+    // ── Persistence effects ──
+
+    useEffect(() => { saveToStorage(STORAGE_KEYS.PANEL_EXPANDED, expanded); }, [expanded]);
+    useEffect(() => { saveToStorage(STORAGE_KEYS.SELECTED_EXE_PATH, selectedExePath); }, [selectedExePath]);
+    useEffect(() => { saveToStorage(STORAGE_KEYS.AUTO_LAUNCH_SERVER, autoLaunchServer); }, [autoLaunchServer]);
+    useEffect(() => { saveToStorage(STORAGE_KEYS.AUTO_CONNECT_WS, autoConnectWs); }, [autoConnectWs]);
+
+    // ── Server status polling ──
+
+    const pollServerStatus = useCallback(async () => {
+        if (!isElectron || !api) return;
+        try {
+            const running = await api.pythonServer.isRunning.query();
+            setServerRunning(running);
+            const info = await api.pythonServer.getProcessInfo.query();
+            setProcessInfo(info);
+            const exePath = await api.pythonServer.getExecutablePath.query();
+            setCurrentExePath(exePath);
+        } catch (err) {
+            console.error('Failed to poll server status:', err);
+        }
+    }, [isElectron, api]);
+
+    // ── Candidate management ──
+
+    const loadCandidates = useCallback(async () => {
+        if (!isElectron || !api) return;
+        setCandidatesLoading(true);
+        try {
+            const result = await api.pythonServer.getExecutableCandidates.query();
+            const typed = result as ExecutableCandidate[];
+            setCandidates(typed);
+            if (!selectedExePath) {
+                const firstValid = typed.find((c) => c.isValid);
+                if (firstValid) {
+                    setSelectedExePath(firstValid.path);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load executable candidates:', err);
+            setError(`Failed to load candidates: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+            setCandidatesLoading(false);
+        }
+    }, [isElectron, api, selectedExePath]);
+
+    const refreshCandidates = useCallback(async () => {
+        if (!isElectron || !api) return;
+        setCandidatesLoading(true);
+        setError(null);
+        try {
+            const result = await api.pythonServer.refreshCandidates.mutate();
+            const typed = result as ExecutableCandidate[];
+            setCandidates(typed);
+            const firstValid = typed.find((c) => c.isValid);
+            if (firstValid) {
+                setSelectedExePath(firstValid.path);
+            }
+        } catch (err) {
+            console.error('Failed to refresh candidates:', err);
+            setError(`Failed to refresh: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+            setCandidatesLoading(false);
+        }
+    }, [isElectron, api]);
+
+    const browseForExecutable = useCallback(async () => {
+        if (!isElectron || !api) return;
+        try {
+            const filePath = await api.fileSystem.selectExecutableFile.mutate();
+            if (filePath) {
+                setSelectedExePath(filePath);
+            }
+        } catch (err) {
+            console.error('Failed to browse for executable:', err);
+            setError(`Browse failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }, [isElectron, api]);
+
+    // ── Server actions ──
+
+    const startServer = useCallback(async () => {
+        if (!isElectron || !api) return;
+        if (serverLaunchingRef.current) return;
+        serverLaunchingRef.current = true;
+        setServerLoading(true);
+        setError(null);
+        try {
+            const exePath = selectedExePath || null;
+            await api.pythonServer.start.mutate({ exePath });
+            await pollServerStatus();
+        } catch (err) {
+            console.error('Failed to start server:', err);
+            setError(`Start failed: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+            setServerLoading(false);
+            serverLaunchingRef.current = false;
+        }
+    }, [isElectron, api, selectedExePath, pollServerStatus]);
+
+    const stopServer = useCallback(async () => {
+        if (!isElectron || !api) return;
+        setServerLoading(true);
+        setError(null);
+        try {
+            disconnect();
+            await api.pythonServer.stop.mutate();
+            await pollServerStatus();
+        } catch (err) {
+            console.error('Failed to stop server:', err);
+            setError(`Stop failed: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+            setServerLoading(false);
+        }
+    }, [isElectron, api, pollServerStatus, disconnect]);
+
+    const resetServer = useCallback(async () => {
+        if (!isElectron || !api) return;
+        setServerLoading(true);
+        setError(null);
+        try {
+            disconnect();
+            await api.pythonServer.stop.mutate();
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const exePath = selectedExePath || null;
+            await api.pythonServer.start.mutate({ exePath });
+            await pollServerStatus();
+        } catch (err) {
+            console.error('Failed to reset server:', err);
+            setError(`Reset failed: ${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+            setServerLoading(false);
+        }
+    }, [isElectron, api, selectedExePath, pollServerStatus, disconnect]);
+
+    // ── Initial load: poll status + load candidates ──
+
+    useEffect(() => {
+        if (isElectron && api) {
+            pollServerStatus();
+            loadCandidates();
+        }
+    }, [isElectron, api, pollServerStatus, loadCandidates]);
+
+    // ── Poll server status periodically ──
+
+    useEffect(() => {
+        if (!isElectron || !api) return;
+        const interval = setInterval(pollServerStatus, 5000);
+        return () => clearInterval(interval);
+    }, [isElectron, api, pollServerStatus]);
+
+    // ── Auto-launch server on mount (once) ──
+    // Waits for candidates to be loaded so selectedExePath is populated,
+    // then fires a single launch attempt if the server is not already running.
+
+    useEffect(() => {
+        if (!isElectron || !api) return;
+        if (!autoLaunchServer) return;
+        if (autoLaunchFiredRef.current) return;
+        if (candidatesLoading) return; // wait for candidates to load
+        if (serverRunning || serverLoading) return;
+
+        autoLaunchFiredRef.current = true;
+        console.log('Auto-launching server...');
+        startServer();
+    }, [isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
+
+    // ── WebSocket auto-reconnect loop ──
+    // When autoConnectWs is on and we're not connected, periodically call connect().
+    // The underlying WebSocketConnection handles deduplication of CONNECTING state.
+
+    useEffect(() => {
+        if (!autoConnectWs) return;
+        if (isConnected) return;
+
+        // Fire one immediate attempt
+        connect();
+
+        const interval = setInterval(() => {
+            if (!isConnected) {
+                connect();
+            }
+        }, WS_RECONNECT_INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [autoConnectWs, isConnected, connect]);
+
+    // ── Toggle handlers ──
+
+    const handleToggleAutoLaunch = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setAutoLaunchServer((prev) => !prev);
+    }, []);
+
+    const handleToggleAutoConnectWs = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setAutoConnectWs((prev) => {
+            const next = !prev;
+            if (!next) {
+                // User is turning off auto-connect — disconnect now
+                disconnect();
+            }
+            return next;
+        });
+    }, [disconnect]);
+
+    const handleToggleServerRunning = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (serverRunning) {
+            stopServer();
+        } else {
+            startServer();
+        }
+    }, [serverRunning, startServer, stopServer]);
+
+    const handleToggleWsConnected = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
         if (isConnected) {
+            // Turn off auto-connect so it doesn't immediately reconnect
+            setAutoConnectWs(false);
             disconnect();
         } else {
+            setAutoConnectWs(true);
             connect();
         }
-    };
+    }, [isConnected, connect, disconnect]);
 
-    const getStatusColor = (): { bg: string; border: string; text: string } => {
-        if (isConnected) {
-            return {
-                bg: 'rgba(0, 255, 255, 0.05)',
-                border: 'rgba(0, 255, 255, 0.3)',
-                text: '#00ffff'
-            };
-        }
-        return {
-            bg: 'rgba(255, 0, 0, 0.1)',
-            border: 'rgba(255, 0, 0, 0.3)',
-            text: '#f44336'
-        };
-    };
+    // ── Derived values ──
 
-    const colors = getStatusColor();
+    const wsStatusColor = isConnected ? '#00ffff' : '#f44336';
+    const serverStatusColor = serverRunning ? theme.palette.success.main : theme.palette.text.disabled;
+
+    const validCandidates = candidates.filter((c) => c.isValid);
+    const invalidCandidates = candidates.filter((c) => !c.isValid);
+
+    // ── Render ──
 
     return (
         <Box
-            onClick={handleClick}
             sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                padding: '8px 12px',
-                cursor: 'pointer',
-                border: `1px solid ${colors.border}`,
-                borderRadius: '8px',
-                backgroundColor: colors.bg,
-                transition: 'all 0.2s ease',
-                ':hover': {
-                    opacity: 0.8,
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                },
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? 'rgba(0, 0, 0, 0.2)'
+                    : 'rgba(0, 0, 0, 0.02)',
             }}
         >
-            <IconButton
-                size="small"
+            {/* ── Collapsed summary row ── */}
+            <Box
+                onClick={() => setExpanded((prev) => !prev)}
                 sx={{
-                    p: 0.5,
-                    color: colors.text,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    ':hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 1.5,
+                    py: 0.5,
+                    cursor: 'pointer',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.03)' },
                 }}
             >
-                {isConnected ? <WifiIcon /> : <WifiOffIcon />}
-            </IconButton>
+                {/* Status labels */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1, minWidth: 0 }}>
+                    {/* WS toggle button */}
+                    <Tooltip title={isConnected ? 'Disconnect WebSocket' : 'Connect WebSocket'}>
+                        <IconButton
+                            size="small"
+                            onClick={handleToggleWsConnected}
+                            sx={{ p: 0.25, color: wsStatusColor }}
+                        >
+                            {isConnected ? (
+                                <WifiIcon sx={{ fontSize: 16 }} />
+                            ) : (
+                                <WifiOffIcon sx={{ fontSize: 16 }} />
+                            )}
+                        </IconButton>
+                    </Tooltip>
 
-            <Box>
-                <Typography
-                    variant="body2"
-                    sx={{
-                        fontWeight: 500,
-                        color: colors.text,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5
-                    }}
-                >
-                    WebSocket: {isConnected ? 'Connected' : 'Disconnected'}
-                    {isConnected ? (
-                        <CheckIcon sx={{ fontSize: 16 }} />
-                    ) : (
-                        <CloseIcon sx={{ fontSize: 16 }} />
+                    <Typography
+                        variant="caption"
+                        sx={{ fontWeight: 500, color: wsStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
+                    >
+                        {isConnected ? 'Connected' : autoConnectWs ? 'Connecting…' : 'Off'}
+                    </Typography>
+
+                    {isElectron && (
+                        <>
+                            <Box sx={{ mx: 0.25, color: theme.palette.text.disabled, fontSize: '0.7rem' }}>|</Box>
+
+                            {/* Server toggle button */}
+                            <Tooltip title={serverRunning ? 'Stop Server' : 'Launch Server'}>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleToggleServerRunning}
+                                    disabled={serverLoading}
+                                    sx={{ p: 0.25, color: serverStatusColor }}
+                                >
+                                    {serverLoading ? (
+                                        <CircularProgress size={14} />
+                                    ) : serverRunning ? (
+                                        <StopIcon sx={{ fontSize: 16 }} />
+                                    ) : (
+                                        <PlayArrowIcon sx={{ fontSize: 16 }} />
+                                    )}
+                                </IconButton>
+                            </Tooltip>
+
+                            <Typography
+                                variant="caption"
+                                sx={{ fontWeight: 500, color: serverStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
+                            >
+                                {serverLoading ? 'Working…' : serverRunning ? 'Running' : 'Stopped'}
+                            </Typography>
+                        </>
                     )}
-                </Typography>
 
-                {isConnected && connectedCameraIds.length > 0 && (
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {connectedCameraIds.length} camera{connectedCameraIds.length !== 1 ? 's' : ''} active
-                    </Typography>
-                )}
+                    {isConnected && connectedCameraIds.length > 0 && (
+                        <Chip
+                            label={`${connectedCameraIds.length} cam${connectedCameraIds.length !== 1 ? 's' : ''}`}
+                            size="small"
+                            sx={{
+                                height: 18,
+                                fontSize: '0.6rem',
+                                ml: 0.5,
+                                backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                                color: '#00ffff',
+                            }}
+                        />
+                    )}
+                </Box>
 
-                {!isConnected && (
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Click to connect
-                    </Typography>
+                {expanded ? (
+                    <ExpandLessIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                ) : (
+                    <ExpandMoreIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
                 )}
             </Box>
+
+            {/* ── Expanded panel ── */}
+            <Collapse in={expanded}>
+                <Box sx={{ px: 1.5, pb: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {/* ── Server Process Section (Electron only) ── */}
+                    {isElectron && (
+                        <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1, p: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography
+                                    variant="caption"
+                                    sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
+                                >
+                                    SERVER PROCESS
+                                </Typography>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size="small"
+                                            checked={autoLaunchServer}
+                                            onClick={handleToggleAutoLaunch}
+                                            onChange={() => {}} // controlled via onClick with stopPropagation
+                                        />
+                                    }
+                                    label={
+                                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: theme.palette.text.secondary }}>
+                                            Auto-launch
+                                        </Typography>
+                                    }
+                                    sx={{ mr: 0, ml: 0, height: 24 }}
+                                    labelPlacement="start"
+                                />
+                            </Box>
+
+                            {/* Status line */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                <Box
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: serverRunning
+                                            ? theme.palette.success.main
+                                            : theme.palette.error.main,
+                                    }}
+                                />
+                                <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
+                                    {serverRunning ? 'Running' : 'Stopped'}
+                                    {processInfo?.pid && ` (PID: ${processInfo.pid})`}
+                                </Typography>
+                            </Box>
+
+                            {/* Executable selector */}
+                            <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                                <InputLabel sx={{ fontSize: '0.75rem' }}>Executable</InputLabel>
+                                <Select
+                                    value={selectedExePath}
+                                    onChange={(e) => setSelectedExePath(e.target.value)}
+                                    label="Executable"
+                                    disabled={serverRunning || serverLoading}
+                                    sx={{ fontSize: '0.75rem' }}
+                                >
+                                    {validCandidates.map((candidate) => (
+                                        <MenuItem key={candidate.path} value={candidate.path} sx={{ fontSize: '0.75rem' }}>
+                                            <Box>
+                                                <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                                    {candidate.name}
+                                                </Typography>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        display: 'block',
+                                                        color: theme.palette.text.secondary,
+                                                        fontSize: '0.65rem',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                        maxWidth: 250,
+                                                    }}
+                                                >
+                                                    {candidate.path}
+                                                </Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
+                                    {invalidCandidates.length > 0 && validCandidates.length > 0 && (
+                                        <MenuItem disabled divider sx={{ fontSize: '0.65rem', opacity: 0.5 }}>
+                                            — invalid —
+                                        </MenuItem>
+                                    )}
+                                    {invalidCandidates.map((candidate) => (
+                                        <MenuItem
+                                            key={candidate.path}
+                                            value={candidate.path}
+                                            disabled
+                                            sx={{ fontSize: '0.75rem', opacity: 0.4 }}
+                                        >
+                                            <Tooltip title={candidate.error || 'Invalid'} placement="right">
+                                                <Typography variant="caption">
+                                                    {candidate.name} — {candidate.error || 'not found'}
+                                                </Typography>
+                                            </Tooltip>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            {/* Browse + Refresh row */}
+                            <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+                                <Tooltip title="Browse for executable">
+                                    <IconButton
+                                        size="small"
+                                        onClick={browseForExecutable}
+                                        disabled={serverRunning || serverLoading}
+                                        sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}
+                                    >
+                                        <FolderOpenIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Refresh candidates">
+                                    <IconButton
+                                        size="small"
+                                        onClick={refreshCandidates}
+                                        disabled={serverRunning || candidatesLoading}
+                                        sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}
+                                    >
+                                        {candidatesLoading ? (
+                                            <CircularProgress size={14} />
+                                        ) : (
+                                            <RefreshIcon sx={{ fontSize: 16 }} />
+                                        )}
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
+
+                            {/* Action buttons */}
+                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    color="success"
+                                    startIcon={serverLoading ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon />}
+                                    onClick={() => startServer()}
+                                    disabled={serverRunning || serverLoading}
+                                    sx={{ flex: 1, fontSize: '0.7rem', textTransform: 'none' }}
+                                >
+                                    Launch
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    color="error"
+                                    startIcon={serverLoading ? <CircularProgress size={14} color="inherit" /> : <StopIcon />}
+                                    onClick={() => stopServer()}
+                                    disabled={!serverRunning || serverLoading}
+                                    sx={{ flex: 1, fontSize: '0.7rem', textTransform: 'none' }}
+                                >
+                                    Stop
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={serverLoading ? <CircularProgress size={14} /> : <RestartAltIcon />}
+                                    onClick={() => resetServer()}
+                                    disabled={!serverRunning || serverLoading}
+                                    sx={{ flex: 1, fontSize: '0.7rem', textTransform: 'none' }}
+                                >
+                                    Reset
+                                </Button>
+                            </Box>
+
+                            {/* Running executable path */}
+                            {currentExePath && (
+                                <Tooltip title={currentExePath} placement="bottom">
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            mt: 0.5,
+                                            display: 'block',
+                                            color: theme.palette.text.secondary,
+                                            fontSize: '0.6rem',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        Running: {currentExePath}
+                                    </Typography>
+                                </Tooltip>
+                            )}
+
+                            {/* Error display */}
+                            {error && (
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        mt: 0.5,
+                                        display: 'block',
+                                        color: theme.palette.error.main,
+                                        fontSize: '0.65rem',
+                                        wordBreak: 'break-word',
+                                    }}
+                                >
+                                    {error}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+
+                    {/* ── WebSocket Section ── */}
+                    <Box sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1, p: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography
+                                variant="caption"
+                                sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
+                            >
+                                WEBSOCKET CONNECTION
+                            </Typography>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        size="small"
+                                        checked={autoConnectWs}
+                                        onClick={handleToggleAutoConnectWs}
+                                        onChange={() => {}}
+                                    />
+                                }
+                                label={
+                                    <Typography variant="caption" sx={{ fontSize: '0.65rem', color: theme.palette.text.secondary }}>
+                                        Auto-connect
+                                    </Typography>
+                                }
+                                sx={{ mr: 0, ml: 0, height: 24 }}
+                                labelPlacement="start"
+                            />
+                        </Box>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                                sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: isConnected ? '#00ffff' : theme.palette.error.main,
+                                }}
+                            />
+                            <Typography variant="caption" sx={{ color: theme.palette.text.primary, flex: 1 }}>
+                                {isConnected ? 'Connected' : autoConnectWs ? 'Connecting…' : 'Disconnected'}
+                                {isConnected && connectedCameraIds.length > 0
+                                    ? ` — ${connectedCameraIds.length} camera${connectedCameraIds.length !== 1 ? 's' : ''}`
+                                    : ''}
+                            </Typography>
+
+                            <Button
+                                variant={isConnected ? 'outlined' : 'contained'}
+                                size="small"
+                                color={isConnected ? 'error' : 'info'}
+                                startIcon={isConnected ? <WifiOffIcon /> : <WifiIcon />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleWsConnected(e);
+                                }}
+                                sx={{ fontSize: '0.7rem', textTransform: 'none' }}
+                            >
+                                {isConnected ? 'Disconnect' : 'Connect'}
+                            </Button>
+                        </Box>
+                    </Box>
+                </Box>
+            </Collapse>
         </Box>
     );
 };

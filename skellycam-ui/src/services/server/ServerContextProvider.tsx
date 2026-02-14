@@ -193,8 +193,8 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         ws.on('state-change', handleStateChange);
         ws.on('message', handleMessage);
 
-        // Auto-connect
-        ws.connect();
+        // Connection is driven by ServerConnectionStatus via the connect() callback.
+        // No auto-connect here — the component's autoConnectWs loop handles it.
 
         return () => {
             ws.off('state-change', handleStateChange);
