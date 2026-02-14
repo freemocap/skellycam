@@ -69,6 +69,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     try:
         asyncio.run(main())
     except Exception as e:
