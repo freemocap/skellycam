@@ -1,6 +1,26 @@
+export const DEFAULT_HOST = 'localhost';
+export const DEFAULT_PORT = 53117;
+export const WS_PATH = '/skellycam/websocket/connect';
+
 class ServerUrls {
-    private readonly host = 'localhost';
-    private readonly port = 53117;
+    private host: string = DEFAULT_HOST;
+    private port: number = DEFAULT_PORT;
+
+    getHost(): string {
+        return this.host;
+    }
+
+    getPort(): number {
+        return this.port;
+    }
+
+    setHost(host: string): void {
+        this.host = host;
+    }
+
+    setPort(port: number): void {
+        this.port = port;
+    }
 
     /**
      * Get HTTP base URL
@@ -13,7 +33,7 @@ class ServerUrls {
      * Get WebSocket base URL
      */
     getWebSocketUrl(): string {
-        return `ws://${this.host}:${this.port}/skellycam/websocket/connect`;
+        return `ws://${this.host}:${this.port}${WS_PATH}`;
     }
     get endpoints() {
         const baseUrl = this.getHttpUrl();

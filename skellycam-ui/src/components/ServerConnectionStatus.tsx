@@ -14,6 +14,7 @@ import {
     Chip,
     Switch,
     FormControlLabel,
+    TextField,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import WifiIcon from '@mui/icons-material/Wifi';
@@ -27,6 +28,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useElectronIPC } from '@/services';
+import { DEFAULT_HOST, DEFAULT_PORT } from '@/services/server/server-helpers/server-urls';
 
 interface ExecutableCandidate {
     name: string;
@@ -45,6 +47,8 @@ const STORAGE_KEYS = {
     PANEL_EXPANDED: 'skellycam:serverPanelExpanded',
     AUTO_LAUNCH_SERVER: 'skellycam:autoLaunchServer',
     AUTO_CONNECT_WS: 'skellycam:autoConnectWs',
+    SERVER_HOST: 'skellycam:serverHost',
+    SERVER_PORT: 'skellycam:serverPort',
 } as const;
 
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -67,7 +71,7 @@ function saveToStorage(key: string, value: unknown): void {
 
 export const ServerConnectionStatus: React.FC = () => {
     const theme = useTheme();
-    const { isConnected, connect, disconnect, connectedCameraIds } = useServer();
+    const { isConnected, connect, disconnect, connectedCameraIds, updateServerConnection } = useServer();
     const { isElectron, api } = useElectronIPC();
 
     // Persisted UI state
@@ -75,6 +79,12 @@ export const ServerConnectionStatus: React.FC = () => {
     const [selectedExePath, setSelectedExePath] = useState(() => loadFromStorage(STORAGE_KEYS.SELECTED_EXE_PATH, ''));
     const [autoLaunchServer, setAutoLaunchServer] = useState(() => loadFromStorage(STORAGE_KEYS.AUTO_LAUNCH_SERVER, true));
     const [autoConnectWs, setAutoConnectWs] = useState(() => loadFromStorage(STORAGE_KEYS.AUTO_CONNECT_WS, true));
+    const [serverHost, setServerHost] = useState(() => loadFromStorage(STORAGE_KEYS.SERVER_HOST, DEFAULT_HOST));
+    const [serverPort, setServerPort] = useState(() => loadFromStorage(STORAGE_KEYS.SERVER_PORT, DEFAULT_PORT));
+
+    // Text field drafts (applied on blur/enter so we don't reconnect on every keystroke)
+    const [hostDraft, setHostDraft] = useState(serverHost);
+    const [portDraft, setPortDraft] = useState(String(serverPort));
 
     // Transient state
     const [serverRunning, setServerRunning] = useState(false);
@@ -96,6 +106,13 @@ export const ServerConnectionStatus: React.FC = () => {
     useEffect(() => { saveToStorage(STORAGE_KEYS.SELECTED_EXE_PATH, selectedExePath); }, [selectedExePath]);
     useEffect(() => { saveToStorage(STORAGE_KEYS.AUTO_LAUNCH_SERVER, autoLaunchServer); }, [autoLaunchServer]);
     useEffect(() => { saveToStorage(STORAGE_KEYS.AUTO_CONNECT_WS, autoConnectWs); }, [autoConnectWs]);
+    useEffect(() => { saveToStorage(STORAGE_KEYS.SERVER_HOST, serverHost); }, [serverHost]);
+    useEffect(() => { saveToStorage(STORAGE_KEYS.SERVER_PORT, serverPort); }, [serverPort]);
+
+    // Apply persisted host/port to the server connection on mount
+    useEffect(() => {
+        updateServerConnection(serverHost, serverPort);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Server status polling ──
 
@@ -317,6 +334,23 @@ export const ServerConnectionStatus: React.FC = () => {
             connect();
         }
     }, [isConnected, connect, disconnect]);
+
+    const applyHostPort = useCallback(() => {
+        const trimmedHost = hostDraft.trim();
+        const parsedPort = parseInt(portDraft, 10);
+        if (!trimmedHost) return;
+        if (isNaN(parsedPort) || parsedPort < 1 || parsedPort > 65535) return;
+
+        setServerHost(trimmedHost);
+        setServerPort(parsedPort);
+        updateServerConnection(trimmedHost, parsedPort);
+    }, [hostDraft, portDraft, updateServerConnection]);
+
+    const handleHostPortKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            applyHostPort();
+        }
+    }, [applyHostPort]);
 
     // ── Derived values ──
 
@@ -659,6 +693,37 @@ export const ServerConnectionStatus: React.FC = () => {
                                 }
                                 sx={{ mr: 0, ml: 0, height: 24 }}
                                 labelPlacement="start"
+                            />
+                        </Box>
+
+                        {/* Host / Port inputs */}
+                        <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
+                            <TextField
+                                size="small"
+                                label="Host"
+                                value={hostDraft}
+                                onChange={(e) => setHostDraft(e.target.value)}
+                                onBlur={applyHostPort}
+                                onKeyDown={handleHostPortKeyDown}
+                                disabled={isConnected}
+                                slotProps={{ inputLabel: { sx: { fontSize: '0.7rem' } }, input: { sx: { fontSize: '0.75rem' } } }}
+                                sx={{ flex: 3 }}
+                            />
+                            <TextField
+                                size="small"
+                                label="Port"
+                                type="number"
+                                value={portDraft}
+                                onChange={(e) => setPortDraft(e.target.value)}
+                                onBlur={applyHostPort}
+                                onKeyDown={handleHostPortKeyDown}
+                                disabled={isConnected}
+                                slotProps={{
+                                    inputLabel: { sx: { fontSize: '0.7rem' } },
+                                    input: { sx: { fontSize: '0.75rem' } },
+                                    htmlInput: { min: 1, max: 65535 },
+                                }}
+                                sx={{ flex: 1 }}
                             />
                         </Box>
 

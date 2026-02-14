@@ -23,6 +23,7 @@ interface ServerContextValue {
     setCanvasForCamera: (cameraId: string, canvas: HTMLCanvasElement) => void;
     getFps: (cameraId: string) => number | null;
     connectedCameraIds: string[];
+    updateServerConnection: (host: string, port: number) => void;
 }
 
 const ServerContext = createContext<ServerContextValue | null>(null);
@@ -223,6 +224,20 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         return frameProcessorRef.current?.getFps(cameraId) ?? null;
     }, []);
 
+    const updateServerConnection = useCallback((host: string, port: number): void => {
+        // Update the singleton so HTTP endpoints also update
+        serverUrls.setHost(host);
+        serverUrls.setPort(port);
+
+        // Update the WebSocket URL and reconnect
+        const ws = wsConnectionRef.current;
+        if (ws) {
+            ws.disconnect();
+            ws.updateUrl(serverUrls.getWebSocketUrl());
+            // The auto-reconnect loop in ServerConnectionStatus will re-trigger connect()
+        }
+    }, []);
+
     return (
         <ServerContext.Provider value={{
             isConnected,
@@ -231,7 +246,8 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             send,
             setCanvasForCamera,
             getFps,
-            connectedCameraIds
+            connectedCameraIds,
+            updateServerConnection,
         }}>
             {children}
         </ServerContext.Provider>
