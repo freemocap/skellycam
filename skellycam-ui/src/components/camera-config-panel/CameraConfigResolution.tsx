@@ -132,12 +132,12 @@ export const CameraConfigResolution: React.FC<CameraConfigResolutionProps> = ({
     };
 
     const handleKeyDown = (
-        event: React.KeyboardEvent<HTMLInputElement>,
+        event: React.KeyboardEvent<HTMLDivElement>,
         dimension: 'width' | 'height'
     ): void => {
         if (event.key === 'Enter') {
             handleCustomBlur(dimension);
-            event.currentTarget.blur();
+            (event.target as HTMLElement).blur();
         }
     };
 

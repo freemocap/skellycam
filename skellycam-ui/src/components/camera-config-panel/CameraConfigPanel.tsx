@@ -13,7 +13,7 @@ import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
 import { CameraConfigRotation } from "./CameraConfigRotation";
 import { CameraConfigFramerate } from "./CameraConfigFramerate";
-import { CameraConfig, ExposureMode } from "@/store/slices/cameras/cameras-types";
+import { CameraConfig, ExposureMode, RotationValue } from "@/store/slices/cameras/cameras-types";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { selectCameras, configCopiedToAll } from "@/store/slices/cameras";
 
@@ -53,8 +53,8 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
         handleChange("resolution", { width, height });
     };
 
-    const handleRotationChange = (value: string): void => {
-        handleChange("rotation", value as unknown as CameraConfig['rotation']);
+    const handleRotationChange = (value: RotationValue): void => {
+        handleChange("rotation", value);
     };
 
     const handleFramerateChange = (value: number): void => {

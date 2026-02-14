@@ -1,11 +1,5 @@
 import { workerCode } from "@/services/server/server-helpers/offscreen-renderer.worker";
 
-export interface FrameData {
-    cameraId: string;
-    frameNumber: number;
-    bitmap: ImageBitmap;
-}
-
 export interface CanvasWorker {
     worker: Worker;
     canvas: HTMLCanvasElement;

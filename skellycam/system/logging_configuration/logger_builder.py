@@ -4,6 +4,7 @@ from multiprocessing import Queue
 from typing import Optional
 
 from .filters.delta_time import DeltaTimeFilter
+from .filters.stringify_traceback import StringifyTracebackFilter
 from .handlers.colored_console import ColoredConsoleHandler
 from .handlers.websocket_log_queue_handler import WebSocketQueueHandler
 from .log_format_string import LOG_FORMAT_STRING
@@ -24,7 +25,7 @@ class LoggerBuilder:
         root = logging.getLogger()
         root.setLevel(self.level.value)
 
-        # Stringify live traceback objects before any handler sees the record, to
+        # Stringify live traceback objects before any handler sees the record,
         # to avoid pickling errors when sendnig to the frontend
         root.addFilter(StringifyTracebackFilter())
 

@@ -90,7 +90,6 @@ export const CameraConfigTreeView: React.FC = () => {
                     label={
                         <CameraConfigTreeViewHeader
                             cameraCount={cameras.length}
-                            isConnected={isConnectedToCameras}
                             isLoading={isLoading}
                             isPaused={isPaused}
                             onPauseToggle={handlePauseToggle}
