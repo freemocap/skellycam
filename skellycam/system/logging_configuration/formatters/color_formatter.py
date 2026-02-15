@@ -1,5 +1,5 @@
+import copy
 import logging
-from copy import deepcopy
 
 from .custom_formatter import CustomFormatter
 from ..log_format_string import LOG_POINTER_STRING
@@ -15,12 +15,20 @@ LOG_COLOR_CODES = {
     "WARNING": "\033[33m",  # Yellow
     "ERROR": "\033[41m",  # Red background
 }
+
+
 class ColorFormatter(CustomFormatter):
     """Adds ANSI colors to PID, TID, and log messages"""
 
     def format(self, record: logging.LogRecord) -> str:
-        # Apply PID/TID colors
-        record = deepcopy(record)
+        # Pre-format exception text so the traceback object doesn't need to survive the copy
+        if record.exc_info and not record.exc_text:
+            record.exc_text = self.formatException(record.exc_info)
+
+        # Shallow copy to avoid mutating the original record (traceback objects can't be deepcopied)
+        record = copy.copy(record)
+        record.exc_info = None
+
         record.pid_color = get_hashed_color(record.process)
         record.tid_color = get_hashed_color(record.thread)
 

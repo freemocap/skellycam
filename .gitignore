@@ -230,3 +230,4 @@ pyapp-v*
 *.exe
 *onefile-build
 /skellycam.zip
+ *.zip
