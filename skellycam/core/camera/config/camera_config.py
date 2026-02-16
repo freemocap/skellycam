@@ -290,7 +290,7 @@ class CameraConfig(BaseModel):
             camera_id=array.camera_id[0],
             camera_index=array.camera_index[0],
             camera_name=array.camera_name[0],
-            use_this_camera=array.use_this_camera[0],
+            use_this_camera=bool(array.use_this_camera[0]),
             resolution=ImageResolution(
                 height=array.resolution_height[0],
                 width=array.resolution_width[0]

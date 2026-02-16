@@ -71,6 +71,8 @@ class WebsocketServer:
 
         try:
             await asyncio.gather(*self.ws_tasks, return_exceptions=True)
+        except asyncio.CancelledError:
+            logger.debug("Websocket runner cancelled")
         except Exception as e:
             logger.exception(f"Error in websocket runner: {e.__class__}: {e}")
             raise
