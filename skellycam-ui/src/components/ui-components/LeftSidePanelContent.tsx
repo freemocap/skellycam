@@ -7,7 +7,7 @@ import ThemeToggle from "@/components/ui-components/ThemeToggle";
 import HomeIcon from '@mui/icons-material/Home';
 import {useLocation, useNavigate} from "react-router-dom";
 import VideocamIcon from '@mui/icons-material/Videocam';
-import {VideoFolderPanel} from "@/components/video-folder-panel/VideoFolderPanel";
+import SlideshowIcon from '@mui/icons-material/Slideshow';
 import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraConfigTreeView";
 import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 
@@ -105,6 +105,17 @@ export const LeftSidePanelContent = () => {
                             <VideocamIcon sx={{ fontSize: 18 }} />
                         </IconButton>
 
+                        <IconButton
+                            size="small"
+                            onClick={() => navigate('/playback')}
+                            sx={{
+                                padding: '4px',
+                                color: location.pathname === '/playback' ? theme.palette.success.main : theme.palette.text.secondary
+                            }}
+                        >
+                            <SlideshowIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+
                         <ThemeToggle/>
                     </Box>
                 </ListItem>
@@ -112,16 +123,6 @@ export const LeftSidePanelContent = () => {
 
             {/* Server Settings - Compact */}
             <ServerConnectionStatus/>
-
-            {/* Video Panel for Videos Page */}
-            {location.pathname === '/videos' && (
-                <Box sx={{
-                    borderTop: '1px solid',
-                    borderColor: theme.palette.divider,
-                }}>
-                    <VideoFolderPanel/>
-                </Box>
-            )}
 
             {/* Main Content Area */}
             <Box sx={{

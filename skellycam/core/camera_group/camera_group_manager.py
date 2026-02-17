@@ -129,9 +129,9 @@ class CameraGroupManager:
             if fe_return is None:
                 continue
             frame_number, multiframe_timestamp, fe_payload = fe_return
-            fe_payloads[camera_group.id] = (
-                (frame_number, multiframe_timestamp, fe_payload) if fe_payload is not None else None
-            )
+            if fe_payload is None:
+                continue
+            fe_payloads[camera_group.id] = (frame_number, multiframe_timestamp, fe_payload)
         return fe_payloads
 
     def get_backend_framerate_updates(self) -> dict[CameraGroupIdString, CurrentFramerate]:

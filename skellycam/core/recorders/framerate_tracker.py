@@ -91,14 +91,14 @@ class FramerateTracker:
 
 
     def to_string_list(self) -> list[str]:
-        current = self.current
+        current = self.current_framerate
         return [
             f"Mean Frame Duration (ms): {current.mean_frame_duration_ms:.2f}" if current.mean_frame_duration_ms else "Mean Frame Duration (ms): N/A",
             f"Mean FPS: {current.mean_frames_per_second:.2f}" if current.mean_frames_per_second else "Mean FPS: N/A",
             f"Min Frame Duration (ms): {current.frame_duration_min:.2f}" if len(self.frame_durations_ns) > 0 else "Min Frame Duration (ms): N/A",
             f"Max Frame Duration (ms): {current.frame_duration_max:.2f}" if len(self.frame_durations_ns) > 0 else "Max Frame Duration (ms): N/A",
             f"Median Frame Duration (ms): {current.frame_duration_median:.2f}" if len(self.frame_durations_ns) > 0 else "Median Frame Duration (ms): N/A",
-            f"Frame Duration Jitter (ms): {current.frame_durtation_jitter:.2f}" if len(self.frame_durations_ns) > 0 else "Frame Duration Jitter (ms): N/A",
+            f"Frame Duration StdDev (ms): {current.frame_duration_stddev:.2f}" if len(self.frame_durations_ns) > 0 else "Frame Duration StdDev (ms): N/A",
         ]
 
     def __str__(self):

@@ -54,6 +54,12 @@ class ServerUrls {
             startRecording: `${baseUrl}/skellycam/camera/group/all/record/start`,
             stopRecording: `${baseUrl}/skellycam/camera/group/all/record/stop`,
 
+            // Playback endpoints
+            playbackRecordings: `${baseUrl}/skellycam/playback/recordings`,
+            playbackLoad: `${baseUrl}/skellycam/playback/load`,
+            playbackVideos: `${baseUrl}/skellycam/playback/videos`,
+            playbackVideoStream: (videoId: string) => `${baseUrl}/skellycam/playback/video/${videoId}`,
+
             // WebSocket
             websocket: this.getWebSocketUrl(),
         };

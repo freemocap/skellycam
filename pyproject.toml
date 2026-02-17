@@ -164,6 +164,13 @@ test     = { cmd = "pytest", help = "Run test suite" }
 
 
 # =============================================================================
+# Pytest config
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["skellycam/tests"]
+asyncio_mode = "auto"
+
+# =============================================================================
 # Ruff linter config
 # =============================================================================
 # TC rules move imports that are ONLY used in type annotations behind an

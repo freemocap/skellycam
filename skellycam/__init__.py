@@ -3,7 +3,7 @@
 
 __author__ = """Skelly FreeMoCap"""
 __email__ = "info@freemocap.org"
-__version__ = "v2023.09.1086"
+__version__ = "v2024.09.1094"
 
 __description__ = "A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸"
 __package_name__ = "skellycam"
@@ -11,7 +11,7 @@ __repo_url__ = f"https://github.com/freemocap/{__package_name__}"
 __repo_issues_url__ = f"{__repo_url__}/issues"
 __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
-__package_root__ = __file__.replace("/__init__.py", "")
+__package_root__ = str(__import__("pathlib").Path(__file__).parent)
 
 import multiprocessing
 multiprocessing.freeze_support()

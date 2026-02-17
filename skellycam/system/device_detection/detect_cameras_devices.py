@@ -58,14 +58,17 @@ class CameraDeviceInfo(BaseModel):
             path=self.path,
             api_preference=self.backend_id if self.backend_id is not None else cv2.CAP_ANY
         )
+        if cap is None:
+            raise RuntimeError(f"No matching camera found for index={self.index}, Vendor ID={self.vendor_id}, Product ID={self.product_id}")
         if not cap.isOpened():
-            raise Exception(f"Failed to open camera {self.index} with Vendor ID: {self.vendor_id} and Prodcut ID: {self.product_id}")
+            raise RuntimeError(f"Failed to open camera {self.index} with Vendor ID: {self.vendor_id} and Product ID: {self.product_id}")
         # Attempt to read a frame to ensure the camera is working
         success, image = cap.read()
 
         if not success or image is None:
             cap.release()
-            raise Exception(f"Failed to read frame from camera {self.index} with Vendor ID: {self.vendor_id} and Product ID: {self.product_id}")
+            raise RuntimeError(f"Failed to read frame from camera {self.index} with Vendor ID: {self.vendor_id} and Product ID: {self.product_id}")
+        return cap
         return cap
 
 def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virtual:bool=True) -> list[CameraDeviceInfo]:

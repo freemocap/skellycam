@@ -76,4 +76,4 @@ def default_recording_name(string_tag: str = "") -> str:
     else:
         string_tag = ""
 
-    return time.strftime(get_iso6201_time_string(timespec="seconds") + string_tag)
+    return get_iso6201_time_string(timespec="seconds") + string_tag
