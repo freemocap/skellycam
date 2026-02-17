@@ -1,0 +1,45 @@
+site_name: SkellyCam Documentation
+site_description: Documentation for SkellyCam — multi-camera synchronization and recording
+site_url: https://freemocap.github.io/skellycam/
+repo_url: https://github.com/freemocap/skellycam
+repo_name: freemocap/skellycam
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - API Reference: api-reference.md
+  - WebSocket Protocol: websocket-protocol.md
+  - Configuration: configuration.md
+  - Development: development.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
