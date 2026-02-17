@@ -16,17 +16,17 @@ def kill_flag():
 
 
 @pytest.fixture()
-def process_registry():
+def worker_registry():
     reg = MagicMock()
     reg.heartbeat_timestamp = multiprocessing.Value("d", 0.0)
     return reg
 
 
 @pytest.fixture()
-def manager(kill_flag, process_registry):
+def manager(kill_flag, worker_registry):
     return CameraGroupManager(
         global_kill_flag=kill_flag,
-        process_registry=process_registry,
+        worker_registry=worker_registry,
     )
 
 
@@ -54,7 +54,7 @@ class TestCameraGroupManagerInit:
 
 
 class TestSingletonFactory:
-    def test_returns_same_instance(self, kill_flag, process_registry):
+    def test_returns_same_instance(self, kill_flag, worker_registry):
         """get_or_create_camera_group_manager returns the same instance on repeated calls."""
         # We need to reset the module-level singleton before testing
         with patch(
@@ -64,7 +64,7 @@ class TestSingletonFactory:
             from fastapi import FastAPI
             app = FastAPI()
             app.state.global_kill_flag = kill_flag
-            app.state.process_registry = process_registry
+            app.state.worker_registry = worker_registry
 
             first = get_or_create_camera_group_manager(app)
             second = get_or_create_camera_group_manager(app)

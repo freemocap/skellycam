@@ -60,6 +60,13 @@ class WebsocketServer:
             and self.websocket.client_state == WebSocketState.CONNECTED
         )
 
+    def _signal_shutdown(self) -> None:
+        """Signal all tasks to stop and cancel them."""
+        self._websocket_should_continue = False
+        for task in self.ws_tasks:
+            if not task.done():
+                task.cancel()
+
     async def run(self):
         logger.info("Starting websocket runner...")
         self.ws_tasks = [
@@ -138,12 +145,19 @@ class WebsocketServer:
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")
+        except RuntimeError as e:
+            if "close" in str(e).lower():
+                logger.info("Websocket closed during image relay send, ending task...")
+            else:
+                raise
         except asyncio.CancelledError:
             pass
         except Exception as e:
             logger.exception(f"Error in image payload relay: {e.__class__}: {e}")
             self.global_kill_flag.value = True
             raise
+        finally:
+            self._signal_shutdown()
 
     async def _logs_relay(self, ws_log_level: int = MIN_LOG_LEVEL_FOR_WEBSOCKET):
         logger.info("Starting websocket log relay listener...")
@@ -163,10 +177,17 @@ class WebsocketServer:
             logger.debug("Log relay task cancelled")
         except WebSocketDisconnect:
             logger.info("Client disconnected, ending log relay task...")
+        except RuntimeError as e:
+            if "close" in str(e).lower():
+                logger.info("Websocket closed during log relay send, ending task...")
+            else:
+                raise
         except Exception as e:
             logger.exception(f"Error in websocket log relay: {e.__class__}: {e}")
             self.global_kill_flag.value = True
             raise
+        finally:
+            self._signal_shutdown()
 
     async def _app_state_sender(self):
         """
@@ -187,44 +208,63 @@ class WebsocketServer:
                 previous_state = state_dict
         except asyncio.CancelledError:
             logger.debug("State sender task cancelled")
+        except WebSocketDisconnect:
+            logger.info("Client disconnected, ending state sender task...")
+        except RuntimeError as e:
+            if "close" in str(e).lower():
+                logger.info("Websocket closed during state send, ending task...")
+            else:
+                raise
         except Exception as e:
             logger.exception(f"Error in state sender: {e.__class__}: {e}")
             self.global_kill_flag.value = True
             raise
         finally:
+            self._signal_shutdown()
             logger.info("Ending state sender task...")
 
     async def _client_message_handler(self):
         """
-        Handle messages from the client.
+        Handle messages from the client. Acts as the disconnect sentinel —
+        when the client disconnects, this task signals all other tasks to stop.
         """
         logger.info("Starting client message handler...")
         try:
             while self.should_continue:
                 message = await self.websocket.receive()
-                if message:
-                    if "text" in message:
-                        text_content = message.get("text", "")
-                        if text_content.strip().startswith('{') or text_content.strip().startswith('['):
-                            try:
-                                data = json.loads(text_content)
-                                if 'frameNumber' in data:
-                                    self.last_received_frontend_confirmation = data['frameNumber']
-                                    self._display_image_sizes = data.get('displayImageSizes', None)
-                            except json.JSONDecodeError as e:
-                                logger.error(f"Failed to decode JSON message: {e}")
-                        else:
-                            if text_content.startswith("ping"):
-                                await self.websocket.send_text("pong")
-                            elif text_content.startswith("pong"):
-                                pass
-                            else:
-                                logger.info(f"Websocket received message: `{text_content}`")
-                    elif "websocket" in message:
-                        logger.trace(f"Received unknown websocket control message: {message}")
-                    else:
-                        logger.warning(f"Received unexpected message format: {message}")
 
+                message_type: str = message.get("type", "")
+
+                # ASGI disconnect message — client is gone
+                if message_type == "websocket.disconnect":
+                    logger.info(f"Client disconnected (code={message.get('code', 'unknown')}), shutting down websocket tasks...")
+                    self._signal_shutdown()
+                    return
+
+                if "text" in message:
+                    text_content: str = message["text"]
+                    if text_content.strip().startswith('{') or text_content.strip().startswith('['):
+                        try:
+                            data = json.loads(text_content)
+                            if 'frameNumber' in data:
+                                self.last_received_frontend_confirmation = data['frameNumber']
+                                self._display_image_sizes = data.get('displayImageSizes', None)
+                        except json.JSONDecodeError as e:
+                            raise ValueError(f"Failed to decode JSON from client websocket message: {e}") from e
+                    else:
+                        if text_content.startswith("ping"):
+                            await self.websocket.send_text("pong")
+                        elif text_content.startswith("pong"):
+                            pass
+                        else:
+                            logger.info(f"Websocket received message: `{text_content}`")
+                elif "bytes" in message:
+                    logger.trace(f"Received binary websocket message ({len(message['bytes'])} bytes)")
+                else:
+                    raise RuntimeError(f"Unexpected ASGI websocket message: {message}")
+
+        except WebSocketDisconnect:
+            logger.info("Client disconnected (WebSocketDisconnect), shutting down websocket tasks...")
         except asyncio.CancelledError:
             logger.debug("Client message handler task cancelled")
         except Exception as e:
@@ -232,4 +272,5 @@ class WebsocketServer:
             self.global_kill_flag.value = True
             raise
         finally:
+            self._signal_shutdown()
             logger.info("Ending client message handler...")

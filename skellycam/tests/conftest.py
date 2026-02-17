@@ -28,8 +28,8 @@ def mock_global_kill_flag():
 
 
 @pytest.fixture()
-def mock_process_registry(mock_global_kill_flag):
-    """A MagicMock standing in for ProcessRegistry (no real threads/processes)."""
+def mock_worker_registry(mock_global_kill_flag):
+    """A MagicMock standing in for WorkerRegistry (no real threads/processes)."""
     registry = MagicMock()
     registry.heartbeat_timestamp = multiprocessing.Value("d", 0.0)
     return registry
@@ -67,7 +67,7 @@ def mock_camera_group_manager():
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def app(mock_global_kill_flag, mock_process_registry, mock_camera_group_manager):
+def app(mock_global_kill_flag, mock_worker_registry, mock_camera_group_manager):
     """
     A lightweight FastAPI app with the same routes but no heavy lifespan.
 
@@ -86,7 +86,7 @@ def app(mock_global_kill_flag, mock_process_registry, mock_camera_group_manager)
     ):
         test_app = FastAPI()
         test_app.state.global_kill_flag = mock_global_kill_flag
-        test_app.state.process_registry = mock_process_registry
+        test_app.state.worker_registry = mock_worker_registry
 
         # Register the same routes as the real app
         for router in [health_router, shutdown_router]:

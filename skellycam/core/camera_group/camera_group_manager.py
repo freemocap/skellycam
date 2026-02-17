@@ -4,11 +4,12 @@ from dataclasses import dataclass, field
 
 from fastapi import FastAPI
 
+from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
-from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
+from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.recorders.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import (
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraGroupManager:
     global_kill_flag: multiprocessing.Value
-    process_registry: ProcessRegistry
+    worker_registry: WorkerRegistry
     closing: bool = False
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
     camera_group_framerate_subscriptions: dict[CameraGroupIdString, TopicSubscriptionQueue] = field(
@@ -36,9 +37,9 @@ class CameraGroupManager:
         """Create a camera group with the provided configuration settings."""
         camera_group = CameraGroup.create(
             camera_configs=camera_configs,
-            heartbeat_timestamp=self.process_registry.heartbeat_timestamp,
+            heartbeat_timestamp=self.worker_registry.heartbeat_timestamp,
             global_kill_flag=self.global_kill_flag,
-            process_registry=self.process_registry,
+            worker_registry=self.worker_registry,
         )
         self.camera_group_framerate_subscriptions[camera_group.id] = (
             camera_group.ipc.pubsub.get_subscription(TopicTypes.FRAMERATE)
@@ -148,6 +149,32 @@ class CameraGroupManager:
                     )
         return framerate_updates
 
+    def get_latest_performance_data(
+        self,
+        session_start_perf_ns: int,
+    ) -> dict[CameraGroupIdString, dict]:
+        """
+        Get per-camera frame lifecycle performance data for all camera groups.
+        Returns a dict mapping camera_group_id to performance data dicts
+        suitable for streaming to the frontend Perspective tables.
+        """
+        if self.closing:
+            return {}
+        result: dict[CameraGroupIdString, dict] = {}
+        for camera_group in self.camera_groups.values():
+            latest_frames = camera_group.get_latest_frames()
+            if latest_frames is None:
+                continue
+            try:
+                perf_data = extract_performance_data_from_frames(
+                    latest_frames=latest_frames,
+                    session_start_perf_ns=session_start_perf_ns,
+                )
+                result[camera_group.id] = perf_data
+            except Exception as e:
+                logger.debug(f"Error extracting performance data for group {camera_group.id}: {e}")
+        return result
+
     def pause_all_groups(self, await_paused: bool = True) -> None:
         """Pause all camera groups."""
         for camera_group in self.camera_groups.values():
@@ -196,6 +223,6 @@ def get_or_create_camera_group_manager(app: FastAPI) -> CameraGroupManager:
 
     _CAMERA_GROUP_MANAGER = CameraGroupManager(
         global_kill_flag=app.state.global_kill_flag,
-        process_registry=app.state.process_registry,
+        worker_registry=app.state.worker_registry,
     )
     return _CAMERA_GROUP_MANAGER

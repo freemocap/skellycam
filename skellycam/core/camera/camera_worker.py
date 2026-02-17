@@ -9,8 +9,8 @@ from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
-from skellycam.core.ipc.process_management.managed_process import ManagedProcess
-from skellycam.core.ipc.process_management.process_registry import  ProcessRegistry
+from skellycam.core.ipc.process_management.managed_worker import ManagedWorker
+from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class CameraState(BaseModel):
 @dataclass
 class CameraWorker:
     camera_id: CameraIdString
-    worker: ManagedProcess
+    worker: ManagedWorker
     ipc: CameraGroupIPC
     orchestrator: CameraOrchestrator
 
@@ -38,16 +38,16 @@ class CameraWorker:
         *,
         camera_id: CameraIdString,
         ipc: CameraGroupIPC,
-        process_registry: ProcessRegistry,
+        worker_registry: WorkerRegistry,
         config: CameraConfig,
         orchestrator: CameraOrchestrator,
         update_camera_settings_subscription: TopicSubscriptionQueue,
         shm_subscription: TopicSubscriptionQueue,
         recording_info_subscription: TopicSubscriptionQueue,
     ) -> "CameraWorker":
-        worker = process_registry.create_process(
+        worker = worker_registry.create_worker(
             target=opencv_camera_worker_method,
-            name=f"Camera{config.camera_index}-{camera_id}-Process",
+            name=f"Camera{config.camera_index}-{camera_id}-Worker",
             log_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication,
             kwargs=dict(
                 camera_id=camera_id,

@@ -9,7 +9,7 @@ from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
-from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
+from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.types.type_overloads import CameraIdString
 
@@ -31,7 +31,7 @@ class CameraManager:
         cls,
         *,
         ipc: CameraGroupIPC,
-        process_registry: ProcessRegistry,
+        worker_registry: WorkerRegistry,
         camera_configs: CameraConfigs,
     ) -> "CameraManager":
         logger.info(f"Starting camera manager process with {len(camera_configs)} cameras")
@@ -45,7 +45,7 @@ class CameraManager:
             camera_id: CameraWorker.create(
                 camera_id=camera_id,
                 ipc=ipc,
-                process_registry=process_registry,
+                worker_registry=worker_registry,
                 orchestrator=orchestrator,
                 config=camera_config,
                 update_camera_settings_subscription=ipc.pubsub.topics[

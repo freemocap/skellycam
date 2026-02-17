@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import cv2
 
@@ -18,6 +19,15 @@ class FailedToOpenCameraException(Exception):
 
 logger = logging.getLogger(__name__)
 
+# Minimum buffer size to reduce stale-frame latency.
+# USB cameras deliver frames into an OS driver ring buffer (typically 2-4 frames deep).
+# When our grab() loop falls behind, a larger buffer means we dequeue frames that were
+# captured tens of milliseconds ago, making our grab timestamps a poor proxy for actual
+# capture time. Setting this to 1 ensures grab() always returns the most recent frame
+# the driver has available.
+# NOTE: Not all backends honor this (MSMF ignores it). DSHOW on Windows does respect it.
+_PREFERRED_BUFFER_SIZE = 1
+
 
 def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tuple[cv2.VideoCapture, CameraConfig]:
     cap_backend = determine_opencv_camera_backend()
@@ -35,6 +45,18 @@ def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tupl
                 capture = None
                 continue
             raise FailedToOpenCameraException()
+
+        # Minimize the driver-side frame buffer to reduce stale-frame latency.
+        # This makes grab() timestamps a tighter proxy for actual frame capture time.
+        if not capture.set(cv2.CAP_PROP_BUFFERSIZE, _PREFERRED_BUFFER_SIZE):
+            logger.debug(
+                f"Camera {config.camera_index}: backend did not accept "
+                f"CAP_PROP_BUFFERSIZE={_PREFERRED_BUFFER_SIZE} (this is normal for some backends)"
+            )
+        else:
+            actual = capture.get(cv2.CAP_PROP_BUFFERSIZE)
+            logger.debug(f"Camera {config.camera_index}: buffer size set to {int(actual)}")
+
         success, image = capture.read()
 
         if not success or image is None:

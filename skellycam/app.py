@@ -17,7 +17,7 @@ from skellycam.api.middleware.add_middleware import add_middleware
 from skellycam.api.middleware.cors import cors
 from skellycam.api.routers import SKELLYCAM_ROUTERS
 from skellycam.api.server_constants import APP_URL
-from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
+from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
     get_default_skellycam_base_folder_path,
@@ -52,7 +52,7 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # ===== SHUTDOWN =====
     logger.api("SkellyCam API shutting down...")
 
-    # Just set the flag — __main__ owns the ProcessRegistry and calls shutdown_all()
+    # Just set the flag — __main__ owns the WorkerRegistry and calls shutdown_all()
     app.state.global_kill_flag.value = True
 
     logger.success("SkellyCam API shutdown complete - Goodbye! 👋")
@@ -61,7 +61,7 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_fastapi_app(
         *,
         global_kill_flag: multiprocessing.Value,
-        process_registry: ProcessRegistry,
+        worker_registry: WorkerRegistry,
 ) -> FastAPI:
     """
     Create and configure the FastAPI application.
@@ -69,7 +69,7 @@ def create_fastapi_app(
     app = FastAPI(lifespan=app_lifespan)
 
     app.state.global_kill_flag = global_kill_flag
-    app.state.process_registry = process_registry
+    app.state.worker_registry = worker_registry
 
     cors(app)
     _register_routes(app)

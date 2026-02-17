@@ -17,7 +17,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import (
     RecordingFinishedMessage,
 )
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
-from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
+from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
@@ -70,7 +70,7 @@ class CameraGroup:
         camera_configs: CameraConfigs,
         heartbeat_timestamp: multiprocessing.Value,
         global_kill_flag: multiprocessing.Value,
-        process_registry: ProcessRegistry,
+        worker_registry: WorkerRegistry,
     ) -> "CameraGroup":
         try:
             validate_camera_configs(camera_configs)
@@ -81,7 +81,7 @@ class CameraGroup:
 
             cameras = CameraManager.create(
                 ipc=ipc,
-                process_registry=process_registry,
+                worker_registry=worker_registry,
                 camera_configs=camera_configs,
             )
         except Exception as e:

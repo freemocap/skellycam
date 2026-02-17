@@ -11,15 +11,17 @@ async def main() -> None:
     import uvicorn
     from skellycam.api.server_constants import HOSTNAME, PORT
     from skellycam.app import create_fastapi_app
-    from skellycam.core.ipc.process_management.process_registry import ProcessRegistry
+    from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
+    from skellycam.core.ipc.process_management.managed_worker import WorkerMode
     from skellycam.utilities.kill_process_on_port import kill_process_on_port
     from skellycam.utilities.wait_functions import await_1s
 
     global_kill_flag = multiprocessing.Value("b", False)
-    process_registry = ProcessRegistry(
+    worker_registry = WorkerRegistry(
         global_kill_flag=global_kill_flag,
+        worker_mode=WorkerMode.PROCESS,
     )
-    process_registry.start_heartbeat()
+    worker_registry.start_heartbeat()
 
     server: uvicorn.Server | None = None
 
@@ -38,7 +40,7 @@ async def main() -> None:
 
         app = create_fastapi_app(
             global_kill_flag=global_kill_flag,
-            process_registry=process_registry,
+            worker_registry=worker_registry,
         )
 
         config = uvicorn.Config(
@@ -64,7 +66,7 @@ async def main() -> None:
             server.should_exit = True
             await await_1s()
 
-        process_registry.shutdown_all()
+        worker_registry.shutdown_all()
         logger.success("Done! Thank you for using SkellyCam 💀📸✨")
 
 
@@ -77,5 +79,3 @@ if __name__ == "__main__":
         os._exit(1)
     print("Done!")
     os._exit(0)
-
-
