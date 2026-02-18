@@ -7,7 +7,7 @@ import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
 import FramerateStatisticsView from "./FramerateStatisticsView"
 import {useServer} from "@/services/server/ServerContextProvider";
-import {FramerateSnapshot} from "@/services/server/framerate-store";
+import {FramerateSnapshot} from "@/services/server/server-helpers/framerate-store";
 
 type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"

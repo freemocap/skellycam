@@ -13,7 +13,7 @@ import {
     Typography,
 } from "@mui/material";
 import {alpha, useTheme} from "@mui/material/styles";
-import {DetailedFramerate} from "@/services/server/framerate-store";
+import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store";
 import {useState} from "react";
 import {frontendColor, backendColor} from "@/components/framerate-viewer/FrameRateViewer";
 

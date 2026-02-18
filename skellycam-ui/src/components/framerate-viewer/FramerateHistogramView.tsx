@@ -3,7 +3,7 @@ import {useCallback} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "./d3ChartUtils"
-import {DetailedFramerate} from "@/services/server/framerate-store";
+import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 
 type FramerateHistogramProps = {
