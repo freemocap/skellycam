@@ -1,5 +1,5 @@
 // src/components/framerate-viewer/BaseD3ChartView.tsx
-import {useEffect, useRef, useState} from "react"
+import {useEffect, useRef, useState, useCallback} from "react"
 import * as d3 from "d3"
 import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
 import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
@@ -11,7 +11,6 @@ export type ChartMargins = {
     left: number
 }
 
-// Define a type for elements that should be updated on zoom
 export type ZoomableElement = {
     selector: string;
     updateFn: (selection: d3.Selection<any, any, any, any>, transform: d3.ZoomTransform) => void;
@@ -33,32 +32,55 @@ type BaseChartViewProps = {
 export default function BaseD3ChartView({
                                             title,
                                             renderChart,
-                                            margin = {top: 20, right: 100, bottom: 30, left: 60}
+                                            margin = {top: 20, right: 20, bottom: 30, left: 50}
                                         }: BaseChartViewProps) {
     const svgRef = useRef<SVGSVGElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
     const chartRef = useRef<{
         cleanup?: () => void
     }>({})
     const [transform, setTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity)
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
     const [showControls, setShowControls] = useState(false)
+    const [containerSize, setContainerSize] = useState<{width: number, height: number}>({width: 0, height: 0})
+
+    // Track container size with ResizeObserver
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const {width, height} = entry.contentRect
+                setContainerSize(prev => {
+                    if (prev.width === Math.round(width) && prev.height === Math.round(height)) return prev
+                    return {width: Math.round(width), height: Math.round(height)}
+                })
+            }
+        })
+        observer.observe(container)
+        return () => observer.disconnect()
+    }, [])
 
     useEffect(() => {
-        if (!svgRef.current) return
+        if (!svgRef.current || containerSize.width === 0 || containerSize.height === 0) return
 
         // Clear previous chart
         d3.select(svgRef.current).selectAll("*").remove()
 
-        // Set up dimensions
-        let width = svgRef.current.clientWidth - margin.left - margin.right
-        let height = svgRef.current.clientHeight - margin.top - margin.bottom
-        if (width < 0) {
-            width = 0
+        // Cleanup previous tooltips
+        if (chartRef.current.cleanup) {
+            chartRef.current.cleanup()
+            chartRef.current.cleanup = undefined
         }
-        if (height < 0) {
-            height = 0
-        }
-        // Create SVG with a clip path for zooming
+
+        // Set up dimensions from observed container size
+        const width = Math.max(0, containerSize.width - margin.left - margin.right)
+        const height = Math.max(0, containerSize.height - margin.top - margin.bottom)
+
+        if (width <= 0 || height <= 0) return
+
+        // Create SVG group with margin offset
         const svg = d3.select(svgRef.current)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`)
@@ -78,7 +100,6 @@ export default function BaseD3ChartView({
         // Call the render function provided by the child component
         const cleanup = renderChart({svg, chartArea, width, height, margin, transform})
 
-        // Store cleanup function if one is returned
         if (typeof cleanup === 'function') {
             chartRef.current.cleanup = cleanup
         }
@@ -92,45 +113,41 @@ export default function BaseD3ChartView({
                 [width, height],
             ])
             .on("zoom", (event) => {
-                // Update the transform state
                 setTransform(event.transform)
             })
 
-        // Store zoom reference for external controls
         zoomRef.current = zoom
-
-        // Apply zoom to the SVG
         d3.select(svgRef.current).call(zoom)
 
-        // Cleanup function
         return () => {
             if (chartRef.current.cleanup) {
                 chartRef.current.cleanup()
+                chartRef.current.cleanup = undefined
             }
         }
-    }, [renderChart, margin, transform])
+    }, [renderChart, margin, transform, containerSize])
 
-    // Zoom control handlers
-    const handleZoomIn = () => {
+    const handleZoomIn = useCallback(() => {
         if (svgRef.current && zoomRef.current) {
             d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 1.5)
         }
-    }
+    }, [])
 
-    const handleZoomOut = () => {
+    const handleZoomOut = useCallback(() => {
         if (svgRef.current && zoomRef.current) {
             d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.scaleBy, 0.75)
         }
-    }
+    }, [])
 
-    const handleResetZoom = () => {
+    const handleResetZoom = useCallback(() => {
         if (svgRef.current && zoomRef.current) {
             d3.select(svgRef.current).transition().duration(300).call(zoomRef.current.transform, d3.zoomIdentity)
         }
-    }
+    }, [])
 
     return (
         <Box
+            ref={containerRef}
             sx={{
                 width: "100%",
                 height: "100%",
@@ -191,11 +208,11 @@ export default function BaseD3ChartView({
 
             <svg
                 ref={svgRef}
-                width="100%"
-                height="100%"
+                width={containerSize.width}
+                height={containerSize.height}
                 style={{
                     display: 'block',
-                    overflow: "visible"
+                    overflow: "hidden"
                 }}
             />
         </Box>

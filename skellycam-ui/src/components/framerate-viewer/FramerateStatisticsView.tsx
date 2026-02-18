@@ -13,12 +13,13 @@ import {
     Typography,
 } from "@mui/material";
 import {alpha, useTheme} from "@mui/material/styles";
-import {CurrentFramerate} from "@/store/slices/framerate/framerate-slice";
+import {DetailedFramerate} from "@/services/server/framerate-store";
 import {useState} from "react";
+import {frontendColor, backendColor} from "@/components/framerate-viewer/FrameRateViewer";
 
 type FramerateStatisticsViewProps = {
-    frontendFramerate: CurrentFramerate | null;
-    backendFramerate: CurrentFramerate | null;
+    frontendFramerate: DetailedFramerate | null;
+    backendFramerate: DetailedFramerate | null;
     compact?: boolean;
 };
 
@@ -109,48 +110,39 @@ export const HeaderCellWithTooltip = ({
 };
 
 type FramerateRowProps = {
-    framerateData: CurrentFramerate | null;
+    framerateData: DetailedFramerate | null;
+    sourceColor: string;
+    sourceLabel: string;
     colorMap: Record<string, string>;
     getCellStyle: (metricType: string) => object;
-    isDarkMode: boolean;
-    theme: any;
     shortTooltip: string;
     longTooltip: string;
 };
 
 const FramerateRow = ({
                           framerateData,
+                          sourceColor,
+                          sourceLabel,
                           colorMap,
                           getCellStyle,
-                          isDarkMode,
-                          theme,
                           shortTooltip,
                           longTooltip,
                       }: FramerateRowProps) => {
-    const isBackend =
-        framerateData?.framerate_source === "Backend" ||
-        (!framerateData?.framerate_source && framerateData);
-
     return (
         <TableRow>
             <ProgressiveTooltip shortInfo={shortTooltip} longInfo={longTooltip}>
                 <TableCell
                     sx={{
                         fontWeight: "bold",
-                        borderLeft: `3px solid ${colorMap.current}`,
+                        borderLeft: `4px solid ${sourceColor}`,
+                        backgroundColor: `${sourceColor}22`,
                         paddingY: 0.5,
-                        color: isDarkMode
-                            ? isBackend
-                                ? theme.palette.secondary.light
-                                : theme.palette.primary.light
-                            : isBackend
-                                ? theme.palette.secondary.main
-                                : theme.palette.primary.main,
+                        paddingLeft: 1,
+                        color: sourceColor,
                         cursor: "help",
                     }}
                 >
-                    {framerateData?.framerate_source ||
-                        (isBackend ? "Backend" : "Frontend")}
+                    {framerateData?.framerate_source || sourceLabel}
                     <Typography
                         variant="caption"
                         display="block"
@@ -166,64 +158,64 @@ const FramerateRow = ({
                 label="current"
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
-                primaryValue={framerateData?.mean_frame_duration_ms}
-                primarySuffix="ms"
-                secondaryValue={framerateData?.mean_frames_per_second}
-                secondarySuffix="fps"
+                primaryValue={framerateData?.mean_frames_per_second}
+                primarySuffix="fps"
+                secondaryValue={framerateData?.mean_frame_duration_ms}
+                secondarySuffix="ms"
             />
 
             <MetricCell
                 label="min"
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_min}
-                primarySuffix="ms"
-                secondaryValue={
-                    framerateData?.frame_duration_min &&
-                    framerateData.frame_duration_min > 0
-                        ? 1000 / framerateData.frame_duration_min
+                primaryValue={
+                    framerateData?.frame_duration_max &&
+                    framerateData.frame_duration_max > 0
+                        ? 1000 / framerateData.frame_duration_max
                         : null
                 }
-                secondarySuffix="fps"
+                primarySuffix="fps"
+                secondaryValue={framerateData?.frame_duration_max}
+                secondarySuffix="ms"
             />
 
             <MetricCell
                 label="max"
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_max}
-                primarySuffix="ms"
-                secondaryValue={
-                    framerateData?.frame_duration_max &&
-                    framerateData.frame_duration_max > 0
-                        ? 1000 / framerateData.frame_duration_max
+                primaryValue={
+                    framerateData?.frame_duration_min &&
+                    framerateData.frame_duration_min > 0
+                        ? 1000 / framerateData.frame_duration_min
                         : null
                 }
-                secondarySuffix="fps"
+                primarySuffix="fps"
+                secondaryValue={framerateData?.frame_duration_min}
+                secondarySuffix="ms"
             />
 
             <MetricCell
                 label="mean"
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_mean}
-                primarySuffix="ms"
-                secondaryValue={framerateData?.frame_duration_mean && framerateData.frame_duration_mean > 0
+                primaryValue={framerateData?.frame_duration_mean && framerateData.frame_duration_mean > 0
                     ? 1000 / framerateData.frame_duration_mean
                     : null}
-                secondarySuffix="fps"
+                primarySuffix="fps"
+                secondaryValue={framerateData?.frame_duration_mean}
+                secondarySuffix="ms"
             />
 
             <MetricCell
                 label="median"
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_median}
-                primarySuffix="ms"
-                secondaryValue={framerateData?.frame_duration_median && framerateData.frame_duration_median > 0
+                primaryValue={framerateData?.frame_duration_median && framerateData.frame_duration_median > 0
                     ? 1000 / framerateData.frame_duration_median
                     : null}
-                secondarySuffix="fps"
+                primarySuffix="fps"
+                secondaryValue={framerateData?.frame_duration_median}
+                secondarySuffix="ms"
             />
 
             <MetricCell
@@ -333,8 +325,8 @@ export default function FramerateStatisticsView({
     // Tooltips content - short and long versions
     const tooltips = {
         source: {
-            short: "Frontend displays frames, Backend captures frames.",
-            long: "The backend is the true rate at which frames are pulled/recorded from the camera, while the frontend is the rate at which they are received and displayed. Skellycam prioritizes backend performance for recording quality, so that number should stay more stable. If the frontend framerate diverges from the backend, it indicates your system resources are taxed. Consider using fewer cameras or decreasing framerate/resolution.",
+            short: "Display renders frames, Server captures frames.",
+            long: "The server is the true rate at which frames are pulled/recorded from the camera, while display is the rate at which they are received and rendered. Skellycam prioritizes server-side performance for recording quality, so that number should stay more stable. If the display framerate diverges from the server, it indicates your system resources are taxed. Consider using fewer cameras or decreasing framerate/resolution.",
         },
         current: {
             short: "Most recent frame time and corresponding FPS.",
@@ -460,33 +452,33 @@ export default function FramerateStatisticsView({
                 </TableHead>
 
                 <TableBody>
-                    {/* Frontend Row */}
+                    {/* Server Row (primary - shown first) */}
                     <FramerateRow
-                        framerateData={frontendFramerate}
+                        framerateData={backendFramerate}
+                        sourceColor={backendColor}
+                        sourceLabel="Server"
                         colorMap={colorMap}
                         getCellStyle={getCellStyle}
-                        isDarkMode={isDarkMode}
-                        theme={theme}
-                        shortTooltip="Displays received frames."
-                        longTooltip="Frontend represents the UI rendering performance. It shows how quickly your display receives and renders frames. Performance issues here won't affect recording quality but may impact your ability to monitor cameras in real-time."
+                        shortTooltip="Captures frames from camera."
+                        longTooltip="Server represents the camera frame-grabbing performance. This is the true rate at which frames are pulled from the camera and saved during recording. This is the most important metric for recording quality and should remain stable even if display performance fluctuates."
                     />
 
-                    {/* Divider between rows - now properly inside TableBody */}
+                    {/* Divider between rows */}
                     <TableRow>
                         <TableCell colSpan={7} sx={{padding: 0}}>
                             <Divider sx={{borderColor: theme.palette.divider}}/>
                         </TableCell>
                     </TableRow>
 
-                    {/* Backend Row */}
+                    {/* Display Row */}
                     <FramerateRow
-                        framerateData={backendFramerate}
+                        framerateData={frontendFramerate}
+                        sourceColor={frontendColor}
+                        sourceLabel="Display"
                         colorMap={colorMap}
                         getCellStyle={getCellStyle}
-                        isDarkMode={isDarkMode}
-                        theme={theme}
-                        shortTooltip="Captures frames from camera."
-                        longTooltip="Backend represents the camera frame-grabbing performance. This is the true rate at which frames are pulled from the camera and saved during recording. This is the most important metric for recording quality and should remain stable even if frontend performance fluctuates."
+                        shortTooltip="Renders received frames on screen."
+                        longTooltip="Display represents the UI rendering performance. It shows how quickly your display receives and renders frames. Performance issues here won't affect recording quality but may impact your ability to monitor cameras in real-time."
                     />
                 </TableBody>
             </Table>

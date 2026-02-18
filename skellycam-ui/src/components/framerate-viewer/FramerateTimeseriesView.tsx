@@ -2,13 +2,13 @@
 import {useCallback} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
-import {CurrentFramerate} from "@/store/slices/framerate/framerate-slice"
+import {DetailedFramerate} from "@/services/server/framerate-store"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "@/components/framerate-viewer/d3ChartUtils";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 
 type FramerateTimeseriesProps = {
-    frontendFramerate: CurrentFramerate | null
-    backendFramerate: CurrentFramerate | null
+    frontendFramerate: DetailedFramerate | null
+    backendFramerate: DetailedFramerate | null
     recentFrontendFrameDurations: number[]
     recentBackendFrameDurations: number[]
     frontendColor: string
@@ -31,32 +31,36 @@ export default function FramerateTimeseriesView({
                                                     recentBackendFrameDurations,
                                                     frontendColor,
                                                     backendColor,
-                                                    title = "Frame Duration Over Time"
+                                                    title = "Framerate Over Time"
                                                 }: FramerateTimeseriesProps) {
     const theme = useTheme()
 
     const renderChart = useCallback(({svg, chartArea, width, height, margin, transform}: ChartRenderProps) => {
-        // Prepare data sources - using the recent frame durations arrays
+        // Each data point in recentFrameDurations arrives ~1 second apart (server throttle rate)
+        const UPDATE_INTERVAL_MS = 1000;
+
         const sources = [
             {
                 id: "frontend",
-                name: frontendFramerate?.framerate_source || "Frontend",
+                name: frontendFramerate?.framerate_source || "Display",
                 color: frontendColor,
-                data: recentFrontendFrameDurations.map((value, index) => ({
-                    timestamp: Date.now() - (recentFrontendFrameDurations.length - index) *
-                        (frontendFramerate?.mean_frame_duration_ms || 16.67),
-                    value
-                }))
+                data: recentFrontendFrameDurations
+                    .filter(v => v > 0)
+                    .map((value, index, arr) => ({
+                        timestamp: Date.now() - (arr.length - index) * UPDATE_INTERVAL_MS,
+                        value: 1000 / value
+                    }))
             },
             {
                 id: "backend",
-                name: backendFramerate?.framerate_source || "Backend",
+                name: backendFramerate?.framerate_source || "Server",
                 color: backendColor,
-                data: recentBackendFrameDurations.map((value, index) => ({
-                    timestamp: Date.now() - (recentBackendFrameDurations.length - index) *
-                        (backendFramerate?.mean_frame_duration_ms || 33.33),
-                    value
-                }))
+                data: recentBackendFrameDurations
+                    .filter(v => v > 0)
+                    .map((value, index, arr) => ({
+                        timestamp: Date.now() - (arr.length - index) * UPDATE_INTERVAL_MS,
+                        value: 1000 / value
+                    }))
             }
         ];
 
@@ -74,13 +78,15 @@ export default function FramerateTimeseriesView({
             .domain(d3.extent(allData, (d) => new Date(d.timestamp)) as [Date, Date])
             .range([0, width]);
 
-        // Calculate y domain with some padding
+        // Calculate y domain zoomed to actual data range
         const yMax = d3.max(allData, (d) => d.value) as number;
-        const yPadding = Math.max(1, yMax * 0.1);
+        const yMin = d3.min(allData, (d) => d.value) as number;
+        const yRange = yMax - yMin;
+        const yPadding = Math.max(1, yRange * 0.3);
 
         const yScale = d3
             .scaleLinear()
-            .domain([0, yMax + yPadding])
+            .domain([Math.max(0, yMin - yPadding), yMax + yPadding])
             .range([height, 0]);
 
         // Apply the current zoom transform
@@ -127,7 +133,7 @@ export default function FramerateTimeseriesView({
             .style("font-family", "monospace")
             .style("font-size", "14px")
             .style("fill", theme.palette.text.secondary)
-            .text("Frame Duration (ms)");
+            .text("Framerate (fps)");
 
         // Style axes
         applyAxisStyles(svg, theme);
@@ -160,25 +166,19 @@ export default function FramerateTimeseriesView({
                 .attr("stroke-width", 1.5)
                 .attr("d", line);
 
-        });
+            // Add small dots at each data point
+            chartArea
+                .selectAll(`.dot-${source.id}`)
+                .data(source.data)
+                .enter()
+                .append("circle")
+                .attr("class", `dot-${source.id}`)
+                .attr("cx", d => xScaleZoomed(new Date(d.timestamp)))
+                .attr("cy", d => yScaleZoomed(d.value))
+                .attr("r", 2)
+                .attr("fill", source.color)
+                .attr("opacity", 0.8);
 
-        // Add legend
-        const legend = svg
-            .append("g")
-            .attr("transform", `translate(${width + 10}, 0)`)
-            .attr("font-family", "monospace")
-            .attr("font-size", "10px");
-
-        sources.forEach((source, i) => {
-            if (source.data.length === 0) return;
-
-            const legendItem = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
-            legendItem.append("rect").attr("width", 12).attr("height", 12).attr("fill", source.color);
-            legendItem.append("text")
-                .attr("x", 20)
-                .attr("y", 10)
-                .style("fill", theme.palette.text.primary)
-                .text(source.name);
         });
 
         // Add tooltip
@@ -202,10 +202,10 @@ export default function FramerateTimeseriesView({
                 <span style="color: ${source.color};">${source.name}</span>
                 <span style="color: ${theme.palette.text.secondary};">TIME:</span>
                 <span>${new Date(d.timestamp).toISOString().substr(11, 12)}</span>
-                <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
-                <span>${d.value.toFixed(2)} ms</span>
                 <span style="color: ${theme.palette.text.secondary};">FPS:</span>
-                <span>${(1000 / d.value).toFixed(2)}</span>
+                <span>${d.value.toFixed(2)}</span>
+                <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
+                <span>${(1000 / d.value).toFixed(2)} ms</span>
               </div>
             `)
                         .style("left", event.pageX + 10 + "px")

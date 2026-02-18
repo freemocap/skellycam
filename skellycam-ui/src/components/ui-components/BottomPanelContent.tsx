@@ -16,7 +16,6 @@ export default function BottomPanelContent() {
                 <Panel defaultSize={30} minSize={20}>
                     <Box sx={{height: '100%', overflow: 'auto'}}>
                         <FramerateViewerPanel/>
-                        Framerate  Viewer
                     </Box>
                 </Panel>
 

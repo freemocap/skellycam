@@ -1,28 +1,46 @@
 // src/components/framerate-viewer/FrameRateViewer.tsx
-import {useState} from "react"
+import {useState, useEffect, useRef} from "react"
 import {Box, IconButton, Paper, Stack, Tooltip, Typography} from "@mui/material"
 import {BarChart, ShowChart, ViewCompact, ViewDay} from "@mui/icons-material"
 import {alpha, useTheme} from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
 import FramerateStatisticsView from "./FramerateStatisticsView"
-import {useAppSelector, selectFramerateViewerData} from "@/store";
+import {useServer} from "@/services/server/ServerContextProvider";
+import {FramerateSnapshot} from "@/services/server/framerate-store";
 
 type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"
 export const backendColor: string = "#ff4d00"
 
+const POLL_INTERVAL_MS = 1000;
+
 export const FramerateViewerPanel = () => {
     const theme = useTheme()
     const [viewType, setViewType] = useState<ViewType>("both")
+    const {getFramerateStore} = useServer();
 
-    // Use the new selector to get all framerate data
+    // Poll the mutable store on a fixed interval instead of reacting to Redux
+    const [snapshot, setSnapshot] = useState<FramerateSnapshot>({
+        currentBackendFramerate: null,
+        currentFrontendFramerate: null,
+        recentFrontendFrameDurations: [],
+        recentBackendFrameDurations: [],
+    });
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setSnapshot(getFramerateStore().getSnapshot());
+        }, POLL_INTERVAL_MS);
+        return () => clearInterval(interval);
+    }, [getFramerateStore]);
+
     const {
         currentFrontendFramerate,
         currentBackendFramerate,
         recentFrontendFrameDurations,
         recentBackendFrameDurations
-    } = useAppSelector(selectFramerateViewerData);
+    } = snapshot;
 
     return (
         <Box sx={{
@@ -31,7 +49,7 @@ export const FramerateViewerPanel = () => {
             flexDirection: 'column',
             backgroundColor: theme.palette.background.default,
             p: 0.5,
-            overflow: 'hidden'  // Prevent content overflow
+            overflow: 'hidden'
         }}>
             {/* Ultra-compact header with controls */}
             <Box sx={{
@@ -111,7 +129,7 @@ export const FramerateViewerPanel = () => {
                 display: 'flex',
                 flexDirection: viewType === 'both' ? 'row' : 'column',
                 gap: 0.25,
-                overflow: 'hidden'  // Critical to prevent overflow
+                overflow: 'hidden'
             }}>
                 {(viewType === 'timeseries' || viewType === 'both') && (
                     <Paper
@@ -122,7 +140,7 @@ export const FramerateViewerPanel = () => {
                             flexDirection: 'column',
                             border: '1px solid',
                             borderColor: alpha(theme.palette.divider, 0.2),
-                            overflow: 'hidden'  // Ensure chart doesn't overflow
+                            overflow: 'hidden'
                         }}
                     >
                         <FramerateTimeseriesView
@@ -132,7 +150,7 @@ export const FramerateViewerPanel = () => {
                             recentBackendFrameDurations={recentBackendFrameDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
-                            title="Frame Duration Timeline"
+                            title="Framerate Timeline"
                         />
                     </Paper>
                 )}
@@ -146,7 +164,7 @@ export const FramerateViewerPanel = () => {
                             flexDirection: 'column',
                             border: '1px solid',
                             borderColor: alpha(theme.palette.divider, 0.2),
-                            overflow: 'hidden'  // Ensure chart doesn't overflow
+                            overflow: 'hidden'
                         }}
                     >
                         <FramerateHistogramView
@@ -156,7 +174,7 @@ export const FramerateViewerPanel = () => {
                             recentBackendFrameDurations={recentBackendFrameDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
-                            title="Frame Duration Distribution"
+                            title="Framerate Distribution"
                         />
                     </Paper>
                 )}

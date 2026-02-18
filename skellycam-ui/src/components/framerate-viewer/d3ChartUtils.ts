@@ -39,46 +39,16 @@ export function renderEmptyChart(
     height: number,
     theme: Theme
 ) {
-    // Create empty scales
-    const xScale = d3.scaleLinear().domain([0, 100]).range([0, width])
-    const yScale = d3.scaleLinear().domain([0, 10]).range([height, 0])
-
-    // Create axes
-    const xAxis = d3.axisBottom(xScale).ticks(10).tickSize(-height)
-    const yAxis = d3.axisLeft(yScale).ticks(5).tickSize(-width)
-
-    // Add X axis
-    svg
-        .append("g")
-        .attr("class", "x-axis")
-        .style("font-family", "monospace")
-        .style("font-size", "10px")
-        .style("color", theme.palette.text.secondary)
-        .attr("transform", `translate(0,${height})`)
-        .call(xAxis)
-
-    // Add Y axis
-    svg
-        .append("g")
-        .attr("class", "y-axis")
-        .style("font-family", "monospace")
-        .style("font-size", "10px")
-        .style("color", theme.palette.text.secondary)
-        .call(yAxis)
-
-    // Style grid lines
-    svg.selectAll(".tick line").attr("stroke", theme.palette.divider).attr("stroke-dasharray", "2,2")
-
-    // Add "No data" message
     svg
         .append("text")
         .attr("x", width / 2)
         .attr("y", height / 2)
         .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "central")
         .style("font-family", "monospace")
-        .style("font-size", "14px")
+        .style("font-size", "12px")
         .style("fill", theme.palette.text.disabled)
-        .text("No data available")
+        .text("Waiting for data…")
 }
 
 export function renderThresholdLines(

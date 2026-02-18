@@ -7,13 +7,8 @@ import { ConnectionState, WebSocketConnection } from "@/services/server/server-h
 import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
 import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
 import { serverUrls } from "@/services";
-import {
-    logAdded,
-    LogRecord,
-    backendFramerateUpdated,
-    frontendFramerateUpdated,
-    DetailedFramerate
-} from '@/store';
+import { logAdded, LogRecord } from '@/store';
+import {DetailedFramerate, FramerateStore} from "@/services/server/server-helpers/framerate-store";
 
 interface ServerContextValue {
     isConnected: boolean;
@@ -22,6 +17,8 @@ interface ServerContextValue {
     send: (data: string | object) => void;
     setCanvasForCamera: (cameraId: string, canvas: HTMLCanvasElement) => void;
     getFps: (cameraId: string) => number | null;
+    getServerFps: () => number | null;
+    getFramerateStore: () => FramerateStore;
     connectedCameraIds: string[];
     updateServerConnection: (host: string, port: number) => void;
 }
@@ -80,6 +77,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
     const wsConnectionRef = useRef<WebSocketConnection | null>(null);
     const frameProcessorRef = useRef<FrameProcessor | null>(null);
     const canvasManagerRef = useRef<CanvasManager | null>(null);
+    const framerateStoreRef = useRef<FramerateStore>(new FramerateStore());
+
+    // Latest server-side (backend) FPS stored in a ref for non-reactive access
+    const serverFpsRef = useRef<number | null>(null);
 
     // Initialize services once
     useEffect(() => {
@@ -117,6 +118,8 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             if (newState === ConnectionState.DISCONNECTED || newState === ConnectionState.FAILED) {
                 canvasManagerRef.current?.terminateAllWorkers();
                 frameProcessorRef.current?.reset();
+                serverFpsRef.current = null;
+                framerateStoreRef.current.clear();
                 setConnectedCameraIds([]);
             }
         };
@@ -177,9 +180,11 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                     }
                     // Handle framerate updates
                     else if (isFramerateUpdate(jsonData)) {
-                        // Dispatch full detailed framerate data to Redux store
-                        dispatch(backendFramerateUpdated(jsonData.backend_framerate));
-                        dispatch(frontendFramerateUpdated(jsonData.frontend_framerate));
+                        // Store backend FPS in ref for fast non-reactive access
+                        serverFpsRef.current = jsonData.backend_framerate.mean_frames_per_second;
+                        // Update mutable framerate store (no Redux, no re-renders)
+                        framerateStoreRef.current.updateBackend(jsonData.backend_framerate);
+                        framerateStoreRef.current.updateFrontend(jsonData.frontend_framerate);
                     }
                     // Handle other message types
                     else {
@@ -224,6 +229,14 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         return frameProcessorRef.current?.getFps(cameraId) ?? null;
     }, []);
 
+    const getServerFps = useCallback((): number | null => {
+        return serverFpsRef.current;
+    }, []);
+
+    const getFramerateStore = useCallback((): FramerateStore => {
+        return framerateStoreRef.current;
+    }, []);
+
     const updateServerConnection = useCallback((host: string, port: number): void => {
         // Update the singleton so HTTP endpoints also update
         serverUrls.setHost(host);
@@ -246,6 +259,8 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             send,
             setCanvasForCamera,
             getFps,
+            getServerFps,
+            getFramerateStore,
             connectedCameraIds,
             updateServerConnection,
         }}>

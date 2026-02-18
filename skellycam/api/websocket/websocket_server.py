@@ -1,7 +1,10 @@
 import asyncio
 import json
 import logging
+import time
+from collections import deque
 
+import numpy as np
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from fastapi import FastAPI
 
@@ -20,6 +23,54 @@ logger = logging.getLogger(__name__)
 BACKPRESSURE_WARNING_THRESHOLD: int = 1000  # Number of frames before we warn about backpressure
 
 
+class ServerFramerateCalculator:
+    """Compute true camera capture framerate from (frame_number, capture_timestamp_ns) pairs.
+
+    frame_number increments by 1 for every camera capture at the hardware level.
+    capture_timestamp_ns is perf_counter_ns at the moment of camera grab.
+    When the websocket skips frames due to backpressure, frame_number jumps
+    but we can still compute the true per-frame duration from the gap.
+    """
+
+    def __init__(self, source_name: str, max_observations: int = 200):
+        self._source_name: str = source_name
+        self._observations: deque[tuple[int, float]] = deque(maxlen=max_observations)
+        self._per_frame_durations_ms: deque[float] = deque(maxlen=1000)
+
+    def update(self, frame_number: int, capture_timestamp_ns: float) -> None:
+        if self._observations:
+            prev_fn, prev_ts = self._observations[-1]
+            frame_delta = frame_number - prev_fn
+            if frame_delta > 0:
+                per_frame_ns = (capture_timestamp_ns - prev_ts) / frame_delta
+                per_frame_ms = per_frame_ns / 1e6
+                # Record one duration entry per actual frame captured
+                for _ in range(frame_delta):
+                    self._per_frame_durations_ms.append(per_frame_ms)
+        self._observations.append((frame_number, capture_timestamp_ns))
+
+    @property
+    def current_framerate(self) -> CurrentFramerate | None:
+        if len(self._per_frame_durations_ms) < 2:
+            return None
+        durations = np.array(self._per_frame_durations_ms)
+        mean_dur = float(np.nanmean(durations))
+        if mean_dur <= 0:
+            return None
+        return CurrentFramerate(
+            mean_frame_duration_ms=mean_dur,
+            mean_frames_per_second=1e3 / mean_dur,
+            frame_duration_max=float(np.nanmax(durations)),
+            frame_duration_min=float(np.nanmin(durations)),
+            frame_duration_mean=mean_dur,
+            frame_duration_stddev=float(np.nanstd(durations)),
+            frame_duration_median=float(np.nanmedian(durations)),
+            frame_duration_coefficient_of_variation=float(np.nanstd(durations)) / mean_dur,
+            calculation_window_size=len(durations),
+            framerate_source=self._source_name,
+        )
+
+
 class WebsocketServer:
     def __init__(self, app: FastAPI, websocket: WebSocket):
         self.websocket = websocket
@@ -32,7 +83,9 @@ class WebsocketServer:
 
         self.last_sent_frame_number: int = -1
         self._display_image_sizes: dict[CameraGroupIdString, dict[str, float]] | None = None
-        self._frontend_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
+        self._server_framerate_calculators: dict[CameraGroupIdString, ServerFramerateCalculator] = {}
+        self._display_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
+        self._last_framerate_send_time: float = 0.0
 
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
@@ -117,10 +170,25 @@ class WebsocketServer:
                                               payload_bytes) in new_frontend_payloads.items():
                             await self.websocket.send_bytes(payload_bytes)
                             self.last_sent_frame_number = frame_number
-                            if camera_group_id not in self._frontend_framerate_trackers:
-                                self._frontend_framerate_trackers[camera_group_id] = FramerateTracker.create(
-                                    framerate_source=f"Frontend-{camera_group_id}")
-                            self._frontend_framerate_trackers[camera_group_id].update(multiframe_timestamp)
+
+                            # Server framerate: computed from frame_number + capture timestamp.
+                            # frame_number increments by 1 per actual camera capture,
+                            # multiframe_timestamp is perf_counter_ns at the camera grab.
+                            # This gives the true capture rate even when frames are
+                            # skipped in the websocket relay due to backpressure.
+                            if camera_group_id not in self._server_framerate_calculators:
+                                self._server_framerate_calculators[camera_group_id] = ServerFramerateCalculator(
+                                    source_name="Server")
+                            self._server_framerate_calculators[camera_group_id].update(
+                                frame_number=frame_number,
+                                capture_timestamp_ns=multiframe_timestamp,
+                            )
+
+                            # Display framerate: websocket send rate (what the UI actually receives)
+                            if camera_group_id not in self._display_framerate_trackers:
+                                self._display_framerate_trackers[camera_group_id] = FramerateTracker.create(
+                                    framerate_source="Display")
+                            self._display_framerate_trackers[camera_group_id].update(time.perf_counter_ns())
                 else:
                     skipped_previous = True
                     backpressure = self.last_sent_frame_number - self.last_received_frontend_confirmation
@@ -130,18 +198,23 @@ class WebsocketServer:
                             f"Last sent frame: {self.last_sent_frame_number}, "
                             f"last received confirmation: {self.last_received_frontend_confirmation}")
 
-                backend_framerate_updates: dict[CameraGroupIdString, CurrentFramerate] = self._cgm.get_backend_framerate_updates()
-                if backend_framerate_updates:
-                    for camera_group_id, backend_framerate in backend_framerate_updates.items():
-                        if camera_group_id not in self._frontend_framerate_trackers:
+                # Send framerate updates from our local trackers (throttled to ~1Hz)
+                now = time.monotonic()
+                if now - self._last_framerate_send_time >= 1.0:
+                    for camera_group_id, server_calc in self._server_framerate_calculators.items():
+                        if camera_group_id not in self._display_framerate_trackers:
                             continue
-                        framerate_message = {
-                            "message_type": "framerate_update",
-                            "camera_group_id": camera_group_id,
-                            "backend_framerate": backend_framerate.model_dump(),
-                            "frontend_framerate": self._frontend_framerate_trackers[camera_group_id].current_framerate.model_dump()
-                        }
-                        await self.websocket.send_json(framerate_message)
+                        server_framerate = server_calc.current_framerate
+                        display_tracker = self._display_framerate_trackers[camera_group_id]
+                        if server_framerate and display_tracker.frames_received_timestamps_ns:
+                            framerate_message = {
+                                "message_type": "framerate_update",
+                                "camera_group_id": camera_group_id,
+                                "backend_framerate": server_framerate.model_dump(),
+                                "frontend_framerate": display_tracker.current_framerate.model_dump()
+                            }
+                            await self.websocket.send_json(framerate_message)
+                    self._last_framerate_send_time = now
 
         except WebSocketDisconnect:
             logger.api("Client disconnected, ending Frontend Image relay task...")

@@ -3,12 +3,12 @@ import {useCallback} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "./d3ChartUtils"
-import {CurrentFramerate} from "@/store/slices/framerate/framerate-slice";
+import {DetailedFramerate} from "@/services/server/framerate-store";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 
 type FramerateHistogramProps = {
-    frontendFramerate: CurrentFramerate | null
-    backendFramerate: CurrentFramerate | null
+    frontendFramerate: DetailedFramerate | null
+    backendFramerate: DetailedFramerate | null
     recentFrontendFrameDurations: number[]
     recentBackendFrameDurations: number[]
     frontendColor: string
@@ -23,12 +23,12 @@ export default function FramerateHistogramView({
                                                    recentBackendFrameDurations,
                                                    frontendColor,
                                                    backendColor,
-                                                   title = "Frame Duration Distribution",
+                                                   title = "Framerate Distribution",
                                                }: FramerateHistogramProps) {
     const theme = useTheme()
 
     // Generate histogram data
-    const generateHistogram = (data: number[], binCount = 100) => {
+    const generateHistogram = (data: number[], binCount = 25) => {
         if (data.length === 0) return null;
 
         // Calculate bins using d3's histogram generator
@@ -65,21 +65,25 @@ export default function FramerateHistogramView({
         margin: { top: number; right: number; bottom: number; left: number };
         transform: d3.ZoomTransform;
     }) => {
+        // Convert frame durations (ms) to fps for histogram
+        const frontendFpsData = recentFrontendFrameDurations.filter(v => v > 0).map(v => 1000 / v);
+        const backendFpsData = recentBackendFrameDurations.filter(v => v > 0).map(v => 1000 / v);
+
         // Prepare the sources with histogram data
         const sources = [
             {
                 id: 'frontend',
-                name: frontendFramerate?.framerate_source || 'Frontend',
+                name: frontendFramerate?.framerate_source || 'Display',
                 color: frontendColor,
-                histogram: generateHistogram(recentFrontendFrameDurations),
-                totalSamples: recentFrontendFrameDurations.length
+                histogram: generateHistogram(frontendFpsData),
+                totalSamples: frontendFpsData.length
             },
             {
                 id: 'backend',
-                name: backendFramerate?.framerate_source || 'Backend',
+                name: backendFramerate?.framerate_source || 'Server',
                 color: backendColor,
-                histogram: generateHistogram(recentBackendFrameDurations),
-                totalSamples: recentBackendFrameDurations.length
+                histogram: generateHistogram(backendFpsData),
+                totalSamples: backendFpsData.length
             }
         ];
 
@@ -149,7 +153,7 @@ export default function FramerateHistogramView({
             .style("font-family", "monospace")
             .style("font-size", "10px")
             .style("fill", theme.palette.text.secondary)
-            .text("Frame Duration (ms)");
+            .text("Framerate (fps)");
 
         // Add Y axis with label
         const yAxisGroup = svg
@@ -199,7 +203,7 @@ export default function FramerateHistogramView({
                 .append("rect")
                 .attr("class", `bar-${source.id}`)
                 .attr("x", d => xScaleZoomed(d.x0))
-                .attr("width", d => Math.max(0, xScaleZoomed(d.x1) - xScaleZoomed(d.x0) - 1))
+                .attr("width", d => Math.max(2, xScaleZoomed(d.x1) - xScaleZoomed(d.x0) - 1))
                 .attr("y", d => {
                     const y = yScaleZoomed(d.density);
                     // Ensure y is valid and not greater than height
@@ -216,25 +220,6 @@ export default function FramerateHistogramView({
                 .attr("stroke", theme.palette.background.paper)
                 .attr("stroke-width", 0.5)
                 .attr("opacity", 0.7);
-        });
-
-        // Add legend
-        const legend = svg
-            .append("g")
-            .attr("transform", `translate(${width + 10}, 0)`)
-            .attr("font-family", "monospace")
-            .attr("font-size", "10px");
-
-        sources.forEach((source, i) => {
-            if (!source.histogram) return;
-
-            const legendItem = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
-            legendItem.append("rect").attr("width", 12).attr("height", 12).attr("fill", source.color);
-            legendItem.append("text")
-                .attr("x", 20)
-                .attr("y", 10)
-                .style("fill", theme.palette.text.primary)
-                .text(`${source.name} (${source.totalSamples})`);
         });
 
         // Add tooltip
@@ -256,13 +241,11 @@ export default function FramerateHistogramView({
                 <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
                 <span style="color: ${source.color};">${source.name}</span>
                 <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
-                <span>${d.x0.toFixed(2)} - ${d.x1.toFixed(2)} ms</span>
+                <span>${d.x0.toFixed(1)} - ${d.x1.toFixed(1)} fps</span>
                 <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
                 <span>${d.count} samples</span>
                 <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
                 <span>${(d.density * 100).toFixed(1)}%</span>
-                <span style="color: ${theme.palette.text.secondary};">FPS RANGE:</span>
-                <span>${(1000 / d.x1).toFixed(1)} - ${(1000 / d.x0).toFixed(1)} fps</span>
               </div>
             `)
                         .style("left", event.pageX + 10 + "px")
