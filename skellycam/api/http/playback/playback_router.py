@@ -8,10 +8,12 @@ Workflow:
 3. GET  /playback/video/{video_id} — stream a video file (range-request aware)
 4. GET  /playback/recordings — list available recordings in the default directory
 """
+import csv
 import logging
 from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -56,6 +58,11 @@ class RecordingListEntry(BaseModel):
     name: str
     path: str
     video_count: int
+    total_size_bytes: int = 0
+    created_timestamp: Optional[str] = None
+    total_frames: Optional[int] = None
+    duration_seconds: Optional[float] = None
+    fps: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +101,100 @@ def _find_video_folder(recording_path: Path) -> Path:
     )
 
 
+def _get_total_size(video_folder: Path) -> int:
+    """Sum of all video file sizes in a folder."""
+    total = 0
+    for p in video_folder.iterdir():
+        if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS:
+            try:
+                total += p.stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def _get_recording_stats(recording_path: Path, video_folder: Path) -> dict:
+    """Try to extract frame count, duration, and fps from timestamp CSV files."""
+    stats: dict = {
+        "total_frames": None,
+        "duration_seconds": None,
+        "fps": None,
+    }
+
+    # Look for timestamp CSV files in various locations
+    timestamp_dirs = [
+        recording_path / "synchronized_videos" / "timestamps" / "camera_timestamps",
+        recording_path / "synchronized_videos" / "timestamps",
+        recording_path / "timestamps",
+        video_folder,
+    ]
+
+    for ts_dir in timestamp_dirs:
+        if not ts_dir.is_dir():
+            continue
+        for ts_file in sorted(ts_dir.iterdir()):
+            if ts_file.suffix.lower() != ".csv":
+                continue
+            try:
+                with open(ts_file, "r", newline="") as f:
+                    reader = csv.reader(f)
+                    header = next(reader, None)
+                    if header is None:
+                        continue
+                    rows = list(reader)
+                    if len(rows) < 2:
+                        continue
+
+                    frame_count = len(rows)
+                    stats["total_frames"] = frame_count
+
+                    # Try to get timestamps for duration/fps calculation
+                    # Look for a column that contains timestamp data
+                    timestamp_col = None
+                    for i, col_name in enumerate(header):
+                        col_lower = col_name.strip().lower()
+                        if any(kw in col_lower for kw in ["timestamp", "time", "elapsed", "seconds"]):
+                            timestamp_col = i
+                            break
+
+                    if timestamp_col is not None and len(rows) >= 2:
+                        try:
+                            first_ts = float(rows[0][timestamp_col])
+                            last_ts = float(rows[-1][timestamp_col])
+                            duration = abs(last_ts - first_ts)
+
+                            # If duration seems to be in nanoseconds or milliseconds, convert
+                            if duration > 1e15:  # nanoseconds
+                                duration /= 1e9
+                            elif duration > 1e6:  # milliseconds
+                                duration /= 1e3
+
+                            if duration > 0:
+                                stats["duration_seconds"] = round(duration, 2)
+                                stats["fps"] = round(frame_count / duration, 1)
+                        except (ValueError, IndexError):
+                            pass
+
+                    # Found a timestamp file — use it and stop
+                    return stats
+            except (OSError, csv.Error):
+                continue
+
+    return stats
+
+
+def _get_created_timestamp(recording_path: Path) -> Optional[str]:
+    """Try to determine the recording creation time from folder name or file metadata."""
+    try:
+        # Most reliable: folder creation / modification time
+        stat = recording_path.stat()
+        from datetime import datetime
+        created = datetime.fromtimestamp(stat.st_mtime)
+        return created.isoformat(timespec="seconds")
+    except OSError:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -105,7 +206,7 @@ def list_recordings() -> list[RecordingListEntry]:
         return []
 
     entries: list[RecordingListEntry] = []
-    for child in sorted(recordings_dir.iterdir()):
+    for child in sorted(recordings_dir.iterdir(), reverse=True):  # newest first by name
         if not child.is_dir():
             continue
         try:
@@ -115,10 +216,19 @@ def list_recordings() -> list[RecordingListEntry]:
                 if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
             )
             if video_count > 0:
+                total_size = _get_total_size(video_folder)
+                created_ts = _get_created_timestamp(child)
+                stats = _get_recording_stats(child, video_folder)
+
                 entries.append(RecordingListEntry(
                     name=child.name,
                     path=str(child),
                     video_count=video_count,
+                    total_size_bytes=total_size,
+                    created_timestamp=created_ts,
+                    total_frames=stats.get("total_frames"),
+                    duration_seconds=stats.get("duration_seconds"),
+                    fps=stats.get("fps"),
                 ))
         except (FileNotFoundError, PermissionError):
             continue
@@ -190,7 +300,6 @@ def stream_video(video_id: str) -> FileResponse:
     if not video_path.is_file():
         raise HTTPException(status_code=404, detail=f"Video file no longer exists: {video_path}")
 
-    # Determine media type from extension
     suffix = video_path.suffix.lower()
     media_types = {
         ".mp4": "video/mp4",
@@ -201,7 +310,6 @@ def stream_video(video_id: str) -> FileResponse:
     }
     media_type = media_types.get(suffix, "application/octet-stream")
 
-    # FileResponse handles range requests automatically
     return FileResponse(
         path=str(video_path),
         media_type=media_type,
@@ -217,7 +325,6 @@ def get_timestamps(video_id: str) -> dict:
     if _loaded_recording_path is None:
         raise HTTPException(status_code=404, detail="No recording loaded")
 
-    # Search for timestamp files in the expected locations
     timestamp_dirs = [
         _loaded_recording_path / "synchronized_videos" / "timestamps" / "camera_timestamps",
         _loaded_recording_path / "synchronized_videos" / "timestamps",

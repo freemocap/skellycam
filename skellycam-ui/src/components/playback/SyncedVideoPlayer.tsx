@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Tooltip, Typography, useTheme } from '@mui/material';
 import { PlaybackControls } from './PlaybackControls';
 
 interface VideoEntry {
@@ -8,139 +8,247 @@ interface VideoEntry {
     streamUrl: string;
 }
 
+export interface PlaybackSettings {
+    showOverlays: boolean;
+    timestampFormat: 'timecode' | 'seconds';
+}
+
 interface SyncedVideoPlayerProps {
     videos: VideoEntry[];
+    recordingFps?: number;
+}
+
+function formatTimecode(frame: number, fps: number): string {
+    if (fps <= 0) return '00:00:00:00';
+    const totalSec = frame / fps;
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = Math.floor(totalSec % 60);
+    const f = frame % Math.round(fps);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
+}
+
+function formatSeconds(frame: number, fps: number): string {
+    if (fps <= 0) return '0.000s';
+    return `${(frame / fps).toFixed(3)}s`;
 }
 
 /**
- * Frame-locked multi-video player.
+ * High-performance frame-locked multi-video player.
  *
- * Guarantees frame-perfect synchronization by NEVER calling .play() on any
- * video element. Instead, a single requestAnimationFrame loop maintains a
- * frame counter and sets `video.currentTime = frame / fps` on ALL videos
- * simultaneously each tick. The browser's video decoder handles seeking
- * to the correct frame internally.
+ * CRITICAL PERFORMANCE DESIGN:
+ * During playback, we NEVER call React setState per-frame. Instead:
+ *   - Frame number overlays are updated via direct DOM manipulation (refs)
+ *   - React state (for controls/slider) is updated at ~5Hz via a throttle
+ *   - Videos use native .play() with periodic drift correction
  *
- * During "playback", the frame counter advances based on wall-clock elapsed
- * time × playbackRate. During pause, frame-step directly sets the counter.
- * All videos are always on the exact same frame number.
+ * This keeps the rAF loop ~0ms per tick with zero React re-renders during playback.
  */
-export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) => {
+export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps }) => {
     const theme = useTheme();
     const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
-    // Playback state in refs for use inside the rAF loop (avoids stale closures)
+    // Direct DOM refs for overlays — updated WITHOUT React re-renders
+    const frameOverlayRefs = useRef<Map<string, HTMLElement>>(new Map());
+    const timeOverlayRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+    // Playback refs (rAF loop reads these, never stale)
     const isPlayingRef = useRef(false);
     const currentFrameRef = useRef(0);
     const totalFramesRef = useRef(0);
-    const fpsRef = useRef(30);
+    const fpsRef = useRef(recordingFps || 30);
     const playbackRateRef = useRef(1);
-    const lastTickTimeRef = useRef<number | null>(null);
+    const playStartTimeRef = useRef<number | null>(null);
+    const playStartFrameRef = useRef(0);
     const rafRef = useRef<number | null>(null);
+    const syncCheckCounter = useRef(0);
+    const settingsRef = useRef<PlaybackSettings>({ showOverlays: true, timestampFormat: 'seconds' });
 
-    // React state for UI rendering
+    const SYNC_CHECK_INTERVAL = 3;
+    const SYNC_TOLERANCE_FRAMES = 0.5;
+    // Grace period: skip sync corrections for the first N ms after play starts
+    // to let the browser's video decoder buffer and stabilize
+    const SYNC_GRACE_PERIOD_MS = 600;
+
+    // Throttle: only push to React state every ~200ms
+    const lastReactUpdateRef = useRef(0);
+    const REACT_UPDATE_INTERVAL_MS = 200;
+
+    // Slider drag state — tracked in refs so rAF loop can read it
+    const isDraggingRef = useRef(false);
+    const wasPlayingBeforeDragRef = useRef(false);
+
+    // React state — ONLY for controls/slider, NOT updated per-frame
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentFrame, setCurrentFrame] = useState(0);
     const [totalFrames, setTotalFrames] = useState(0);
-    const [fps, setFps] = useState(30);
     const [duration, setDuration] = useState(0);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [videosReady, setVideosReady] = useState(0);
+    const [settings, setSettings] = useState<PlaybackSettings>({
+        showOverlays: true,
+        timestampFormat: 'seconds',
+    });
 
-    const allReady = videosReady >= videos.length;
+    const fps = recordingFps || 30;
+    const allReady = videosReady >= videos.length && videos.length > 0;
     const columns = videos.length <= 1 ? 1 : videos.length <= 4 ? 2 : videos.length <= 9 ? 3 : 4;
     const currentTime = fpsRef.current > 0 ? currentFrameRef.current / fpsRef.current : 0;
+
+    // Keep settingsRef in sync
+    useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+    useEffect(() => {
+        if (recordingFps && recordingFps > 0) fpsRef.current = recordingFps;
+    }, [recordingFps]);
+
+    // -----------------------------------------------------------------------
+    // Direct DOM overlay updates — fast, no React involved
+    // -----------------------------------------------------------------------
+    const updateOverlays = useCallback((frame: number) => {
+        const s = settingsRef.current;
+        const padLen = Math.max(String(totalFramesRef.current).length, 1);
+        const frameText = 'F' + String(frame).padStart(padLen, '0');
+        const timeText = '~' + (s.timestampFormat === 'timecode'
+            ? formatTimecode(frame, fpsRef.current)
+            : formatSeconds(frame, fpsRef.current));
+
+        frameOverlayRefs.current.forEach((el) => { el.textContent = frameText; });
+        timeOverlayRefs.current.forEach((el) => { el.textContent = timeText; });
+    }, []);
 
     // -----------------------------------------------------------------------
     // Ref registration
     // -----------------------------------------------------------------------
     const setVideoRef = useCallback((videoId: string, el: HTMLVideoElement | null) => {
-        if (el) {
-            videoRefs.current.set(videoId, el);
-        } else {
-            videoRefs.current.delete(videoId);
-        }
+        if (el) videoRefs.current.set(videoId, el);
+        else videoRefs.current.delete(videoId);
+    }, []);
+
+    const setFrameOverlayRef = useCallback((videoId: string, el: HTMLElement | null) => {
+        if (el) frameOverlayRefs.current.set(videoId, el);
+        else frameOverlayRefs.current.delete(videoId);
+    }, []);
+
+    const setTimeOverlayRef = useCallback((videoId: string, el: HTMLElement | null) => {
+        if (el) timeOverlayRefs.current.set(videoId, el);
+        else timeOverlayRefs.current.delete(videoId);
     }, []);
 
     // -----------------------------------------------------------------------
-    // Core: seek ALL videos to a specific frame number
+    // Seek all videos to a frame (used when PAUSED / stepping only)
     // -----------------------------------------------------------------------
     const seekAllToFrame = useCallback((frame: number) => {
-        const clampedFrame = Math.max(0, Math.min(frame, totalFramesRef.current - 1));
-        const targetTime = fpsRef.current > 0 ? clampedFrame / fpsRef.current : 0;
+        const clamped = Math.max(0, Math.min(frame, totalFramesRef.current - 1));
+        const targetTime = fpsRef.current > 0 ? clamped / fpsRef.current : 0;
+        videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
+        currentFrameRef.current = clamped;
+        setCurrentFrame(clamped);      // OK when paused — not per-frame
+        updateOverlays(clamped);
+    }, [updateOverlays]);
+
+    // -----------------------------------------------------------------------
+    // Native play/pause
+    // -----------------------------------------------------------------------
+    const playAllVideos = useCallback(() => {
         videoRefs.current.forEach((el) => {
-            el.currentTime = targetTime;
+            el.playbackRate = playbackRateRef.current;
+            el.play().catch(() => {});
         });
-        currentFrameRef.current = clampedFrame;
-        setCurrentFrame(clampedFrame);
+    }, []);
+
+    const pauseAllVideos = useCallback(() => {
+        videoRefs.current.forEach((el) => { el.pause(); });
     }, []);
 
     // -----------------------------------------------------------------------
-    // The playback loop — single rAF drives all videos from one frame counter
+    // rAF playback loop — ZERO React state updates per frame
     // -----------------------------------------------------------------------
     const tick = useCallback((timestamp: DOMHighResTimeStamp) => {
         if (!isPlayingRef.current) return;
 
-        if (lastTickTimeRef.current !== null) {
-            const deltaSeconds = (timestamp - lastTickTimeRef.current) / 1000;
-            const frameAdvance = deltaSeconds * fpsRef.current * playbackRateRef.current;
-            const newFrame = currentFrameRef.current + frameAdvance;
-
-            if (newFrame >= totalFramesRef.current) {
-                // Reached the end — stop
-                seekAllToFrame(totalFramesRef.current - 1);
-                isPlayingRef.current = false;
-                lastTickTimeRef.current = null;
-                setIsPlaying(false);
-                return;
-            }
-
-            // Seek when we cross into a new integer frame
-            const newIntFrame = Math.floor(newFrame);
-            if (newIntFrame !== Math.floor(currentFrameRef.current)) {
-                seekAllToFrame(newIntFrame);
-            } else {
-                // Accumulate fractional frame progress
-                currentFrameRef.current = newFrame;
-            }
+        if (playStartTimeRef.current === null) {
+            playStartTimeRef.current = timestamp;
+            lastReactUpdateRef.current = timestamp;
         }
 
-        lastTickTimeRef.current = timestamp;
+        const elapsedSec = (timestamp - playStartTimeRef.current) / 1000;
+        const newFrame = playStartFrameRef.current + (elapsedSec * fpsRef.current * playbackRateRef.current);
+
+        // End of video
+        if (newFrame >= totalFramesRef.current) {
+            pauseAllVideos();
+            isPlayingRef.current = false;
+            playStartTimeRef.current = null;
+            const endFrame = totalFramesRef.current - 1;
+            currentFrameRef.current = endFrame;
+            updateOverlays(endFrame);
+            // Single React update on stop
+            setIsPlaying(false);
+            setCurrentFrame(endFrame);
+            return;
+        }
+
+        const intFrame = Math.floor(newFrame);
+        const prevIntFrame = Math.floor(currentFrameRef.current);
+        currentFrameRef.current = newFrame;
+
+        // Update DOM overlays directly on frame change — FAST
+        if (intFrame !== prevIntFrame) {
+            updateOverlays(intFrame);
+        }
+
+        // Throttled React update for controls/slider (~5Hz)
+        if (timestamp - lastReactUpdateRef.current >= REACT_UPDATE_INTERVAL_MS) {
+            lastReactUpdateRef.current = timestamp;
+            setCurrentFrame(intFrame);
+        }
+
+        // Periodic video sync check — skip during grace period after start
+        syncCheckCounter.current++;
+        const elapsedMs = timestamp - playStartTimeRef.current!;
+        if (syncCheckCounter.current >= SYNC_CHECK_INTERVAL && elapsedMs > SYNC_GRACE_PERIOD_MS) {
+            syncCheckCounter.current = 0;
+            const targetTime = newFrame / fpsRef.current;
+            const toleranceSec = SYNC_TOLERANCE_FRAMES / fpsRef.current;
+            videoRefs.current.forEach((el) => {
+                if (Math.abs(el.currentTime - targetTime) > toleranceSec) el.currentTime = targetTime;
+                if (Math.abs(el.playbackRate - playbackRateRef.current) > 0.01) el.playbackRate = playbackRateRef.current;
+            });
+        }
+
         rafRef.current = requestAnimationFrame(tick);
-    }, [seekAllToFrame]);
+    }, [pauseAllVideos, updateOverlays]);
 
     const startLoop = useCallback(() => {
-        lastTickTimeRef.current = null;
+        playStartTimeRef.current = null;
+        playStartFrameRef.current = Math.floor(currentFrameRef.current);
+        syncCheckCounter.current = 0;
         rafRef.current = requestAnimationFrame(tick);
     }, [tick]);
 
     const stopLoop = useCallback(() => {
-        if (rafRef.current !== null) {
-            cancelAnimationFrame(rafRef.current);
-            rafRef.current = null;
-        }
-        lastTickTimeRef.current = null;
+        if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+        playStartTimeRef.current = null;
     }, []);
 
     useEffect(() => stopLoop, [stopLoop]);
 
     // -----------------------------------------------------------------------
-    // Video metadata
+    // Metadata
     // -----------------------------------------------------------------------
     const handleLoadedMetadata = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
         const el = e.currentTarget;
         if (el.duration && el.duration !== Infinity) {
-            const videoDuration = el.duration;
-            setDuration((prev) => Math.max(prev, videoDuration));
-
-            const estimatedFrames = Math.floor(videoDuration * fpsRef.current);
-            if (totalFramesRef.current === 0 || estimatedFrames < totalFramesRef.current) {
-                totalFramesRef.current = estimatedFrames;
-                setTotalFrames(estimatedFrames);
+            const d = el.duration;
+            setDuration((prev) => Math.max(prev, d));
+            const frames = Math.floor(d * fpsRef.current);
+            if (totalFramesRef.current === 0 || frames < totalFramesRef.current) {
+                totalFramesRef.current = frames;
+                setTotalFrames(frames);
             }
         }
-
-        // Videos must NEVER auto-play — we drive them manually
         el.pause();
         setVideosReady((prev) => prev + 1);
     }, []);
@@ -150,78 +258,96 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) 
     // -----------------------------------------------------------------------
     const handlePlayPause = useCallback(() => {
         if (isPlayingRef.current) {
-            isPlayingRef.current = false;
-            stopLoop();
-            setIsPlaying(false);
+            isPlayingRef.current = false; stopLoop(); pauseAllVideos(); setIsPlaying(false);
             seekAllToFrame(Math.floor(currentFrameRef.current));
         } else {
-            if (Math.floor(currentFrameRef.current) >= totalFramesRef.current - 1) {
-                seekAllToFrame(0);
+            if (Math.floor(currentFrameRef.current) >= totalFramesRef.current - 1) seekAllToFrame(0);
+            isPlayingRef.current = true; setIsPlaying(true); playAllVideos(); startLoop();
+        }
+    }, [seekAllToFrame, startLoop, stopLoop, playAllVideos, pauseAllVideos]);
+
+    // Slider DRAG — lightweight: just update overlays + pause once, no play/restart
+    const handleSeekDrag = useCallback((frame: number) => {
+        if (!isDraggingRef.current) {
+            // First drag tick — pause if playing
+            isDraggingRef.current = true;
+            wasPlayingBeforeDragRef.current = isPlayingRef.current;
+            if (isPlayingRef.current) {
+                isPlayingRef.current = false;
+                stopLoop();
+                pauseAllVideos();
             }
+        }
+        // Update overlays instantly via DOM
+        const clamped = Math.max(0, Math.min(frame, totalFramesRef.current - 1));
+        currentFrameRef.current = clamped;
+        updateOverlays(clamped);
+        setCurrentFrame(clamped);
+        // Seek videos (they're paused, so this is just setting the poster frame)
+        const targetTime = fpsRef.current > 0 ? clamped / fpsRef.current : 0;
+        videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
+    }, [stopLoop, pauseAllVideos, updateOverlays]);
+
+    // Slider COMMIT — final seek + resume if was playing
+    const handleSeekCommit = useCallback((frame: number) => {
+        const clamped = Math.max(0, Math.min(frame, totalFramesRef.current - 1));
+        seekAllToFrame(clamped);
+        if (wasPlayingBeforeDragRef.current) {
             isPlayingRef.current = true;
             setIsPlaying(true);
+            playAllVideos();
             startLoop();
         }
-    }, [seekAllToFrame, startLoop, stopLoop]);
-
-    const handleSeek = useCallback((time: number) => {
-        seekAllToFrame(Math.floor(time * fpsRef.current));
-    }, [seekAllToFrame]);
+        isDraggingRef.current = false;
+        wasPlayingBeforeDragRef.current = false;
+    }, [seekAllToFrame, playAllVideos, startLoop]);
 
     const handleFrameStep = useCallback((delta: number) => {
-        if (isPlayingRef.current) {
-            isPlayingRef.current = false;
-            stopLoop();
-            setIsPlaying(false);
-        }
+        if (isPlayingRef.current) { isPlayingRef.current = false; stopLoop(); pauseAllVideos(); setIsPlaying(false); }
         seekAllToFrame(Math.floor(currentFrameRef.current) + delta);
-    }, [seekAllToFrame, stopLoop]);
+    }, [seekAllToFrame, stopLoop, pauseAllVideos]);
 
     const handlePlaybackRateChange = useCallback((rate: number) => {
-        playbackRateRef.current = rate;
-        setPlaybackRate(rate);
+        playbackRateRef.current = rate; setPlaybackRate(rate);
+        if (isPlayingRef.current) {
+            videoRefs.current.forEach((el) => { el.playbackRate = rate; });
+            playStartTimeRef.current = null;
+            playStartFrameRef.current = Math.floor(currentFrameRef.current);
+        }
     }, []);
 
-    const handleSeekToStart = useCallback(() => seekAllToFrame(0), [seekAllToFrame]);
-    const handleSeekToEnd = useCallback(() => seekAllToFrame(totalFramesRef.current - 1), [seekAllToFrame]);
+    const handleSeekToStart = useCallback(() => {
+        const w = isPlayingRef.current;
+        if (w) { isPlayingRef.current = false; stopLoop(); pauseAllVideos(); }
+        seekAllToFrame(0);
+        if (w) { isPlayingRef.current = true; setIsPlaying(true); playAllVideos(); startLoop(); }
+    }, [seekAllToFrame, stopLoop, startLoop, playAllVideos, pauseAllVideos]);
+
+    const handleSeekToEnd = useCallback(() => {
+        if (isPlayingRef.current) { isPlayingRef.current = false; stopLoop(); pauseAllVideos(); setIsPlaying(false); }
+        seekAllToFrame(totalFramesRef.current - 1);
+    }, [seekAllToFrame, stopLoop, pauseAllVideos]);
 
     // -----------------------------------------------------------------------
-    // Keyboard shortcuts
+    // Keyboard
     // -----------------------------------------------------------------------
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
             switch (e.key) {
-                case ' ':
-                    e.preventDefault();
-                    handlePlayPause();
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    handleFrameStep(e.shiftKey ? -10 : -1);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    handleFrameStep(e.shiftKey ? 10 : 1);
-                    break;
-                case 'Home':
-                    e.preventDefault();
-                    handleSeekToStart();
-                    break;
-                case 'End':
-                    e.preventDefault();
-                    handleSeekToEnd();
-                    break;
+                case ' ': e.preventDefault(); handlePlayPause(); break;
+                case 'ArrowLeft': e.preventDefault(); handleFrameStep(e.shiftKey ? -10 : -1); break;
+                case 'ArrowRight': e.preventDefault(); handleFrameStep(e.shiftKey ? 10 : 1); break;
+                case 'Home': e.preventDefault(); handleSeekToStart(); break;
+                case 'End': e.preventDefault(); handleSeekToEnd(); break;
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handlePlayPause, handleFrameStep, handleSeekToStart, handleSeekToEnd]);
 
     // -----------------------------------------------------------------------
-    // Render
+    // Render — overlays use callback refs for direct DOM updates
     // -----------------------------------------------------------------------
     if (videos.length === 0) {
         return (
@@ -231,6 +357,12 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) 
         );
     }
 
+    const framePadLen = Math.max(String(totalFrames).length, 1);
+    const initialFrameText = 'F' + String(currentFrame).padStart(framePadLen, '0');
+    const initialTimeText = '~' + (settings.timestampFormat === 'timecode'
+        ? formatTimecode(currentFrame, fps)
+        : formatSeconds(currentFrame, fps));
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
             {/* Video grid */}
@@ -239,10 +371,10 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) 
                     flex: 1,
                     display: 'grid',
                     gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                    gap: 0.5,
-                    p: 0.5,
-                    overflow: 'auto',
-                    backgroundColor: theme.palette.mode === 'dark' ? '#111' : '#222',
+                    gap: '2px',
+                    p: '2px',
+                    overflow: 'hidden',
+                    backgroundColor: '#0a0a0a',
                     minHeight: 0,
                 }}
             >
@@ -256,7 +388,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) 
                             justifyContent: 'center',
                             backgroundColor: '#000',
                             overflow: 'hidden',
-                            minHeight: 150,
+                            minHeight: 120,
                         }}
                     >
                         <video
@@ -265,38 +397,69 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) 
                             preload="auto"
                             muted
                             playsInline
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain',
-                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             onLoadedMetadata={handleLoadedMetadata}
                         />
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                bottom: 8,
-                                left: 8,
-                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                color: '#fff',
-                                px: 1,
-                                py: 0.25,
-                                borderRadius: 1,
-                                fontSize: '12px',
-                                fontFamily: 'monospace',
-                            }}
-                        >
-                            {video.videoId}
-                        </Box>
+
+                        {settings.showOverlays && (
+                            <>
+                                {/* FRAME NUMBER — DOM ref, updated directly */}
+                                <Box
+                                    ref={(el: HTMLElement | null) => setFrameOverlayRef(video.videoId, el)}
+                                    sx={{
+                                        position: 'absolute', top: 6, right: 6,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.88)',
+                                        color: '#00ff88',
+                                        px: 1.25, py: 0.4, borderRadius: '4px',
+                                        fontSize: '14px', fontWeight: 700,
+                                        fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace',
+                                        letterSpacing: '0.5px', lineHeight: 1,
+                                        border: '1px solid rgba(0, 255, 136, 0.3)',
+                                        textShadow: '0 0 6px rgba(0, 255, 136, 0.4)',
+                                        minWidth: 60, textAlign: 'center',
+                                        userSelect: 'none', pointerEvents: 'none', zIndex: 10,
+                                    }}
+                                >
+                                    {initialFrameText}
+                                </Box>
+
+                                {/* CAMERA ID — static, never changes */}
+                                <Box sx={{
+                                    position: 'absolute', bottom: 6, left: 6,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                                    color: '#ccc', px: 1, py: 0.25, borderRadius: '3px',
+                                    fontSize: '11px',
+                                    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                                    userSelect: 'none', pointerEvents: 'none', zIndex: 10,
+                                }}>
+                                    {video.videoId}
+                                </Box>
+
+                                {/* TIMECODE — DOM ref, updated directly */}
+                                <Tooltip title="Estimated from frame number × recording fps — not read from timestamp data" placement="top-end">
+                                    <Box
+                                        ref={(el: HTMLElement | null) => setTimeOverlayRef(video.videoId, el)}
+                                        sx={{
+                                            position: 'absolute', bottom: 6, right: 6,
+                                            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                                            color: '#aaa', px: 0.75, py: 0.25, borderRadius: '3px',
+                                            fontSize: '10px',
+                                            fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                                            userSelect: 'none', zIndex: 10,
+                                        }}
+                                    >
+                                        {initialTimeText}
+                                    </Box>
+                                </Tooltip>
+                            </>
+                        )}
                     </Box>
                 ))}
             </Box>
 
-            {!allReady && (
+            {!allReady && videos.length > 0 && (
                 <Box sx={{ textAlign: 'center', py: 0.5, backgroundColor: theme.palette.warning.dark, color: '#fff' }}>
-                    <Typography variant="caption">
-                        Loading videos... ({videosReady}/{videos.length} ready)
-                    </Typography>
+                    <Typography variant="caption">Loading videos… ({videosReady}/{videos.length} ready)</Typography>
                 </Box>
             )}
 
@@ -308,8 +471,12 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos }) 
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
                 fps={fps}
+                recordingFps={recordingFps}
+                settings={settings}
+                onSettingsChange={setSettings}
                 onPlayPause={handlePlayPause}
-                onSeek={handleSeek}
+                onSeekDrag={handleSeekDrag}
+                onSeekCommit={handleSeekCommit}
                 onFrameStep={handleFrameStep}
                 onPlaybackRateChange={handlePlaybackRateChange}
                 onSeekToStart={handleSeekToStart}

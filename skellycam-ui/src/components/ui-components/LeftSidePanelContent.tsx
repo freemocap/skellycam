@@ -82,39 +82,83 @@ export const LeftSidePanelContent = () => {
                         SkellyCam 💀📸
                     </Box>
 
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.25}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
                         <IconButton
                             size="small"
                             onClick={() => navigate('/')}
                             sx={{
                                 padding: '4px',
-                                color: location.pathname === '/' ?  theme.palette.success.main : theme.palette.text.secondary
+                                color: location.pathname === '/' ? theme.palette.success.main : theme.palette.text.secondary,
                             }}
                         >
                             <HomeIcon sx={{ fontSize: 18 }} />
                         </IconButton>
 
-                        <IconButton
-                            size="small"
+                        {/* Cameras nav — labeled button */}
+                        <Box
                             onClick={() => navigate('/cameras')}
                             sx={{
-                                padding: '4px',
-                                color: location.pathname === '/cameras' ? theme.palette.success.main : theme.palette.text.secondary
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1,
+                                py: 0.35,
+                                borderRadius: 1,
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                transition: 'all 0.15s ease',
+                                ...(location.pathname === '/cameras'
+                                    ? {
+                                        color: '#fff',
+                                        backgroundColor: theme.palette.success.main,
+                                    }
+                                    : {
+                                        color: theme.palette.text.secondary,
+                                        border: `1px solid ${theme.palette.divider}`,
+                                        '&:hover': {
+                                            borderColor: theme.palette.success.main,
+                                            color: theme.palette.success.main,
+                                        },
+                                    }),
                             }}
                         >
-                            <VideocamIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
+                            <VideocamIcon sx={{ fontSize: 15 }} />
+                            Cameras
+                        </Box>
 
-                        <IconButton
-                            size="small"
+                        {/* Playback nav — labeled button */}
+                        <Box
                             onClick={() => navigate('/playback')}
                             sx={{
-                                padding: '4px',
-                                color: location.pathname === '/playback' ? theme.palette.success.main : theme.palette.text.secondary
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1,
+                                py: 0.35,
+                                borderRadius: 1,
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                transition: 'all 0.15s ease',
+                                ...(location.pathname === '/playback'
+                                    ? {
+                                        color: '#fff',
+                                        backgroundColor: theme.palette.success.main,
+                                    }
+                                    : {
+                                        color: theme.palette.text.secondary,
+                                        border: `1px solid ${theme.palette.divider}`,
+                                        '&:hover': {
+                                            borderColor: theme.palette.success.main,
+                                            color: theme.palette.success.main,
+                                        },
+                                    }),
                             }}
                         >
-                            <SlideshowIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
+                            <SlideshowIcon sx={{ fontSize: 15 }} />
+                            Videos
+                        </Box>
 
                         <ThemeToggle/>
                     </Box>

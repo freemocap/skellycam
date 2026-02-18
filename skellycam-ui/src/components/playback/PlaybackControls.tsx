@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Box,
+    Checkbox,
+    FormControlLabel,
     IconButton,
-    Slider,
-    Typography,
-    Select,
     MenuItem,
+    Popover,
+    Select,
+    Slider,
+    ToggleButton,
+    ToggleButtonGroup,
     Tooltip,
+    Typography,
     useTheme,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -15,6 +20,8 @@ import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
+import SettingsIcon from '@mui/icons-material/Settings';
+import type { PlaybackSettings } from './SyncedVideoPlayer';
 
 interface PlaybackControlsProps {
     isPlaying: boolean;
@@ -24,8 +31,12 @@ interface PlaybackControlsProps {
     currentFrame: number;
     totalFrames: number;
     fps: number;
+    recordingFps?: number;
+    settings: PlaybackSettings;
+    onSettingsChange: (settings: PlaybackSettings) => void;
     onPlayPause: () => void;
-    onSeek: (time: number) => void;
+    onSeekDrag: (frame: number) => void;
+    onSeekCommit: (frame: number) => void;
     onFrameStep: (delta: number) => void;
     onPlaybackRateChange: (rate: number) => void;
     onSeekToStart: () => void;
@@ -49,14 +60,34 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     currentFrame,
     totalFrames,
     fps,
+    recordingFps,
+    settings,
+    onSettingsChange,
     onPlayPause,
-    onSeek,
+    onSeekDrag,
+    onSeekCommit,
     onFrameStep,
     onPlaybackRateChange,
     onSeekToStart,
     onSeekToEnd,
 }) => {
     const theme = useTheme();
+    const monoFont = '"JetBrains Mono", "Fira Code", "SF Mono", monospace';
+    const isDark = theme.palette.mode === 'dark';
+
+    // Visible accent colors that work on dark backgrounds
+    const accentGreen = '#00ff88';
+    const accentBlue = '#29b6f6'; // info.main from theme
+    const sliderColor = isDark ? accentBlue : theme.palette.primary.main;
+    const playBtnColor = isDark ? '#4caf50' : theme.palette.primary.main;
+
+    // Settings popover
+    const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
+    const settingsOpen = Boolean(settingsAnchor);
+
+    const updateSetting = <K extends keyof PlaybackSettings>(key: K, value: PlaybackSettings[K]) => {
+        onSettingsChange({ ...settings, [key]: value });
+    };
 
     return (
         <Box
@@ -70,84 +101,262 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                 borderTop: `1px solid ${theme.palette.divider}`,
             }}
         >
-            {/* Timeline slider */}
+            {/* Frame-based slider */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', minWidth: 70, textAlign: 'right' }}>
-                    {formatTime(currentTime)}
-                </Typography>
+                <Tooltip title="Estimated time (frame ÷ recording fps)" placement="top">
+                    <Typography variant="caption" sx={{
+                        fontFamily: monoFont, minWidth: 70, textAlign: 'right',
+                        color: accentGreen, fontWeight: 600, fontSize: '0.8rem',
+                    }}>
+                        ~{formatTime(currentTime)}
+                    </Typography>
+                </Tooltip>
                 <Slider
-                    value={currentTime}
+                    value={currentFrame}
                     min={0}
-                    max={duration || 1}
-                    step={0.001}
-                    onChange={(_, value) => onSeek(value as number)}
-                    sx={{ flex: 1 }}
+                    max={Math.max(totalFrames - 1, 1)}
+                    step={1}
+                    onChange={(_, value) => onSeekDrag(value as number)}
+                    onChangeCommitted={(_, value) => onSeekCommit(value as number)}
+                    sx={{
+                        flex: 1,
+                        color: sliderColor,
+                        '& .MuiSlider-thumb': {
+                            width: 14, height: 14,
+                            transition: 'none',
+                            backgroundColor: sliderColor,
+                            '&:hover, &.Mui-focusVisible': {
+                                boxShadow: `0 0 0 8px ${isDark ? 'rgba(41, 182, 246, 0.16)' : 'rgba(25, 118, 210, 0.16)'}`,
+                            },
+                        },
+                        '& .MuiSlider-track': { transition: 'none', backgroundColor: sliderColor },
+                        '& .MuiSlider-rail': { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' },
+                    }}
                     size="small"
                 />
-                <Typography variant="caption" sx={{ fontFamily: 'monospace', minWidth: 70 }}>
-                    {formatTime(duration)}
-                </Typography>
+                <Tooltip title="Estimated duration (total frames ÷ recording fps)" placement="top">
+                    <Typography variant="caption" sx={{
+                        fontFamily: monoFont, minWidth: 70,
+                        color: theme.palette.text.secondary,
+                    }}>
+                        ~{formatTime(duration)}
+                    </Typography>
+                </Tooltip>
             </Box>
 
             {/* Transport controls */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                {/* Left: frame info */}
-                <Typography
-                    variant="caption"
-                    sx={{ fontFamily: 'monospace', minWidth: 140, textAlign: 'right', mr: 2, color: theme.palette.text.secondary }}
-                >
-                    Frame {currentFrame} / {totalFrames} ({fps > 0 ? `${fps.toFixed(1)} fps` : '? fps'})
-                </Typography>
+                {/* Left: frame info + recording stats */}
+                <Box sx={{ minWidth: 240, textAlign: 'right', mr: 2, display: 'flex', alignItems: 'center', gap: 1.5, justifyContent: 'flex-end' }}>
+                    {/* Frame counter badge */}
+                    <Typography
+                        component="span"
+                        sx={{
+                            fontFamily: monoFont,
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            color: accentGreen,
+                            backgroundColor: 'rgba(0,255,136,0.08)',
+                            px: 1, py: 0.25, borderRadius: 1,
+                            border: '1px solid rgba(0,255,136,0.2)',
+                        }}
+                    >
+                        Frame {currentFrame} / {totalFrames}
+                    </Typography>
 
-                {/* Center: transport buttons */}
-                <Tooltip title="Jump to start">
-                    <IconButton size="small" onClick={onSeekToStart}>
+                    {/* Recording FPS badge — clearly labeled */}
+                    {recordingFps != null && recordingFps > 0 && (
+                        <Tooltip title="The framerate this recording was captured at">
+                            <Typography
+                                component="span"
+                                sx={{
+                                    fontFamily: monoFont,
+                                    fontSize: '0.7rem',
+                                    color: isDark ? '#ffcc80' : theme.palette.warning.dark,
+                                    backgroundColor: isDark ? 'rgba(255,204,128,0.08)' : 'rgba(255,152,0,0.08)',
+                                    px: 0.75, py: 0.2, borderRadius: 1,
+                                    border: `1px solid ${isDark ? 'rgba(255,204,128,0.2)' : 'rgba(255,152,0,0.2)'}`,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                rec: {recordingFps} fps
+                            </Typography>
+                        </Tooltip>
+                    )}
+                </Box>
+
+                {/* Center: transport buttons — bright colors for visibility */}
+                <Tooltip title="Jump to start (Home)">
+                    <IconButton size="small" onClick={onSeekToStart}
+                        sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <FirstPageIcon />
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Previous frame (←)">
-                    <IconButton size="small" onClick={() => onFrameStep(-1)}>
+                <Tooltip title="Previous frame (← / Shift+← for 10)">
+                    <IconButton size="small" onClick={() => onFrameStep(-1)}
+                        sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <SkipPreviousIcon />
                     </IconButton>
                 </Tooltip>
 
                 <Tooltip title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}>
-                    <IconButton onClick={onPlayPause} color="primary" sx={{ mx: 1 }}>
+                    <IconButton
+                        onClick={onPlayPause}
+                        sx={{
+                            mx: 1,
+                            color: playBtnColor,
+                            border: `2px solid ${playBtnColor}`,
+                            '&:hover': {
+                                backgroundColor: `${playBtnColor}22`,
+                                borderColor: playBtnColor,
+                            },
+                        }}
+                    >
                         {isPlaying ? <PauseIcon fontSize="large" /> : <PlayArrowIcon fontSize="large" />}
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Next frame (→)">
-                    <IconButton size="small" onClick={() => onFrameStep(1)}>
+                <Tooltip title="Next frame (→ / Shift+→ for 10)">
+                    <IconButton size="small" onClick={() => onFrameStep(1)}
+                        sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <SkipNextIcon />
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Jump to end">
-                    <IconButton size="small" onClick={onSeekToEnd}>
+                <Tooltip title="Jump to end (End)">
+                    <IconButton size="small" onClick={onSeekToEnd}
+                        sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <LastPageIcon />
                     </IconButton>
                 </Tooltip>
 
-                {/* Right: speed selector */}
-                <Box sx={{ display: 'flex', alignItems: 'center', ml: 2, gap: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">Speed:</Typography>
-                    <Select
-                        value={playbackRate}
-                        onChange={(e) => onPlaybackRateChange(Number(e.target.value))}
-                        size="small"
-                        variant="outlined"
-                        sx={{ minWidth: 70, '& .MuiSelect-select': { py: 0.25, fontSize: '0.8rem' } }}
-                    >
-                        {PLAYBACK_RATES.map((rate) => (
-                            <MenuItem key={rate} value={rate}>
-                                {rate}×
-                            </MenuItem>
-                        ))}
-                    </Select>
+                {/* Right: speed selector + settings */}
+                <Box sx={{ display: 'flex', alignItems: 'center', ml: 2, gap: 1 }}>
+                    <Tooltip title="Playback speed (does not affect recording fps)">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="caption" sx={{ color: isDark ? '#b3b9c6' : 'text.secondary' }}>
+                                Speed:
+                            </Typography>
+                            <Select
+                                value={playbackRate}
+                                onChange={(e) => onPlaybackRateChange(Number(e.target.value))}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                    minWidth: 70,
+                                    '& .MuiSelect-select': {
+                                        py: 0.25, fontSize: '0.8rem', fontFamily: monoFont,
+                                        color: isDark ? '#fff' : undefined,
+                                    },
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: isDark ? 'rgba(255,255,255,0.25)' : undefined,
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: isDark ? 'rgba(255,255,255,0.5)' : undefined,
+                                    },
+                                    '& .MuiSvgIcon-root': {
+                                        color: isDark ? 'rgba(255,255,255,0.5)' : undefined,
+                                    },
+                                }}
+                            >
+                                {PLAYBACK_RATES.map((rate) => (
+                                    <MenuItem key={rate} value={rate}>{rate}×</MenuItem>
+                                ))}
+                            </Select>
+                        </Box>
+                    </Tooltip>
+
+                    {/* Settings gear */}
+                    <Tooltip title="Playback settings">
+                        <IconButton
+                            size="small"
+                            onClick={(e) => setSettingsAnchor(e.currentTarget)}
+                            sx={{
+                                color: settingsOpen
+                                    ? accentBlue
+                                    : (isDark ? '#b3b9c6' : theme.palette.text.secondary),
+                            }}
+                        >
+                            <SettingsIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             </Box>
+
+            {/* Settings popover */}
+            <Popover
+                open={settingsOpen}
+                anchorEl={settingsAnchor}
+                onClose={() => setSettingsAnchor(null)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            p: 2,
+                            minWidth: 260,
+                            backgroundColor: theme.palette.background.paper,
+                            border: `1px solid ${theme.palette.divider}`,
+                        },
+                    },
+                }}
+            >
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
+                    Display Settings
+                </Typography>
+
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={settings.showOverlays}
+                            onChange={(e) => updateSetting('showOverlays', e.target.checked)}
+                            size="small"
+                            sx={{
+                                color: isDark ? 'rgba(255,255,255,0.5)' : undefined,
+                                '&.Mui-checked': { color: accentBlue },
+                            }}
+                        />
+                    }
+                    label={
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                            Show frame overlays
+                        </Typography>
+                    }
+                    sx={{ mb: 1.5, ml: 0 }}
+                />
+
+                <Typography variant="caption" sx={{ mb: 0.75, display: 'block', color: theme.palette.text.secondary }}>
+                    Timestamp format
+                </Typography>
+                <ToggleButtonGroup
+                    value={settings.timestampFormat}
+                    exclusive
+                    onChange={(_, val) => { if (val) updateSetting('timestampFormat', val); }}
+                    size="small"
+                    fullWidth
+                    sx={{
+                        '& .MuiToggleButton-root': {
+                            fontSize: '0.75rem',
+                            fontFamily: monoFont,
+                            py: 0.5,
+                            color: isDark ? '#b3b9c6' : theme.palette.text.secondary,
+                            borderColor: isDark ? 'rgba(255,255,255,0.2)' : theme.palette.divider,
+                            '&.Mui-selected': {
+                                color: '#fff',
+                                backgroundColor: isDark ? 'rgba(41,182,246,0.25)' : theme.palette.primary.main,
+                                borderColor: accentBlue,
+                                '&:hover': {
+                                    backgroundColor: isDark ? 'rgba(41,182,246,0.35)' : theme.palette.primary.dark,
+                                },
+                            },
+                        },
+                    }}
+                >
+                    <ToggleButton value="seconds">1.234s</ToggleButton>
+                    <ToggleButton value="timecode">HH:MM:SS:FF</ToggleButton>
+                </ToggleButtonGroup>
+            </Popover>
         </Box>
     );
 };

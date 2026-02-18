@@ -1,36 +1,42 @@
 import React, { useCallback, useState } from 'react';
-import { Box, Button, Typography, useTheme } from '@mui/material';
+import { Box, Chip, IconButton, Tooltip, Typography, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ErrorBoundary from '@/components/common/ErrorBoundary';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import StorageIcon from '@mui/icons-material/Storage';
 import { Footer } from '@/components/ui-components/Footer';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { RecordingBrowser, LoadedVideo } from '@/components/playback/RecordingBrowser';
 import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
 
-type PlaybackView = 'browser' | 'player';
-
 const PlaybackPage: React.FC = () => {
     const theme = useTheme();
-    const [view, setView] = useState<PlaybackView>('browser');
+    const isDark = theme.palette.mode === 'dark';
     const [loadedVideos, setLoadedVideos] = useState<LoadedVideo[]>([]);
-    const [recordingPath, setRecordingPath] = useState<string>('');
+    const [recordingPath, setRecordingPath] = useState<string | null>(null);
+    const [recordingFps, setRecordingFps] = useState<number | undefined>(undefined);
 
-    const handleRecordingLoaded = useCallback((videos: LoadedVideo[], path: string) => {
+    const handleRecordingLoaded = useCallback((videos: LoadedVideo[], path: string, fps?: number) => {
         setLoadedVideos(videos);
         setRecordingPath(path);
-        setView('player');
+        setRecordingFps(fps);
     }, []);
 
-    const handleBackToBrowser = useCallback(() => {
-        setView('browser');
+    const handleBack = useCallback(() => {
         setLoadedVideos([]);
-        setRecordingPath('');
+        setRecordingPath(null);
+        setRecordingFps(undefined);
     }, []);
+
+    const hasVideos = loadedVideos.length > 0;
+    const totalSize = loadedVideos.reduce((sum, v) => sum + v.sizeBytes, 0);
+    const monoFont = '"JetBrains Mono", "Fira Code", "SF Mono", monospace';
+
+    // Extract recording name from path
+    const recordingName = recordingPath ? recordingPath.split(/[\\/]/).pop() || recordingPath : '';
 
     return (
         <Box
             sx={{
-                py: 1,
-                px: 1,
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
@@ -43,60 +49,135 @@ const PlaybackPage: React.FC = () => {
                 borderColor: theme.palette.divider,
             }}
         >
-            <ErrorBoundary>
-                {view === 'browser' ? (
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        <Typography variant="h5" sx={{ px: 2, pt: 1, pb: 0.5 }}>
-                            📹 Playback
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ px: 2, pb: 1 }}>
-                            Select a recording to play back synchronized videos.
-                        </Typography>
-                        <Box sx={{ flex: 1, overflow: 'auto' }}>
-                            <RecordingBrowser onRecordingLoaded={handleRecordingLoaded} />
-                        </Box>
-                    </Box>
-                ) : (
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                        {/* Header bar with back button and recording name */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                            <Button
-                                size="small"
-                                startIcon={<ArrowBackIcon />}
-                                onClick={handleBackToBrowser}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <ErrorBoundary>
+                    {hasVideos ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            {/* Recording header bar — prominent stats */}
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    px: 1.5,
+                                    py: 0.75,
+                                    borderBottom: `1px solid ${theme.palette.divider}`,
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                                    minHeight: 40,
+                                    flexWrap: 'wrap',
+                                }}
                             >
-                                Back
-                            </Button>
-                            <Typography
-                                variant="body2"
-                                sx={{ fontFamily: 'monospace', color: theme.palette.text.secondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                            >
-                                {recordingPath}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto', whiteSpace: 'nowrap' }}>
-                                {loadedVideos.length} video{loadedVideos.length !== 1 ? 's' : ''}
-                            </Typography>
-                        </Box>
+                                <Tooltip title="Back to recordings">
+                                    <IconButton size="small" onClick={handleBack}
+                                        sx={{ color: isDark ? '#b3b9c6' : undefined }}>
+                                        <ArrowBackIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
 
-                        {/* Synced video player */}
-                        <Box sx={{ flex: 1, minHeight: 0 }}>
-                            <SyncedVideoPlayer
-                                videos={loadedVideos.map((v) => ({
-                                    videoId: v.videoId,
-                                    filename: v.filename,
-                                    streamUrl: v.streamUrl,
-                                }))}
-                            />
-                        </Box>
-                    </Box>
-                )}
-            </ErrorBoundary>
+                                {/* Recording name */}
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        fontFamily: monoFont,
+                                        fontWeight: 600,
+                                        color: theme.palette.text.primary,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {recordingName}
+                                </Typography>
 
-            <Box component="footer" sx={{ p: 1 }}>
+                                {/* Spacer */}
+                                <Box sx={{ flex: 1 }} />
+
+                                {/* Stats chips */}
+                                <Tooltip title="Camera streams in this recording">
+                                    <Chip
+                                        icon={<VideocamIcon sx={{ fontSize: '14px !important' }} />}
+                                        label={`${loadedVideos.length} camera${loadedVideos.length !== 1 ? 's' : ''}`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                            fontFamily: monoFont,
+                                            fontSize: '0.75rem',
+                                            height: 24,
+                                            borderColor: isDark ? 'rgba(41,182,246,0.3)' : undefined,
+                                            color: isDark ? '#29b6f6' : theme.palette.info.main,
+                                            '& .MuiChip-icon': { color: 'inherit' },
+                                        }}
+                                    />
+                                </Tooltip>
+
+                                {totalSize > 0 && (
+                                    <Tooltip title="Total recording size on disk">
+                                        <Chip
+                                            icon={<StorageIcon sx={{ fontSize: '14px !important' }} />}
+                                            label={formatBytes(totalSize)}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{
+                                                fontFamily: monoFont,
+                                                fontSize: '0.75rem',
+                                                height: 24,
+                                                borderColor: isDark ? 'rgba(255,255,255,0.15)' : undefined,
+                                                color: isDark ? '#b3b9c6' : theme.palette.text.secondary,
+                                                '& .MuiChip-icon': { color: 'inherit' },
+                                            }}
+                                        />
+                                    </Tooltip>
+                                )}
+
+                                {recordingFps != null && recordingFps > 0 && (
+                                    <Tooltip title="Recording capture framerate">
+                                        <Chip
+                                            label={`rec: ${recordingFps} fps`}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{
+                                                fontFamily: monoFont,
+                                                fontSize: '0.75rem',
+                                                height: 24,
+                                                borderColor: isDark ? 'rgba(255,204,128,0.3)' : undefined,
+                                                color: isDark ? '#ffcc80' : theme.palette.warning.dark,
+                                            }}
+                                        />
+                                    </Tooltip>
+                                )}
+                            </Box>
+
+                            {/* Player */}
+                            <Box sx={{ flex: 1, minHeight: 0 }}>
+                                <SyncedVideoPlayer
+                                    videos={loadedVideos.map((v) => ({
+                                        videoId: v.videoId,
+                                        filename: v.filename,
+                                        streamUrl: v.streamUrl,
+                                    }))}
+                                    recordingFps={recordingFps}
+                                />
+                            </Box>
+                        </Box>
+                    ) : (
+                        <RecordingBrowser onRecordingLoaded={handleRecordingLoaded} />
+                    )}
+                </ErrorBoundary>
+            </Box>
+
+            <Box component="footer" sx={{ p: 0.5 }}>
                 <Footer />
             </Box>
         </Box>
     );
 };
+
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(i > 1 ? 1 : 0)} ${units[i]}`;
+}
 
 export default PlaybackPage;
