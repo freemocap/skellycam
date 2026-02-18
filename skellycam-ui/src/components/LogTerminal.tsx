@@ -26,7 +26,7 @@ import {
 } from "@/store/slices/log-records/log-records-slice";
 import { LogRecord } from "@/store/slices/log-records/logs-types";
 import {
-    Delete as DeleteIcon,
+    DeleteSweep as DeleteSweepIcon,
     Pause as PauseIcon,
     PlayArrow as PlayArrowIcon,
     Search as SearchIcon,
@@ -363,7 +363,7 @@ export const LogTerminal = () => {
                         onClick={handleClear}
                         sx={{ color: theme.palette.text.secondary }}
                     >
-                        <DeleteIcon fontSize="small" />
+                        <DeleteSweepIcon fontSize="small" />
                     </IconButton>
                 </Box>
             </Box>

@@ -2,13 +2,28 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
     CamerasState,
-    CameraConfig, extractConfigSettings, areConfigsEqual,
+    CameraConfig, extractConfigSettings, areConfigsEqual, createDefaultCameraConfig,
 } from './cameras-types';
 import {
     detectCameras,
     camerasConnectOrUpdate,
     closeCameras,
 } from './cameras-thunks';
+import {
+    savePersistedCameraSettings,
+    clearPersistedCameraSettings,
+    buildPersistedEntry,
+    PersistedCameraSettingsMap,
+} from './camera-settings-storage';
+
+// Persist all current camera desired configs + selection to localStorage
+function persistAllCameraSettings(state: CamerasState): void {
+    const settingsMap: PersistedCameraSettingsMap = {};
+    for (const camera of state.cameras) {
+        settingsMap[camera.id] = buildPersistedEntry(camera.desiredConfig, camera.selected);
+    }
+    savePersistedCameraSettings(settingsMap);
+}
 
 const initialState: CamerasState = {
     cameras: [],
@@ -27,6 +42,7 @@ export const cameraSlice = createSlice({
                 camera.selected = !camera.selected;
                 camera.desiredConfig.use_this_camera = camera.selected;
             }
+            persistAllCameraSettings(state);
         },
 
         // ========== Configuration ==========
@@ -46,6 +62,7 @@ export const cameraSlice = createSlice({
                 // Check if there's now a mismatch
                 camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, camera.desiredConfig);
             }
+            persistAllCameraSettings(state);
         },
 
 
@@ -65,6 +82,21 @@ export const cameraSlice = createSlice({
                     camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, camera.desiredConfig);
                 }
             });
+            persistAllCameraSettings(state);
+        },
+
+        savedSettingsCleared: (state) => {
+            clearPersistedCameraSettings();
+            for (const camera of state.cameras) {
+                const defaultConfig = createDefaultCameraConfig(
+                    camera.id,
+                    camera.index,
+                    camera.name,
+                );
+                camera.desiredConfig = defaultConfig;
+                camera.selected = true;
+                camera.hasConfigMismatch = !areConfigsEqual(camera.actualConfig, defaultConfig);
+            }
         },
 
 
@@ -80,6 +112,7 @@ export const cameraSlice = createSlice({
             .addCase(detectCameras.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.cameras = action.payload;
+                persistAllCameraSettings(state);
             })
             .addCase(detectCameras.rejected, (state, action) => {
                 state.isLoading = false;
@@ -105,6 +138,7 @@ export const cameraSlice = createSlice({
                         }
                     }
                 );
+                persistAllCameraSettings(state);
             })
             .addCase(camerasConnectOrUpdate.rejected, (state, action) => {
                 state.isLoading = false;
@@ -127,4 +161,5 @@ export const {
     cameraSelectionToggled,
     cameraDesiredConfigUpdated,
     configCopiedToAll,
+    savedSettingsCleared,
 } = cameraSlice.actions;

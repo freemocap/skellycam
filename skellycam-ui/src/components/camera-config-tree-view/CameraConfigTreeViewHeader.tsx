@@ -5,6 +5,7 @@ import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 
 import {useAppDispatch, useAppSelector} from "@/store";
 import {selectSelectedCameras} from "@/store/slices/cameras/cameras-selectors";
@@ -14,6 +15,7 @@ import {
     detectCameras,
     pauseUnpauseCameras,
 } from "@/store/slices/cameras/cameras-thunks";
+import { savedSettingsCleared } from "@/store/slices/cameras/cameras-slice";
 
 interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
@@ -88,6 +90,11 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
         } finally {
             setIsActionInProgress(false);
         }
+    };
+
+    const handleClearSavedSettings = (e: React.MouseEvent): void => {
+        e.stopPropagation();
+        dispatch(savedSettingsCleared());
     };
 
     const handleHeaderClick = (e: React.MouseEvent): void => {
@@ -177,6 +184,19 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             ) : (
                                 <YoutubeSearchedForIcon />
                             )}
+                        </IconButton>
+                    </span>
+                </Tooltip>
+
+                {/* Clear Saved Settings Button */}
+                <Tooltip title="Clear saved camera settings from memory">
+                    <span>
+                        <IconButton
+                            size="small"
+                            onClick={handleClearSavedSettings}
+                            sx={{color: "inherit"}}
+                        >
+                            <DeleteSweepIcon />
                         </IconButton>
                     </span>
                 </Tooltip>

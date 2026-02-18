@@ -12,6 +12,11 @@ import {
     createDefaultCameraConfig,
 } from './cameras-types';
 import { selectSelectedCameraConfigs } from './cameras-selectors';
+import {
+    loadPersistedCameraSettings,
+    savePersistedCameraSettings,
+    PersistedCameraSettingsMap,
+} from './camera-settings-storage';
 
 export const detectCameras = createAsyncThunk<
     Camera[],
@@ -35,9 +40,29 @@ export const detectCameras = createAsyncThunk<
 
         const data: DetectCamerasResponse = await response.json();
 
+        // Load persisted settings from localStorage
+        let persisted: PersistedCameraSettingsMap = {};
+        try {
+            persisted = loadPersistedCameraSettings();
+        } catch {
+            // Storage was corrupted and has been cleared — proceed with defaults
+        }
+
+        const detectedIds = new Set(data.cameras.map(c => c.index.toString()));
+
+        // Prune persisted entries for cameras that are no longer detected
+        const prunedPersisted: PersistedCameraSettingsMap = {};
+        for (const [id, settings] of Object.entries(persisted)) {
+            if (detectedIds.has(id)) {
+                prunedPersisted[id] = settings;
+            }
+        }
+        savePersistedCameraSettings(prunedPersisted);
+
         return data.cameras.map((serverCamera): Camera => {
             const cameraId = serverCamera.index.toString();
             const existing = existingCameras.find(cam => cam.id === cameraId);
+            const saved = prunedPersisted[cameraId];
 
             const defaultConfig = createDefaultCameraConfig(
                 cameraId,
@@ -45,16 +70,23 @@ export const detectCameras = createAsyncThunk<
                 serverCamera.name,
             );
 
+            // Priority: existing in-memory state > persisted localStorage > defaults
+            const desiredConfig: CameraConfig = existing?.desiredConfig
+                ?? (saved ? { ...defaultConfig, ...saved.desiredConfig } : { ...defaultConfig });
+
+            const selected: boolean = existing?.selected
+                ?? saved?.selected
+                ?? true;
+
             return {
                 id: cameraId,
                 name: serverCamera.name,
                 index: serverCamera.index,
-                // If camera exists, preserve its configs, otherwise use defaults
                 actualConfig: existing?.actualConfig || defaultConfig,
-                desiredConfig: existing?.desiredConfig || { ...defaultConfig },
+                desiredConfig,
                 hasConfigMismatch: existing?.hasConfigMismatch ?? false,
                 connectionStatus: 'available',
-                selected: existing?.selected ?? true,
+                selected,
                 deviceInfo: {
                     vendorId: serverCamera.vendor_id,
                     productId: serverCamera.product_id,
