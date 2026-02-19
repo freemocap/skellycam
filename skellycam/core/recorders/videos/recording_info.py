@@ -89,10 +89,18 @@ class RecordingInfo(BaseModel):
     def video_file_path_from_camera_config(self, config) -> str:
         return str(
             Path(
-                self.videos_folder) / f"{self.recording_name}.camera{config.camera_index}.{config.video_file_extension}")
+                self.videos_folder) / f"{self.recording_name}.camera.id{config.camera_id}.idx{config.camera_index}.{config.video_file_extension}")
 
     def camera_timestamps_file_path_from_camera_id(self, camera_id: str) -> str:
         return str(Path(self.camera_timestamps_folder) / f"{self.recording_name}.camera{camera_id}.timestamps.csv")
+
+    @property
+    def audio_file_path(self) -> str:
+        return str(Path(self.videos_folder) / f"{self.recording_name}.audio.wav")
+
+    @property
+    def audio_timestamps_path(self) -> str:
+        return str(Path(self.videos_folder) / f"{self.recording_name}.audio_timestamps.json")
 
     def __eq__(self, other):
         if not isinstance(other, RecordingInfo):

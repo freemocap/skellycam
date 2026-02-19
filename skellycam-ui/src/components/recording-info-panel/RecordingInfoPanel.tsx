@@ -9,6 +9,9 @@ import {useAppDispatch, useAppSelector} from "@/store";
 import {
     StartStopRecordingButton
 } from "@/components/recording-info-panel/recording-subcomponents/StartStopRecordingButton";
+import {
+    MicrophoneSelector
+} from "@/components/recording-info-panel/recording-subcomponents/MicrophoneSelector";
 import {startRecording, stopRecording, recordingInfoUpdated} from "@/store";
 import {RecordingPathTreeItem} from "@/components/recording-info-panel/RecordingPathTreeItem";
 import {electronIpc, useElectronIPC} from "@/services/electron-ipc/electron-ipc";
@@ -42,6 +45,7 @@ export const RecordingInfoPanel: React.FC = () => {
     const [baseName, setBaseName] = useState<string>("recording");
     const [customSubfolderName, setCustomSubfolderName] = useState<string>("");
     const [recordingTag, setRecordingTag] = useState<string>("");
+    const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
     const {isElectron, api} = useElectronIPC();
 
     // Track when recording state changes to clear pending state
@@ -185,6 +189,7 @@ export const RecordingInfoPanel: React.FC = () => {
                 startRecording({
                     recordingName,
                     recordingDirectory: recordingPath,
+                    micDeviceIndex,
                 })
             ).unwrap();
         } catch (error) {
@@ -277,7 +282,17 @@ export const RecordingInfoPanel: React.FC = () => {
                             />
                         </Box>
                     }
-                >
+                >{/* Microphone selector */}
+                    <TreeItem
+                        itemId="recording-mic"
+                        label={
+                            <MicrophoneSelector
+                                selectedMicIndex={micDeviceIndex}
+                                onMicSelected={setMicDeviceIndex}
+                                disabled={recordingInfo.isRecording}
+                            />
+                        }
+                    />
                     <RecordingPathTreeItem
                         recordingDirectory={recordingInfo.recordingDirectory}
                         recordingName={recordingName}

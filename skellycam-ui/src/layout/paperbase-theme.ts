@@ -46,8 +46,8 @@ const darkPalette = {
     mode: 'dark' as PaletteMode,
     primary: {
         light: '#5e92f3',
-        main: '#3a7bd5',
-        dark: '#1a5ba8',
+        main: '#163a6d',
+        dark: '#051a33',
         contrastText: '#ffffff',
     },
     secondary: {

@@ -8,6 +8,11 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.camera_group.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
     process_and_save_recording_timestamps
+from skellycam.core.recorders.video_audio_remuxer import (
+    remux_video_with_audio_and_timestamps,
+    load_frame_timestamps_from_csv,
+    load_audio_start_time,
+)
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.types.type_overloads import CameraIdString
 from typing import TYPE_CHECKING
@@ -57,6 +62,7 @@ class RecordingFinalizer(BaseModel):
             frame_metadatas_by_camera=self.frame_metadatas_by_camera,
         )
 
+        # self._remux_videos_with_audio_and_timestamps()
         self._save_folder_readme()
         self.validate_recording()
         logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{timestamp_stats}\n\n--------------------------------------------------------\n")
@@ -65,6 +71,58 @@ class RecordingFinalizer(BaseModel):
     def _save_folder_readme(self):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)
+
+    def _remux_videos_with_audio_and_timestamps(self) -> None:
+        """Remux each camera's MP4 to embed VFR timestamps, audio, and metadata."""
+        audio_path = self.recording_info.audio_file_path
+        has_audio = Path(audio_path).exists()
+        audio_timestamps_path = self.recording_info.audio_timestamps_path
+
+        audio_start_ns: int | None = None
+        if has_audio and Path(audio_timestamps_path).exists():
+            audio_start_ns = load_audio_start_time(audio_timestamps_path)
+            logger.info(f"Audio file found: {audio_path}")
+        elif has_audio:
+            logger.warning(f"Audio file exists but no timestamp sidecar found at {audio_timestamps_path} — audio will not be synced")
+            has_audio = False
+
+        for camera_id, camera_config in self.camera_configs.items():
+            video_path = self.recording_info.video_file_path_from_camera_config(camera_config)
+            csv_path = self.recording_info.camera_timestamps_file_path_from_camera_id(camera_id)
+
+            if not Path(video_path).exists():
+                raise FileNotFoundError(f"Video file not found for camera {camera_id}: {video_path}")
+            if not Path(csv_path).exists():
+                raise FileNotFoundError(f"Timestamp CSV not found for camera {camera_id}: {csv_path}")
+
+            frame_timestamps = load_frame_timestamps_from_csv(csv_path)
+
+            metadata_json = {
+                "version": "2.0",
+                "recording_name": self.recording_info.recording_name,
+                "recording_uuid": self.recording_info.recording_uuid,
+                "camera_id": camera_id,
+                "camera_index": camera_config.camera_index,
+                "resolution": {
+                    "width": camera_config.resolution.width,
+                    "height": camera_config.resolution.height,
+                },
+                "total_frames": len(frame_timestamps),
+                "has_audio": has_audio,
+            }
+
+            logger.debug(f"Remuxing camera {camera_id}: {len(frame_timestamps)} frames, audio={'yes' if has_audio else 'no'}")
+
+            remux_video_with_audio_and_timestamps(
+                video_path=video_path,
+                audio_path=audio_path if has_audio else None,
+                frame_timestamps_perf_ns=frame_timestamps,
+                audio_start_perf_ns=audio_start_ns,
+                metadata_json=metadata_json,
+            )
+
+        logger.info(f"Remuxed {len(self.camera_configs)} videos with VFR timestamps" +
+                    (" and audio" if has_audio else ""))
 
 
     def validate_recording(self):

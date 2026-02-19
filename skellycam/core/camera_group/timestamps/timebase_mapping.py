@@ -79,3 +79,8 @@ class TimebaseMapping(BaseModel):
 
     def __hash__(self):
         return hash((self.utc_time_ns, self.perf_counter_ns, self.local_time_utc_offset))
+
+
+
+if __name__ == "__main__":
+    print(TimebaseMapping())

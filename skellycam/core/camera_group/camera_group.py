@@ -19,6 +19,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import (
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
+from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.types.type_overloads import (
@@ -52,6 +53,7 @@ class CameraGroup:
     cameras: CameraManager
     shm: CameraGroupSharedMemory | None = None
     started: bool = False
+    _audio_recorder: AudioRecorder | None = None
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -188,6 +190,16 @@ class CameraGroup:
             RecordingInfoMessage(recording_info=recording_info)
         )
 
+        # Start audio recording if a microphone is selected
+        if recording_info.mic_device_index >= 0:
+            self._audio_recorder = AudioRecorder(
+                audio_file_path=recording_info.audio_file_path,
+                mic_device_index=recording_info.mic_device_index,
+                timebase_mapping=self.ipc.timebase_mapping,
+            )
+            self._audio_recorder.start()
+            logger.info(f"Audio recording started (mic device {recording_info.mic_device_index})")
+
         await await_10ms()
         await self.cameras.unpause(await_unpaused=True)
         logger.info("Camera group unpaused - Recording successfully started.")
@@ -200,6 +212,13 @@ class CameraGroup:
         """Stop recording for the camera group."""
         logger.debug("Stopping recording for all cameras in orchestrator...")
         await self.cameras.pause(await_paused=True)
+
+        # Stop audio before finalizing video
+        if self._audio_recorder is not None:
+            self._audio_recorder.stop()
+            logger.info("Audio recording stopped.")
+            self._audio_recorder = None
+
         frame_count = max(
             status.frame_count.value
             for status in self.cameras.orchestrator.camera_statuses.values()
@@ -226,6 +245,14 @@ class CameraGroup:
                 await self.stop_recording()
             except Exception as e:
                 logger.error(f"Error stopping recording during close: {type(e).__name__} - {e}")
+
+        # Stop audio if still running (e.g. error during stop_recording)
+        if self._audio_recorder is not None:
+            try:
+                self._audio_recorder.stop()
+            except Exception as e:
+                logger.error(f"Error stopping audio during close: {type(e).__name__} - {e}")
+            self._audio_recorder = None
 
         self.ipc.should_continue = False
         self.cameras.close()
