@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Python 3.10–3.12** — [python.org/downloads](https://www.python.org/downloads/)
+- **Python 3.10+** — [python.org/downloads](https://www.python.org/downloads/)
 - **uv** — Fast Python package manager: [astral.sh/uv](https://github.com/astral-sh/uv)
 - **Node.js 18+** — Required for the React/Electron UI: [nodejs.org](https://nodejs.org/)
 - **USB cameras or built-in webcams**

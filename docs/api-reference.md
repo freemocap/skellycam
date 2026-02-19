@@ -58,6 +58,20 @@ Detects available camera devices on the system.
 }
 ```
 
+### `GET /skellycam/camera/microphone/detect`
+
+Detects available microphone devices on the system. Returns a mapping of device index to device name.
+
+**Response:**
+```json
+{
+  "microphones": {
+    "0": "Built-in Microphone",
+    "1": "USB Audio Device"
+  }
+}
+```
+
 ### `POST /skellycam/camera/group/apply`
 
 Creates a new camera group or updates an existing one. If the provided camera IDs match an existing group, the group's settings are updated; otherwise, a new group is created and started.
@@ -66,13 +80,20 @@ Creates a new camera group or updates an existing one. If the provided camera ID
 ```json
 {
   "camera_configs": {
-    "0": {
-      "camera_id": "0",
-      "resolution_width": 1280,
-      "resolution_height": 720,
-      "framerate": 30,
-      "exposure": -5,
-      "rotation": 0
+    "000": {
+      "camera_id": "000",
+      "camera_index": 0,
+      "camera_name": "Camera-000",
+      "use_this_camera": true,
+      "resolution": { "width": 1280, "height": 720 },
+      "framerate": -1,
+      "color_channels": 3,
+      "pixel_format": "RGB",
+      "exposure_mode": "MANUAL",
+      "exposure": -7,
+      "rotation": -1,
+      "capture_fourcc": "MJPG",
+      "writer_fourcc": "X264"
     }
   }
 }
@@ -143,7 +164,12 @@ Lists available recording directories in the default recordings folder (`~/skell
   {
     "name": "2024-09-15T14_30_00",
     "path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
-    "video_count": 3
+    "video_count": 3,
+    "total_size_bytes": 157286400,
+    "created_timestamp": "2024-09-15T14:30:00",
+    "total_frames": 9000,
+    "duration_seconds": 300.0,
+    "fps": 30.0
   }
 ]
 ```

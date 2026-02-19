@@ -187,9 +187,26 @@ export class WebSocketConnection {
     private startHeartbeat(): void {
         this.heartbeatTimer = window.setInterval(() => {
             if (this.isConnected()) {
-                this.send({type: 'ping'});
+                this.sendRaw('ping');
             }
         }, this.config.heartbeatInterval);
+    }
+
+    /**
+     * Send a raw text string over the WebSocket without JSON serialization.
+     * Used for protocol-level messages like ping/pong.
+     */
+    public sendRaw(text: string): boolean {
+        if (!this.isConnected()) {
+            return false;
+        }
+        try {
+            this.ws!.send(text);
+            return true;
+        } catch (error) {
+            console.error('Failed to send raw WebSocket message:', error);
+            return false;
+        }
     }
 
     private clearTimers(): void {

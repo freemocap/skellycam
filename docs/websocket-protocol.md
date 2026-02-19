@@ -57,17 +57,18 @@ Log records with a level at or above `TRACE` (level 5) are forwarded to the WebS
     "frame_duration_median": 33.2,
     "frame_duration_coefficient_of_variation": 0.063,
     "calculation_window_size": 100,
-    "framerate_source": "Backend-group-0"
+    "framerate_source": "Server"
   },
   "frontend_framerate": {
     "mean_frame_duration_ms": 34.1,
     "mean_frames_per_second": 29.3,
+    "framerate_source": "Display",
     ...
   }
 }
 ```
 
-Sent when new framerate statistics are available from the backend camera workers. Includes both backend (capture) and frontend (display) framerates.
+Sent approximately once per second when cameras are active. The `backend_framerate` represents the true camera capture rate (computed from frame numbers and capture timestamps, accurate even when the WebSocket skips frames due to backpressure). The `frontend_framerate` represents the WebSocket delivery rate (what the UI actually receives).
 
 ### Application State
 

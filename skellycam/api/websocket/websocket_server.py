@@ -325,9 +325,9 @@ class WebsocketServer:
                         except json.JSONDecodeError as e:
                             raise ValueError(f"Failed to decode JSON from client websocket message: {e}") from e
                     else:
-                        if text_content.startswith("ping"):
+                        if text_content.strip() == "ping":
                             await self.websocket.send_text("pong")
-                        elif text_content.startswith("pong"):
+                        elif text_content.strip() == "pong":
                             pass
                         else:
                             logger.info(f"Websocket received message: `{text_content}`")

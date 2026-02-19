@@ -124,7 +124,7 @@ GitHub Actions runs on every push and pull request (`.github/workflows/test.yml`
 - **Redux Toolkit** for state management with typed hooks
 - **Material UI** for component styling
 - **OffscreenCanvas workers** for live camera frame rendering
-- **Frame-locked playback** — recorded videos use a manual frame pump, never `.play()`, guaranteeing identical frame numbers across all cameras
+- **Frame-locked playback** — recorded videos use native `.play()` with an authoritative frame counter and periodic drift correction, guaranteeing identical frame numbers across all cameras. Overlays are updated via direct DOM refs to avoid React re-renders during playback.
 
 ## Adding a New API Endpoint
 

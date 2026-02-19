@@ -19,18 +19,32 @@ Each camera in a group has its own `CameraConfig` with the following settings:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `camera_id` | `str` | `"0"` | Unique identifier for the camera |
-| `resolution_width` | `int` | `1280` | Capture width in pixels |
-| `resolution_height` | `int` | `720` | Capture height in pixels |
-| `framerate` | `int` | `30` | Target capture framerate |
-| `exposure` | `int` | `-5` | Camera exposure value (hardware-dependent) |
-| `rotation` | `int` | `0` | Image rotation: 0, 90, 180, or 270 degrees |
+| `camera_id` | `str` | `"000"` | Unique identifier for the camera |
+| `resolution` | `object` | `{"width": 1280, "height": 720}` | Capture resolution in pixels |
+| `framerate` | `float` | `-1` | Target capture framerate (`-1` uses camera default) |
+| `exposure` | `int` | `-7` | Camera exposure value (hardware-dependent) |
+| `exposure_mode` | `str` | `"MANUAL"` | Exposure mode: `MANUAL`, `AUTO`, or `RECOMMENDED` |
+| `rotation` | `int` | `-1` | Image rotation (see table below) |
+| `capture_fourcc` | `str` | `"MJPG"` | FOURCC code for capture codec |
+| `writer_fourcc` | `str` | `"X264"` | FOURCC code for recording codec |
 
 Camera configuration is applied via the `POST /skellycam/camera/group/apply` endpoint or through the UI's camera configuration panel.
 
 ### Resolution
 
+Resolution is specified as a nested object with `width` and `height` fields:
+
+```json
+{
+  "resolution": { "width": 1280, "height": 720 }
+}
+```
+
 The requested resolution may not match the actual resolution if the camera does not support it. OpenCV will silently fall back to the nearest supported resolution. The actual resolution is reported back in the response.
+
+### Framerate
+
+Set `framerate` to `-1` (the default) to use the camera's native framerate and run the frame loop as fast as the hardware allows. Set a positive value (e.g., `30`) to target a specific capture rate.
 
 ### Exposure
 
@@ -38,14 +52,14 @@ Exposure values are hardware-dependent. Common USB webcams use negative integer 
 
 ### Rotation
 
-Rotation is applied in software after frame capture. The options are:
+Rotation is applied in software after frame capture. The values correspond to OpenCV's `cv2.rotate()` codes:
 
 | Value | Rotation |
 |-------|----------|
-| `0` | No rotation |
-| `1` | 90° clockwise |
-| `2` | 180° |
-| `3` | 90° counter-clockwise |
+| `-1` | No rotation (default) |
+| `0` | 90° clockwise |
+| `1` | 180° |
+| `2` | 90° counter-clockwise |
 
 ## Data Directories
 

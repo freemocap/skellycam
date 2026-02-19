@@ -75,7 +75,7 @@ The result: consumers (WebSocket stream, video recorder, frontend) always see ex
 
 **During recording**, each camera's `cv2.VideoWriter` runs in the camera's own process, writing frames in the order they are captured. Because the orchestrator ensures every camera produces exactly one frame per event, and recording starts and stops for all cameras at the same event boundary, the output videos are guaranteed to have identical frame counts.
 
-**During playback**, the frontend enforces the same guarantee: all `<video>` elements are kept permanently paused, and a manual frame pump sets `video.currentTime = frameNumber / fps` on every video simultaneously. The videos never play independently — the frame numbers always match.
+**During playback**, the frontend uses a hybrid native-decode + authoritative-counter strategy. All `<video>` elements play via the browser's native `.play()` for smooth hardware-decoded rendering. A `requestAnimationFrame` loop maintains a single authoritative frame counter computed from wall-clock elapsed time × fps × playbackRate. Every few ticks, each video's `currentTime` is compared against the target — any camera drifting beyond ±0.5 frames is force-seeked back into alignment. When paused or frame-stepping, the system sets `video.currentTime` directly on all elements simultaneously. The frame number shown on every camera overlay comes from the authoritative counter, never from any individual video element, guaranteeing all cameras display the same frame at all times.
 
 ## Data Flow: Capture to Display
 
@@ -114,5 +114,5 @@ The React UI uses:
 - **WebSocket Connection** — Persistent connection to the server with automatic reconnection and heartbeat.
 - **FrameProcessor** — Parses the binary multi-frame protocol and creates `ImageBitmap` objects.
 - **CanvasManager** — Manages `OffscreenCanvas` + `Worker` pairs for each camera, enabling GPU-accelerated rendering without blocking the main thread.
-- **Frame-locked Playback** — The playback page uses a manual frame pump for recorded videos: all `<video>` elements stay permanently paused, and a `requestAnimationFrame` loop sets `video.currentTime = frame / fps` on every video simultaneously. Videos never call `.play()` — the frame numbers are always identical across all cameras.
+- **Frame-locked Playback** — The playback page uses native `.play()` for smooth hardware-decoded rendering. A `requestAnimationFrame` loop drives an authoritative frame counter (wall-clock × fps × rate) and periodically drift-corrects each `<video>` element back into alignment. When paused or frame-stepping, `video.currentTime` is set directly on all elements simultaneously. Frame overlays are updated via direct DOM manipulation to avoid React re-renders during playback.
 - **Material UI** — Component library for the control panels, tree views, and layout.

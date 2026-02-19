@@ -43,7 +43,7 @@ def add_middleware(app: FastAPI) -> None:
             return response
 
         except Exception as e:
-            process_time = time.time() - start_time
+            process_time = time.perf_counter() - start_time
             logger.error(
                 f"Exception during request: {request.method} {request.url}\n"
                 f"  Error: {type(e).__name__}: {str(e)}\n"
