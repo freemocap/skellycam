@@ -8,10 +8,11 @@ import numpy as np
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from fastapi import FastAPI
 
+from skellylogs import LogRecordModel, LogLevels
+from skellylogs.handlers.websocket_log_queue_handler import get_websocket_log_queue
+
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, get_or_create_camera_group_manager
 from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
-    get_websocket_log_queue, MIN_LOG_LEVEL_FOR_WEBSOCKET
 from skellycam.utilities.wait_functions import await_10ms
 from typing import TYPE_CHECKING
 
@@ -87,6 +88,13 @@ class WebsocketServer:
         self._display_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
         self._last_framerate_send_time: float = 0.0
 
+        # Serialize all websocket sends — the `websockets` library does not
+        # support concurrent writes on the same connection. Without this lock,
+        # two tasks calling send_json/send_bytes at the same time hit an
+        # internal `assert waiter is None or waiter.cancelled()` in the
+        # protocol drain logic.
+        self._send_lock = asyncio.Lock()
+
     async def __aenter__(self):
         logger.debug("Entering WebsocketRunner context manager...")
         self._websocket_should_continue = True
@@ -119,6 +127,24 @@ class WebsocketServer:
         for task in self.ws_tasks:
             if not task.done():
                 task.cancel()
+
+    async def _send_json(self, data: dict) -> None:
+        """Send JSON through the websocket, serialized by the send lock."""
+        async with self._send_lock:
+            if self.websocket.client_state == WebSocketState.CONNECTED:
+                await self.websocket.send_json(data)
+
+    async def _send_bytes(self, data: bytes) -> None:
+        """Send bytes through the websocket, serialized by the send lock."""
+        async with self._send_lock:
+            if self.websocket.client_state == WebSocketState.CONNECTED:
+                await self.websocket.send_bytes(data)
+
+    async def _send_text(self, data: str) -> None:
+        """Send text through the websocket, serialized by the send lock."""
+        async with self._send_lock:
+            if self.websocket.client_state == WebSocketState.CONNECTED:
+                await self.websocket.send_text(data)
 
     async def run(self):
         logger.info("Starting websocket runner...")
@@ -168,7 +194,7 @@ class WebsocketServer:
                         for camera_group_id, (frame_number,
                                               multiframe_timestamp,
                                               payload_bytes) in new_frontend_payloads.items():
-                            await self.websocket.send_bytes(payload_bytes)
+                            await self._send_bytes(payload_bytes)
                             self.last_sent_frame_number = frame_number
 
                             # Server framerate: computed from frame_number + capture timestamp.
@@ -213,11 +239,11 @@ class WebsocketServer:
                                 "backend_framerate": server_framerate.model_dump(),
                                 "frontend_framerate": display_tracker.current_framerate.model_dump()
                             }
-                            await self.websocket.send_json(framerate_message)
+                            await self._send_json(framerate_message)
                     self._last_framerate_send_time = now
 
-        except WebSocketDisconnect:
-            logger.api("Client disconnected, ending Frontend Image relay task...")
+        except (WebSocketDisconnect, AssertionError):
+            logger.info("Client disconnected, ending frontend image relay task...")
         except RuntimeError as e:
             if "close" in str(e).lower():
                 logger.info("Websocket closed during image relay send, ending task...")
@@ -232,23 +258,22 @@ class WebsocketServer:
         finally:
             self._signal_shutdown()
 
-    async def _logs_relay(self, ws_log_level: int = MIN_LOG_LEVEL_FOR_WEBSOCKET):
+    async def _logs_relay(self, ws_log_level: int = LogLevels.TRACE.value):
         logger.info("Starting websocket log relay listener...")
         logs_queue = get_websocket_log_queue()
         try:
             while self.should_continue:
-                if not logs_queue.empty() and self.websocket.client_state == WebSocketState.CONNECTED:
+                if not logs_queue.empty():
                     log_record: LogRecordModel = LogRecordModel(**logs_queue.get_nowait())
                     if log_record.levelno < ws_log_level:
-                        continue  # Skip logs below the specified level
-
+                        continue
                     log_data = log_record.model_dump()
-                    await self.websocket.send_json(log_data)
+                    await self._send_json(log_data)
                 else:
                     await await_10ms()
         except asyncio.CancelledError:
             logger.debug("Log relay task cancelled")
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, AssertionError):
             logger.info("Client disconnected, ending log relay task...")
         except RuntimeError as e:
             if "close" in str(e).lower():
@@ -276,12 +301,12 @@ class WebsocketServer:
                         "message_type": "app_state",
                         "state": state_dict
                     }
-                    await self.websocket.send_json(state_message)
+                    await self._send_json(state_message)
                 await asyncio.sleep(1.0)
                 previous_state = state_dict
         except asyncio.CancelledError:
             logger.debug("State sender task cancelled")
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, AssertionError):
             logger.info("Client disconnected, ending state sender task...")
         except RuntimeError as e:
             if "close" in str(e).lower():
@@ -326,7 +351,7 @@ class WebsocketServer:
                             raise ValueError(f"Failed to decode JSON from client websocket message: {e}") from e
                     else:
                         if text_content.strip() == "ping":
-                            await self.websocket.send_text("pong")
+                            await self._send_text("pong")
                         elif text_content.strip() == "pong":
                             pass
                         else:

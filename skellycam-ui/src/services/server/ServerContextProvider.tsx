@@ -82,6 +82,17 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
     // Latest server-side (backend) FPS stored in a ref for non-reactive access
     const serverFpsRef = useRef<number | null>(null);
 
+    // Holds the latest binary payload received from the WebSocket.
+    // The WebSocket onmessage handler writes here synchronously;
+    // a separate rAF-driven processing loop reads and clears it.
+    // This decouples decoding from the WebSocket message storm,
+    // preventing promise starvation where createImageBitmap microtasks
+    // can never resolve because the browser dispatches onmessage events
+    // back-to-back in a single macrotask without yielding.
+    const pendingPayloadRef = useRef<ArrayBuffer | null>(null);
+    const processingFrameRef = useRef<boolean>(false);
+    const frameLoopRef = useRef<number | null>(null);
+
     // Initialize services once
     useEffect(() => {
         wsConnectionRef.current = new WebSocketConnection({
@@ -119,55 +130,77 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                 canvasManagerRef.current?.terminateAllWorkers();
                 frameProcessorRef.current?.reset();
                 serverFpsRef.current = null;
+                processingFrameRef.current = false;
+                pendingPayloadRef.current = null;
                 framerateStoreRef.current.clear();
                 setConnectedCameraIds([]);
             }
         };
 
-        const handleMessage = async (event: MessageEvent): Promise<void> => {
-            // Handle binary frame data
-            if (event.data instanceof ArrayBuffer) {
+        // Process a decoded frame result: update camera list, dispatch to workers, send ack.
+        const dispatchFrames = (
+            result: Awaited<ReturnType<FrameProcessor['processFramePayload']>>
+        ): void => {
+            if (!result) return;
+
+            const { frames, cameraIds, frameNumbers } = result;
+
+            const currentCameraIds = Array.from(cameraIds).sort();
+            setConnectedCameraIds(prevIds => {
+                if (!arraysEqual(prevIds, currentCameraIds)) {
+                    console.log(`Camera list updated: ${currentCameraIds.join(', ')}`);
+
+                    const removedCameras = prevIds.filter(id => !cameraIds.has(id));
+                    for (const cameraId of removedCameras) {
+                        console.log(`Removing camera ${cameraId} - not in latest payload`);
+                        canvasManagerRef.current?.terminateWorker(cameraId);
+                    }
+
+                    return currentCameraIds;
+                }
+                return prevIds;
+            });
+
+            for (const frameData of frames) {
+                canvasManagerRef.current!.sendFrameToWorker(
+                    frameData.cameraId,
+                    frameData.bitmap
+                );
+            }
+
+            if (frameNumbers.size > 0) {
+                const maxFrameNumber = Math.max(...Array.from(frameNumbers));
+                ws.send({ type: 'frameAcknowledgment', frameNumber: maxFrameNumber });
+            }
+        };
+
+        // rAF-driven processing loop. Runs on its own macrotask boundary,
+        // so createImageBitmap promises can resolve without being starved
+        // by the WebSocket onmessage dispatch loop.
+        const processFrameLoop = async (): Promise<void> => {
+            if (!processingFrameRef.current && pendingPayloadRef.current !== null) {
+                const payload = pendingPayloadRef.current;
+                pendingPayloadRef.current = null;
+                processingFrameRef.current = true;
                 try {
-                    const result = await frameProcessorRef.current!.processFramePayload(event.data);
-                    if (!result) return;
-
-                    const { frames, cameraIds, frameNumbers } = result;
-
-                    // Convert Set to sorted array for comparison
-                    const currentCameraIds = Array.from(cameraIds).sort();
-                    // Update state only if camera list has changed
-                    setConnectedCameraIds(prevIds => {
-                        if (!arraysEqual(prevIds, currentCameraIds)) {
-                            console.log(`Camera list updated: ${currentCameraIds.join(', ')}`);
-
-                            // Clean up workers for cameras that are no longer in the payload
-                            const removedCameras = prevIds.filter(id => !cameraIds.has(id));
-                            for (const cameraId of removedCameras) {
-                                console.log(`Removing camera ${cameraId} - not in latest payload`);
-                                canvasManagerRef.current?.terminateWorker(cameraId);
-                            }
-
-                            return currentCameraIds;
-                        }
-                        return prevIds; // Return same reference to prevent re-render
-                    });
-
-                    // Send frames to canvas workers
-                    for (const frameData of frames) {
-                        canvasManagerRef.current!.sendFrameToWorker(
-                            frameData.cameraId,
-                            frameData.bitmap
-                        );
-                    }
-
-                    // Acknowledge the highest frame number
-                    if (frameNumbers.size > 0) {
-                        const maxFrameNumber = Math.max(...Array.from(frameNumbers));
-                        ws.send({ type: 'frameAcknowledgment', frameNumber: maxFrameNumber });
-                    }
+                    const result = await frameProcessorRef.current!.processFramePayload(payload);
+                    dispatchFrames(result);
                 } catch (error) {
                     console.error('Error processing frame:', error);
+                } finally {
+                    processingFrameRef.current = false;
                 }
+            }
+            frameLoopRef.current = requestAnimationFrame(processFrameLoop);
+        };
+
+        frameLoopRef.current = requestAnimationFrame(processFrameLoop);
+
+        const handleMessage = (event: MessageEvent): void => {
+            // Handle binary frame data: just buffer the latest payload.
+            // Older unprocessed payloads are overwritten (frame dropping).
+            if (event.data instanceof ArrayBuffer) {
+                pendingPayloadRef.current = event.data;
             }
             // Handle text/JSON messages (logs, framerate updates, etc.)
             else if (typeof event.data === 'string') {
@@ -206,6 +239,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             ws.off('state-change', handleStateChange);
             ws.off('message', handleMessage);
             ws.disconnect();
+            if (frameLoopRef.current !== null) {
+                cancelAnimationFrame(frameLoopRef.current);
+                frameLoopRef.current = null;
+            }
         };
     }, [dispatch]);
 

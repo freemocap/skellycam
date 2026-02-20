@@ -72,9 +72,13 @@ function renderLoop() {
     if (pendingFrame && !isRendering) {
         isRendering = true;
         
-        // Fastest possible render path
-        ctx.transferFromImageBitmap(pendingFrame);
+        const frame = pendingFrame;
         pendingFrame = null;
+        
+        // transferFromImageBitmap detaches the bitmap (ownership transferred to canvas).
+        // Explicit close() afterwards as a safety net for browser edge cases.
+        ctx.transferFromImageBitmap(frame);
+        frame.close();
         
         // Update stats
         stats.framesRendered++;

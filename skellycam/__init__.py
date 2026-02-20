@@ -14,13 +14,17 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 __package_root__ = str(__import__("pathlib").Path(__file__).parent)
 
 import multiprocessing
+
+
 multiprocessing.freeze_support()
 
-from skellycam.system.logging_configuration.configure_logging import configure_logging
-from skellycam.system.logging_configuration.log_levels import LogLevels
+from skellylogs import configure_logging, LogLevels
+
+from skellycam.system.default_paths import get_log_file_path
 
 LOG_LEVEL = LogLevels.TRACE
-configure_logging(LOG_LEVEL)
+configure_logging(level=LOG_LEVEL, log_file_path=get_log_file_path())
+
 
 
 __all__ = [
@@ -32,5 +36,4 @@ __all__ = [
     "__repo_url__",
     "__repo_issues_url__",
     "__pypi_url__",
-    'LOG_LEVEL'
 ]

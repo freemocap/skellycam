@@ -4,6 +4,8 @@ from typing import Type
 import numpy as np
 from pydantic import Field, model_validator
 
+from skellylogs import LogRecordModel, get_websocket_log_queue
+
 from skellycam.core.camera.config.camera_config import CameraConfig, CameraConfigs
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemoryDTO
@@ -11,8 +13,6 @@ from skellycam.core.recorders.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
 from skellycam.core.types.type_overloads import TopicPublicationQueue, CameraIdString
-from skellycam.system.logging_configuration.handlers.websocket_log_queue_handler import LogRecordModel, \
-    get_websocket_log_queue
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBufferDTO
 
 class DeviceExtractedConfigMessage(TopicMessageABC):

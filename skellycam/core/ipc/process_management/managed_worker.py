@@ -28,8 +28,8 @@ import threading
 from enum import Enum
 from typing import Callable, Optional
 
-from skellycam.system.logging_configuration.configure_logging import configure_logging
 from skellycam import LOG_LEVEL
+from skellylogs import configure_logging
 
 logger = logging.getLogger(__name__)
 
