@@ -220,7 +220,7 @@ export const createExtendedTheme = (mode: PaletteMode) => {
                     root: {
                         color: mode === 'dark' ? baseTheme.palette.grey[400] : baseTheme.palette.grey[600],
                         '&.Mui-checked': {
-                            color: baseTheme.palette.primary.main,
+                            color: mode === 'dark' ? baseTheme.palette.info.main : baseTheme.palette.primary.main,
                         },
                         '&.Mui-disabled': {
                             color: mode === 'dark' ? baseTheme.palette.grey[700] : baseTheme.palette.grey[400],
@@ -233,7 +233,7 @@ export const createExtendedTheme = (mode: PaletteMode) => {
                     root: {
                         color: mode === 'dark' ? baseTheme.palette.grey[400] : baseTheme.palette.grey[600],
                         '&.Mui-checked': {
-                            color: baseTheme.palette.primary.main,
+                            color: mode === 'dark' ? baseTheme.palette.info.main : baseTheme.palette.primary.main,
                         },
                     },
                 },

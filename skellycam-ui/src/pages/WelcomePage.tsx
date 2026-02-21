@@ -1,15 +1,17 @@
-import React, {useEffect, useState, useRef} from 'react';
-import {Box, Container, Fade, Grow, Paper, Typography} from '@mui/material';
+import React, {useEffect, useState, useRef, useCallback} from 'react';
+import {Box, Checkbox, Container, Fade, FormControlLabel, Grow, Paper, Typography} from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
 import {Footer} from '@/components/ui-components/Footer';
 import {useElectronIPC} from "@/services";
-import {useServer} from "@/services/server/ServerContextProvider"; // Adjust import path as needed
+import {useServer} from "@/services/server/ServerContextProvider";
 
 const WelcomePage: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    const [telemetryEnabled, setTelemetryEnabled] = useState<boolean>(true);
+    const [telemetryLoaded, setTelemetryLoaded] = useState<boolean>(false);
     const {isElectron, api} = useElectronIPC();
     const {connectedCameraIds} = useServer();
 
@@ -32,7 +34,6 @@ const WelcomePage: React.FC = () => {
         const fetchLogo = async (): Promise<void> => {
             try {
                 if (isElectron && api) {
-                    // Use the new base64 method that returns a data URL
                     const dataUrl = await api.assets.getLogoBase64.query();
                     if (dataUrl) {
                         setLogoDataUrl(dataUrl);
@@ -42,11 +43,39 @@ const WelcomePage: React.FC = () => {
                 }
             } catch (error) {
                 console.error('Failed to load logo:', error);
-
             }
         };
 
         fetchLogo();
+    }, [isElectron, api]);
+
+    // Load telemetry preference on mount
+    useEffect(() => {
+        const loadTelemetryPref = async (): Promise<void> => {
+            try {
+                if (isElectron && api) {
+                    const enabled = await api.telemetry.getEnabled.query();
+                    setTelemetryEnabled(enabled);
+                }
+            } catch (error) {
+                console.error('Failed to load telemetry preference:', error);
+            } finally {
+                setTelemetryLoaded(true);
+            }
+        };
+
+        loadTelemetryPref();
+    }, [isElectron, api]);
+
+    const handleTelemetryToggle = useCallback(async (_event: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+        setTelemetryEnabled(checked);
+        try {
+            if (isElectron && api) {
+                await api.telemetry.setEnabled.mutate({enabled: checked});
+            }
+        } catch (error) {
+            console.error('Failed to save telemetry preference:', error);
+        }
     }, [isElectron, api]);
 
     return (
@@ -144,7 +173,7 @@ const WelcomePage: React.FC = () => {
                         variant="subtitle1"
                         color="text.secondary"
                         sx={{
-                            mb: 5,
+                            mb: 3,
                             textAlign: 'center',
                             maxWidth: '80%',
                             fontSize: '1.1rem'
@@ -152,6 +181,36 @@ const WelcomePage: React.FC = () => {
                     >
                         Record and View Synchronized Videos
                     </Typography>
+
+                    {/* Telemetry opt-in checkbox */}
+                    {telemetryLoaded && (
+                        <Fade in={true} timeout={600}>
+                            <Box sx={{
+                                mb: 3,
+                                px: 2,
+                                py: 1,
+                                borderRadius: 2,
+                                backgroundColor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.03)'
+                                    : 'rgba(0,0,0,0.02)',
+                            }}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={telemetryEnabled}
+                                            onChange={handleTelemetryToggle}
+                                            size="small"
+                                        />
+                                    }
+                                    label={
+                                        <Typography variant="body2" color="text.primary">
+                                            Send anonymous usage pings
+                                        </Typography>
+                                    }
+                                />
+                            </Box>
+                        </Fade>
+                    )}
 
                     <Box component="footer" sx={{p: 3}}>
                         <Footer/>

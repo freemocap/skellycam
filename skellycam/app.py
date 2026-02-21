@@ -22,6 +22,7 @@ from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
     get_default_skellycam_base_folder_path,
 )
+from skellycam.system.telemetry.telemetry import initialize_telemetry, shutdown_telemetry
 from skellycam.utilities.ensure_compiled import ensure_bytecode_compiled
 from starlette.responses import FileResponse
 
@@ -42,6 +43,9 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     base_path.mkdir(parents=True, exist_ok=True)
     logger.info(f"Base folder: {base_path}")
 
+    # Initialize anonymous telemetry (respects user opt-out preference)
+    initialize_telemetry()
+
     logger.success(
         f"SkellyCam API v{skellycam.__version__} started successfully 💀📸✨\n"
         f"Swagger API docs: {APP_URL}/docs"
@@ -51,6 +55,8 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ===== SHUTDOWN =====
     logger.api("SkellyCam API shutting down...")
+
+    shutdown_telemetry()
 
     # Just set the flag — __main__ owns the WorkerRegistry and calls shutdown_all()
     app.state.global_kill_flag.value = True

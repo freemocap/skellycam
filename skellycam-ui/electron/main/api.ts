@@ -8,12 +8,42 @@ import { PythonServer } from './services/python-server';
 import { dialog, shell, app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import { APP_PATHS } from './app-paths';
 
 // Initialize tRPC
 const t = initTRPC.create({
     transformer: superjson, // Handles Date/undefined/etc serialization
 });
+
+// Telemetry config lives in ~/skellycam_data/telemetry_config.json
+const TELEMETRY_CONFIG_PATH = path.join(os.homedir(), 'skellycam_data', 'telemetry_config.json');
+
+interface TelemetryConfig {
+    telemetry_enabled: boolean;
+}
+
+function readTelemetryConfig(): TelemetryConfig {
+    try {
+        if (fs.existsSync(TELEMETRY_CONFIG_PATH)) {
+            const raw = fs.readFileSync(TELEMETRY_CONFIG_PATH, 'utf-8');
+            const parsed = JSON.parse(raw);
+            return { telemetry_enabled: Boolean(parsed.telemetry_enabled) };
+        }
+    } catch (err) {
+        console.error('Failed to read telemetry config:', err);
+    }
+    // Default: enabled
+    return { telemetry_enabled: true };
+}
+
+function writeTelemetryConfig(config: TelemetryConfig): void {
+    const dir = path.dirname(TELEMETRY_CONFIG_PATH);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(TELEMETRY_CONFIG_PATH, JSON.stringify(config, null, 2) + '\n');
+}
 
 // Create the main API router
 export const api = t.router({
@@ -97,6 +127,21 @@ export const api = t.router({
             }),
     }),
 
+    // Telemetry Settings
+    telemetry: t.router({
+        getEnabled: t.procedure
+            .query((): boolean => {
+                return readTelemetryConfig().telemetry_enabled;
+            }),
+
+        setEnabled: t.procedure
+            .input(z.object({ enabled: z.boolean() }))
+            .mutation(({ input }): boolean => {
+                writeTelemetryConfig({ telemetry_enabled: input.enabled });
+                return input.enabled;
+            }),
+    }),
+
     // Asset Management
     assets: t.router({
         getLogoBase64: t.procedure
@@ -129,7 +174,6 @@ export const api = t.router({
                 }
             }),
 
-        // Keep the old method for backward compatibility if needed
         getLogoPngPath: t.procedure
             .query(() => {
                 if (fs.existsSync(APP_PATHS.SKELLYCAM_LOGO_PNG_SHARED_PATH)) {

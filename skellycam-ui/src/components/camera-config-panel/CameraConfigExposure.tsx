@@ -82,34 +82,42 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
 
     return (
         <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-                Camera Exposure
-            </Typography>
-            <Tooltip title="Choose between automatic or manual exposure control">
-                <ToggleButtonGroup
-                    color={theme.palette.primary.main as any}
-                    value={exposureMode}
-                    exclusive
-                    onChange={handleModeChange}
-                    size="small"
-                    sx={{
-                        '& .MuiToggleButton-root.Mui-selected': {
-                            backgroundColor: theme.palette.primary.main,
-                            border: `1px solid ${theme.palette.text.secondary}`,
-                            color: theme.palette.primary.contrastText,
-                            '&:hover': {
-                                backgroundColor: theme.palette.primary.light,
+            {/* Label and mode toggle on the same line */}
+            <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5}}>
+                <Typography variant="body2" color="text.secondary" sx={{whiteSpace: 'nowrap', fontSize: 12}}>
+                    Exposure
+                </Typography>
+                <Tooltip title="Choose between automatic or manual exposure control">
+                    <ToggleButtonGroup
+                        color={theme.palette.primary.main as any}
+                        value={exposureMode}
+                        exclusive
+                        onChange={handleModeChange}
+                        size="small"
+                        sx={{
+                            '& .MuiToggleButton-root': {
+                                py: 0.25,
+                                px: 1,
+                                fontSize: 11,
                             },
-                        }
-                    }}
-                >
-                    <ToggleButton value="MANUAL">Manual</ToggleButton>
-                    <ToggleButton value="AUTO">Auto</ToggleButton>
-                    <ToggleButton value="RECOMMEND">Recommend</ToggleButton>
-                </ToggleButtonGroup>
-            </Tooltip>
+                            '& .MuiToggleButton-root.Mui-selected': {
+                                backgroundColor: theme.palette.primary.main,
+                                border: `1px solid ${theme.palette.text.secondary}`,
+                                color: theme.palette.primary.contrastText,
+                                '&:hover': {
+                                    backgroundColor: theme.palette.primary.light,
+                                },
+                            }
+                        }}
+                    >
+                        <ToggleButton value="MANUAL">Manual</ToggleButton>
+                        <ToggleButton value="AUTO">Auto</ToggleButton>
+                        <ToggleButton value="RECOMMEND">Recommend</ToggleButton>
+                    </ToggleButtonGroup>
+                </Tooltip>
+            </Box>
             <Tooltip title="Adjust exposure time, e.g. cv2.VideoCapture.set(cv2.CAP_PROP_EXPOSURE, value)">
-                <Box sx={{ flexGrow: 1 }}>
+                <Box sx={{px: 1}}>
                     <Slider
                         value={exposure}
                         disabled={exposureMode === 'AUTO' || exposureMode === 'RECOMMEND'}
@@ -124,7 +132,12 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                         }}
                         sx={{
                             color: theme.palette.primary.light,
+                            '& .MuiSlider-markLabel': {
+                                fontSize: 11,
+                            },
                             '& .MuiSlider-thumb': {
+                                width: 16,
+                                height: 16,
                                 '&:hover, &.Mui-focusVisible': {
                                     boxShadow: `0px 0px 0px 8px ${theme.palette.primary.light}33`,
                                 },

@@ -1,5 +1,5 @@
 import React from 'react';
-import {Box, Checkbox, FormControlLabel, Grid, TextField, Typography, useTheme} from '@mui/material';
+import {Box, Checkbox, FormControlLabel, TextField, Typography, useTheme} from '@mui/material';
 
 interface RecordingSettingsProps {
     useTimestamp: boolean;
@@ -16,110 +16,138 @@ interface RecordingSettingsProps {
     onCustomSubfolderNameChange: (value: string) => void;
 }
 
+/** A compact row: checkbox on the left, optional input filling remaining space. */
+const SettingRow: React.FC<{
+    checked: boolean;
+    label: string;
+    onCheck: (value: boolean) => void;
+    children?: React.ReactNode;
+}> = ({checked, label, onCheck, children}) => (
+    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 32}}>
+        <FormControlLabel
+            control={
+                <Checkbox
+                    checked={checked}
+                    onChange={(e) => onCheck(e.target.checked)}
+                    size="small"
+                    sx={{p: 0.25}}
+                />
+            }
+            label={label}
+            sx={{
+                mr: 0,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                '& .MuiFormControlLabel-label': {fontSize: 12},
+            }}
+        />
+        {children && (
+            <Box sx={{flex: 1, minWidth: 0}}>
+                {children}
+            </Box>
+        )}
+    </Box>
+);
+
+/** Compact text field that aligns vertically with checkboxes (no floating label). */
+const CompactTextField: React.FC<{
+    value: string | number;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder: string;
+    disabled: boolean;
+    type?: string;
+    inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+    fullWidth?: boolean;
+    sx?: object;
+}> = ({value, onChange, placeholder, disabled, type, inputProps, fullWidth = true, sx}) => (
+    <TextField
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        type={type}
+        inputProps={inputProps}
+        size="small"
+        fullWidth={fullWidth}
+        sx={{
+            '& .MuiOutlinedInput-root': {
+                height: 28,
+                fontSize: 12,
+            },
+            '& .MuiOutlinedInput-input': {
+                py: 0.5,
+                px: 1,
+            },
+            ...sx,
+        }}
+    />
+);
+
 export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
-                                                                               useTimestamp,
-                                                                               baseName,
-                                                                               useIncrement,
-                                                                               currentIncrement,
-                                                                               createSubfolder,
-                                                                               customSubfolderName,
-                                                                               onUseTimestampChange,
-                                                                               onBaseNameChange,
-                                                                               onUseIncrementChange,
-                                                                               onIncrementChange,
-                                                                               onCreateSubfolderChange,
-                                                                               onCustomSubfolderNameChange,
-                                                                           }) => {
+                                                                             useTimestamp,
+                                                                             baseName,
+                                                                             useIncrement,
+                                                                             currentIncrement,
+                                                                             createSubfolder,
+                                                                             customSubfolderName,
+                                                                             onUseTimestampChange,
+                                                                             onBaseNameChange,
+                                                                             onUseIncrementChange,
+                                                                             onIncrementChange,
+                                                                             onCreateSubfolderChange,
+                                                                             onCustomSubfolderNameChange,
+                                                                         }) => {
     const theme = useTheme();
 
     return (
         <Box sx={{
-            mt: 2,
-            p: 2,
+            mt: 1,
+            p: 1.5,
             bgcolor: theme.palette.mode === 'dark'
                 ? 'rgba(255, 255, 255, 0.05)'
                 : 'rgba(0, 0, 0, 0.04)',
-            borderRadius: 1
+            borderRadius: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.5,
         }}>
-            <Typography variant="subtitle1" sx={{mb: 2}}>Recording Settings</Typography>
+            <Typography variant="subtitle2" sx={{mb: 0.5, fontSize: 13, fontWeight: 600}}>
+                Recording Settings
+            </Typography>
 
-            <Grid container spacing={2} alignItems="center">
-                {/* Timestamp & Base name row */}
-                <Grid item xs={12} sm={4}>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                color="primary"
-                                checked={useTimestamp}
-                                onChange={(e) => onUseTimestampChange(e.target.checked)}
-                            />
-                        }
-                        label="Use Timestamp"
-                    />
-                </Grid>
-                <Grid item xs={12} sm={8}>
-                    <TextField
-                        label="Base Recording Name"
-                        value={baseName}
-                        onChange={(e) => onBaseNameChange(e.target.value)}
-                        disabled={useTimestamp}
-                        size="small"
-                        fullWidth
-                    />
-                </Grid>
+            {/* Timestamp toggle + base name input */}
+            <SettingRow checked={useTimestamp} label="Timestamp" onCheck={onUseTimestampChange}>
+                <CompactTextField
+                    value={baseName}
+                    onChange={(e) => onBaseNameChange(e.target.value)}
+                    placeholder="Base Name"
+                    disabled={useTimestamp}
+                />
+            </SettingRow>
 
-                {/* Subfolder row */}
-                <Grid item xs={12} sm={4}>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                color="primary"
+            {/* Subfolder toggle + custom name input */}
+            <SettingRow checked={createSubfolder} label="Subfolder" onCheck={onCreateSubfolderChange}>
+                <CompactTextField
+                    value={customSubfolderName}
+                    onChange={(e) => onCustomSubfolderNameChange(e.target.value)}
+                    placeholder="Subfolder Name"
+                    disabled={!createSubfolder}
+                />
+            </SettingRow>
 
-                                checked={createSubfolder}
-                                onChange={(e) => onCreateSubfolderChange(e.target.checked)}
-                            />
-                        }
-                        label="Use Subfolder"
-                    />
-                </Grid>
-                <Grid item xs={12} sm={8}>
-                    <TextField
-                        label="Custom Subfolder Name"
-                        value={customSubfolderName}
-                        onChange={(e) => onCustomSubfolderNameChange(e.target.value)}
-                        disabled={!createSubfolder}
-                        size="small"
-                        fullWidth
-                        placeholder="Leave empty to use timestamp"
-                    />
-                </Grid>
-
-                {/* Auto increment row */}
-                <Grid item xs={12} sm={4}>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={useIncrement}
-                                onChange={(e) => onUseIncrementChange(e.target.checked)}
-                            />
-                        }
-                        label="Auto Increment"
-                    />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    <TextField
-                        label="Increment Number"
-                        type="number"
-                        value={currentIncrement}
-                        onChange={(e) => onIncrementChange(parseInt(e.target.value) || 1)}
-                        disabled={!useIncrement}
-                        inputProps={{min: 1, step: 1}}
-                        size="small"
-                        fullWidth
-                    />
-                </Grid>
-
-            </Grid>
+            {/* Auto-increment toggle + number input */}
+            <SettingRow checked={useIncrement} label="Increment" onCheck={onUseIncrementChange}>
+                <CompactTextField
+                    value={currentIncrement}
+                    onChange={(e) => onIncrementChange(parseInt(e.target.value) || 1)}
+                    placeholder="#"
+                    disabled={!useIncrement}
+                    type="number"
+                    inputProps={{min: 1, step: 1}}
+                    fullWidth={false}
+                    sx={{maxWidth: 64}}
+                />
+            </SettingRow>
         </Box>
     );
 };
