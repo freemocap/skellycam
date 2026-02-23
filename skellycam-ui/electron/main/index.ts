@@ -5,6 +5,7 @@ import { WindowManager } from './services/window-manager';
 import { PythonServer } from './services/python-server';
 // import { UpdateHandler } from './services/update-handler';
 import { LifecycleLogger } from './services/logger';
+import { buildApplicationMenu } from './services/menu-builder';
 // import os from 'node:os'; // Uncomment if needed for platform-specific checks
 
 // Export environment configuration
@@ -41,6 +42,9 @@ if (!gotTheLock) {
 
         // Setup IPC
         setupIPC();
+
+        // Build the native application menu with shortcuts
+        buildApplicationMenu();
 
         // Create window
         const mainWindow = WindowManager.createMainWindow();

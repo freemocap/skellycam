@@ -6,6 +6,8 @@ import type { AppAPI } from '../../../electron/main/api';
 // Type for the electron API exposed via preload
 interface ElectronAPI {
     invoke: (path: string, input?: any) => Promise<any>;
+    onMenuAction: (callback: (action: string) => void) => () => void;
+    sendMenuLabels: (params: Record<string, unknown>) => void;
 }
 
 declare global {

@@ -5,6 +5,7 @@ import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelCont
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
 import {useTheme} from "@mui/material/styles";
 import {Box} from "@mui/material";
+import {useMenuActions} from "@/hooks/useMenuActions";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const theme = useTheme();
@@ -29,6 +30,9 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const handlePanelExpand = useCallback(() => {
         setIsCollapsed(false);
     }, []);
+
+    // Connect native menu actions to the app
+    useMenuActions({ onToggleSidebar: handleToggleCollapse });
 
     return (
         <Box sx={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
