@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {TextField, Typography} from '@mui/material';
 
 interface RecordingNamePreviewProps {
@@ -14,14 +15,15 @@ export const RecordingNamePreview: React.FC<RecordingNamePreviewProps> = ({
                                                                               isRecording,
                                                                               onTagChange
                                                                           }) => {
+    const { t } = useTranslation();
     return (
         <>
             <Typography variant="body2" sx={{mb: 1}}>
-                Recording Name: {name}
+                {t('recordingName', { name })}
             </Typography>
             {!isRecording && (
                 <TextField
-                    label="Recording Tag"
+                    label={t("recordingTag")}
                     value={tag}
                     onChange={(e) => onTagChange(e.target.value)}
                     onKeyDown={(e) => {
@@ -29,7 +31,7 @@ export const RecordingNamePreview: React.FC<RecordingNamePreviewProps> = ({
                         e.stopPropagation();}}
                     size="small"
                     fullWidth
-                    placeholder="Optional tag"
+                    placeholder={t("recordingTagPlaceholder")}
                 />
             )}
         </>

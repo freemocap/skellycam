@@ -33,6 +33,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
+import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -180,13 +181,13 @@ const MONO_FONT = '"JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", mo
 const ACCENT_BLUE = '#29b6f6';
 const ACCENT_GREEN = '#00ff88';
 
-const SORT_OPTIONS: { value: SortField; label: string }[] = [
-    { value: 'date', label: 'Date' },
-    { value: 'name', label: 'Name' },
-    { value: 'size', label: 'Size' },
-    { value: 'cameras', label: 'Cameras' },
-    { value: 'frames', label: 'Frames' },
-    { value: 'duration', label: 'Duration' },
+const SORT_OPTIONS: { value: SortField; labelKey: string }[] = [
+    { value: 'date', labelKey: 'date' },
+    { value: 'name', labelKey: 'name' },
+    { value: 'size', labelKey: 'size' },
+    { value: 'cameras', labelKey: 'cameras' },
+    { value: 'frames', labelKey: 'frames' },
+    { value: 'duration', labelKey: 'duration' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -195,6 +196,7 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 
 export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingLoaded }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const isDark = theme.palette.mode === 'dark';
 
     // Data state
@@ -226,7 +228,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
             const data: RecordingEntry[] = await response.json();
             setRecordings(data);
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to fetch recordings');
+            setError(e instanceof Error ? e.message : t('failedToFetch'));
         } finally {
             setIsLoadingList(false);
         }
@@ -342,7 +344,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                 <TextField
                     fullWidth
                     size="small"
-                    label="Recording folder path"
+                    label={t("recordingFolderPath")}
                     placeholder="~/skellycam_data/recordings/2024-01-01..."
                     value={manualPath}
                     onChange={(e) => setManualPath(e.target.value)}
@@ -370,7 +372,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                         '&:hover': { backgroundColor: isDark ? '#66bb6a' : undefined },
                     }}
                 >
-                    Load
+                    {t('load')}
                 </Button>
             </Box>
 
@@ -400,7 +402,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                             fontWeight: 600,
                         }}
                     >
-                        Recordings
+                        {t('recordings')}
                     </Typography>
                     {recordings.length > 0 && (
                         <Chip
@@ -426,7 +428,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     {/* Search filter */}
                     <TextField
                         size="small"
-                        placeholder="Filter…"
+                        placeholder={t("filter")}
                         value={filterText}
                         onChange={(e) => setFilterText(e.target.value)}
                         InputProps={{
@@ -476,7 +478,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     >
                         {SORT_OPTIONS.map((opt) => (
                             <MenuItem key={opt.value} value={opt.value}>
-                                {opt.label}
+                                {t(opt.labelKey)}
                             </MenuItem>
                         ))}
                     </Select>
@@ -510,7 +512,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                         disabled={isLoadingList}
                         sx={{ color: isDark ? '#b3b9c6' : undefined }}
                     >
-                        Refresh
+                        {t('refresh')}
                     </Button>
                 </Box>
             </Box>
@@ -527,7 +529,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     sx={{ textAlign: 'center', py: 4 }}
                 >
                     {recordings.length === 0
-                        ? 'No recordings found. Enter a path above to load manually.'
+                        ? t('noRecordingsFound')
                         : 'No recordings match your filter.'}
                 </Typography>
             ) : (
@@ -575,6 +577,7 @@ const RecordingRow: React.FC<RecordingRowProps> = React.memo(
     ({ rec, isLoading, isAnyLoading, isDark, onClick }) => {
         const theme = useTheme();
         const parsedDate = parseTimestampFromName(rec.name);
+    const { t } = useTranslation();
 
         return (
             <ListItemButton
@@ -679,7 +682,7 @@ const RecordingRow: React.FC<RecordingRowProps> = React.memo(
 
                             {/* Frame count chip */}
                             {rec.total_frames != null && rec.total_frames > 0 && (
-                                <Tooltip title="Frame count per camera">
+                                <Tooltip title={t("frameCountPerCamera")}>
                                     <Chip
                                         label={`${rec.total_frames.toLocaleString()} frames`}
                                         size="small"
@@ -702,7 +705,7 @@ const RecordingRow: React.FC<RecordingRowProps> = React.memo(
 
                             {/* FPS chip */}
                             {rec.fps != null && rec.fps > 0 && (
-                                <Tooltip title="Recording capture framerate">
+                                <Tooltip title={t("recordingCaptureFps")}>
                                     <Chip
                                         label={`${rec.fps} fps`}
                                         size="small"

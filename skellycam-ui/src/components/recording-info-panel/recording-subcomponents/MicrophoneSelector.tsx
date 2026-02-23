@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from "react";
+import { useTranslation } from "react-i18next";
 import {
     Box,
     FormControl,
@@ -27,6 +28,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
     const [microphones, setMicrophones] = useState<MicrophoneMap>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useTranslation();
 
     const detectMicrophones = async (): Promise<void> => {
         setLoading(true);
@@ -61,7 +63,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
 
     return (
         <Box sx={{display: "flex", alignItems: "center", gap: 0.5, minWidth: 0}}>
-            <Tooltip title={isActive ? "Audio recording enabled" : "No microphone selected"}>
+            <Tooltip title={isActive ? t("audioRecordingEnabled") : t("noMicrophoneSelected")}>
                 {isActive ? (
                     <Mic sx={{fontSize: 16, color: "success.main", flexShrink: 0}}/>
                 ) : (
@@ -82,7 +84,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                 >
                     <MenuItem value={-1}>
                         <Typography variant="caption" color="text.secondary">
-                            No microphone
+                            {t('noMicrophone')}
                         </Typography>
                     </MenuItem>
                     {micEntries.map(({id, name}) => (
@@ -95,7 +97,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                 </Select>
             </FormControl>
 
-            <Tooltip title="Refresh microphone list">
+            <Tooltip title={t("refreshMicrophoneList")}>
                 <span>
                     <IconButton
                         size="small"

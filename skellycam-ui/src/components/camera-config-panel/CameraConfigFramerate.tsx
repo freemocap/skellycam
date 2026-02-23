@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Box, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 interface CameraConfigFramerateProps {
     framerate: number | null;
@@ -17,6 +18,7 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
     onChange
 }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const isAuto = framerate === null;
     const [mode, setMode] = useState<'AUTO' | 'MANUAL'>(isAuto ? 'AUTO' : 'MANUAL');
     const [localValue, setLocalValue] = useState<string>(
@@ -99,9 +101,9 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
     return (
         <Box>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-                Framerate
+                {t("framerate")}
             </Typography>
-            <Tooltip title="Choose between automatic or manual framerate control">
+            <Tooltip title={t("framerateControl")}>
                 <ToggleButtonGroup
                     color={theme.palette.primary.main as any}
                     value={mode}
@@ -121,15 +123,15 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
                         }
                     }}
                 >
-                    <ToggleButton value="AUTO">Auto</ToggleButton>
-                    <ToggleButton value="MANUAL">Manual</ToggleButton>
+                    <ToggleButton value="AUTO">{t("auto")}</ToggleButton>
+                    <ToggleButton value="MANUAL">{t("manual")}</ToggleButton>
                 </ToggleButtonGroup>
             </Tooltip>
 
             {mode === 'MANUAL' && (
-                <Tooltip title="Set target frames per second (FPS) for camera capture">
+                <Tooltip title={t("setTargetFps")}>
                     <TextField
-                        label="FPS"
+                        label={t("fps")}
                         value={localValue}
                         onChange={handleChange}
                         onBlur={handleBlur}

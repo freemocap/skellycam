@@ -4,6 +4,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import CloseIcon from '@mui/icons-material/Close';
 import GridViewIcon from '@mui/icons-material/GridView';
 import { useServer } from '@/services/server/ServerContextProvider';
+import { useTranslation } from 'react-i18next';
 
 interface CameraSettings {
     columns: number | null;
@@ -17,6 +18,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                                                                                           onSettingsChange
                                                                                       }) => {
     const { connectedCameraIds } = useServer();
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [isAuto, setIsAuto] = useState<boolean>(true);
     const [manualColumns, setManualColumns] = useState<number>(2);
@@ -59,7 +61,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                     zIndex: 1000,
                 }}
             >
-                <Tooltip title={isOpen ? "Close settings" : "Grid settings"}>
+                <Tooltip title={isOpen ? t("closeSettings") : t("gridSettings")}>
                     <IconButton
                         onClick={() => setIsOpen(!isOpen)}
                         sx={{
@@ -90,7 +92,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                         <GridViewIcon fontSize="small" />
-                        <Box sx={{ fontWeight: 600 }}>Grid Columns</Box>
+                        <Box sx={{ fontWeight: 600 }}>{t("gridColumns")}</Box>
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -106,12 +108,12 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                                     }}
                                 />
                             }
-                            label="Auto"
+                            label={t("auto")}
                         />
 
                         <TextField
                             type="number"
-                            label="Columns"
+                            label={t("columns")}
                             value={isAuto ? autoColumns : manualColumns}
                             onChange={handleColumnsChange}
                             fullWidth

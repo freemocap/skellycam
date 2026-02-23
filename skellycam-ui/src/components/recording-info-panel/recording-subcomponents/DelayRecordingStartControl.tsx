@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {Box, Checkbox, FormControlLabel, TextField, useTheme} from '@mui/material';
 
 interface DelayStartControlProps {
@@ -15,6 +16,7 @@ export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
                                                                                  onDelayChange
                                                                              }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     return (
         <Box display="flex" alignItems="center" gap={2}>
             <FormControlLabel
@@ -25,11 +27,11 @@ export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
                         color="primary"
                     />
                 }
-                label="Delay Start"
+                label={t("delayStart")}
             />
             {useDelay && (
                 <TextField
-                    label="Seconds"
+                    label={t("seconds")}
                     type="number"
                     value={delaySeconds}
                     onChange={(e) => onDelayChange(Math.max(1, parseInt(e.target.value) || 1))}

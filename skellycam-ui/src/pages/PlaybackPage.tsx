@@ -7,9 +7,11 @@ import { Footer } from '@/components/ui-components/Footer';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { RecordingBrowser, LoadedVideo } from '@/components/playback/RecordingBrowser';
 import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
+import { useTranslation } from 'react-i18next';
 
 const PlaybackPage: React.FC = () => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const isDark = theme.palette.mode === 'dark';
     const [loadedVideos, setLoadedVideos] = useState<LoadedVideo[]>([]);
     const [recordingPath, setRecordingPath] = useState<string | null>(null);
@@ -67,7 +69,7 @@ const PlaybackPage: React.FC = () => {
                                     flexWrap: 'wrap',
                                 }}
                             >
-                                <Tooltip title="Back to recordings">
+                                <Tooltip title={t('backToRecordings')}>
                                     <IconButton size="small" onClick={handleBack}
                                         sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                                         <ArrowBackIcon fontSize="small" />
@@ -93,10 +95,10 @@ const PlaybackPage: React.FC = () => {
                                 <Box sx={{ flex: 1 }} />
 
                                 {/* Stats chips */}
-                                <Tooltip title="Camera streams in this recording">
+                                <Tooltip title={t('cameraStreams')}>
                                     <Chip
                                         icon={<VideocamIcon sx={{ fontSize: '14px !important' }} />}
-                                        label={`${loadedVideos.length} camera${loadedVideos.length !== 1 ? 's' : ''}`}
+                                        label={t('cameraCount', { count: loadedVideos.length })}
                                         size="small"
                                         variant="outlined"
                                         sx={{
@@ -111,7 +113,7 @@ const PlaybackPage: React.FC = () => {
                                 </Tooltip>
 
                                 {totalSize > 0 && (
-                                    <Tooltip title="Total recording size on disk">
+                                    <Tooltip title={t('totalRecordingSize')}>
                                         <Chip
                                             icon={<StorageIcon sx={{ fontSize: '14px !important' }} />}
                                             label={formatBytes(totalSize)}
@@ -130,7 +132,7 @@ const PlaybackPage: React.FC = () => {
                                 )}
 
                                 {recordingFps != null && recordingFps > 0 && (
-                                    <Tooltip title="Recording capture framerate">
+                                    <Tooltip title={t('recordingCaptureFps')}>
                                         <Chip
                                             label={`rec: ${recordingFps} fps`}
                                             size="small"

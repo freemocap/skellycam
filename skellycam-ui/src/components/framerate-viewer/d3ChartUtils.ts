@@ -37,7 +37,8 @@ export function renderEmptyChart(
     svg: d3.Selection<SVGGElement, unknown, null, undefined>,
     width: number,
     height: number,
-    theme: Theme
+    theme: Theme,
+    text: string = "Waiting for data…"
 ) {
     svg
         .append("text")
@@ -48,7 +49,7 @@ export function renderEmptyChart(
         .style("font-family", "monospace")
         .style("font-size", "12px")
         .style("fill", theme.palette.text.disabled)
-        .text("Waiting for data…")
+        .text(text)
 }
 
 export function renderThresholdLines(

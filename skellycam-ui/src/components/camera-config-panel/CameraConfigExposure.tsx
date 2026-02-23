@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Slider, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme } from '@mui/material';
 import { ExposureMode } from "@/store/slices/cameras/cameras-types";
+import { useTranslation } from 'react-i18next';
 
 interface CameraConfigExposureProps {
     exposureMode: ExposureMode;
@@ -42,6 +43,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                                                                               onExposureValueChange
                                                                           }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const handleModeChange = (
         event: React.MouseEvent<HTMLElement>,
@@ -85,9 +87,9 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
             {/* Label and mode toggle on the same line */}
             <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5}}>
                 <Typography variant="body2" color="text.secondary" sx={{whiteSpace: 'nowrap', fontSize: 12}}>
-                    Exposure
+                    {t("exposure")}
                 </Typography>
-                <Tooltip title="Choose between automatic or manual exposure control">
+                <Tooltip title={t("exposureControl")}>
                     <ToggleButtonGroup
                         color={theme.palette.primary.main as any}
                         value={exposureMode}
@@ -110,13 +112,13 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                             }
                         }}
                     >
-                        <ToggleButton value="MANUAL">Manual</ToggleButton>
-                        <ToggleButton value="AUTO">Auto</ToggleButton>
-                        <ToggleButton value="RECOMMEND">Recommend</ToggleButton>
+                        <ToggleButton value="MANUAL">{t("manual")}</ToggleButton>
+                        <ToggleButton value="AUTO">{t("auto")}</ToggleButton>
+                        <ToggleButton value="RECOMMEND">{t("recommend")}</ToggleButton>
                     </ToggleButtonGroup>
                 </Tooltip>
             </Box>
-            <Tooltip title="Adjust exposure time, e.g. cv2.VideoCapture.set(cv2.CAP_PROP_EXPOSURE, value)">
+            <Tooltip title={t("adjustExposure")}>
                 <Box sx={{px: 1}}>
                     <Slider
                         value={exposure}

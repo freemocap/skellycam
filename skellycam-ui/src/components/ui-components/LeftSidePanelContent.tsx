@@ -11,11 +11,13 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import StopIcon from '@mui/icons-material/Stop';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {useLocation, useNavigate} from "react-router-dom";
 import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraConfigTreeView";
 import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {startRecording, stopRecording} from "@/store";
+import {useTranslation} from "react-i18next";
 
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
@@ -57,6 +59,7 @@ const CollapsedToolbar: React.FC<{
     const theme = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
+    const {t} = useTranslation();
 
     return (
         <Box sx={{
@@ -72,14 +75,14 @@ const CollapsedToolbar: React.FC<{
             gap: 0.5,
         }}>
             {/* Hamburger to expand */}
-            <Tooltip title="Expand sidebar" placement="right">
+            <Tooltip title={t('expandSidebar')} placement="right">
                 <IconButton size="small" onClick={onToggleCollapse} sx={{color: theme.palette.text.primary}}>
                     <MenuIcon fontSize="small"/>
                 </IconButton>
             </Tooltip>
 
             {/* Record button */}
-            <Tooltip title={isRecording ? "Stop Recording" : "Start Recording"} placement="right">
+            <Tooltip title={isRecording ? t('stopRecording') : t('startRecording')} placement="right">
                 <IconButton
                     size="small"
                     onClick={onRecordClick}
@@ -97,7 +100,7 @@ const CollapsedToolbar: React.FC<{
             </Tooltip>
 
             {/* Cameras page */}
-            <Tooltip title="Cameras" placement="right">
+            <Tooltip title={t('cameras')} placement="right">
                 <IconButton
                     size="small"
                     onClick={() => navigate('/cameras')}
@@ -112,7 +115,7 @@ const CollapsedToolbar: React.FC<{
             </Tooltip>
 
             {/* Videos page */}
-            <Tooltip title="Videos" placement="right">
+            <Tooltip title={t('videos')} placement="right">
                 <IconButton
                     size="small"
                     onClick={() => navigate('/playback')}
@@ -123,6 +126,25 @@ const CollapsedToolbar: React.FC<{
                     }}
                 >
                     <SlideshowIcon fontSize="small"/>
+                </IconButton>
+            </Tooltip>
+
+            {/* Spacer */}
+            <Box sx={{ flex: 1 }} />
+
+            {/* Settings page */}
+            <Tooltip title={t('settings')} placement="right">
+                <IconButton
+                    size="small"
+                    onClick={() => navigate('/settings')}
+                    sx={{
+                        color: location.pathname === '/settings'
+                            ? theme.palette.success.main
+                            : theme.palette.text.secondary,
+                        mb: 0.5,
+                    }}
+                >
+                    <SettingsIcon fontSize="small"/>
                 </IconButton>
             </Tooltip>
         </Box>
@@ -137,6 +159,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
     const navigate = useNavigate();
     const location = useLocation();
     const dispatch = useAppDispatch();
+    const {t} = useTranslation();
 
     const isRecording = useAppSelector((state) => state.recording.isRecording);
 
@@ -202,7 +225,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                     }}
                 >
                     {/* Hamburger to collapse */}
-                    <Tooltip title="Collapse sidebar">
+                    <Tooltip title={t('collapseSidebar')}>
                         <IconButton size="small" onClick={onToggleCollapse} sx={{color: theme.palette.text.primary, flexShrink: 0}}>
                             <MenuOpenIcon fontSize="small"/>
                         </IconButton>
@@ -228,7 +251,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
 
                     {/* Nav icons — fixed row, never wraps */}
                     <Box sx={{display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0}}>
-                        <Tooltip title="Home">
+                        <Tooltip title={t('home')}>
                             <IconButton
                                 size="small"
                                 onClick={() => navigate('/')}
@@ -238,7 +261,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                             </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Cameras">
+                        <Tooltip title={t('cameras')}>
                             <IconButton
                                 size="small"
                                 onClick={() => navigate('/cameras')}
@@ -248,13 +271,23 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                             </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Videos">
+                        <Tooltip title={t('videos')}>
                             <IconButton
                                 size="small"
                                 onClick={() => navigate('/playback')}
                                 sx={navButtonSx(location.pathname === '/playback')}
                             >
                                 <SlideshowIcon sx={{fontSize: 18}}/>
+                            </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title={t('settings')}>
+                            <IconButton
+                                size="small"
+                                onClick={() => navigate('/settings')}
+                                sx={navButtonSx(location.pathname === '/settings')}
+                            >
+                                <SettingsIcon sx={{fontSize: 18}}/>
                             </IconButton>
                         </Tooltip>
 

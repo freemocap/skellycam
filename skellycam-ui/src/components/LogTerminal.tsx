@@ -32,6 +32,7 @@ import {
     Search as SearchIcon,
     Warning as WarningIcon
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 
 const LOG_COLORS = {
     TRACE: "#ccc",
@@ -49,6 +50,7 @@ const LogEntryComponent = ({ log }: { log: LogRecord }) => {
     const color =
         LOG_COLORS[log.levelname.toUpperCase() as keyof typeof LOG_COLORS] || "#ccc";
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const renderWithFormatting = (text: string | null | undefined): React.ReactNode => {
         if (!text) return null;
@@ -142,11 +144,11 @@ const LogEntryComponent = ({ log }: { log: LogRecord }) => {
                     <div>
                         Location: {log.module}:{log.funcName}:Line#{log.lineno}
                     </div>
-                    <div>File: {log.filename}</div>
-                    <div>Time delta: {log.delta_t}</div>
-                    <div>Path: {log.pathname}</div>
+                    <div>{t("fileLabel")}: {log.filename}</div>
+                    <div>{t("timeDelta")}: {log.delta_t}</div>
+                    <div>{t("pathLabel")}: {log.pathname}</div>
                     {log.formatted_message && (
-                        <div>Raw message: {renderWithFormatting(log.formatted_message)}</div>
+                        <div>{t("rawMessage")}: {renderWithFormatting(log.formatted_message)}</div>
                     )}
                     <div>
                         Thread: {log.threadName} (ID: {log.thread})
@@ -157,7 +159,7 @@ const LogEntryComponent = ({ log }: { log: LogRecord }) => {
 
                     {(log.exc_info || log.exc_text) && (
                         <div>
-                            <div>Exception details:</div>
+                            <div>{t("exceptionDetails")}:</div>
                             {log.exc_info && <div>{renderWithFormatting(log.exc_info)}</div>}
                             {log.exc_text && <div>{renderWithFormatting(log.exc_text)}</div>}
                         </div>
@@ -165,7 +167,7 @@ const LogEntryComponent = ({ log }: { log: LogRecord }) => {
 
                     {log.stack_info && (
                         <div>
-                            <div>Stack Trace:</div>
+                            <div>{t("stackTrace")}:</div>
                             <pre
                                 style={{
                                     whiteSpace: "pre-wrap",
@@ -188,6 +190,7 @@ const LogEntryComponent = ({ log }: { log: LogRecord }) => {
 
 export const LogTerminal = () => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const dispatch = useAppDispatch();
     const logs = useAppSelector(selectFilteredLogs);
     const isPaused = useAppSelector(selectLogsPaused);
@@ -261,11 +264,11 @@ export const LogTerminal = () => {
                         fontWeight: "bold",
                     }}
                 >
-                    Server Logs
+                    {t('serverLogs')}
                 </span>
 
                 {hasErrors && (
-                    <Tooltip title="Errors detected">
+                    <Tooltip title={t("errorsDetected")}>
                         <WarningIcon
                             sx={{
                                 color: LOG_COLORS.ERROR,
@@ -373,7 +376,7 @@ export const LogTerminal = () => {
                     <TextField
                         size="small"
                         fullWidth
-                        placeholder="Search logs..."
+                        placeholder={t("searchLogs")}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         InputProps={{
@@ -427,7 +430,7 @@ export const LogTerminal = () => {
                             color: theme.palette.text.disabled,
                         }}
                     >
-                        {isPaused ? "Logging paused" : "No logs to display"}
+                        {isPaused ? t("loggingPaused") : t("noLogsToDisplay")}
                     </Box>
                 ) : (
                     <>

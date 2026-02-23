@@ -5,8 +5,11 @@ import {useTheme} from '@mui/material/styles';
 import {Footer} from '@/components/ui-components/Footer';
 import {useElectronIPC} from "@/services";
 import {useServer} from "@/services/server/ServerContextProvider";
+import {useTranslation} from "react-i18next";
+import {LanguageSwitcher} from "@/components/LanguageSwitcher";
 
 const WelcomePage: React.FC = () => {
+    const {t} = useTranslation();
     const theme = useTheme();
     const navigate = useNavigate();
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -22,7 +25,7 @@ const WelcomePage: React.FC = () => {
         const prevCount = prevCountRef.current;
         const currentCount = connectedCameraIds.length;
 
-        // Auto-navigate to cameras page only when first camera connects (0 -> >0 transition)
+        // Auto-navigate to cameras page when first camera connects (0 -> >0 transition)
         if (prevCount === 0 && currentCount > 0) {
             navigate('/cameras');
         }
@@ -166,7 +169,7 @@ const WelcomePage: React.FC = () => {
                             mb: 2
                         }}
                     >
-                        Welcome to SkellyCam
+                        {t('welcomeTitle')}
                     </Typography>
 
                     <Typography
@@ -179,8 +182,13 @@ const WelcomePage: React.FC = () => {
                             fontSize: '1.1rem'
                         }}
                     >
-                        Record and View Synchronized Videos
+                        {t('welcomeSubtitle')}
                     </Typography>
+
+                    {/* Language selector */}
+                    <Box sx={{mb: 3}}>
+                        <LanguageSwitcher/>
+                    </Box>
 
                     {/* Telemetry opt-in checkbox */}
                     {telemetryLoaded && (
@@ -204,7 +212,7 @@ const WelcomePage: React.FC = () => {
                                     }
                                     label={
                                         <Typography variant="body2" color="text.primary">
-                                            Send anonymous usage pings
+                                            {t('sendAnonymousPings')}
                                         </Typography>
                                     }
                                 />

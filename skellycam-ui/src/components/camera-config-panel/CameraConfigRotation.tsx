@@ -3,6 +3,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { Box, Tooltip, useTheme } from '@mui/material';
 import {ROTATION_DEGREE_LABELS, ROTATION_OPTIONS, RotationValue} from '@/store/slices/cameras/cameras-types';
+import { useTranslation } from 'react-i18next';
 
 interface CameraConfigRotationProps {
     rotation?: RotationValue;
@@ -16,6 +17,7 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                                                                               onChange
                                                                           }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const handleChange = (
         event: React.MouseEvent<HTMLElement>,
@@ -28,14 +30,14 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
 
     return (
         <Box>
-            <Tooltip title="Select camera image rotation">
+            <Tooltip title={t("selectCameraRotation")}>
                 <ToggleButtonGroup
                     color={theme.palette.primary.main as any}
                     value={rotation}
                     size="small"
                     exclusive
                     onChange={handleChange}
-                    aria-label="camera rotation"
+                    aria-label={t("cameraRotation")}
                     sx={{
                         '& .MuiToggleButton-root.Mui-selected': {
                             backgroundColor: theme.palette.primary.main,

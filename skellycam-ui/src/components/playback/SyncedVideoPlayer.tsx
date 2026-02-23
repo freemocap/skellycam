@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Tooltip, Typography, useTheme } from '@mui/material';
 import { PlaybackControls } from './PlaybackControls';
+import { useTranslation } from 'react-i18next';
 
 interface VideoEntry {
     videoId: string;
@@ -47,6 +48,7 @@ function formatSeconds(frame: number, fps: number): string {
  */
 export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
     // Direct DOM refs for overlays — updated WITHOUT React re-renders
@@ -352,7 +354,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     if (videos.length === 0) {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'text.secondary' }}>
-                <Typography>No videos loaded</Typography>
+                <Typography>{t("noVideosLoaded")}</Typography>
             </Box>
         );
     }
@@ -436,7 +438,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                                 </Box>
 
                                 {/* TIMECODE — DOM ref, updated directly */}
-                                <Tooltip title="Estimated from frame number × recording fps — not read from timestamp data" placement="top-end">
+                                <Tooltip title={t("estimatedFromFrameNumber")} placement="top-end">
                                     <Box
                                         ref={(el: HTMLElement | null) => setTimeOverlayRef(video.videoId, el)}
                                         sx={{
@@ -459,7 +461,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
 
             {!allReady && videos.length > 0 && (
                 <Box sx={{ textAlign: 'center', py: 0.5, backgroundColor: theme.palette.warning.dark, color: '#fff' }}>
-                    <Typography variant="caption">Loading videos… ({videosReady}/{videos.length} ready)</Typography>
+                    <Typography variant="caption">{t("loadingVideos", { ready: videosReady, total: videos.length })}</Typography>
                 </Box>
             )}
 

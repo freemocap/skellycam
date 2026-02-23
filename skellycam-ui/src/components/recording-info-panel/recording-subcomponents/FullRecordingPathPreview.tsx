@@ -3,6 +3,7 @@ import React from 'react';
 import {Box, IconButton, Paper, Tooltip, Typography, useTheme} from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderSpecialIcon from '@mui/icons-material/FolderSpecial';
+import { useTranslation } from "react-i18next";
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import {useElectronIPC} from "@/services";
@@ -20,6 +21,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
                                                                              subfolder
                                                                          }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const { api } = useElectronIPC()
     const parts = [
         {icon: <FolderIcon/>, text: directory},
@@ -118,7 +120,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
                     ))}
                 </Box>
 
-                <Tooltip title="Open folder in file explorer">
+                <Tooltip title={t("openFolder")}>
                     <IconButton
                         size="small"
                         onClick={handleOpenFolder}

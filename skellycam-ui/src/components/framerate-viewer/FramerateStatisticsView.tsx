@@ -16,6 +16,7 @@ import {alpha, useTheme} from "@mui/material/styles";
 import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store";
 import {useState} from "react";
 import {frontendColor, backendColor} from "@/components/framerate-viewer/FrameRateViewer";
+import { useTranslation } from "react-i18next";
 
 type FramerateStatisticsViewProps = {
     frontendFramerate: DetailedFramerate | null;
@@ -42,6 +43,7 @@ export const ProgressiveTooltip = ({
                                    }: ProgressiveTooltipProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const handleTooltipClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -60,7 +62,7 @@ export const ProgressiveTooltip = ({
                         color="text.secondary"
                         sx={{display: "block", mt: 1, textAlign: "center"}}
                     >
-                        {isExpanded ? "Click to show less" : "Click to learn more"}
+                        {isExpanded ? t("clickToShowLess") : t("clickToLearnMore")}
                     </Typography>
                 </Box>
             }
@@ -128,6 +130,8 @@ const FramerateRow = ({
                           shortTooltip,
                           longTooltip,
                       }: FramerateRowProps) => {
+    const { t } = useTranslation();
+
     return (
         <TableRow>
             <ProgressiveTooltip shortInfo={shortTooltip} longInfo={longTooltip}>
@@ -149,7 +153,7 @@ const FramerateRow = ({
                         color="text.secondary"
                         sx={{fontSize: "0.6rem"}}
                     >
-                        {framerateData?.calculation_window_size || 0} samples
+                        {framerateData?.calculation_window_size || 0} {t('samples')}
                     </Typography>
                 </TableCell>
             </ProgressiveTooltip>
@@ -284,6 +288,7 @@ export default function FramerateStatisticsView({
                                                 }: FramerateStatisticsViewProps) {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
+    const { t } = useTranslation();
 
     // Define color map with high contrast for both light and dark themes
     const colorMap: Record<string, string> = {
@@ -325,32 +330,32 @@ export default function FramerateStatisticsView({
     // Tooltips content - short and long versions
     const tooltips = {
         source: {
-            short: "Display renders frames, Server captures frames.",
-            long: "The server is the true rate at which frames are pulled/recorded from the camera, while display is the rate at which they are received and rendered. Skellycam prioritizes server-side performance for recording quality, so that number should stay more stable. If the display framerate diverges from the server, it indicates your system resources are taxed. Consider using fewer cameras or decreasing framerate/resolution.",
+            short: t("statsSourceShort"),
+            long: t("statsSourceLong"),
         },
         current: {
-            short: "Most recent frame time and corresponding FPS.",
-            long: "This shows the most recent measurement of how long it takes to process a single frame (in milliseconds) and the equivalent frames per second (FPS). Lower frame times and higher FPS indicate better performance.",
+            short: t("statsCurrentShort"),
+            long: t("statsCurrentLong"),
         },
         min: {
-            short: "Fastest frame time (lowest latency) and highest FPS achieved.",
-            long: "This represents the minimum time it took to process a single frame during the sampling window. This corresponds to the maximum FPS your system achieved during optimal conditions.",
+            short: t("statsMinShort"),
+            long: t("statsMinLong"),
         },
         max: {
-            short: "Slowest frame time (highest latency) and lowest FPS experienced.",
-            long: "This represents the maximum time it took to process a single frame during the sampling window. This corresponds to the minimum FPS your system achieved during worst-case conditions. Occasional spikes are normal, but consistently high values may indicate performance issues.",
+            short: t("statsMaxShort"),
+            long: t("statsMaxLong"),
         },
         mean: {
-            short: "Average frame time and FPS across all samples.",
-            long: "The arithmetic mean (average) of all frame times measured during the sampling window and the corresponding FPS. This gives a good overall picture of performance but may be skewed by outliers.",
+            short: t("statsMeanShort"),
+            long: t("statsMeanLong"),
         },
         median: {
-            short: "Middle value of all frame times (50th percentile).",
-            long: "The median represents the middle value when all frame times are sorted from fastest to slowest. Unlike the mean, the median is not affected by extreme outliers, making it a more stable indicator of typical performance.",
+            short: t("statsMedianShort"),
+            long: t("statsMedianLong"),
         },
         stdDev: {
-            short: "Measures frame time variability. CV% is relative variability.",
-            long: "Standard deviation measures the amount of variation in frame times. Lower values indicate more consistent performance. The Coefficient of Variation (CV%) expresses this variability as a percentage of the mean, making it easier to compare stability across different frame rates. Lower CV% indicates more stable performance.",
+            short: t("statsStdDevShort"),
+            long: t("statsStdDevLong"),
         },
     };
 
@@ -378,7 +383,7 @@ export default function FramerateStatisticsView({
                 <TableHead>
                     <TableRow>
                         <HeaderCellWithTooltip
-                            label="Source"
+                            label={t("source")}
                             shortInfo={tooltips.source.short}
                             longInfo={tooltips.source.long}
                             style={{
@@ -389,7 +394,7 @@ export default function FramerateStatisticsView({
                             align="left"
                         />
                         <HeaderCellWithTooltip
-                            label="Current"
+                            label={t("current")}
                             shortInfo={tooltips.current.short}
                             longInfo={tooltips.current.long}
                             style={{
@@ -398,7 +403,7 @@ export default function FramerateStatisticsView({
                             }}
                         />
                         <HeaderCellWithTooltip
-                            label="Min"
+                            label={t("min")}
                             shortInfo={tooltips.min.short}
                             longInfo={tooltips.min.long}
                             style={{
@@ -407,7 +412,7 @@ export default function FramerateStatisticsView({
                             }}
                         />
                         <HeaderCellWithTooltip
-                            label="Max"
+                            label={t("max")}
                             shortInfo={tooltips.max.short}
                             longInfo={tooltips.max.long}
                             style={{
@@ -416,7 +421,7 @@ export default function FramerateStatisticsView({
                             }}
                         />
                         <HeaderCellWithTooltip
-                            label="Mean"
+                            label={t("mean")}
                             shortInfo={tooltips.mean.short}
                             longInfo={tooltips.mean.long}
                             style={{
@@ -425,7 +430,7 @@ export default function FramerateStatisticsView({
                             }}
                         />
                         <HeaderCellWithTooltip
-                            label="Median"
+                            label={t("median")}
                             shortInfo={tooltips.median.short}
                             longInfo={tooltips.median.long}
                             style={{
@@ -434,7 +439,7 @@ export default function FramerateStatisticsView({
                             }}
                         />
                         <HeaderCellWithTooltip
-                            label="StdDev/CV"
+                            label={t("stdDevCv")}
                             shortInfo={tooltips.stdDev.short}
                             longInfo={tooltips.stdDev.long}
                             style={{
@@ -456,10 +461,10 @@ export default function FramerateStatisticsView({
                     <FramerateRow
                         framerateData={backendFramerate}
                         sourceColor={backendColor}
-                        sourceLabel="Server"
+                        sourceLabel={t("server")}
                         colorMap={colorMap}
                         getCellStyle={getCellStyle}
-                        shortTooltip="Captures frames from camera."
+                        shortTooltip={t("capturesFramesFromCamera")}
                         longTooltip="Server represents the camera frame-grabbing performance. This is the true rate at which frames are pulled from the camera and saved during recording. This is the most important metric for recording quality and should remain stable even if display performance fluctuates."
                     />
 
@@ -474,11 +479,11 @@ export default function FramerateStatisticsView({
                     <FramerateRow
                         framerateData={frontendFramerate}
                         sourceColor={frontendColor}
-                        sourceLabel="Display"
+                        sourceLabel={t("display")}
                         colorMap={colorMap}
                         getCellStyle={getCellStyle}
-                        shortTooltip="Renders received frames on screen."
-                        longTooltip="Display represents the UI rendering performance. It shows how quickly your display receives and renders frames. Performance issues here won't affect recording quality but may impact your ability to monitor cameras in real-time."
+                        shortTooltip={t("rendersReceivedFrames")}
+                        longTooltip={t("displayTooltipLong")}
                     />
                 </TableBody>
             </Table>

@@ -6,16 +6,25 @@ import {BasePanelLayout} from "@/layout/BasePanelLayout";
 import {createExtendedTheme} from "@/layout/paperbase-theme";
 import {useAppSelector} from "@/store";
 import {BaseContentRouter} from "@/layout/BaseContentRouter";
+import {useTranslation} from "react-i18next";
+import {getLocaleDirection} from "@/i18n";
 
 export const AppContent = function () {
-
+    const {i18n} = useTranslation();
     const themeMode = useAppSelector(state => state.theme.mode);
-    // Create theme dynamically based on current mode
+    const direction = getLocaleDirection(i18n.language);
 
-    const theme = React.useMemo(() =>
-            createExtendedTheme(themeMode),
-        [themeMode]
-    );
+    // Sync document-level direction and lang attributes with current locale
+    React.useEffect(() => {
+        document.documentElement.dir = direction;
+        document.documentElement.lang = i18n.language;
+    }, [direction, i18n.language]);
+
+    const theme = React.useMemo(() => {
+        const base = createExtendedTheme(themeMode);
+        return {...base, direction};
+    }, [themeMode, direction]);
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline/>

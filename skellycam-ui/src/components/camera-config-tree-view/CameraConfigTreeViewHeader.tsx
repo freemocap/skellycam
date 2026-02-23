@@ -16,6 +16,7 @@ import {
     pauseUnpauseCameras,
 } from "@/store/slices/cameras/cameras-thunks";
 import { savedSettingsCleared } from "@/store/slices/cameras/cameras-slice";
+import { useTranslation } from 'react-i18next';
 
 interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
@@ -33,6 +34,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 }) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
+    const { t } = useTranslation();
     const selectedCameras = useAppSelector(selectSelectedCameras);
     const hasSelected = selectedCameras.length > 0;
 
@@ -114,12 +116,12 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
         >
             <VideocamIcon sx={{ml: 2, mr: 1}} />
             <Typography variant="h6" sx={{flexGrow: 1}}>
-                Cameras ({cameraCount})
+                {t('camerasCount', { count: cameraCount })}
             </Typography>
 
             <Stack direction="row" spacing={1} sx={{mr: 2}}>
                 {/* Connect/Apply Button - Always visible, changes icon and behavior */}
-                <Tooltip title={"Connect to selected cameras or update connected cameras"}>
+                <Tooltip title={t("connectCameras")}>
                     <span>
                         <IconButton
                             size="small"
@@ -136,13 +138,13 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                         scale: '1.6'
                                     }}
                                 />
-                            )
+                            
                         </IconButton>
                     </span>
                 </Tooltip>
 
                 {/* Pause/Play Button - Always visible, disabled when not connected */}
-                <Tooltip title={isPaused ? "Resume streaming" : "Pause streaming"}>
+                <Tooltip title={isPaused ? t("resumeStreaming") : t("pauseStreaming")}>
                     <span>
                         <IconButton
                             size="small"
@@ -157,7 +159,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 </Tooltip>
 
                 {/* Close Button - Always visible, disabled when not connected */}
-                <Tooltip title={"Close all cameras"}>
+                <Tooltip title={t("closeAllCameras")}>
                     <span>
                         <IconButton
                             size="small"
@@ -172,7 +174,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 </Tooltip>
 
                 {/* Refresh/Detect Button - Always visible */}
-                <Tooltip title="Detect available cameras">
+                <Tooltip title={t("detectCameras")}>
                     <span>
                         <IconButton
                             size="small"
@@ -189,7 +191,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 </Tooltip>
 
                 {/* Clear Saved Settings Button */}
-                <Tooltip title="Clear saved camera settings from memory">
+                <Tooltip title={t("clearCameraSettings")}>
                     <span>
                         <IconButton
                             size="small"

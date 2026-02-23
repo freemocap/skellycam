@@ -38,7 +38,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
             >
                 {/* Top section (horizontal panels) */}
                 <Panel defaultSize={87} minSize={20}>
-                    <PanelGroup direction="horizontal">
+                    <PanelGroup direction="horizontal" style={{direction: "ltr"}}>
                         <Panel
                             ref={leftPanelRef}
                             collapsible

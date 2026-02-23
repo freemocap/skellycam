@@ -9,6 +9,7 @@ import {
     useTheme
 } from "@mui/material";
 import { CameraConfig } from "@/store/slices/cameras/cameras-types";
+import { useTranslation } from 'react-i18next';
 
 interface CameraConfigResolutionProps {
     resolution: CameraConfig['resolution'];
@@ -32,8 +33,7 @@ export const CameraConfigResolution: React.FC<CameraConfigResolutionProps> = ({
     onChange
 }) => {
     const theme = useTheme();
-
-    // Check if current resolution matches a preset
+    const { t } = useTranslation();
     const isPreset = PRESET_RESOLUTIONS.some(
         preset => preset.width === resolution.width && preset.height === resolution.height
     );
@@ -156,7 +156,7 @@ export const CameraConfigResolution: React.FC<CameraConfigResolutionProps> = ({
                 </InputLabel>
                 <Select
                     value={selectedValue}
-                    label="Resolution"
+                    label={t("resolution")}
                     onChange={handleSelectChange}
                     sx={{ color: theme.palette.text.primary }}
                 >
@@ -168,14 +168,14 @@ export const CameraConfigResolution: React.FC<CameraConfigResolutionProps> = ({
                             {preset.label}
                         </MenuItem>
                     ))}
-                    <MenuItem value="custom">Custom</MenuItem>
+                    <MenuItem value="custom">{t("custom")}</MenuItem>
                 </Select>
             </FormControl>
 
             {selectedValue === 'custom' && (
                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                     <TextField
-                        label="Width"
+                        label={t("width")}
                         value={customWidth}
                         onChange={handleCustomWidthChange}
                         onBlur={() => handleCustomBlur('width')}
@@ -208,7 +208,7 @@ export const CameraConfigResolution: React.FC<CameraConfigResolutionProps> = ({
                         }}
                     />
                     <TextField
-                        label="Height"
+                        label={t("height")}
                         value={customHeight}
                         onChange={handleCustomHeightChange}
                         onBlur={() => handleCustomBlur('height')}

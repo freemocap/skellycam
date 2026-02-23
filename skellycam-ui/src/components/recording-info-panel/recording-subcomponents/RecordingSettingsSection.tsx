@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {Box, Checkbox, FormControlLabel, TextField, Typography, useTheme} from '@mui/material';
 
 interface RecordingSettingsProps {
@@ -98,6 +99,7 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
                                                                              onCustomSubfolderNameChange,
                                                                          }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
 
     return (
         <Box sx={{
@@ -112,31 +114,31 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
             gap: 0.5,
         }}>
             <Typography variant="subtitle2" sx={{mb: 0.5, fontSize: 13, fontWeight: 600}}>
-                Recording Settings
+                {t('recordingSettings')}
             </Typography>
 
             {/* Timestamp toggle + base name input */}
-            <SettingRow checked={useTimestamp} label="Timestamp" onCheck={onUseTimestampChange}>
+            <SettingRow checked={useTimestamp} label={t("timestamp")} onCheck={onUseTimestampChange}>
                 <CompactTextField
                     value={baseName}
                     onChange={(e) => onBaseNameChange(e.target.value)}
-                    placeholder="Base Name"
+                    placeholder={t("baseName")}
                     disabled={useTimestamp}
                 />
             </SettingRow>
 
             {/* Subfolder toggle + custom name input */}
-            <SettingRow checked={createSubfolder} label="Subfolder" onCheck={onCreateSubfolderChange}>
+            <SettingRow checked={createSubfolder} label={t("subfolder")} onCheck={onCreateSubfolderChange}>
                 <CompactTextField
                     value={customSubfolderName}
                     onChange={(e) => onCustomSubfolderNameChange(e.target.value)}
-                    placeholder="Subfolder Name"
+                    placeholder={t("subfolderPlaceholder")}
                     disabled={!createSubfolder}
                 />
             </SettingRow>
 
             {/* Auto-increment toggle + number input */}
-            <SettingRow checked={useIncrement} label="Increment" onCheck={onUseIncrementChange}>
+            <SettingRow checked={useIncrement} label={t("increment")} onCheck={onUseIncrementChange}>
                 <CompactTextField
                     value={currentIncrement}
                     onChange={(e) => onIncrementChange(parseInt(e.target.value) || 1)}

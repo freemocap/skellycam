@@ -3,6 +3,7 @@ import {useEffect, useRef, useState, useCallback} from "react"
 import * as d3 from "d3"
 import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
 import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
+import { useTranslation } from "react-i18next";
 
 export type ChartMargins = {
     top: number
@@ -34,6 +35,7 @@ export default function BaseD3ChartView({
                                             renderChart,
                                             margin = {top: 20, right: 20, bottom: 30, left: 50}
                                         }: BaseChartViewProps) {
+    const { t } = useTranslation();
     const svgRef = useRef<SVGSVGElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const chartRef = useRef<{
@@ -188,17 +190,17 @@ export default function BaseD3ChartView({
                         flexDirection: "column",
                     }}
                 >
-                    <Tooltip title="Zoom In" placement="right">
+                    <Tooltip title={t("zoomIn")} placement="right">
                         <IconButton size="small" onClick={handleZoomIn} sx={{p: 0.5}}>
                             <ZoomIn fontSize="small"/>
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Zoom Out" placement="right">
+                    <Tooltip title={t("zoomOut")} placement="right">
                         <IconButton size="small" onClick={handleZoomOut} sx={{p: 0.5}}>
                             <ZoomOut fontSize="small"/>
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Reset Zoom" placement="right">
+                    <Tooltip title={t("resetZoom")} placement="right">
                         <IconButton size="small" onClick={handleResetZoom} sx={{p: 0.5}}>
                             <RestartAlt fontSize="small"/>
                         </IconButton>

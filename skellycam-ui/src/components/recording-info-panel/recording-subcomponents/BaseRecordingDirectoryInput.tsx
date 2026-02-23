@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { IconButton, InputAdornment, TextField } from '@mui/material';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { useAppDispatch } from '@/store';
@@ -12,6 +13,7 @@ interface DirectoryInputProps {
 export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({ value }) => {
     const dispatch = useAppDispatch();
     const { api, isElectron } = useElectronIPC();
+    const { t } = useTranslation();
 
     const handleSelectDirectory = async (): Promise<void> => {
         // Only try to use electron API if we're in electron environment
@@ -53,7 +55,7 @@ export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({ val
 
     return (
         <TextField
-            label="Recording Directory"
+            label={t("recordingDirectory")}
             value={value}
             onChange={handleInputChange}
             fullWidth

@@ -5,6 +5,7 @@ import {useTheme} from "@mui/material/styles"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "./d3ChartUtils"
 import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
+import {useTranslation} from "react-i18next";
 
 type FramerateHistogramProps = {
     frontendFramerate: DetailedFramerate | null
@@ -26,8 +27,7 @@ export default function FramerateHistogramView({
                                                    title = "Framerate Distribution",
                                                }: FramerateHistogramProps) {
     const theme = useTheme()
-
-    // Generate histogram data
+    const { t } = useTranslation()
     const generateHistogram = (data: number[], binCount = 25) => {
         if (data.length === 0) return null;
 
@@ -73,14 +73,14 @@ export default function FramerateHistogramView({
         const sources = [
             {
                 id: 'frontend',
-                name: frontendFramerate?.framerate_source || 'Display',
+                name: frontendFramerate?.framerate_source || t('display'),
                 color: frontendColor,
                 histogram: generateHistogram(frontendFpsData),
                 totalSamples: frontendFpsData.length
             },
             {
                 id: 'backend',
-                name: backendFramerate?.framerate_source || 'Server',
+                name: backendFramerate?.framerate_source || t('server'),
                 color: backendColor,
                 histogram: generateHistogram(backendFpsData),
                 totalSamples: backendFpsData.length
@@ -89,7 +89,7 @@ export default function FramerateHistogramView({
 
         // Check if we have valid histogram data
         if (sources.every(s => !s.histogram)) {
-            renderEmptyChart(svg, width, height, theme);
+            renderEmptyChart(svg, width, height, theme, t('waitingForData'));
             return;
         }
 
@@ -153,7 +153,7 @@ export default function FramerateHistogramView({
             .style("font-family", "monospace")
             .style("font-size", "10px")
             .style("fill", theme.palette.text.secondary)
-            .text("Framerate (fps)");
+            .text(t("framerateFps"));
 
         // Add Y axis with label
         const yAxisGroup = svg

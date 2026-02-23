@@ -27,6 +27,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { useServer } from '@/services/server/ServerContextProvider';
+import { useTranslation } from "react-i18next";
 import { useElectronIPC } from '@/services';
 import { DEFAULT_HOST, DEFAULT_PORT } from '@/services/server/server-helpers/server-urls';
 
@@ -72,6 +73,7 @@ function saveToStorage(key: string, value: unknown): void {
 export const ServerConnectionStatus: React.FC = () => {
     const theme = useTheme();
     const { isConnected, connect, disconnect, connectedCameraIds, updateServerConnection } = useServer();
+    const { t } = useTranslation();
     const { isElectron, api } = useElectronIPC();
 
     // Persisted UI state
@@ -387,7 +389,7 @@ export const ServerConnectionStatus: React.FC = () => {
                 {/* Status labels */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1, minWidth: 0 }}>
                     {/* WS toggle button */}
-                    <Tooltip title={isConnected ? 'Disconnect WebSocket' : 'Connect WebSocket'}>
+                    <Tooltip title={isConnected ? t('disconnectWebSocket') : t('connectWebSocket')}>
                         <IconButton
                             size="small"
                             onClick={handleToggleWsConnected}
@@ -405,7 +407,7 @@ export const ServerConnectionStatus: React.FC = () => {
                         variant="caption"
                         sx={{ fontWeight: 500, color: wsStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                     >
-                        {isConnected ? 'Connected' : autoConnectWs ? 'Connecting…' : 'Off'}
+                        {isConnected ? t('connected') : autoConnectWs ? t('connecting') : t('off')}
                     </Typography>
 
                     {isElectron && (
@@ -413,7 +415,7 @@ export const ServerConnectionStatus: React.FC = () => {
                             <Box sx={{ mx: 0.25, color: theme.palette.text.disabled, fontSize: '0.7rem' }}>|</Box>
 
                             {/* Server toggle button */}
-                            <Tooltip title={serverRunning ? 'Stop Server' : 'Launch Server'}>
+                            <Tooltip title={serverRunning ? t('stopServer') : t('launchServer')}>
                                 <IconButton
                                     size="small"
                                     onClick={handleToggleServerRunning}
@@ -434,7 +436,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                 variant="caption"
                                 sx={{ fontWeight: 500, color: serverStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                             >
-                                {serverLoading ? 'Working…' : serverRunning ? 'Running' : 'Stopped'}
+                                {serverLoading ? t('working') : serverRunning ? t('running') : t('stopped')}
                             </Typography>
                         </>
                     )}
@@ -485,7 +487,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                     }
                                     label={
                                         <Typography variant="caption" sx={{ fontSize: '0.65rem', color: theme.palette.text.secondary }}>
-                                            Auto-launch
+                                            {t('autoLaunch')}
                                         </Typography>
                                     }
                                     sx={{ mr: 0, ml: 0, height: 24 }}
@@ -506,18 +508,18 @@ export const ServerConnectionStatus: React.FC = () => {
                                     }}
                                 />
                                 <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
-                                    {serverRunning ? 'Running' : 'Stopped'}
+                                    {serverRunning ? t('running') : t('stopped')}
                                     {processInfo?.pid && ` (PID: ${processInfo.pid})`}
                                 </Typography>
                             </Box>
 
                             {/* Executable selector */}
                             <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-                                <InputLabel sx={{ fontSize: '0.75rem' }}>Executable</InputLabel>
+                                <InputLabel sx={{ fontSize: '0.75rem' }}>{t('executable')}</InputLabel>
                                 <Select
                                     value={selectedExePath}
                                     onChange={(e) => setSelectedExePath(e.target.value)}
-                                    label="Executable"
+                                    label={t("executable")}
                                     disabled={serverRunning || serverLoading}
                                     sx={{ fontSize: '0.75rem' }}
                                 >
@@ -556,7 +558,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                             disabled
                                             sx={{ fontSize: '0.75rem', opacity: 0.4 }}
                                         >
-                                            <Tooltip title={candidate.error || 'Invalid'} placement="right">
+                                            <Tooltip title={candidate.error || t('invalid')} placement="right">
                                                 <Typography variant="caption">
                                                     {candidate.name} — {candidate.error || 'not found'}
                                                 </Typography>
@@ -568,7 +570,7 @@ export const ServerConnectionStatus: React.FC = () => {
 
                             {/* Browse + Refresh row */}
                             <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
-                                <Tooltip title="Browse for executable">
+                                <Tooltip title={t('browseForExecutable')}>
                                     <IconButton
                                         size="small"
                                         onClick={browseForExecutable}
@@ -578,7 +580,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                         <FolderOpenIcon sx={{ fontSize: 16 }} />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Refresh candidates">
+                                <Tooltip title={t('refreshCandidates')}>
                                     <IconButton
                                         size="small"
                                         onClick={refreshCandidates}
@@ -645,7 +647,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        Running: {currentExePath}
+                                        {t('runningPath', { path: currentExePath })}
                                     </Typography>
                                 </Tooltip>
                             )}
@@ -688,7 +690,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                 }
                                 label={
                                     <Typography variant="caption" sx={{ fontSize: '0.65rem', color: theme.palette.text.secondary }}>
-                                        Auto-connect
+                                        {t('autoConnect')}
                                     </Typography>
                                 }
                                 sx={{ mr: 0, ml: 0, height: 24 }}
@@ -700,7 +702,7 @@ export const ServerConnectionStatus: React.FC = () => {
                         <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
                             <TextField
                                 size="small"
-                                label="Host"
+                                label={t("host")}
                                 value={hostDraft}
                                 onChange={(e) => setHostDraft(e.target.value)}
                                 onBlur={applyHostPort}
@@ -711,7 +713,7 @@ export const ServerConnectionStatus: React.FC = () => {
                             />
                             <TextField
                                 size="small"
-                                label="Port"
+                                label={t("port")}
                                 type="number"
                                 value={portDraft}
                                 onChange={(e) => setPortDraft(e.target.value)}
@@ -737,7 +739,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                 }}
                             />
                             <Typography variant="caption" sx={{ color: theme.palette.text.primary, flex: 1 }}>
-                                {isConnected ? 'Connected' : autoConnectWs ? 'Connecting…' : 'Disconnected'}
+                                {isConnected ? t('connected') : autoConnectWs ? t('connecting') : t('disconnected')}
                                 {isConnected && connectedCameraIds.length > 0
                                     ? ` — ${connectedCameraIds.length} camera${connectedCameraIds.length !== 1 ? 's' : ''}`
                                     : ''}
@@ -754,7 +756,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                 }}
                                 sx={{ fontSize: '0.7rem', textTransform: 'none' }}
                             >
-                                {isConnected ? 'Disconnect' : 'Connect'}
+                                {isConnected ? t('disconnect') : t('connect')}
                             </Button>
                         </Box>
                     </Box>

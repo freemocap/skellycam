@@ -2,6 +2,7 @@ import React from "react";
 import { Box } from "@mui/material";
 import { CameraView } from "./CameraView";
 import { useServer } from "@/services/server/ServerContextProvider";
+import { useTranslation } from 'react-i18next';
 
 interface CameraSettings {
     columns: number | null;
@@ -15,6 +16,7 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({
                                                                     settings
                                                                 }) => {
     const { connectedCameraIds } = useServer();
+    const { t } = useTranslation();
 
     const getColumns = (total: number): number => {
         // If manual columns setting is provided, use it
@@ -45,9 +47,9 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({
                 textAlign: 'center',
             }}>
                 <div>
-                    <div>No cameras connected</div>
+                    <div>{t('noCamerasConnected')}</div>
                     <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                        Waiting for camera streams...
+                        {t('waitingForCameraStreams')}
                     </div>
                 </div>
             </Box>

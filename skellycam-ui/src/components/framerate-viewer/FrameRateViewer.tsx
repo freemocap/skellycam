@@ -8,6 +8,7 @@ import FramerateHistogramView from "./FramerateHistogramView"
 import FramerateStatisticsView from "./FramerateStatisticsView"
 import {useServer} from "@/services/server/ServerContextProvider";
 import {FramerateSnapshot} from "@/services/server/server-helpers/framerate-store";
+import { useTranslation } from "react-i18next";
 
 type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"
@@ -17,6 +18,7 @@ const POLL_INTERVAL_MS = 1000;
 
 export const FramerateViewerPanel = () => {
     const theme = useTheme()
+    const { t } = useTranslation();
     const [viewType, setViewType] = useState<ViewType>("both")
     const {getFramerateStore} = useServer();
 
@@ -60,12 +62,12 @@ export const FramerateViewerPanel = () => {
                 px: 0.5
             }}>
                 <Typography variant="body2" fontWeight="medium" noWrap sx={{fontSize: '0.75rem'}}>
-                    Camera Performance Metrics
+                    {t('cameraPerformanceMetrics')}
                 </Typography>
 
                 {/* View type selector as icon buttons */}
                 <Stack direction="row" spacing={0.25}>
-                    <Tooltip title="Timeline View">
+                    <Tooltip title={t("timelineView")}>
                         <IconButton
                             size="small"
                             onClick={() => setViewType("timeseries")}
@@ -75,7 +77,7 @@ export const FramerateViewerPanel = () => {
                             <ShowChart sx={{fontSize: '1rem'}}/>
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Distribution View">
+                    <Tooltip title={t("distributionView")}>
                         <IconButton
                             size="small"
                             onClick={() => setViewType("histogram")}
@@ -85,7 +87,7 @@ export const FramerateViewerPanel = () => {
                             <BarChart sx={{fontSize: '1rem'}}/>
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Combined View">
+                    <Tooltip title={t("combinedView")}>
                         <IconButton
                             size="small"
                             onClick={() => setViewType("both")}
@@ -150,7 +152,7 @@ export const FramerateViewerPanel = () => {
                             recentBackendFrameDurations={recentBackendFrameDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
-                            title="Framerate Timeline"
+                            title={t("framerateTimeline")}
                         />
                     </Paper>
                 )}
@@ -174,7 +176,7 @@ export const FramerateViewerPanel = () => {
                             recentBackendFrameDurations={recentBackendFrameDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
-                            title="Framerate Distribution"
+                            title={t("framerateDistribution")}
                         />
                     </Paper>
                 )}

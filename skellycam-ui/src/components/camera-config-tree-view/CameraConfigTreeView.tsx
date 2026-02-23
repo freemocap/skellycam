@@ -25,11 +25,13 @@ import {
     Camera
 } from "@/store";
 import {useServer} from "@/services/server/ServerContextProvider";
+import { useTranslation } from 'react-i18next';
 
 
 export const CameraConfigTreeView: React.FC = () => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
+    const { t } = useTranslation();
     const {isConnected} = useServer()
     // Redux state
     const cameras = useAppSelector(selectCameras);
@@ -105,7 +107,7 @@ export const CameraConfigTreeView: React.FC = () => {
                             {isConnectedToCameras && connectedCameras.length > 0 && (
                                 <CameraGroupTreeItem
                                     groupId="cameras-connected"
-                                    title="Connected Cameras"
+                                    title={t("connectedCameras")}
                                     cameras={connectedCameras}
                                     icon={<VideoCameraFrontIcon color="success" />}
                                     expandedItems={expandedItems}
@@ -116,7 +118,7 @@ export const CameraConfigTreeView: React.FC = () => {
                             {availableCameras.length > 0 && (
                                 <CameraGroupTreeItem
                                     groupId="cameras-available"
-                                    title="Available Cameras"
+                                    title={t("availableCameras")}
                                     cameras={availableCameras}
                                     icon={<VideoCameraFrontIcon color="info" />}
                                     expandedItems={expandedItems}

@@ -41,6 +41,7 @@ def _collect_system_specs() -> dict[str, object]:
         "cpu_count_physical": psutil.cpu_count(logical=False),
         "cpu_count_logical": psutil.cpu_count(logical=True),
         "ram_total_gb": round(mem.total / (1024 ** 3), 1),
+
     }
 
 

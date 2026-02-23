@@ -5,6 +5,7 @@ import {useTheme} from "@mui/material/styles"
 import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "@/components/framerate-viewer/d3ChartUtils";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
+import {useTranslation} from "react-i18next";
 
 type FramerateTimeseriesProps = {
     frontendFramerate: DetailedFramerate | null
@@ -34,6 +35,7 @@ export default function FramerateTimeseriesView({
                                                     title = "Framerate Over Time"
                                                 }: FramerateTimeseriesProps) {
     const theme = useTheme()
+    const { t } = useTranslation()
 
     const renderChart = useCallback(({svg, chartArea, width, height, margin, transform}: ChartRenderProps) => {
         // Each data point in recentFrameDurations arrives ~1 second apart (server throttle rate)
@@ -42,7 +44,7 @@ export default function FramerateTimeseriesView({
         const sources = [
             {
                 id: "frontend",
-                name: frontendFramerate?.framerate_source || "Display",
+                name: frontendFramerate?.framerate_source || t("display"),
                 color: frontendColor,
                 data: recentFrontendFrameDurations
                     .filter(v => v > 0)
@@ -53,7 +55,7 @@ export default function FramerateTimeseriesView({
             },
             {
                 id: "backend",
-                name: backendFramerate?.framerate_source || "Server",
+                name: backendFramerate?.framerate_source || t("server"),
                 color: backendColor,
                 data: recentBackendFrameDurations
                     .filter(v => v > 0)
@@ -65,7 +67,7 @@ export default function FramerateTimeseriesView({
         ];
 
         if (sources.every((s) => s.data.length === 0)) {
-            renderEmptyChart(svg, width, height, theme);
+            renderEmptyChart(svg, width, height, theme, t('waitingForData'));
             return;
         }
 
@@ -133,7 +135,7 @@ export default function FramerateTimeseriesView({
             .style("font-family", "monospace")
             .style("font-size", "14px")
             .style("fill", theme.palette.text.secondary)
-            .text("Framerate (fps)");
+            .text(t("framerateFps"));
 
         // Style axes
         applyAxisStyles(svg, theme);

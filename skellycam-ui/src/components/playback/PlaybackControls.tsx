@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Box,
     Checkbox,
@@ -14,6 +14,7 @@ import {
     Typography,
     useTheme,
 } from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
@@ -22,6 +23,7 @@ import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import type { PlaybackSettings } from './SyncedVideoPlayer';
+import { useTranslation } from 'react-i18next';
 
 interface PlaybackControlsProps {
     isPlaying: boolean;
@@ -72,8 +74,13 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     onSeekToEnd,
 }) => {
     const theme = useTheme();
+    const { t } = useTranslation();
     const monoFont = '"JetBrains Mono", "Fira Code", "SF Mono", monospace';
     const isDark = theme.palette.mode === 'dark';
+
+    // MUI Slider reads direction from the theme, not CSS.
+    // Force LTR so the playback slider never reverses in RTL locales.
+    const ltrTheme = useMemo(() => createTheme({ ...theme, direction: 'ltr' }), [theme]);
 
     // Visible accent colors that work on dark backgrounds
     const accentGreen = '#00ff88';
@@ -103,7 +110,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
         >
             {/* Frame-based slider */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Tooltip title="Estimated time (frame ÷ recording fps)" placement="top">
+                <Tooltip title={t("estimatedTime")} placement="top">
                     <Typography variant="caption" sx={{
                         fontFamily: monoFont, minWidth: 70, textAlign: 'right',
                         color: accentGreen, fontWeight: 600, fontSize: '0.8rem',
@@ -111,6 +118,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                         ~{formatTime(currentTime)}
                     </Typography>
                 </Tooltip>
+                <ThemeProvider theme={ltrTheme}>
                 <Slider
                     value={currentFrame}
                     min={0}
@@ -134,7 +142,8 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                     }}
                     size="small"
                 />
-                <Tooltip title="Estimated duration (total frames ÷ recording fps)" placement="top">
+                </ThemeProvider>
+                <Tooltip title={t("estimatedDuration")} placement="top">
                     <Typography variant="caption" sx={{
                         fontFamily: monoFont, minWidth: 70,
                         color: theme.palette.text.secondary,
@@ -166,7 +175,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
 
                     {/* Recording FPS badge — clearly labeled */}
                     {recordingFps != null && recordingFps > 0 && (
-                        <Tooltip title="The framerate this recording was captured at">
+                        <Tooltip title={t("recordingCaptureFps")}>
                             <Typography
                                 component="span"
                                 sx={{
@@ -186,14 +195,14 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                 </Box>
 
                 {/* Center: transport buttons — bright colors for visibility */}
-                <Tooltip title="Jump to start (Home)">
+                <Tooltip title={t("jumpToStart")}>
                     <IconButton size="small" onClick={onSeekToStart}
                         sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <FirstPageIcon />
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Previous frame (← / Shift+← for 10)">
+                <Tooltip title={t("previousFrame")}>
                     <IconButton size="small" onClick={() => onFrameStep(-1)}
                         sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <SkipPreviousIcon />
@@ -217,14 +226,14 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Next frame (→ / Shift+→ for 10)">
+                <Tooltip title={t("nextFrame")}>
                     <IconButton size="small" onClick={() => onFrameStep(1)}
                         sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <SkipNextIcon />
                     </IconButton>
                 </Tooltip>
 
-                <Tooltip title="Jump to end (End)">
+                <Tooltip title={t("jumpToEnd")}>
                     <IconButton size="small" onClick={onSeekToEnd}
                         sx={{ color: isDark ? '#b3b9c6' : undefined }}>
                         <LastPageIcon />
@@ -233,7 +242,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
 
                 {/* Right: speed selector + settings */}
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 2, gap: 1 }}>
-                    <Tooltip title="Playback speed (does not affect recording fps)">
+                    <Tooltip title={t("playbackSpeed")}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <Typography variant="caption" sx={{ color: isDark ? '#b3b9c6' : 'text.secondary' }}>
                                 Speed:
@@ -268,7 +277,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                     </Tooltip>
 
                     {/* Settings gear */}
-                    <Tooltip title="Playback settings">
+                    <Tooltip title={t("playbackSettings")}>
                         <IconButton
                             size="small"
                             onClick={(e) => setSettingsAnchor(e.currentTarget)}

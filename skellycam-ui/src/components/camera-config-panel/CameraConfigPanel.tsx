@@ -13,6 +13,7 @@ import { CameraConfigRotation } from "./CameraConfigRotation";
 import { CameraConfig, ExposureMode, RotationValue } from "@/store/slices/cameras/cameras-types";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { selectCameras, configCopiedToAll } from "@/store/slices/cameras";
+import { useTranslation } from 'react-i18next';
 
 interface CameraConfigPanelProps {
     config: CameraConfig;
@@ -27,8 +28,7 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
 }) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
-
-    // Get total camera count for UI feedback
+    const { t } = useTranslation();
     const allCameras = useAppSelector(selectCameras);
     const otherCamerasCount = allCameras.length - 1;
 
@@ -108,7 +108,7 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                                 size="small"
                                 onClick={handleCopyToAllCameras}
                                 disabled={otherCamerasCount === 0}
-                                aria-label="Copy settings to all cameras"
+                                aria-label={t("copySettingsToAll")}
                                 sx={{
                                     color: theme.palette.primary.contrastText,
                                     border: `1px solid ${theme.palette.divider}`,
