@@ -98,7 +98,7 @@ jobs:
       - name: Upload skellycam_server.exe artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-server-pyinstaller-${{ runner.os }}-${{ github.run_id }}
+          name: skellycam-SERVER-ONLY-${{ runner.os }}-${{ github.run_id }}
           path: |
             skellycam-ui/skellycam_server.exe
           include-hidden-files: true
@@ -133,7 +133,7 @@ jobs:
       - name: Upload electron installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-electron-pyinstaller-${{ runner.os }}-${{ github.run_id }}
+          name: skellycam-FULL-APP-installer-${{ runner.os }}-${{ github.run_id }}
           path: |
             skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
