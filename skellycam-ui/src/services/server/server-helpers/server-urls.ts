@@ -62,7 +62,6 @@ class ServerUrls {
             playbackVideoStream: (videoId: string) => `${baseUrl}/skellycam/playback/video/${videoId}`,
             playbackTimestamps: (videoId: string) => `${baseUrl}/skellycam/playback/timestamps/${videoId}`,
             playbackAllTimestamps: `${baseUrl}/skellycam/playback/timestamps`,
-            playbackOpenFolder: `${baseUrl}/skellycam/playback/open-folder`,
 
             // WebSocket
             websocket: this.getWebSocketUrl(),

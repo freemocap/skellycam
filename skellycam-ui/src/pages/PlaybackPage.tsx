@@ -8,12 +8,14 @@ import { Footer } from '@/components/ui-components/Footer';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { RecordingBrowser, LoadedVideo } from '@/components/playback/RecordingBrowser';
 import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
+import { useElectronIPC } from '@/services';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { useTranslation } from 'react-i18next';
 
 const PlaybackPage: React.FC = () => {
     const theme = useTheme();
     const { t } = useTranslation();
+    const { api } = useElectronIPC();
     const isDark = theme.palette.mode === 'dark';
     const [loadedVideos, setLoadedVideos] = useState<LoadedVideo[]>([]);
     const [recordingPath, setRecordingPath] = useState<string | null>(null);
@@ -56,18 +58,12 @@ const PlaybackPage: React.FC = () => {
     const handleOpenFolder = useCallback(async () => {
         if (!recordingPath) return;
         try {
-            const response = await fetch(serverUrls.endpoints.playbackOpenFolder, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ recording_path: recordingPath }),
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to open folder: ${response.statusText}`);
-            }
+            await api?.fileSystem.openFolder.mutate({ path: recordingPath });
         } catch (err) {
             console.error('Failed to open recording folder:', err);
+            throw err;
         }
-    }, [recordingPath]);
+    }, [recordingPath, api]);
 
     const hasVideos = loadedVideos.length > 0;
     const totalSize = loadedVideos.reduce((sum, v) => sum + v.sizeBytes, 0);
