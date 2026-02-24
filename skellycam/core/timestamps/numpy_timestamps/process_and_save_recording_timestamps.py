@@ -3,15 +3,15 @@ import time
 
 import numpy as np
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.timestamps.numpy_timestamps.create_camera_csvs import create_and_save_camera_csvs
-from skellycam.core.camera_group.timestamps.numpy_timestamps.create_multi_frame_csvs import \
+from skellycam.core.timestamps.numpy_timestamps.create_camera_csvs import create_and_save_camera_csvs
+from skellycam.core.timestamps.numpy_timestamps.create_multi_frame_csvs import \
     create_and_save_multiframe_csv
-from skellycam.core.camera_group.timestamps.numpy_timestamps.process_recording_timestamps import \
+from skellycam.core.timestamps.numpy_timestamps.process_recording_timestamps import \
     process_recording_timestamps
-from skellycam.core.camera_group.timestamps.numpy_timestamps.save_timestamps_statistics_summary import \
+from skellycam.core.timestamps.numpy_timestamps.save_timestamps_statistics_summary import \
     save_timestamp_statistics_summary
-from skellycam.core.camera_group.timestamps.recording_timestamp_stats import RecordingTimestampsStats
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 

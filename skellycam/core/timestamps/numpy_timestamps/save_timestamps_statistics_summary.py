@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-from skellycam.core.camera_group.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 
 logger = logging.getLogger(__name__)
@@ -27,4 +27,3 @@ def save_timestamp_statistics_summary(
         f.write(str(stats))
     logger.debug(f"Saved timestamp statistics summary to {stats_text_path}")
     return stats
-

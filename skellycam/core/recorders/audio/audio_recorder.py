@@ -9,7 +9,7 @@ from threading import Event
 import numpy as np
 import sounddevice as sd
 
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 
 logger = logging.getLogger(__name__)
 

@@ -16,46 +16,58 @@ export type DetailedFramerate = {
     framerate_source: string;
 };
 
+/** A single data point with the real timestamp of when it was recorded. */
+export type TimestampedSample = {
+    timestamp: number;
+    value: number;
+};
+
 /** Snapshot of all framerate data, returned by getSnapshot(). */
 export type FramerateSnapshot = {
     currentBackendFramerate: DetailedFramerate | null;
     currentFrontendFramerate: DetailedFramerate | null;
-    recentFrontendFrameDurations: number[];
-    recentBackendFrameDurations: number[];
+    aggregateBackendFramerate: DetailedFramerate | null;
+    aggregateFrontendFramerate: DetailedFramerate | null;
+    recentFrontendDurations: TimestampedSample[];
+    recentBackendDurations: TimestampedSample[];
 };
 
 /**
- * Fixed-capacity ring buffer for streaming numeric data.
+ * Fixed-capacity ring buffer for timestamped numeric samples.
  * O(1) push, O(n) toArray (only called on snapshot requests at ~1Hz).
- * Avoids the repeated Array.slice() copies that occur with push+truncate.
  */
-class RingBuffer {
-    private readonly buffer: Float64Array;
+class TimestampedRingBuffer {
+    private readonly timestamps: Float64Array;
+    private readonly values: Float64Array;
     private writeIndex: number = 0;
     private count: number = 0;
 
     constructor(capacity: number) {
-        this.buffer = new Float64Array(capacity);
+        this.timestamps = new Float64Array(capacity);
+        this.values = new Float64Array(capacity);
     }
 
-    push(value: number): void {
-        this.buffer[this.writeIndex] = value;
-        this.writeIndex = (this.writeIndex + 1) % this.buffer.length;
-        if (this.count < this.buffer.length) {
+    push(timestamp: number, value: number): void {
+        this.timestamps[this.writeIndex] = timestamp;
+        this.values[this.writeIndex] = value;
+        this.writeIndex = (this.writeIndex + 1) % this.timestamps.length;
+        if (this.count < this.timestamps.length) {
             this.count++;
         }
     }
 
     /** Return contents in chronological order (oldest → newest). */
-    toArray(): number[] {
-        if (this.count < this.buffer.length) {
-            // Buffer hasn't wrapped yet — simple subarray copy
-            return Array.from(this.buffer.subarray(0, this.count));
-        }
-        // Buffer has wrapped — oldest data starts at writeIndex
-        const result = new Array<number>(this.count);
-        for (let i = 0; i < this.count; i++) {
-            result[i] = this.buffer[(this.writeIndex + i) % this.buffer.length];
+    toArray(): TimestampedSample[] {
+        const result = new Array<TimestampedSample>(this.count);
+        if (this.count < this.timestamps.length) {
+            for (let i = 0; i < this.count; i++) {
+                result[i] = { timestamp: this.timestamps[i], value: this.values[i] };
+            }
+        } else {
+            for (let i = 0; i < this.count; i++) {
+                const idx = (this.writeIndex + i) % this.timestamps.length;
+                result[i] = { timestamp: this.timestamps[idx], value: this.values[idx] };
+            }
         }
         return result;
     }
@@ -67,45 +79,94 @@ class RingBuffer {
 }
 
 /**
+ * Compute aggregate DetailedFramerate statistics from a buffer of duration samples.
+ */
+function computeAggregate(samples: TimestampedSample[], source: string): DetailedFramerate | null {
+    if (samples.length === 0) return null;
+
+    const durations = samples.map(s => s.value);
+    const n = durations.length;
+    const sorted = [...durations].sort((a, b) => a - b);
+
+    const sum = durations.reduce((a, b) => a + b, 0);
+    const mean = sum / n;
+    const median = n % 2 === 0
+        ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+        : sorted[Math.floor(n / 2)];
+    const min = sorted[0];
+    const max = sorted[n - 1];
+
+    const variance = durations.reduce((acc, v) => acc + (v - mean) ** 2, 0) / n;
+    const stddev = Math.sqrt(variance);
+    const cv = mean > 0 ? stddev / mean : 0;
+
+    return {
+        mean_frame_duration_ms: mean,
+        mean_frames_per_second: mean > 0 ? 1000 / mean : 0,
+        frame_duration_mean: mean,
+        frame_duration_median: median,
+        frame_duration_min: min,
+        frame_duration_max: max,
+        frame_duration_stddev: stddev,
+        frame_duration_coefficient_of_variation: cv,
+        calculation_window_size: n,
+        framerate_source: source,
+    };
+}
+
+/**
  * Mutable store for streaming framerate telemetry.
  * Lives in a ref — no Redux, no immutable copies, no re-renders on every update.
  * Components poll via getSnapshot() on their own schedule.
+ *
+ * Each sample is stamped with its real arrival time via Date.now() at ingestion.
  */
 export class FramerateStore {
     currentBackendFramerate: DetailedFramerate | null = null;
     currentFrontendFramerate: DetailedFramerate | null = null;
 
-    private _recentFrontendFrameDurations = new RingBuffer(MAX_DURATION_HISTORY);
-    private _recentBackendFrameDurations = new RingBuffer(MAX_DURATION_HISTORY);
+    private _recentFrontendDurations = new TimestampedRingBuffer(MAX_DURATION_HISTORY);
+    private _recentBackendDurations = new TimestampedRingBuffer(MAX_DURATION_HISTORY);
 
     updateBackend(data: DetailedFramerate): void {
         this.currentBackendFramerate = data;
         if (data.mean_frame_duration_ms > 0) {
-            this._recentBackendFrameDurations.push(data.mean_frame_duration_ms);
+            this._recentBackendDurations.push(Date.now(), data.mean_frame_duration_ms);
         }
     }
 
     updateFrontend(data: DetailedFramerate): void {
         this.currentFrontendFramerate = data;
         if (data.mean_frame_duration_ms > 0) {
-            this._recentFrontendFrameDurations.push(data.mean_frame_duration_ms);
+            this._recentFrontendDurations.push(Date.now(), data.mean_frame_duration_ms);
         }
     }
 
     /** Returns a snapshot for React components to read during render. */
     getSnapshot(): FramerateSnapshot {
+        const frontendSamples = this._recentFrontendDurations.toArray();
+        const backendSamples = this._recentBackendDurations.toArray();
+
         return {
             currentBackendFramerate: this.currentBackendFramerate,
             currentFrontendFramerate: this.currentFrontendFramerate,
-            recentFrontendFrameDurations: this._recentFrontendFrameDurations.toArray(),
-            recentBackendFrameDurations: this._recentBackendFrameDurations.toArray(),
+            aggregateBackendFramerate: computeAggregate(
+                backendSamples,
+                this.currentBackendFramerate?.framerate_source ?? "Server",
+            ),
+            aggregateFrontendFramerate: computeAggregate(
+                frontendSamples,
+                this.currentFrontendFramerate?.framerate_source ?? "Display",
+            ),
+            recentFrontendDurations: frontendSamples,
+            recentBackendDurations: backendSamples,
         };
     }
 
     clear(): void {
         this.currentBackendFramerate = null;
         this.currentFrontendFramerate = null;
-        this._recentFrontendFrameDurations.clear();
-        this._recentBackendFrameDurations.clear();
+        this._recentFrontendDurations.clear();
+        this._recentBackendDurations.clear();
     }
 }

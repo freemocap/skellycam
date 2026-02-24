@@ -1,14 +1,12 @@
 // ServerContextProvider.tsx
 import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/store/types';
 
 import { ConnectionState, WebSocketConnection } from "@/services/server/server-helpers/websocket-connection";
 import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
 import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
 import { serverUrls } from "@/services";
-import { logAdded, LogRecord } from '@/store';
 import {DetailedFramerate, FramerateStore} from "@/services/server/server-helpers/framerate-store";
+import {LogStore, LogRecord} from "@/services/server/server-helpers/log-store";
 
 interface ServerContextValue {
     isConnected: boolean;
@@ -19,6 +17,7 @@ interface ServerContextValue {
     getFps: (cameraId: string) => number | null;
     getServerFps: () => number | null;
     getFramerateStore: () => FramerateStore;
+    getLogStore: () => LogStore;
     connectedCameraIds: string[];
     updateServerConnection: (host: string, port: number) => void;
 }
@@ -67,8 +66,6 @@ function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
 }
 
 export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const dispatch = useDispatch<AppDispatch>();
-
     // Reactive state - only updates when camera list actually changes
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [connectedCameraIds, setConnectedCameraIds] = useState<string[]>([]);
@@ -78,6 +75,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
     const frameProcessorRef = useRef<FrameProcessor | null>(null);
     const canvasManagerRef = useRef<CanvasManager | null>(null);
     const framerateStoreRef = useRef<FramerateStore>(new FramerateStore());
+    const logStoreRef = useRef<LogStore>(new LogStore());
 
     // Latest server-side (backend) FPS stored in a ref for non-reactive access
     const serverFpsRef = useRef<number | null>(null);
@@ -209,7 +207,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
 
                     // Handle log records
                     if (isLogRecord(jsonData)) {
-                        dispatch(logAdded(jsonData));
+                        logStoreRef.current.add(jsonData);
                     }
                     // Handle framerate updates
                     else if (isFramerateUpdate(jsonData)) {
@@ -244,7 +242,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                 frameLoopRef.current = null;
             }
         };
-    }, [dispatch]);
+    }, []);
 
     const connect = useCallback((): void => {
         wsConnectionRef.current?.connect();
@@ -274,6 +272,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         return framerateStoreRef.current;
     }, []);
 
+    const getLogStore = useCallback((): LogStore => {
+        return logStoreRef.current;
+    }, []);
+
     const updateServerConnection = useCallback((host: string, port: number): void => {
         // Update the singleton so HTTP endpoints also update
         serverUrls.setHost(host);
@@ -298,6 +300,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             getFps,
             getServerFps,
             getFramerateStore,
+            getLogStore,
             connectedCameraIds,
             updateServerConnection,
         }}>

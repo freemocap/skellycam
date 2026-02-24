@@ -2,7 +2,7 @@
 import {useCallback} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
-import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store"
+import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
 import {applyAxisStyles, createTooltip, renderEmptyChart} from "@/components/framerate-viewer/d3ChartUtils";
 import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView";
 import {useTranslation} from "react-i18next";
@@ -10,8 +10,8 @@ import {useTranslation} from "react-i18next";
 type FramerateTimeseriesProps = {
     frontendFramerate: DetailedFramerate | null
     backendFramerate: DetailedFramerate | null
-    recentFrontendFrameDurations: number[]
-    recentBackendFrameDurations: number[]
+    recentFrontendDurations: TimestampedSample[]
+    recentBackendDurations: TimestampedSample[]
     frontendColor: string
     backendColor: string
     title?: string
@@ -25,45 +25,41 @@ type ChartRenderProps = {
     transform: d3.ZoomTransform;
 };
 
+/** How many seconds of data the rolling window shows. */
+const WINDOW_SECONDS = 60;
+
 export default function FramerateTimeseriesView({
                                                     frontendFramerate,
                                                     backendFramerate,
-                                                    recentFrontendFrameDurations,
-                                                    recentBackendFrameDurations,
+                                                    recentFrontendDurations,
+                                                    recentBackendDurations,
                                                     frontendColor,
                                                     backendColor,
                                                     title = "Framerate Over Time"
                                                 }: FramerateTimeseriesProps) {
     const theme = useTheme()
-    const { t } = useTranslation()
+    const {t} = useTranslation()
 
     const renderChart = useCallback(({svg, chartArea, width, height, margin, transform}: ChartRenderProps) => {
-        // Each data point in recentFrameDurations arrives ~1 second apart (server throttle rate)
-        const UPDATE_INTERVAL_MS = 1000;
+        // Convert timestamped duration samples → timestamped FPS values
+        const toFps = (samples: TimestampedSample[]): { timestamp: number; value: number }[] =>
+            samples
+                .filter(s => s.value > 0)
+                .map(s => ({timestamp: s.timestamp, value: 1000 / s.value}));
 
         const sources = [
             {
                 id: "frontend",
                 name: frontendFramerate?.framerate_source || t("display"),
                 color: frontendColor,
-                data: recentFrontendFrameDurations
-                    .filter(v => v > 0)
-                    .map((value, index, arr) => ({
-                        timestamp: Date.now() - (arr.length - index) * UPDATE_INTERVAL_MS,
-                        value: 1000 / value
-                    }))
+                data: toFps(recentFrontendDurations),
             },
             {
                 id: "backend",
                 name: backendFramerate?.framerate_source || t("server"),
                 color: backendColor,
-                data: recentBackendFrameDurations
-                    .filter(v => v > 0)
-                    .map((value, index, arr) => ({
-                        timestamp: Date.now() - (arr.length - index) * UPDATE_INTERVAL_MS,
-                        value: 1000 / value
-                    }))
-            }
+                data: toFps(recentBackendDurations),
+            },
         ];
 
         if (sources.every((s) => s.data.length === 0)) {
@@ -71,106 +67,83 @@ export default function FramerateTimeseriesView({
             return;
         }
 
-        // Combine all data points to determine overall domain
-        const allData = sources.flatMap((s) => s.data);
+        // Determine the window from the actual data timestamps.
+        // End = the most recent real timestamp; Start = end − WINDOW_SECONDS.
+        const allTimestamps = sources.flatMap(s => s.data.map(d => d.timestamp));
+        const latestTimestamp = Math.max(...allTimestamps);
+        const windowEnd = latestTimestamp;
+        const windowStart = windowEnd - WINDOW_SECONDS * 1000;
 
-        // Set up scales
-        const xScale = d3
-            .scaleTime()
-            .domain(d3.extent(allData, (d) => new Date(d.timestamp)) as [Date, Date])
-            .range([0, width]);
+        // Only keep data points within the window
+        const windowedSources = sources.map(s => ({
+            ...s,
+            data: s.data.filter(d => d.timestamp >= windowStart),
+        }));
 
-        // Calculate y domain zoomed to actual data range
-        const yMax = d3.max(allData, (d) => d.value) as number;
-        const yMin = d3.min(allData, (d) => d.value) as number;
+        const visibleData = windowedSources.flatMap(s => s.data);
+        if (visibleData.length === 0) {
+            renderEmptyChart(svg, width, height, theme, t('waitingForData'));
+            return;
+        }
+
+        // Y domain from visible data
+        const yMax = d3.max(visibleData, d => d.value) as number;
+        const yMin = d3.min(visibleData, d => d.value) as number;
         const yRange = yMax - yMin;
         const yPadding = Math.max(1, yRange * 0.3);
 
-        const yScale = d3
-            .scaleLinear()
+        // Scales — x domain is anchored to the real data timestamps
+        const xScale = d3.scaleTime()
+            .domain([new Date(windowStart), new Date(windowEnd)])
+            .range([0, width]);
+
+        const yScale = d3.scaleLinear()
             .domain([Math.max(0, yMin - yPadding), yMax + yPadding])
             .range([height, 0]);
 
-        // Apply the current zoom transform
+        // Apply zoom
         const xScaleZoomed = transform.rescaleX(xScale);
         const yScaleZoomed = transform.rescaleY(yScale);
 
-        // Create axes
-        const xAxis = d3
-            .axisBottom(xScaleZoomed)
-            .ticks(5)
+        // Axes
+        const xAxis = d3.axisBottom(xScaleZoomed)
+            .ticks(Math.max(2, Math.min(5, Math.floor(width / 120))))
             .tickSize(-height)
             .tickFormat(d3.timeFormat("%H:%M:%S") as any);
 
-        const yAxis = d3.axisLeft(yScaleZoomed).ticks(10).tickSize(-width);
+        const yAxis = d3.axisLeft(yScaleZoomed)
+            .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
+            .tickSize(-width);
 
-        // Add X axis
-        const xAxisGroup = svg
-            .append("g")
+        svg.append("g")
             .attr("class", "x-axis")
             .attr("transform", `translate(0,${height})`)
             .call(xAxis);
 
-        xAxisGroup
-            .selectAll("text")
-            .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", "rotate(-45)");
-
-        // Add Y axis
-        const yAxisGroup = svg
-            .append("g")
+        svg.append("g")
             .attr("class", "y-axis")
             .call(yAxis);
 
-        // Add Y axis label
-        svg
-            .append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 0 - margin.left)
-            .attr("x", 0 - height / 2)
-            .attr("dy", "1em")
-            .style("text-anchor", "middle")
-            .style("font-family", "monospace")
-            .style("font-size", "14px")
-            .style("fill", theme.palette.text.secondary)
-            .text(t("framerateFps"));
-
-        // Style axes
         applyAxisStyles(svg, theme);
 
-        // Add threshold lines
-        // const thresholds = [
-        //   { value: 16.67, label: "60 FPS", color: theme.palette.success.main },
-        //   { value: 33.33, label: "30 FPS", color: theme.palette.warning.main },
-        // ];
-        //
-        // renderThresholdLines(chartArea, thresholds, xScaleZoomed, yScaleZoomed, width, height, true);
-
-        // Create line generator
-        const line = d3
-            .line<{ timestamp: number, value: number }>()
-            .x((d) => xScaleZoomed(new Date(d.timestamp)))
-            .y((d) => yScaleZoomed(d.value))
+        // Line generator
+        const line = d3.line<{ timestamp: number; value: number }>()
+            .x(d => xScaleZoomed(new Date(d.timestamp)))
+            .y(d => yScaleZoomed(d.value))
             .curve(d3.curveLinear);
 
-        // Add lines and points for each source
-        sources.forEach((source) => {
+        // Draw lines and dots
+        windowedSources.forEach((source) => {
             if (source.data.length === 0) return;
 
-            // Add the line path
-            chartArea
-                .append("path")
+            chartArea.append("path")
                 .datum(source.data)
                 .attr("fill", "none")
                 .attr("stroke", source.color)
                 .attr("stroke-width", 1.5)
                 .attr("d", line);
 
-            // Add small dots at each data point
-            chartArea
-                .selectAll(`.dot-${source.id}`)
+            chartArea.selectAll(`.dot-${source.id}`)
                 .data(source.data)
                 .enter()
                 .append("circle")
@@ -180,18 +153,16 @@ export default function FramerateTimeseriesView({
                 .attr("r", 2)
                 .attr("fill", source.color)
                 .attr("opacity", 0.8);
-
         });
 
-        // Add tooltip
+        // Tooltip
         const tooltip = createTooltip(theme);
 
-        // Add tooltip for data points
-        sources.forEach((source) => {
+        windowedSources.forEach((source) => {
             if (source.data.length === 0) return;
 
             chartArea
-                .selectAll(`.data-point-${source.id}`)
+                .selectAll(`.dot-${source.id}`)
                 .on("mouseover", function (event: MouseEvent, d: any) {
                     const element = this as unknown as SVGCircleElement;
                     d3.select(element).attr("r", 5).attr("fill", d3.color(source.color)!.brighter(0.5).toString());
@@ -213,8 +184,8 @@ export default function FramerateTimeseriesView({
                         .style("left", event.pageX + 10 + "px")
                         .style("top", event.pageY - 28 + "px");
                 })
-                .on("mouseout", function (event: MouseEvent, d: any) {
-                    d3.select(this).attr("r", 3).attr("fill", source.color);
+                .on("mouseout", function () {
+                    d3.select(this).attr("r", 2).attr("fill", source.color);
                     tooltip.style("opacity", 0);
                 });
         });
@@ -223,17 +194,18 @@ export default function FramerateTimeseriesView({
     }, [
         frontendFramerate,
         backendFramerate,
-        recentFrontendFrameDurations,
-        recentBackendFrameDurations,
+        recentFrontendDurations,
+        recentBackendDurations,
         frontendColor,
         backendColor,
-        theme
+        theme,
     ]);
 
     return (
         <BaseD3ChartView
             title={title}
             renderChart={renderChart}
+            margin={{top: 20, right: 10, bottom: 35, left: 35}}
         />
     );
 }

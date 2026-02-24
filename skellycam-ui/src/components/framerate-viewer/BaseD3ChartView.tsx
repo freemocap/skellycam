@@ -164,10 +164,15 @@ export default function BaseD3ChartView({
                     variant="caption"
                     sx={{
                         position: "absolute",
-                        top: 5,
-                        left: 10,
+                        top: 2,
+                        left: 8,
                         fontSize: '0.7rem',
-                        opacity: 0.8
+                        opacity: 0.9,
+                        zIndex: 5,
+                        bgcolor: 'background.default',
+                        px: 0.5,
+                        borderRadius: 0.5,
+                        lineHeight: 1.4,
                     }}
                 >
                     {title}

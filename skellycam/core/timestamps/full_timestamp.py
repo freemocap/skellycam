@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 
 
 class FullTimestamp(BaseModel):
@@ -137,5 +137,3 @@ if __name__ == "__main__":
 
     print("Printing `Timestamp.now().to_descriptive_dict()`:")
     print(FullTimestamp.now().to_descriptive_dict(), indent=4)
-
-

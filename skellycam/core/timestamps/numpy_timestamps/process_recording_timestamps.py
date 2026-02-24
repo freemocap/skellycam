@@ -1,6 +1,6 @@
 import numpy as np
 
-from skellycam.core.camera_group.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_durations
+from skellycam.core.timestamps.numpy_timestamps.calculate_timestamps_numpy import calculate_durations
 from skellycam.core.types.numpy_record_dtypes import FRAME_LIFECYCLE_TIMESTAMPS_DTYPE, TimestampsArray, DurationArray
 from skellycam.core.types.type_overloads import CameraIdString
 

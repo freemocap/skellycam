@@ -16,11 +16,13 @@ import {alpha, useTheme} from "@mui/material/styles";
 import {DetailedFramerate} from "@/services/server/server-helpers/framerate-store";
 import {useState} from "react";
 import {frontendColor, backendColor} from "@/components/framerate-viewer/FrameRateViewer";
-import { useTranslation } from "react-i18next";
+import {useTranslation} from "react-i18next";
 
 type FramerateStatisticsViewProps = {
     frontendFramerate: DetailedFramerate | null;
     backendFramerate: DetailedFramerate | null;
+    aggregateFrontendFramerate: DetailedFramerate | null;
+    aggregateBackendFramerate: DetailedFramerate | null;
     compact?: boolean;
 };
 
@@ -43,7 +45,7 @@ export const ProgressiveTooltip = ({
                                    }: ProgressiveTooltipProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const theme = useTheme();
-    const { t } = useTranslation();
+    const {t} = useTranslation();
 
     const handleTooltipClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -112,7 +114,8 @@ export const HeaderCellWithTooltip = ({
 };
 
 type FramerateRowProps = {
-    framerateData: DetailedFramerate | null;
+    currentData: DetailedFramerate | null;
+    aggregateData: DetailedFramerate | null;
     sourceColor: string;
     sourceLabel: string;
     colorMap: Record<string, string>;
@@ -122,7 +125,8 @@ type FramerateRowProps = {
 };
 
 const FramerateRow = ({
-                          framerateData,
+                          currentData,
+                          aggregateData,
                           sourceColor,
                           sourceLabel,
                           colorMap,
@@ -130,7 +134,7 @@ const FramerateRow = ({
                           shortTooltip,
                           longTooltip,
                       }: FramerateRowProps) => {
-    const { t } = useTranslation();
+    const {t} = useTranslation();
 
     return (
         <TableRow>
@@ -146,25 +150,77 @@ const FramerateRow = ({
                         cursor: "help",
                     }}
                 >
-                    {framerateData?.framerate_source || sourceLabel}
+                    {currentData?.framerate_source || sourceLabel}
                     <Typography
                         variant="caption"
                         display="block"
                         color="text.secondary"
                         sx={{fontSize: "0.6rem"}}
                     >
-                        {framerateData?.calculation_window_size || 0} {t('samples')}
+                        {aggregateData?.calculation_window_size || 0} {t('samples')}
                     </Typography>
                 </TableCell>
             </ProgressiveTooltip>
 
             <MetricCell
-                label="current"
+                label="Recent"
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
-                primaryValue={framerateData?.mean_frames_per_second}
+                primaryValue={currentData?.mean_frames_per_second}
                 primarySuffix="fps"
-                secondaryValue={framerateData?.mean_frame_duration_ms}
+                secondaryValue={currentData?.mean_frame_duration_ms}
+                secondarySuffix="ms"
+            />
+
+            <MetricCell
+                label="mean"
+                colorMap={colorMap}
+                getCellStyle={getCellStyle}
+                primaryValue={aggregateData?.frame_duration_mean && aggregateData.frame_duration_mean > 0
+                    ? 1000 / aggregateData.frame_duration_mean
+                    : null}
+                primarySuffix="fps"
+                secondaryValue={aggregateData?.frame_duration_mean}
+                secondarySuffix="ms"
+            />
+
+            <MetricCell
+                label="median"
+                colorMap={colorMap}
+                getCellStyle={getCellStyle}
+                primaryValue={aggregateData?.frame_duration_median && aggregateData.frame_duration_median > 0
+                    ? 1000 / aggregateData.frame_duration_median
+                    : null}
+                primarySuffix="fps"
+                secondaryValue={aggregateData?.frame_duration_median}
+                secondarySuffix="ms"
+            />
+
+            <MetricCell
+                label="stdDev"
+                colorMap={colorMap}
+                getCellStyle={getCellStyle}
+                primaryValue={aggregateData?.frame_duration_stddev}
+                primarySuffix="ms"
+                secondaryValue={
+                    aggregateData
+                        ? aggregateData.frame_duration_coefficient_of_variation * 100
+                        : null
+                }
+                secondarySuffix="CV%"
+            />
+            <MetricCell
+                label="max"
+                colorMap={colorMap}
+                getCellStyle={getCellStyle}
+                primaryValue={
+                    aggregateData?.frame_duration_min &&
+                    aggregateData.frame_duration_min > 0
+                        ? 1000 / aggregateData.frame_duration_min
+                        : null
+                }
+                primarySuffix="fps"
+                secondaryValue={aggregateData?.frame_duration_min}
                 secondarySuffix="ms"
             />
 
@@ -173,68 +229,16 @@ const FramerateRow = ({
                 colorMap={colorMap}
                 getCellStyle={getCellStyle}
                 primaryValue={
-                    framerateData?.frame_duration_max &&
-                    framerateData.frame_duration_max > 0
-                        ? 1000 / framerateData.frame_duration_max
+                    aggregateData?.frame_duration_max &&
+                    aggregateData.frame_duration_max > 0
+                        ? 1000 / aggregateData.frame_duration_max
                         : null
                 }
                 primarySuffix="fps"
-                secondaryValue={framerateData?.frame_duration_max}
+                secondaryValue={aggregateData?.frame_duration_max}
                 secondarySuffix="ms"
             />
 
-            <MetricCell
-                label="max"
-                colorMap={colorMap}
-                getCellStyle={getCellStyle}
-                primaryValue={
-                    framerateData?.frame_duration_min &&
-                    framerateData.frame_duration_min > 0
-                        ? 1000 / framerateData.frame_duration_min
-                        : null
-                }
-                primarySuffix="fps"
-                secondaryValue={framerateData?.frame_duration_min}
-                secondarySuffix="ms"
-            />
-
-            <MetricCell
-                label="mean"
-                colorMap={colorMap}
-                getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_mean && framerateData.frame_duration_mean > 0
-                    ? 1000 / framerateData.frame_duration_mean
-                    : null}
-                primarySuffix="fps"
-                secondaryValue={framerateData?.frame_duration_mean}
-                secondarySuffix="ms"
-            />
-
-            <MetricCell
-                label="median"
-                colorMap={colorMap}
-                getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_median && framerateData.frame_duration_median > 0
-                    ? 1000 / framerateData.frame_duration_median
-                    : null}
-                primarySuffix="fps"
-                secondaryValue={framerateData?.frame_duration_median}
-                secondarySuffix="ms"
-            />
-
-            <MetricCell
-                label="stdDev"
-                colorMap={colorMap}
-                getCellStyle={getCellStyle}
-                primaryValue={framerateData?.frame_duration_stddev}
-                primarySuffix="ms"
-                secondaryValue={
-                    framerateData
-                        ? framerateData.frame_duration_coefficient_of_variation * 100
-                        : null
-                }
-                secondarySuffix="CV%"
-            />
         </TableRow>
     );
 };
@@ -284,19 +288,19 @@ const MetricCell = ({
 export default function FramerateStatisticsView({
                                                     frontendFramerate,
                                                     backendFramerate,
+                                                    aggregateFrontendFramerate,
+                                                    aggregateBackendFramerate,
                                                     compact = false,
                                                 }: FramerateStatisticsViewProps) {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === "dark";
-    const { t } = useTranslation();
+    const {t} = useTranslation();
 
     // Define color map with high contrast for both light and dark themes
     const colorMap: Record<string, string> = {
-        current: isDarkMode
+        recent: isDarkMode
             ? theme.palette.success.light
             : theme.palette.success.main,
-        min: isDarkMode ? theme.palette.info.light : theme.palette.info.main,
-        max: isDarkMode ? theme.palette.error.light : theme.palette.error.main,
         mean: isDarkMode ? theme.palette.warning.light : theme.palette.warning.main,
         median: isDarkMode
             ? theme.palette.warning.dark
@@ -304,9 +308,8 @@ export default function FramerateStatisticsView({
         stdDev: isDarkMode
             ? theme.palette.primary.light
             : theme.palette.primary.main,
-        cv: isDarkMode
-            ? theme.palette.secondary.light
-            : theme.palette.secondary.main,
+        max: isDarkMode ? theme.palette.error.light : theme.palette.error.main,
+        min: isDarkMode ? theme.palette.info.light : theme.palette.info.main,
     };
 
     // Generate cell style based on metric type
@@ -333,17 +336,9 @@ export default function FramerateStatisticsView({
             short: t("statsSourceShort"),
             long: t("statsSourceLong"),
         },
-        current: {
+        recent: {
             short: t("statsCurrentShort"),
             long: t("statsCurrentLong"),
-        },
-        min: {
-            short: t("statsMinShort"),
-            long: t("statsMinLong"),
-        },
-        max: {
-            short: t("statsMaxShort"),
-            long: t("statsMaxLong"),
         },
         mean: {
             short: t("statsMeanShort"),
@@ -356,6 +351,14 @@ export default function FramerateStatisticsView({
         stdDev: {
             short: t("statsStdDevShort"),
             long: t("statsStdDevLong"),
+        },
+        max: {
+            short: t("statsMaxShort"),
+            long: t("statsMaxLong"),
+        },
+        min: {
+            short: t("statsMinShort"),
+            long: t("statsMinLong"),
         },
     };
 
@@ -394,30 +397,12 @@ export default function FramerateStatisticsView({
                             align="left"
                         />
                         <HeaderCellWithTooltip
-                            label={t("current")}
-                            shortInfo={tooltips.current.short}
-                            longInfo={tooltips.current.long}
+                            label={t("Recent")}
+                            shortInfo={tooltips.recent.short}
+                            longInfo={tooltips.recent.long}
                             style={{
                                 ...headerCellStyle,
-                                ...getCellStyle("current"),
-                            }}
-                        />
-                        <HeaderCellWithTooltip
-                            label={t("min")}
-                            shortInfo={tooltips.min.short}
-                            longInfo={tooltips.min.long}
-                            style={{
-                                ...headerCellStyle,
-                                ...getCellStyle("min"),
-                            }}
-                        />
-                        <HeaderCellWithTooltip
-                            label={t("max")}
-                            shortInfo={tooltips.max.short}
-                            longInfo={tooltips.max.long}
-                            style={{
-                                ...headerCellStyle,
-                                ...getCellStyle("max"),
+                                ...getCellStyle("recent"),
                             }}
                         />
                         <HeaderCellWithTooltip
@@ -447,6 +432,24 @@ export default function FramerateStatisticsView({
                                 ...getCellStyle("stdDev"),
                             }}
                         />
+                        <HeaderCellWithTooltip
+                            label={t("max")}
+                            shortInfo={tooltips.max.short}
+                            longInfo={tooltips.max.long}
+                            style={{
+                                ...headerCellStyle,
+                                ...getCellStyle("max"),
+                            }}
+                        />
+                        <HeaderCellWithTooltip
+                            label={t("min")}
+                            shortInfo={tooltips.min.short}
+                            longInfo={tooltips.min.long}
+                            style={{
+                                ...headerCellStyle,
+                                ...getCellStyle("min"),
+                            }}
+                        />
                     </TableRow>
                     {/* Add the divider inside TableHead */}
                     <TableRow>
@@ -459,7 +462,8 @@ export default function FramerateStatisticsView({
                 <TableBody>
                     {/* Server Row (primary - shown first) */}
                     <FramerateRow
-                        framerateData={backendFramerate}
+                        currentData={backendFramerate}
+                        aggregateData={aggregateBackendFramerate}
                         sourceColor={backendColor}
                         sourceLabel={t("server")}
                         colorMap={colorMap}
@@ -477,7 +481,8 @@ export default function FramerateStatisticsView({
 
                     {/* Display Row */}
                     <FramerateRow
-                        framerateData={frontendFramerate}
+                        currentData={frontendFramerate}
+                        aggregateData={aggregateFrontendFramerate}
                         sourceColor={frontendColor}
                         sourceLabel={t("display")}
                         colorMap={colorMap}

@@ -55,21 +55,15 @@ class ServerFramerateCalculator:
         if len(self._per_frame_durations_ms) < 2:
             return None
         durations = np.array(self._per_frame_durations_ms)
-        mean_dur = float(np.nanmean(durations))
-        if mean_dur <= 0:
-            return None
-        return CurrentFramerate(
-            mean_frame_duration_ms=mean_dur,
-            mean_frames_per_second=1e3 / mean_dur,
-            frame_duration_max=float(np.nanmax(durations)),
-            frame_duration_min=float(np.nanmin(durations)),
-            frame_duration_mean=mean_dur,
-            frame_duration_stddev=float(np.nanstd(durations)),
-            frame_duration_median=float(np.nanmedian(durations)),
-            frame_duration_coefficient_of_variation=float(np.nanstd(durations)) / mean_dur,
-            calculation_window_size=len(durations),
+        return CurrentFramerate.from_durations_ms(
+            durations_ms=durations,
             framerate_source=self._source_name,
         )
+
+    def clear(self) -> None:
+        """Reset accumulated durations. The next update() will begin a fresh interval."""
+        self._observations.clear()
+        self._per_frame_durations_ms.clear()
 
 
 class WebsocketServer:
@@ -226,13 +220,13 @@ class WebsocketServer:
 
                 # Send framerate updates from our local trackers (throttled to ~1Hz)
                 now = time.monotonic()
-                if now - self._last_framerate_send_time >= 1.0:
+                if now - self._last_framerate_send_time >= 0.25:
                     for camera_group_id, server_calc in self._server_framerate_calculators.items():
                         if camera_group_id not in self._display_framerate_trackers:
                             continue
                         server_framerate = server_calc.current_framerate
                         display_tracker = self._display_framerate_trackers[camera_group_id]
-                        if server_framerate and len(display_tracker.frames_received_timestamps_ns) >= 2:
+                        if server_framerate and display_tracker.has_data:
                             framerate_message = {
                                 "message_type": "framerate_update",
                                 "camera_group_id": camera_group_id,
@@ -240,6 +234,10 @@ class WebsocketServer:
                                 "frontend_framerate": display_tracker.current_framerate.model_dump()
                             }
                             await self._send_json(framerate_message)
+                            # Reset both trackers so the next report reflects only
+                            # the interval since this report.
+                            server_calc.clear()
+                            display_tracker.clear()
                     self._last_framerate_send_time = now
 
         except (WebSocketDisconnect, AssertionError):

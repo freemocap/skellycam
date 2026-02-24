@@ -3,7 +3,7 @@ import multiprocessing
 
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.ipc.pubsub.pubsub_manager import create_camera_group_pubsub_manager, TopicTypes, PubSubTopicManager
 from skellycam.core.ipc.pubsub.pubsub_topics import SetShmMessage
 from skellycam.core.types.type_overloads import CameraGroupIdString, TopicSubscriptionQueue

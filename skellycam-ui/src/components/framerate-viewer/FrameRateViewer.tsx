@@ -14,7 +14,7 @@ type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"
 export const backendColor: string = "#ff4d00"
 
-const POLL_INTERVAL_MS = 1000;
+const POLL_INTERVAL_MS = 250;
 
 export const FramerateViewerPanel = () => {
     const theme = useTheme()
@@ -26,8 +26,10 @@ export const FramerateViewerPanel = () => {
     const [snapshot, setSnapshot] = useState<FramerateSnapshot>({
         currentBackendFramerate: null,
         currentFrontendFramerate: null,
-        recentFrontendFrameDurations: [],
-        recentBackendFrameDurations: [],
+        aggregateBackendFramerate: null,
+        aggregateFrontendFramerate: null,
+        recentFrontendDurations: [],
+        recentBackendDurations: [],
     });
 
     useEffect(() => {
@@ -40,8 +42,10 @@ export const FramerateViewerPanel = () => {
     const {
         currentFrontendFramerate,
         currentBackendFramerate,
-        recentFrontendFrameDurations,
-        recentBackendFrameDurations
+        aggregateFrontendFramerate,
+        aggregateBackendFramerate,
+        recentFrontendDurations,
+        recentBackendDurations
     } = snapshot;
 
     return (
@@ -120,6 +124,8 @@ export const FramerateViewerPanel = () => {
                     <FramerateStatisticsView
                         frontendFramerate={currentFrontendFramerate}
                         backendFramerate={currentBackendFramerate}
+                        aggregateFrontendFramerate={aggregateFrontendFramerate}
+                        aggregateBackendFramerate={aggregateBackendFramerate}
                         compact={true}
                     />
                 </Paper>
@@ -148,8 +154,8 @@ export const FramerateViewerPanel = () => {
                         <FramerateTimeseriesView
                             frontendFramerate={currentFrontendFramerate}
                             backendFramerate={currentBackendFramerate}
-                            recentFrontendFrameDurations={recentFrontendFrameDurations}
-                            recentBackendFrameDurations={recentBackendFrameDurations}
+                            recentFrontendDurations={recentFrontendDurations}
+                            recentBackendDurations={recentBackendDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
                             title={t("framerateTimeline")}
@@ -172,8 +178,8 @@ export const FramerateViewerPanel = () => {
                         <FramerateHistogramView
                             frontendFramerate={currentFrontendFramerate}
                             backendFramerate={currentBackendFramerate}
-                            recentFrontendFrameDurations={recentFrontendFrameDurations}
-                            recentBackendFrameDurations={recentBackendFrameDurations}
+                            recentFrontendDurations={recentFrontendDurations}
+                            recentBackendDurations={recentBackendDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
                             title={t("framerateDistribution")}

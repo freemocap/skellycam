@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.timestamps.timebase_mapping import TimebaseMapping
+from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import AllTimestampsArray, AllDurationsArray, \
     FRAME_LIFECYCLE_TIMESTAMPS_DTYPE, CAMERA_TIMESTAMPS_CSV_ROW_DTYPE, FRAME_DURATION_DTYPE

@@ -12,19 +12,8 @@ import {
     useTheme,
 } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppSelector, useAppDispatch } from "@/store";
-import {
-    selectFilteredLogs,
-    selectLogsPaused,
-    selectHasErrors,
-    selectLogCountsByLevel
-} from "@/store/slices/log-records/logs-selectors";
-import {
-    logsFiltered,
-    logsPaused,
-    logsCleared
-} from "@/store/slices/log-records/log-records-slice";
-import { LogRecord } from "@/store/slices/log-records/logs-types";
+import { useServer } from "@/services/server/ServerContextProvider";
+import { LogRecord, LogSnapshot } from "@/services/server/server-helpers/log-store";
 import {
     DeleteSweep as DeleteSweepIcon,
     Pause as PauseIcon,
@@ -35,6 +24,8 @@ import {
     SaveAlt as SaveAltIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+
+const LOG_POLL_INTERVAL_MS = 500;
 
 const LOG_COLORS = {
     TRACE: "#ccc",
@@ -190,15 +181,44 @@ const LogEntryComponent = ({ log }: { log: LogRecord }) => {
     );
 };
 
+function applyFilters(
+    entries: LogRecord[],
+    selectedLevels: string[],
+    searchText: string,
+): LogRecord[] {
+    let filtered = entries;
+
+    if (selectedLevels.length > 0) {
+        filtered = filtered.filter(log =>
+            selectedLevels.includes(log.levelname.toLowerCase())
+        );
+    }
+
+    if (searchText) {
+        const searchLower = searchText.toLowerCase();
+        filtered = filtered.filter(log =>
+            log.message.toLowerCase().includes(searchLower) ||
+            log.module.toLowerCase().includes(searchLower) ||
+            log.funcName.toLowerCase().includes(searchLower) ||
+            log.formatted_message?.toLowerCase().includes(searchLower)
+        );
+    }
+
+    return filtered;
+}
+
 export const LogTerminal = () => {
     const theme = useTheme();
     const { t } = useTranslation();
-    const dispatch = useAppDispatch();
-    const logs = useAppSelector(selectFilteredLogs);
-    const isPaused = useAppSelector(selectLogsPaused);
-    const hasErrors = useAppSelector(selectHasErrors);
-    const logCounts = useAppSelector(selectLogCountsByLevel);
+    const { getLogStore } = useServer();
 
+    const [snapshot, setSnapshot] = useState<LogSnapshot>({
+        entries: [],
+        hasErrors: false,
+        countsByLevel: {},
+    });
+
+    const [isPaused, setIsPaused] = useState(false);
     const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
     const [searchText, setSearchText] = useState<string>("");
     const [showSearch, setShowSearch] = useState(false);
@@ -206,11 +226,29 @@ export const LogTerminal = () => {
     const shouldAutoScroll = useRef(true);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
+    // Poll the mutable LogStore on a fixed interval.
+    // When paused, stop polling so the displayed snapshot freezes in place.
+    // Logs keep accumulating in the store regardless.
+    useEffect(() => {
+        if (isPaused) return;
+
+        const interval = setInterval(() => {
+            setSnapshot(getLogStore().getSnapshot());
+        }, LOG_POLL_INTERVAL_MS);
+
+        // Grab an immediate snapshot when unpausing
+        setSnapshot(getLogStore().getSnapshot());
+
+        return () => clearInterval(interval);
+    }, [getLogStore, isPaused]);
+
+    const filteredLogs = applyFilters(snapshot.entries, selectedLevels, searchText);
+
     const formatLogsForExport = useCallback((): string => {
-        return logs.map((log) =>
+        return filteredLogs.map((log) =>
             `[${log.asctime}] [${log.levelname}] ${log.module}:${log.funcName}:${log.lineno} - ${log.message}`
         ).join('\n');
-    }, [logs]);
+    }, [filteredLogs]);
 
     const handleCopyToClipboard = useCallback(async () => {
         const text = formatLogsForExport();
@@ -232,31 +270,28 @@ export const LogTerminal = () => {
         URL.revokeObjectURL(url);
     }, [formatLogsForExport]);
 
-    // Update filter when levels or search text changes
-    useEffect(() => {
-        dispatch(logsFiltered({
-            levels: selectedLevels,
-            searchText: searchText
-        }));
-    }, [selectedLevels, searchText, dispatch]);
-
     // Auto-scroll to bottom when new logs arrive (if not paused)
     useEffect(() => {
         if (!isPaused && shouldAutoScroll.current) {
             logEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
-    }, [logs, isPaused]);
+    }, [filteredLogs, isPaused]);
 
     const handleLevelToggle = (_: React.MouseEvent<HTMLElement>, newLevels: string[]): void => {
         setSelectedLevels(newLevels);
     };
 
     const handlePauseToggle = (): void => {
-        dispatch(logsPaused(!isPaused));
+        setIsPaused(prev => !prev);
     };
 
     const handleClear = (): void => {
-        dispatch(logsCleared());
+        getLogStore().clear();
+        setSelectedLevels([]);
+        setSearchText("");
+        setShowSearch(false);
+        setIsPaused(false);
+        setSnapshot({ entries: [], hasErrors: false, countsByLevel: {} });
     };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>): void => {
@@ -296,7 +331,7 @@ export const LogTerminal = () => {
                     {t('serverLogs')}
                 </span>
 
-                {hasErrors && (
+                {snapshot.hasErrors && (
                     <Tooltip title={t("errorsDetected")}>
                         <WarningIcon
                             sx={{
@@ -330,7 +365,7 @@ export const LogTerminal = () => {
                     }}
                 >
                     {Object.entries(LOG_COLORS).map(([level, color]) => {
-                        const count = logCounts[level] || 0;
+                        const count = snapshot.countsByLevel[level] || 0;
                         return (
                             <ToggleButton
                                 key={level}
@@ -469,7 +504,7 @@ export const LogTerminal = () => {
                 }}
                 onScroll={handleScroll}
             >
-                {logs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                     <Box
                         sx={{
                             display: "flex",
@@ -483,7 +518,7 @@ export const LogTerminal = () => {
                     </Box>
                 ) : (
                     <>
-                        {logs.map((log, i) => (
+                        {filteredLogs.map((log, i) => (
                             <LogEntryComponent key={`${log.created}-${log.thread}-${i}`} log={log} />
                         ))}
                         <div ref={logEndRef} />

@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.core.camera.config.image_rotation_types import rotation_int_to_name
 
