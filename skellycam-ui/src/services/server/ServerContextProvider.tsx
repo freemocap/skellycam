@@ -5,8 +5,7 @@ import { ConnectionState, WebSocketConnection } from "@/services/server/server-h
 import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
 import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
 import { serverUrls } from "@/services";
-import {FramerateStore} from "@/services/server/server-helpers/framerate-store";
-import {DisplayFramerateTracker} from "@/services/server/server-helpers/display-framerate-tracker";
+import {DetailedFramerate, FramerateStore} from "@/services/server/server-helpers/framerate-store";
 import {LogStore, LogRecord} from "@/services/server/server-helpers/log-store";
 
 interface ServerContextValue {
@@ -45,24 +44,12 @@ function isLogRecord(data: any): data is LogRecord {
     );
 }
 
-// Type for framerate update message from backend (backend_framerate only;
-// display framerate is measured on the frontend)
+// Type for framerate update message from backend
 interface FramerateUpdateMessage {
     message_type: 'framerate_update';
     camera_group_id: string;
-    backend_framerate: {
-        mean_frame_duration_ms: number;
-        mean_frames_per_second: number;
-        frame_duration_max: number;
-        frame_duration_min: number;
-        frame_duration_mean: number;
-        frame_duration_stddev: number;
-        frame_duration_median: number;
-        frame_duration_coefficient_of_variation: number;
-        calculation_window_size: number;
-        framerate_source: string;
-    };
-    frame_durations_ms: number[];
+    backend_framerate: DetailedFramerate;
+    frontend_framerate: DetailedFramerate;
 }
 
 // Type guard to check if a message is a framerate update
@@ -74,7 +61,8 @@ function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
         typeof data.camera_group_id === 'string' &&
         data.backend_framerate &&
         typeof data.backend_framerate === 'object' &&
-        Array.isArray(data.frame_durations_ms)
+        data.frontend_framerate &&
+        typeof data.frontend_framerate === 'object'
     );
 }
 
@@ -88,7 +76,6 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
     const frameProcessorRef = useRef<FrameProcessor | null>(null);
     const canvasManagerRef = useRef<CanvasManager | null>(null);
     const framerateStoreRef = useRef<FramerateStore>(new FramerateStore());
-    const displayFramerateTrackerRef = useRef<DisplayFramerateTracker>(new DisplayFramerateTracker());
     const logStoreRef = useRef<LogStore>(new LogStore());
 
     // Latest server-side (backend) FPS stored in a ref for non-reactive access
@@ -150,7 +137,6 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                 pendingPayloadRef.current = null;
                 lastCameraIdsRef.current = [];
                 framerateStoreRef.current.clear();
-                displayFramerateTrackerRef.current.clear();
                 setConnectedCameraIds([]);
             }
         };
@@ -197,26 +183,6 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                     frameData.cameraId,
                     frameData.bitmap
                 );
-            }
-
-            // Stamp display framerate at the moment frames are actually
-            // decoded and dispatched to canvas workers on the frontend
-            const displayTracker = displayFramerateTrackerRef.current;
-            displayTracker.stamp();
-
-            const store = framerateStoreRef.current;
-
-            // Push the individual inter-frame duration into the ring buffer
-            // for the timeseries and histogram charts
-            const lastDuration = displayTracker.lastDurationMs;
-            if (lastDuration !== null) {
-                store.pushFrontendDuration(lastDuration);
-            }
-
-            // Update the rolling-window summary stats for the statistics table
-            const displayFramerate = displayTracker.computeFramerate();
-            if (displayFramerate) {
-                store.updateFrontend(displayFramerate);
             }
 
             if (frameNumbers.size > 0) {
@@ -269,14 +235,9 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                     else if (isFramerateUpdate(jsonData)) {
                         // Store backend FPS in ref for fast non-reactive access
                         serverFpsRef.current = jsonData.backend_framerate.mean_frames_per_second;
-                        const store = framerateStoreRef.current;
-                        // Set the summary stats for the "Recent" column
-                        store.updateBackend(jsonData.backend_framerate);
-                        // Push individual per-frame durations into the ring buffer
-                        // for the timeseries and histogram charts
-                        store.pushBackendDurations(jsonData.frame_durations_ms);
-                        // Display framerate is measured locally in processFrameLoop,
-                        // not from the backend message
+                        // Update mutable framerate store (no Redux, no re-renders)
+                        framerateStoreRef.current.updateBackend(jsonData.backend_framerate);
+                        framerateStoreRef.current.updateFrontend(jsonData.frontend_framerate);
                     }
                     // Handle other message types
                     else {
