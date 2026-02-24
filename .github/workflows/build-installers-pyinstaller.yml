@@ -20,14 +20,15 @@ jobs:
             server-binary: skellycam_server.exe
             electron-arch: x64
 
-          # macOS Intel (x64)
-          - os: macos-13
+          # macOS Intel (x64) — macos-15-intel is the standard free runner
+          # replacing the retired macos-13. Available until ~Aug 2027.
+          - os: macos-15-intel
             platform: macos
             arch: x64
             server-binary: skellycam_server
             electron-arch: x64
 
-          # macOS Apple Silicon (arm64)
+          # macOS Apple Silicon (arm64) — macos-latest is arm64 (macos-15)
           - os: macos-latest
             platform: macos
             arch: arm64
