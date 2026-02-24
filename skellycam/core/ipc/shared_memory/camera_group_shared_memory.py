@@ -34,9 +34,6 @@ class CameraGroupSharedMemory:
     def latest_multiframe_number(self) -> int:
         return min([camera_shared_memory.latest_frame_number for camera_shared_memory in self.camera_shms.values()])
 
-    def get_latest_multiframe_number(self) -> int:
-        return min([camera_shared_memory.latest_frame_number for camera_shared_memory in self.camera_shms.values()])
-
     @property
     def valid(self) -> bool:
         """

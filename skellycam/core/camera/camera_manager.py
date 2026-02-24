@@ -2,8 +2,6 @@ import logging
 import sys
 import time
 from dataclasses import dataclass
-from typing import ClassVar
-
 from skellycam.core.camera.camera_worker import CameraWorker, CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
