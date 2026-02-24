@@ -25,6 +25,23 @@ const WINDOW_SECONDS = 60
 const toFps = (samples: TimestampedSample[]): FpsSample[] =>
     samples.filter((s) => s.value > 0).map((s) => ({timestamp: s.timestamp, value: 1000 / s.value}))
 
+/**
+ * Persistent mutable state shared between initChart and updateChart.
+ * Stored in a ref so it survives across data updates without triggering
+ * React re-renders or D3 DOM teardown.
+ */
+type ChartState = {
+    frontendPath: d3.Selection<SVGPathElement, unknown, null, undefined>
+    backendPath: d3.Selection<SVGPathElement, unknown, null, undefined>
+    xScale: d3.ScaleTime<number, number>
+    yScale: d3.ScaleLinear<number, number>
+    tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>
+    // Current data snapshots for bisect-based tooltip lookup
+    frontendData: FpsSample[]
+    backendData: FpsSample[]
+    sources: Array<{id: string; name: string; color: string}>
+}
+
 export default function FramerateTimeseriesView({
     frontendFramerate,
     backendFramerate,
@@ -36,117 +53,188 @@ export default function FramerateTimeseriesView({
 }: FramerateTimeseriesProps) {
     const theme = useTheme()
     const {t} = useTranslation()
+    const stateRef = useRef<ChartState | null>(null)
 
-    // Mutable ref holding the tooltip so it survives across data updates
-    const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, any> | null>(null)
-
-    // initChart — called once on mount/resize, creates the tooltip
+    // initChart — creates persistent SVG elements that live for the chart's lifetime
     const initChart = useCallback(
-        (_scaffolding: ChartScaffolding): ChartLifecycle => {
-            // Clean up any previous tooltip (shouldn't happen, but safety)
-            tooltipRef.current?.remove()
+        ({chartArea, width, height}: ChartScaffolding): ChartLifecycle => {
             const tooltip = createTooltip(theme)
-            tooltipRef.current = tooltip
+
+            const xScale = d3.scaleTime().range([0, width])
+            const yScale = d3.scaleLinear().range([height, 0])
+
+            // Persistent path elements — one per series, never removed
+            const frontendPath = chartArea.append("path")
+                .attr("fill", "none")
+                .attr("stroke", frontendColor)
+                .attr("stroke-width", 1.5)
+
+            const backendPath = chartArea.append("path")
+                .attr("fill", "none")
+                .attr("stroke", backendColor)
+                .attr("stroke-width", 1.5)
+
+            // Persistent empty-state text (hidden by default)
+            chartArea.append("text")
+                .attr("class", "empty-text")
+                .attr("x", width / 2)
+                .attr("y", height / 2)
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "central")
+                .style("font-family", "monospace")
+                .style("font-size", "12px")
+                .style("fill", theme.palette.text.disabled)
+                .style("display", "none")
+
+            // Invisible overlay rect for bisect-based tooltip — single event listener
+            const overlay = chartArea.append("rect")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("fill", "none")
+                .attr("pointer-events", "all")
+
+            overlay.on("mousemove", (event: MouseEvent) => {
+                const state = stateRef.current
+                if (!state) return
+
+                const [mx] = d3.pointer(event)
+                const mouseTime = state.xScale.invert(mx).getTime()
+
+                // Find nearest point across both series using bisect
+                let bestDist = Infinity
+                let bestSample: FpsSample | null = null
+                let bestSource: {id: string; name: string; color: string} | null = null
+
+                const datasets = [
+                    {data: state.frontendData, source: state.sources[0]},
+                    {data: state.backendData, source: state.sources[1]},
+                ]
+
+                for (const {data, source} of datasets) {
+                    if (data.length === 0) continue
+                    const bisect = d3.bisector<FpsSample, number>((d) => d.timestamp).center
+                    const idx = bisect(data, mouseTime)
+                    const sample = data[idx]
+                    if (!sample) continue
+                    const dist = Math.abs(sample.timestamp - mouseTime)
+                    if (dist < bestDist) {
+                        bestDist = dist
+                        bestSample = sample
+                        bestSource = source
+                    }
+                }
+
+                if (bestSample && bestSource) {
+                    tooltip
+                        .style("opacity", 1)
+                        .html(
+                            `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
+                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
+                <span style="color: ${bestSource.color};">${bestSource.name}</span>
+                <span style="color: ${theme.palette.text.secondary};">TIME:</span>
+                <span>${new Date(bestSample.timestamp).toISOString().substr(11, 12)}</span>
+                <span style="color: ${theme.palette.text.secondary};">FPS:</span>
+                <span>${bestSample.value.toFixed(2)}</span>
+                <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
+                <span>${(1000 / bestSample.value).toFixed(2)} ms</span>
+              </div>`
+                        )
+                        .style("left", event.pageX + 10 + "px")
+                        .style("top", event.pageY - 28 + "px")
+                }
+            })
+
+            overlay.on("mouseleave", () => {
+                tooltip.style("opacity", 0)
+            })
+
+            stateRef.current = {
+                frontendPath,
+                backendPath,
+                xScale,
+                yScale,
+                tooltip,
+                frontendData: [],
+                backendData: [],
+                sources: [
+                    {id: "frontend", name: "", color: frontendColor},
+                    {id: "backend", name: "", color: backendColor},
+                ],
+            }
 
             return {
                 cleanup: () => {
                     tooltip.remove()
-                    tooltipRef.current = null
+                    stateRef.current = null
                 },
             }
         },
-        // theme is stable within a session (only changes on light/dark toggle)
-        [theme]
+        [theme, frontendColor, backendColor]
     )
 
-    // updateChart — called on every data poll, does in-place D3 updates
+    // updateChart — only mutates existing elements, zero DOM adds/removes
     const updateChart = useCallback(
-        ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
-            const sources = [
-                {
-                    id: "frontend",
-                    name: frontendFramerate?.framerate_source || t("display"),
-                    color: frontendColor,
-                    data: toFps(recentFrontendDurations),
-                },
-                {
-                    id: "backend",
-                    name: backendFramerate?.framerate_source || t("server"),
-                    color: backendColor,
-                    data: toFps(recentBackendDurations),
-                },
-            ]
+        ({svg, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
+            const state = stateRef.current
+            if (!state) return
 
-            // Clear previous data elements (but NOT axes groups or clip paths)
-            chartArea.selectAll("*").remove()
-            // Clear any previous empty-chart text on the svg group
-            svg.selectAll(".empty-text").remove()
+            const frontendFps = toFps(recentFrontendDurations)
+            const backendFps = toFps(recentBackendDurations)
 
-            if (sources.every((s) => s.data.length === 0)) {
-                svg.append("text")
-                    .attr("class", "empty-text")
-                    .attr("x", width / 2)
-                    .attr("y", height / 2)
-                    .attr("text-anchor", "middle")
-                    .attr("dominant-baseline", "central")
-                    .style("font-family", "monospace")
-                    .style("font-size", "12px")
-                    .style("fill", theme.palette.text.disabled)
-                    .text(t("waitingForData"))
+            // Update source names for tooltip display
+            state.sources[0].name = frontendFramerate?.framerate_source || t("display")
+            state.sources[1].name = backendFramerate?.framerate_source || t("server")
+
+            const allData = [...frontendFps, ...backendFps]
+            const emptyText = svg.select<SVGTextElement>(".empty-text")
+
+            if (allData.length === 0) {
+                state.frontendPath.attr("d", null)
+                state.backendPath.attr("d", null)
+                emptyText.style("display", null).text(t("waitingForData"))
                 return
             }
 
-            // Determine the window from the actual data timestamps
-            const allTimestamps = sources.flatMap((s) => s.data.map((d) => d.timestamp))
-            const latestTimestamp = Math.max(...allTimestamps)
+            emptyText.style("display", "none")
+
+            // Compute the rolling window
+            const latestTimestamp = Math.max(...allData.map((d) => d.timestamp))
             const windowEnd = latestTimestamp
             const windowStart = windowEnd - WINDOW_SECONDS * 1000
 
-            const windowedSources = sources.map((s) => ({
-                ...s,
-                data: s.data.filter((d) => d.timestamp >= windowStart),
-            }))
+            const windowedFrontend = frontendFps.filter((d) => d.timestamp >= windowStart)
+            const windowedBackend = backendFps.filter((d) => d.timestamp >= windowStart)
 
-            const visibleData = windowedSources.flatMap((s) => s.data)
+            // Store windowed data for bisect tooltip lookup
+            state.frontendData = windowedFrontend
+            state.backendData = windowedBackend
+
+            const visibleData = [...windowedFrontend, ...windowedBackend]
             if (visibleData.length === 0) {
-                svg.append("text")
-                    .attr("class", "empty-text")
-                    .attr("x", width / 2)
-                    .attr("y", height / 2)
-                    .attr("text-anchor", "middle")
-                    .attr("dominant-baseline", "central")
-                    .style("font-family", "monospace")
-                    .style("font-size", "12px")
-                    .style("fill", theme.palette.text.disabled)
-                    .text(t("waitingForData"))
+                state.frontendPath.attr("d", null)
+                state.backendPath.attr("d", null)
+                emptyText.style("display", null).text(t("waitingForData"))
                 return
             }
 
-            // Y domain from visible data
+            // Update scale domains
             const yMax = d3.max(visibleData, (d) => d.value) as number
             const yMin = d3.min(visibleData, (d) => d.value) as number
             const yRange = yMax - yMin
             const yPadding = Math.max(1, yRange * 0.3)
 
-            const xScale = d3
-                .scaleTime()
-                .domain([new Date(windowStart), new Date(windowEnd)])
-                .range([0, width])
+            state.xScale.domain([new Date(windowStart), new Date(windowEnd)])
+            state.yScale.domain([Math.max(0, yMin - yPadding), yMax + yPadding])
 
-            const yScale = d3
-                .scaleLinear()
-                .domain([Math.max(0, yMin - yPadding), yMax + yPadding])
-                .range([height, 0])
-
-            // Update axes in-place (reusing the persistent axis groups)
+            // Update axes in-place
             const xAxisGen = d3
-                .axisBottom(xScale)
+                .axisBottom(state.xScale)
                 .ticks(Math.max(2, Math.min(5, Math.floor(width / 120))))
                 .tickSize(-height)
                 .tickFormat(d3.timeFormat("%H:%M:%S") as any)
 
             const yAxisGen = d3
-                .axisLeft(yScale)
+                .axisLeft(state.yScale)
                 .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
                 .tickSize(-width)
 
@@ -154,76 +242,15 @@ export default function FramerateTimeseriesView({
             yAxisG.call(yAxisGen)
             applyAxisStyles(svg, theme)
 
-            // Line generator
+            // Update path d attributes — the only DOM mutation per update
             const line = d3
                 .line<FpsSample>()
-                .x((d) => xScale(new Date(d.timestamp)))
-                .y((d) => yScale(d.value))
+                .x((d) => state.xScale(new Date(d.timestamp)))
+                .y((d) => state.yScale(d.value))
                 .curve(d3.curveLinear)
 
-            // Draw lines and dots into the persistent chartArea
-            const tooltip = tooltipRef.current
-
-            windowedSources.forEach((source) => {
-                if (source.data.length === 0) return
-
-                chartArea
-                    .append("path")
-                    .datum(source.data)
-                    .attr("class", `line-${source.id}`)
-                    .attr("fill", "none")
-                    .attr("stroke", source.color)
-                    .attr("stroke-width", 1.5)
-                    .attr("d", line)
-
-                chartArea
-                    .selectAll(`.dot-${source.id}`)
-                    .data(source.data)
-                    .enter()
-                    .append("circle")
-                    .attr("class", `dot-${source.id}`)
-                    .attr("cx", (d) => xScale(new Date(d.timestamp)))
-                    .attr("cy", (d) => yScale(d.value))
-                    .attr("r", 2)
-                    .attr("fill", source.color)
-                    .attr("opacity", 0.8)
-            })
-
-            // Attach tooltip events
-            if (tooltip) {
-                windowedSources.forEach((source) => {
-                    if (source.data.length === 0) return
-
-                    chartArea.selectAll(`.dot-${source.id}`)
-                        .on("mouseover", function (event: MouseEvent, d: any) {
-                            const element = this as unknown as SVGCircleElement
-                            d3.select(element)
-                                .attr("r", 5)
-                                .attr("fill", d3.color(source.color)!.brighter(0.5).toString())
-
-                            tooltip
-                                .style("opacity", 1)
-                                .html(
-                                    `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                    <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                    <span style="color: ${source.color};">${source.name}</span>
-                    <span style="color: ${theme.palette.text.secondary};">TIME:</span>
-                    <span>${new Date(d.timestamp).toISOString().substr(11, 12)}</span>
-                    <span style="color: ${theme.palette.text.secondary};">FPS:</span>
-                    <span>${d.value.toFixed(2)}</span>
-                    <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
-                    <span>${(1000 / d.value).toFixed(2)} ms</span>
-                  </div>`
-                                )
-                                .style("left", event.pageX + 10 + "px")
-                                .style("top", event.pageY - 28 + "px")
-                        })
-                        .on("mouseout", function () {
-                            d3.select(this).attr("r", 2).attr("fill", source.color)
-                            tooltip.style("opacity", 0)
-                        })
-                })
-            }
+            state.frontendPath.attr("d", windowedFrontend.length > 0 ? line(windowedFrontend) : null)
+            state.backendPath.attr("d", windowedBackend.length > 0 ? line(windowedBackend) : null)
         },
         [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
     )

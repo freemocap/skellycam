@@ -38,6 +38,7 @@ export type LogSnapshot = {
     entries: LogRecord[];
     hasErrors: boolean;
     countsByLevel: Record<string, number>;
+    version: number;
 };
 
 /**
@@ -45,16 +46,28 @@ export type LogSnapshot = {
  * Lives in a ref — no Redux, no immutable copies, no re-renders on every message.
  * Components poll via getSnapshot() on their own schedule (typically ~500ms).
  *
- * Logs are NEVER dropped — they accumulate regardless of UI pause/filter state.
- * Filtering and pausing are purely display concerns handled by the consuming component.
+ * Uses a version counter to avoid copying the entries array when nothing has
+ * changed since the last snapshot. The snapshot's entries array is only
+ * reallocated when new logs have arrived.
  */
 export class LogStore {
     private entries: LogRecord[] = [];
     private countsByLevel: Record<string, number> = {};
     private hasErrors: boolean = false;
 
+    /** Incremented on every mutation (add / clear). */
+    private version: number = 0;
+
+    /** Version at which the last snapshot was taken. */
+    private lastSnapshotVersion: number = -1;
+
+    /** Cached snapshot entries — reused when version hasn't changed. */
+    private cachedEntries: LogRecord[] = [];
+    private cachedCountsByLevel: Record<string, number> = {};
+
     add(record: LogRecord): void {
         this.entries.push(record);
+        this.version++;
 
         // Update counts
         const level = record.levelname;
@@ -67,7 +80,6 @@ export class LogStore {
 
         // Trim to capacity
         if (this.entries.length > MAX_ENTRIES) {
-            // Recalculate counts for the removed entries
             const removed = this.entries.splice(0, this.entries.length - MAX_ENTRIES);
             for (const r of removed) {
                 this.countsByLevel[r.levelname]--;
@@ -80,11 +92,23 @@ export class LogStore {
         }
     }
 
+    /**
+     * Returns a snapshot for React components to read during render.
+     * Only copies the entries array when new logs have arrived since the
+     * last call, avoiding the per-poll GC pressure of unconditional .slice().
+     */
     getSnapshot(): LogSnapshot {
+        if (this.version !== this.lastSnapshotVersion) {
+            this.cachedEntries = this.entries.slice();
+            this.cachedCountsByLevel = { ...this.countsByLevel };
+            this.lastSnapshotVersion = this.version;
+        }
+
         return {
-            entries: this.entries.slice(),
+            entries: this.cachedEntries,
             hasErrors: this.hasErrors,
-            countsByLevel: { ...this.countsByLevel },
+            countsByLevel: this.cachedCountsByLevel,
+            version: this.version,
         };
     }
 
@@ -92,5 +116,9 @@ export class LogStore {
         this.entries = [];
         this.countsByLevel = {};
         this.hasErrors = false;
+        this.version++;
+        this.cachedEntries = [];
+        this.cachedCountsByLevel = {};
+        this.lastSnapshotVersion = this.version;
     }
 }

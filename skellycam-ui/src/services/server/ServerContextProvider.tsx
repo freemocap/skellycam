@@ -24,12 +24,13 @@ interface ServerContextValue {
 
 const ServerContext = createContext<ServerContextValue | null>(null);
 
-// Helper to compare arrays efficiently
-function arraysEqual(a: string[], b: string[]): boolean {
+// Compare two already-sorted string arrays without allocating
+function sortedArraysEqual(a: string[], b: string[]): boolean {
     if (a.length !== b.length) return false;
-    const sortedA = [...a].sort();
-    const sortedB = [...b].sort();
-    return sortedA.every((val, idx) => val === sortedB[idx]);
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
 }
 
 // Type guard to check if a message is a log record
@@ -91,6 +92,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
     const processingFrameRef = useRef<boolean>(false);
     const frameLoopRef = useRef<number | null>(null);
 
+    // Cached sorted camera IDs from the last frame — compared by value to avoid
+    // per-frame Array.from().sort() allocations when the camera list hasn't changed.
+    const lastCameraIdsRef = useRef<string[]>([]);
+
     // Initialize services once
     useEffect(() => {
         wsConnectionRef.current = new WebSocketConnection({
@@ -130,6 +135,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                 serverFpsRef.current = null;
                 processingFrameRef.current = false;
                 pendingPayloadRef.current = null;
+                lastCameraIdsRef.current = [];
                 framerateStoreRef.current.clear();
                 setConnectedCameraIds([]);
             }
@@ -143,21 +149,34 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
 
             const { frames, cameraIds, frameNumbers } = result;
 
-            const currentCameraIds = Array.from(cameraIds).sort();
-            setConnectedCameraIds(prevIds => {
-                if (!arraysEqual(prevIds, currentCameraIds)) {
-                    console.log(`Camera list updated: ${currentCameraIds.join(', ')}`);
-
-                    const removedCameras = prevIds.filter(id => !cameraIds.has(id));
-                    for (const cameraId of removedCameras) {
-                        console.log(`Removing camera ${cameraId} - not in latest payload`);
-                        canvasManagerRef.current?.terminateWorker(cameraId);
+            // Only allocate a new sorted array if the camera set actually changed.
+            // Compare against the cached ref to avoid Array.from().sort() on every frame.
+            const lastIds = lastCameraIdsRef.current;
+            let cameraListChanged = lastIds.length !== cameraIds.size;
+            if (!cameraListChanged) {
+                for (const id of lastIds) {
+                    if (!cameraIds.has(id)) {
+                        cameraListChanged = true;
+                        break;
                     }
-
-                    return currentCameraIds;
                 }
-                return prevIds;
-            });
+            }
+
+            if (cameraListChanged) {
+                const newIds = Array.from(cameraIds).sort();
+                lastCameraIdsRef.current = newIds;
+
+                setConnectedCameraIds(prevIds => {
+                    if (!sortedArraysEqual(prevIds, newIds)) {
+                        const removedCameras = prevIds.filter(id => !cameraIds.has(id));
+                        for (const cameraId of removedCameras) {
+                            canvasManagerRef.current?.terminateWorker(cameraId);
+                        }
+                        return newIds;
+                    }
+                    return prevIds;
+                });
+            }
 
             for (const frameData of frames) {
                 canvasManagerRef.current!.sendFrameToWorker(

@@ -20,8 +20,7 @@ type FramerateHistogramProps = {
 type HistogramBin = {x0: number; x1: number; count: number; density: number}
 
 /**
- * Build histogram bins with a domain tight to the actual data range
- * and 1-fps-wide bins (scaling up if the range is very large).
+ * Build histogram bins with a domain tight to the actual data range.
  */
 function buildHistogram(fpsValues: number[]): {
     bins: HistogramBin[]
@@ -62,6 +61,19 @@ function buildHistogram(fpsValues: number[]): {
     return {bins, maxDensity}
 }
 
+/**
+ * Persistent mutable state shared between initChart and updateChart.
+ */
+type ChartState = {
+    frontendBarGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+    backendBarGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+    xScale: d3.ScaleLinear<number, number>
+    yScale: d3.ScaleLinear<number, number>
+    tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>
+    sources: Array<{id: string; name: string; color: string; bins: HistogramBin[]}>
+    height: number
+}
+
 export default function FramerateHistogramView({
     frontendFramerate,
     backendFramerate,
@@ -73,78 +85,155 @@ export default function FramerateHistogramView({
 }: FramerateHistogramProps) {
     const theme = useTheme()
     const {t} = useTranslation()
+    const stateRef = useRef<ChartState | null>(null)
 
-    const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, any> | null>(null)
-
-    // initChart — called once on mount/resize, creates the tooltip
+    // initChart — creates persistent groups and a single hover overlay
     const initChart = useCallback(
-        (_scaffolding: ChartScaffolding): ChartLifecycle => {
-            tooltipRef.current?.remove()
+        ({chartArea, width, height}: ChartScaffolding): ChartLifecycle => {
             const tooltip = createTooltip(theme)
-            tooltipRef.current = tooltip
+
+            const xScale = d3.scaleLinear().range([0, width])
+            const yScale = d3.scaleLinear().range([height, 0])
+
+            // Persistent bar groups — one per series, never removed
+            const frontendBarGroup = chartArea.append("g").attr("class", "bars-frontend")
+            const backendBarGroup = chartArea.append("g").attr("class", "bars-backend")
+
+            // Persistent empty-state text (hidden by default)
+            chartArea.append("text")
+                .attr("class", "empty-text")
+                .attr("x", width / 2)
+                .attr("y", height / 2)
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "central")
+                .style("font-family", "monospace")
+                .style("font-size", "12px")
+                .style("fill", theme.palette.text.disabled)
+                .style("display", "none")
+
+            // Invisible overlay for tooltip — single event listener
+            const overlay = chartArea.append("rect")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("fill", "none")
+                .attr("pointer-events", "all")
+
+            overlay.on("mousemove", (event: MouseEvent) => {
+                const state = stateRef.current
+                if (!state) return
+
+                const [mx] = d3.pointer(event)
+                const mouseX = state.xScale.invert(mx)
+
+                // Find which bin the mouse is over, across both series
+                let bestBin: HistogramBin | null = null
+                let bestSource: {name: string; color: string} | null = null
+
+                for (const source of state.sources) {
+                    for (const bin of source.bins) {
+                        if (mouseX >= bin.x0 && mouseX < bin.x1) {
+                            // Prefer the bin with higher density if overlapping
+                            if (!bestBin || bin.density > bestBin.density) {
+                                bestBin = bin
+                                bestSource = source
+                            }
+                        }
+                    }
+                }
+
+                if (bestBin && bestSource) {
+                    tooltip
+                        .style("opacity", 1)
+                        .html(
+                            `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
+                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
+                <span style="color: ${bestSource.color};">${bestSource.name}</span>
+                <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
+                <span>${bestBin.x0.toFixed(1)} – ${bestBin.x1.toFixed(1)} fps</span>
+                <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
+                <span>${bestBin.count} samples</span>
+                <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
+                <span>${(bestBin.density * 100).toFixed(1)}%</span>
+              </div>`
+                        )
+                        .style("left", event.pageX + 10 + "px")
+                        .style("top", event.pageY - 28 + "px")
+                } else {
+                    tooltip.style("opacity", 0)
+                }
+            })
+
+            overlay.on("mouseleave", () => {
+                tooltip.style("opacity", 0)
+            })
+
+            stateRef.current = {
+                frontendBarGroup,
+                backendBarGroup,
+                xScale,
+                yScale,
+                tooltip,
+                sources: [
+                    {id: "frontend", name: "", color: frontendColor, bins: []},
+                    {id: "backend", name: "", color: backendColor, bins: []},
+                ],
+                height,
+            }
 
             return {
                 cleanup: () => {
                     tooltip.remove()
-                    tooltipRef.current = null
+                    stateRef.current = null
                 },
             }
         },
-        [theme]
+        [theme, frontendColor, backendColor]
     )
 
-    // updateChart — called on every data poll, does in-place D3 updates
+    // updateChart — uses D3 data join for minimal DOM mutations
     const updateChart = useCallback(
         ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
+            const state = stateRef.current
+            if (!state) return
+
             const frontendFps = recentFrontendDurations.filter((s) => s.value > 0).map((s) => 1000 / s.value)
             const backendFps = recentBackendDurations.filter((s) => s.value > 0).map((s) => 1000 / s.value)
 
-            const sources = [
-                {
-                    id: "frontend",
-                    name: frontendFramerate?.framerate_source || t("display"),
-                    color: frontendColor,
-                    hist: buildHistogram(frontendFps),
-                },
-                {
-                    id: "backend",
-                    name: backendFramerate?.framerate_source || t("server"),
-                    color: backendColor,
-                    hist: buildHistogram(backendFps),
-                },
-            ]
+            const frontendHist = buildHistogram(frontendFps)
+            const backendHist = buildHistogram(backendFps)
 
-            // Clear previous data elements (but NOT axes groups or clip paths)
-            chartArea.selectAll("*").remove()
-            svg.selectAll(".empty-text").remove()
+            // Update source metadata for tooltip
+            state.sources[0].name = frontendFramerate?.framerate_source || t("display")
+            state.sources[1].name = backendFramerate?.framerate_source || t("server")
+            state.sources[0].bins = frontendHist?.bins ?? []
+            state.sources[1].bins = backendHist?.bins ?? []
+            state.height = height
 
-            if (sources.every((s) => !s.hist)) {
-                svg.append("text")
-                    .attr("class", "empty-text")
-                    .attr("x", width / 2)
-                    .attr("y", height / 2)
-                    .attr("text-anchor", "middle")
-                    .attr("dominant-baseline", "central")
-                    .style("font-family", "monospace")
-                    .style("font-size", "12px")
-                    .style("fill", theme.palette.text.disabled)
-                    .text(t("waitingForData"))
+            const emptyText = chartArea.select<SVGTextElement>(".empty-text")
+
+            if (!frontendHist && !backendHist) {
+                // Clear all bars
+                state.frontendBarGroup.selectAll("rect").remove()
+                state.backendBarGroup.selectAll("rect").remove()
+                emptyText.style("display", null).text(t("waitingForData"))
                 return
             }
 
-            // Domain from all histogram bins
+            emptyText.style("display", "none")
+
+            // Compute domain from all bins
             let minX = Infinity
             let maxX = -Infinity
             let maxDensity = 0
 
-            for (const s of sources) {
-                if (!s.hist) continue
-                const bins = s.hist.bins
+            for (const hist of [frontendHist, backendHist]) {
+                if (!hist) continue
+                const bins = hist.bins
                 if (bins.length > 0) {
                     minX = Math.min(minX, bins[0].x0)
                     maxX = Math.max(maxX, bins[bins.length - 1].x1)
                 }
-                maxDensity = Math.max(maxDensity, s.hist.maxDensity)
+                maxDensity = Math.max(maxDensity, hist.maxDensity)
             }
 
             if (minX === Infinity) minX = 0
@@ -153,22 +242,16 @@ export default function FramerateHistogramView({
 
             const xPad = Math.max(1, (maxX - minX) * 0.05)
 
-            const xScale = d3
-                .scaleLinear()
-                .domain([minX - xPad, maxX + xPad])
-                .range([0, width])
-            const yScale = d3
-                .scaleLinear()
-                .domain([0, maxDensity * 1.15])
-                .range([height, 0])
+            state.xScale.domain([minX - xPad, maxX + xPad])
+            state.yScale.domain([0, maxDensity * 1.15])
 
             // Update axes in-place
             const xAxisGen = d3
-                .axisBottom(xScale)
+                .axisBottom(state.xScale)
                 .ticks(Math.max(2, Math.min(8, Math.floor(width / 50))))
                 .tickSize(-height)
             const yAxisGen = d3
-                .axisLeft(yScale)
+                .axisLeft(state.yScale)
                 .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
                 .tickSize(-width)
 
@@ -176,72 +259,50 @@ export default function FramerateHistogramView({
             yAxisG.call(yAxisGen)
             applyAxisStyles(svg, theme)
 
-            // Draw bars
-            const barInset = sources.filter((s) => s.hist).length > 1 ? 1 : 0
-            const tooltip = tooltipRef.current
+            // D3 data join for bars — enter/update/exit pattern
+            const numSources = [frontendHist, backendHist].filter(Boolean).length
+            const barInset = numSources > 1 ? 1 : 0
 
-            sources.forEach((source, srcIdx) => {
-                if (!source.hist) return
+            const updateBars = (
+                group: d3.Selection<SVGGElement, unknown, null, undefined>,
+                bins: HistogramBin[],
+                color: string,
+                srcIdx: number,
+            ) => {
+                const bars = group.selectAll<SVGRectElement, HistogramBin>("rect")
+                    .data(bins, (d) => `${d.x0}-${d.x1}`)
 
-                chartArea
-                    .selectAll(`.bar-${source.id}`)
-                    .data(source.hist.bins)
-                    .enter()
+                // EXIT: remove bars for bins that no longer exist
+                bars.exit().remove()
+
+                // ENTER: create new bars
+                const entered = bars.enter()
                     .append("rect")
-                    .attr("class", `bar-${source.id}`)
-                    .attr("x", (d) => xScale(d.x0) + srcIdx * barInset)
-                    .attr("width", (d) => {
-                        const w = xScale(d.x1) - xScale(d.x0) - barInset
-                        return Math.max(1, w)
-                    })
-                    .attr("y", (d) => {
-                        const y = yScale(d.density)
-                        return isNaN(y) ? height : Math.min(height, Math.max(0, y))
-                    })
-                    .attr("height", (d) => {
-                        const y = yScale(d.density)
-                        if (isNaN(y)) return 0
-                        return Math.max(0, height - Math.min(height, Math.max(0, y)))
-                    })
-                    .attr("fill", source.color)
+                    .attr("fill", color)
                     .attr("stroke", theme.palette.background.paper)
                     .attr("stroke-width", 0.5)
                     .attr("opacity", 0.7)
-            })
 
-            // Attach tooltip events
-            if (tooltip) {
-                sources.forEach((source) => {
-                    if (!source.hist) return
-
-                    chartArea
-                        .selectAll(`.bar-${source.id}`)
-                        .on("mouseover", function (event, d: any) {
-                            d3.select(this).attr("opacity", 1).attr("stroke-width", 1)
-
-                            tooltip
-                                .style("opacity", 1)
-                                .html(
-                                    `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                    <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                    <span style="color: ${source.color};">${source.name}</span>
-                    <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
-                    <span>${d.x0.toFixed(1)} – ${d.x1.toFixed(1)} fps</span>
-                    <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
-                    <span>${d.count} samples</span>
-                    <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
-                    <span>${(d.density * 100).toFixed(1)}%</span>
-                  </div>`
-                                )
-                                .style("left", event.pageX + 10 + "px")
-                                .style("top", event.pageY - 28 + "px")
-                        })
-                        .on("mouseout", function () {
-                            d3.select(this).attr("opacity", 0.7).attr("stroke-width", 0.5)
-                            tooltip.style("opacity", 0)
-                        })
-                })
+                // UPDATE + ENTER: update positions and sizes for all bars
+                entered.merge(bars)
+                    .attr("x", (d) => state.xScale(d.x0) + srcIdx * barInset)
+                    .attr("width", (d) => {
+                        const w = state.xScale(d.x1) - state.xScale(d.x0) - barInset
+                        return Math.max(1, w)
+                    })
+                    .attr("y", (d) => {
+                        const y = state.yScale(d.density)
+                        return isNaN(y) ? height : Math.min(height, Math.max(0, y))
+                    })
+                    .attr("height", (d) => {
+                        const y = state.yScale(d.density)
+                        if (isNaN(y)) return 0
+                        return Math.max(0, height - Math.min(height, Math.max(0, y)))
+                    })
             }
+
+            updateBars(state.frontendBarGroup, frontendHist?.bins ?? [], frontendColor, 0)
+            updateBars(state.backendBarGroup, backendHist?.bins ?? [], backendColor, numSources > 1 ? 1 : 0)
         },
         [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
     )
