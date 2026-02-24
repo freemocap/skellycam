@@ -43,6 +43,10 @@
       {
         "target": "dmg",
         "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
       }
     ],
     "artifactName": "${productName}_${version}_${arch}_installer.${ext}",
@@ -63,6 +67,10 @@
       {
         "target": "AppImage",
         "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64", "arm64"]
       }
     ],
     "artifactName": "${productName}_${version}_${arch}.${ext}",
@@ -71,6 +79,16 @@
       "Comment": "Camera backend for FreeMoCap",
       "Categories": "Video;AudioVideo;"
     }
+  },
+  "deb": {
+    "depends": [
+      "libgl1-mesa-glx",
+      "libglib2.0-0",
+      "libsm6",
+      "libxext6",
+      "libxrender1",
+      "libv4l-0"
+    ]
   },
 
   "publish": {

@@ -226,6 +226,7 @@ jobs:
           name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             skellycam-ui/release/*/*.dmg
+            skellycam-ui/release/*/*.zip
           include-hidden-files: true
 
       - name: Upload installer artifacts (Linux)
@@ -235,4 +236,5 @@ jobs:
           name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             skellycam-ui/release/*/*.AppImage
+            skellycam-ui/release/*/*.deb
           include-hidden-files: true
