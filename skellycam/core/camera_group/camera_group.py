@@ -302,8 +302,7 @@ async def await_extracted_configs(
             ] = extracted_config_message.extracted_config
         await await_100ms()
 
-    if not ipc.should_continue:
-        validate_camera_configs(updated_configs)
+    validate_camera_configs(updated_configs)
 
     return updated_configs
 

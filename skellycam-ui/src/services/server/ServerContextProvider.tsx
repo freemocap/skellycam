@@ -202,6 +202,9 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             }
             // Handle text/JSON messages (logs, framerate updates, etc.)
             else if (typeof event.data === 'string') {
+                // Skip heartbeat pong responses — they're plain text, not JSON
+                if (event.data === 'pong') return;
+
                 try {
                     const jsonData = JSON.parse(event.data);
 

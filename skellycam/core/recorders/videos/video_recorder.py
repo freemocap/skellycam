@@ -28,8 +28,6 @@ class VideoRecorder:
     previous_frame_number: int | None = None
     video_writer: cv2.VideoWriter | None = None
 
-    class Config:
-        arbitrary_types_allowed = True
 
     @property
     def any_data_saved(self) -> bool:

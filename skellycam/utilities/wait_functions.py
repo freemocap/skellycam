@@ -15,11 +15,9 @@ def wait_10ms():
 
 def wait_30ms():
     """
-    Once per frame-ish
+    Once per frame-ish on a 30fps camera
     """
-    wait_10ms()
-    wait_10ms()
-    wait_10ms()
+    time.sleep(0.03)
 
 
 def wait_1ms():
@@ -66,5 +64,3 @@ if __name__ == "__main__":
         wait_10ms()
     toc = time.perf_counter_ns()
     print(f"WAITED 10ms {1000} times in {(toc - tic)/1e9} s")
-
-

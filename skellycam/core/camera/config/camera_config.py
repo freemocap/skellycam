@@ -151,7 +151,7 @@ class CameraConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate(self) -> Self:
-        if self.camera_name is DEFAULT_CAMERA_NAME:
+        if self.camera_name == DEFAULT_CAMERA_NAME:
             self.camera_name = f"Camera-{self.camera_id}"
         return self
 
@@ -448,5 +448,3 @@ def validate_camera_configs(camera_configs: CameraConfigs) -> None:
     camera_indexes = list(camera_indexes_by_camera.values())
     if len(camera_indexes) != len(set(camera_indexes)):
         raise ValueError(f"Camera indexes must be unique across all camera configurations, received: {camera_indexes_by_camera}")
-
-

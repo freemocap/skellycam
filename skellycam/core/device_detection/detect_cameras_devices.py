@@ -69,7 +69,6 @@ class CameraDeviceInfo(BaseModel):
             cap.release()
             raise RuntimeError(f"Failed to read frame from camera {self.index} with Vendor ID: {self.vendor_id} and Product ID: {self.product_id}")
         return cap
-        return cap
 
 def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virtual:bool=True) -> list[CameraDeviceInfo]:
     """
