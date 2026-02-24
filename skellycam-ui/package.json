@@ -5,6 +5,7 @@
   "description": "SkellyCam - the camera backend for the FreeMoCap software.",
   "author": "Skelly FreeMocap <info@freemocap.org>",
   "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/freemocap/skellycam",
   "debug": {
     "env": {
       "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777/"
