@@ -1,5 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import platform
+import sys
+
 from PyInstaller.utils.hooks import collect_all
 import cv2
 import os
@@ -8,17 +11,17 @@ datas = []
 binaries = []
 hiddenimports = ["encodings.idna"]
 
-# Collect all for cv2 (only once)
+# Collect all for cv2
 cv2_datas, cv2_binaries, cv2_hiddenimports = collect_all('cv2')
 datas.extend(cv2_datas)
 binaries.extend(cv2_binaries)
 hiddenimports.extend(cv2_hiddenimports)
 
-# Add specific cv2 modules that might be missed
+# cv2 submodules that might be missed
 hiddenimports.extend([
     'cv2.cv2',
     'cv2.rotate',
-    'cv2.data',  # For haarcascade files
+    'cv2.data',
     'cv2.aruco',
     'cv2.bgsegm',
     'cv2.bioinspired',
@@ -54,16 +57,21 @@ hiddenimports.extend([
     'cv2.xphoto',
 ])
 
-# Add the directory containing cv2 DLLs
+# Platform-specific native library bundling
 cv2_path = os.path.dirname(cv2.__file__)
-binaries.append((os.path.join(cv2_path, '*.dll'), '.'))
+if sys.platform == 'win32':
+    binaries.append((os.path.join(cv2_path, '*.dll'), '.'))
+elif sys.platform == 'darwin':
+    binaries.append((os.path.join(cv2_path, '*.dylib'), '.'))
+else:
+    binaries.append((os.path.join(cv2_path, '*.so*'), '.'))
 
-# Collect missing setuptools data files
+# Collect setuptools data files
 setuptools_datas, _, setuptools_hidden = collect_all('setuptools')
 datas.extend(setuptools_datas)
 hiddenimports.extend(setuptools_hidden)
 
-# Also ensure jaraco.text's lorem ipsum file is included
+# Ensure jaraco.text lorem ipsum file is included
 jaraco_text_path = os.path.join(
     os.path.dirname(__import__('setuptools', fromlist=['_vendor']).__file__),
     '_vendor', 'jaraco', 'text'
@@ -79,14 +87,10 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=None,
     noarchive=False,
-
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+pyz = PYZ(a.pure, a.zipped_data)
 
 exe = EXE(
     pyz,

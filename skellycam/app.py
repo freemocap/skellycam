@@ -37,6 +37,7 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Pre-compile .py → .pyc so spawned child processes hit fast .pyc reads
     # instead of racing on .py file access (Windows multiprocessing.spawn issue)
+    # TODO - JSM NOTE - this was added to fix a mysterious bug that was popping up in my dev environment. I'm not sure if its necessary or even helpful. I think it creates a huge burst of python.exe's to be get spawned for a second or two on app start. We should revisit.
     ensure_bytecode_compiled()
 
     base_path = Path(get_default_skellycam_base_folder_path())

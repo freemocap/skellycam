@@ -22,23 +22,23 @@ type ChartRenderProps = {
     chartArea: d3.Selection<SVGGElement, unknown, null, undefined>
     width: number
     height: number
-    margin: {top: number; right: number; bottom: number; left: number}
+    margin: { top: number; right: number; bottom: number; left: number }
 }
 
-type FpsSample = {timestamp: number; value: number}
+type FpsSample = { timestamp: number; value: number }
 
 /** How many seconds of data the rolling window shows. */
 const WINDOW_SECONDS = 60
 
 export default function FramerateTimeseriesView({
-    frontendFramerate,
-    backendFramerate,
-    recentFrontendDurations,
-    recentBackendDurations,
-    frontendColor,
-    backendColor,
-    title = "Framerate Over Time",
-}: FramerateTimeseriesProps) {
+                                                    frontendFramerate,
+                                                    backendFramerate,
+                                                    recentFrontendDurations,
+                                                    recentBackendDurations,
+                                                    frontendColor,
+                                                    backendColor,
+                                                    title = "Framerate Over Time",
+                                                }: FramerateTimeseriesProps) {
     const theme = useTheme()
     const {t} = useTranslation()
 
@@ -186,10 +186,10 @@ export default function FramerateTimeseriesView({
                         .style("left", event.pageX + 10 + "px")
                         .style("top", event.pageY - 28 + "px")
                 })
-                .on("mouseout", function () {
-                    d3.select(this).attr("r", 2).attr("fill", source.color)
-                    tooltip.style("opacity", 0)
-                })
+                    .on("mouseout", function () {
+                        d3.select(this).attr("r", 2).attr("fill", source.color)
+                        tooltip.style("opacity", 0)
+                    })
             })
 
             // Zoom handler: updates axes + elements via D3 without React re-render
@@ -211,7 +211,8 @@ export default function FramerateTimeseriesView({
                 windowedSources.forEach((source) => {
                     if (source.data.length === 0) return
 
-                    chartArea.select<SVGPathElement>(`.line-${source.id}`).attr("d", zoomedLine)
+                    const path = chartArea.select<SVGPathElement>(`.line-${source.id}`)
+                    path.attr("d", zoomedLine(path.datum() as FpsSample[]) ?? "")
 
                     chartArea
                         .selectAll<SVGCircleElement, FpsSample>(`.dot-${source.id}`)
@@ -228,5 +229,6 @@ export default function FramerateTimeseriesView({
         [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme]
     )
 
-    return <BaseD3ChartView title={title} renderChart={renderChart} margin={{top: 20, right: 10, bottom: 35, left: 35}} />
+    return <BaseD3ChartView title={title} renderChart={renderChart}
+                            margin={{top: 20, right: 10, bottom: 35, left: 35}}/>
 }

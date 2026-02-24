@@ -10,41 +10,89 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest]  # Start with Windows first
         include:
+          # Windows x64
           - os: windows-latest
-            venv-activate: .venv\Scripts\activate
-#    continue-on-error: true
-    steps:
+            platform: windows
+            arch: x64
+            server-binary: skellycam_server.exe
+            electron-arch: x64
 
+          # macOS Intel (x64)
+          - os: macos-13
+            platform: macos
+            arch: x64
+            server-binary: skellycam_server
+            electron-arch: x64
+
+          # macOS Apple Silicon (arm64)
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            server-binary: skellycam_server
+            electron-arch: arm64
+
+          # Linux x64
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+            server-binary: skellycam_server
+            electron-arch: x64
+
+          # Linux ARM64
+          - os: ubuntu-22.04-arm
+            platform: linux
+            arch: arm64
+            server-binary: skellycam_server
+            electron-arch: arm64
+
+    steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Validate code signing prerequisites
+      # ── Windows code-signing prereqs (Windows only) ──
       - name: Validate code signing prerequisites
+        if: matrix.platform == 'windows'
         run: |
           $missingSecrets = @()
-          
+
           if (-not "${{ secrets.AZURE_TENANT_ID }}") { $missingSecrets += "AZURE_TENANT_ID" }
           if (-not "${{ secrets.AZURE_CLIENT_ID }}") { $missingSecrets += "AZURE_CLIENT_ID" }
           if (-not "${{ secrets.AZURE_CLIENT_SECRET }}") { $missingSecrets += "AZURE_CLIENT_SECRET" }
           if (-not "${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}") { $missingSecrets += "TRUSTED_SIGNING_ACCOUNT_NAME" }
           if (-not "${{ secrets.CERTIFICATE_PROFILE_NAME }}") { $missingSecrets += "CERTIFICATE_PROFILE_NAME" }
-          
+
           if ($missingSecrets.Count -gt 0) {
             Write-Error "Missing required secrets for code signing: $($missingSecrets -join ', ')"
             exit 1
           }
-          
-          Write-Output "✅ All required code signing secrets are available"
+
+          Write-Output "All required code signing secrets are available"
         shell: pwsh
+
+      # ── Linux system dependencies ──
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender1 \
+            libv4l-dev \
+            libfuse2
+
+      # ── Common setup ──
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22'
 
-      - name: "Set up Python"
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: ".python-version"
@@ -57,9 +105,6 @@ jobs:
       - name: Create venv
         run: uv venv
 
-      - name: Activate uv environment
-        run: .venv\Scripts\activate
-
       - name: Install the project dependencies
         run: uv sync
 
@@ -70,56 +115,84 @@ jobs:
       - name: Verify installation 3/3
         run: uv pip show opencv-contrib-python
 
+      # ── PyInstaller build ──
       - name: Build with PyInstaller
         run: |
           uv pip install pyinstaller
           uv run pyinstaller ./skellycam.spec --clean
 
-      - name: Move skellycam_server.exe into `/skellycam-ui/`
+      # ── Move server binary into skellycam-ui/ ──
+      - name: Move server binary into skellycam-ui (Windows)
+        if: matrix.platform == 'windows'
         run: |
-          Move-Item -Path ".\dist\skellycam_server.exe" -Destination ".\skellycam-ui\skellycam_server.exe"
+          Move-Item -Path ".\dist\${{ matrix.server-binary }}" -Destination ".\skellycam-ui\${{ matrix.server-binary }}"
 
-      # Sign the PyInstaller-built executable
+      - name: Move server binary into skellycam-ui (macOS/Linux)
+        if: matrix.platform != 'windows'
+        run: |
+          mv "./dist/${{ matrix.server-binary }}" "./skellycam-ui/${{ matrix.server-binary }}"
+          chmod +x "./skellycam-ui/${{ matrix.server-binary }}"
+
+      # ── Windows code signing (server binary) ──
       - name: Sign skellycam_server.exe with Trusted Signing
+        if: matrix.platform == 'windows'
         uses: azure/trusted-signing-action@v0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
+          endpoint: https://eus.codesigning.azure.net/
           trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
           files: ${{ github.workspace }}\skellycam-ui\skellycam_server.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          trace: false # set `true` if need more debug
 
-      - name: Upload skellycam_server.exe artifact
+      # ── Upload server-only artifact ──
+      - name: Upload server binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-SERVER-ONLY-${{ runner.os }}-${{ github.run_id }}
+          name: skellycam-SERVER-ONLY-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
-            skellycam-ui/skellycam_server.exe
+            skellycam-ui/${{ matrix.server-binary }}
           include-hidden-files: true
 
+      # ── Electron build ──
       - name: Install UI dependencies
         run: |
           cd skellycam-ui
           npm install
 
-      - name: Build UI
+      - name: Build UI (Windows)
+        if: matrix.platform == 'windows'
         run: |
           cd skellycam-ui
           npm run build
-      # Sign the Electron installer
+
+      - name: Build UI (macOS)
+        if: matrix.platform == 'macos'
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          cd skellycam-ui
+          npm run build -- --${{ matrix.electron-arch }}
+
+      - name: Build UI (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          cd skellycam-ui
+          npm run build -- --${{ matrix.electron-arch }}
+
+      # ── Windows installer signing ──
       - name: Sign Electron installer with Trusted Signing
+        if: matrix.platform == 'windows'
         uses: azure/trusted-signing-action@v0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
           azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: https://eus.codesigning.azure.net/ # Update with your endpoint
+          endpoint: https://eus.codesigning.azure.net/
           trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
           files-folder: ${{ github.workspace }}\skellycam-ui\release
@@ -128,12 +201,33 @@ jobs:
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          trace: false # set `true` if need more debug
 
-      - name: Upload electron installer artifacts
+      # ── Upload final installer artifacts ──
+      - name: Upload installer artifacts (Windows)
+        if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-FULL-APP-installer-${{ runner.os }}-${{ github.run_id }}
+          name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             skellycam-ui/release/*/skellycam_*_installer.exe
+          include-hidden-files: true
+
+      - name: Upload installer artifacts (macOS)
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            skellycam-ui/release/*/*.dmg
+            skellycam-ui/release/*/*.zip
+          include-hidden-files: true
+
+      - name: Upload installer artifacts (Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            skellycam-ui/release/*/*.AppImage
+            skellycam-ui/release/*/*.deb
           include-hidden-files: true
