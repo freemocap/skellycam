@@ -23,20 +23,26 @@ class CurrentFramerate(BaseModel):
 
     @classmethod
     def from_timestamps_ns(cls, timestamps_ns: list[float], framerate_source: str) -> "CurrentFramerate":
+        if len(timestamps_ns) < 2:
+            raise ValueError(f"Need at least 2 timestamps to compute framerate, got {len(timestamps_ns)}")
         timestamps_ms = [t / 1e6 for t in timestamps_ns]
-        frame_durations_ms = [timestamps_ms[i] - timestamps_ms[i-1] for i in range(1, len(timestamps_ms))]
-        frame_durations_ms.insert(0, 0)
+        frame_durations_ms = [timestamps_ms[i] - timestamps_ms[i - 1] for i in range(1, len(timestamps_ms))]
+        durations = np.array(frame_durations_ms)
+        mean_dur = float(np.nanmean(durations))
+        if mean_dur <= 0:
+            raise ValueError(f"Mean frame duration is non-positive ({mean_dur}), cannot compute framerate")
+        std_dur = float(np.nanstd(durations))
         return cls(
-            mean_frame_duration_ms=float(np.nanmean(frame_durations_ms)),
-            mean_frames_per_second=1e3 / np.nanmean(frame_durations_ms) if len(frame_durations_ms) > 0 and np.nanmean(frame_durations_ms) > 0 else 0,
-            frame_duration_max=np.nanmax(frame_durations_ms),
-            frame_duration_min=np.nanmin(frame_durations_ms[1:]) if len(frame_durations_ms) > 1 else 0,
-            frame_duration_mean=float(np.nanmean(frame_durations_ms)),
-            frame_duration_stddev=float(np.nanstd(frame_durations_ms)),
-            frame_duration_median=float(np.nanmedian(frame_durations_ms)),
-            frame_duration_coefficient_of_variation=np.nanstd(frame_durations_ms) / np.nanmean(frame_durations_ms) if len(frame_durations_ms) > 0 and np.nanmean(frame_durations_ms) > 0 else 0,
+            mean_frame_duration_ms=mean_dur,
+            mean_frames_per_second=1e3 / mean_dur,
+            frame_duration_max=float(np.nanmax(durations)),
+            frame_duration_min=float(np.nanmin(durations)),
+            frame_duration_mean=mean_dur,
+            frame_duration_stddev=std_dur,
+            frame_duration_median=float(np.nanmedian(durations)),
+            frame_duration_coefficient_of_variation=std_dur / mean_dur,
             calculation_window_size=len(timestamps_ns),
-            framerate_source=framerate_source
+            framerate_source=framerate_source,
         )
 
     def to_dict(self) -> dict:

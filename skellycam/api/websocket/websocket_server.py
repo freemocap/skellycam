@@ -232,7 +232,7 @@ class WebsocketServer:
                             continue
                         server_framerate = server_calc.current_framerate
                         display_tracker = self._display_framerate_trackers[camera_group_id]
-                        if server_framerate and display_tracker.frames_received_timestamps_ns:
+                        if server_framerate and len(display_tracker.frames_received_timestamps_ns) >= 2:
                             framerate_message = {
                                 "message_type": "framerate_update",
                                 "camera_group_id": camera_group_id,
