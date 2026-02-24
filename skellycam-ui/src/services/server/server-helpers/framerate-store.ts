@@ -1,6 +1,9 @@
 // src/services/server/server-helpers/framerate-store.ts
 
-const MAX_DURATION_HISTORY = 1000;
+// Ring buffer capacity: sized for per-frame data (one entry per camera
+// capture or display dispatch). At 30fps, 3600 = 2 minutes of history,
+// comfortably covering the 60-second chart window.
+const MAX_DURATION_HISTORY = 3600;
 
 /** Matches the shape sent by the Python backend's CurrentFramerate.model_dump() */
 export type DetailedFramerate = {
@@ -207,19 +210,60 @@ export class FramerateStore {
     private _frontendStats = new RunningStats(this._recentFrontendDurations);
     private _backendStats = new RunningStats(this._recentBackendDurations);
 
+    /**
+     * Set the latest backend summary stats (for the "Recent" column in the stats table).
+     */
     updateBackend(data: DetailedFramerate): void {
         this.currentBackendFramerate = data;
-        if (data.mean_frame_duration_ms > 0) {
-            this._recentBackendDurations.push(Date.now(), data.mean_frame_duration_ms);
-            this._backendStats.update(data.mean_frame_duration_ms);
+    }
+
+    /**
+     * Record individual backend frame duration observations.
+     * Called with the per-frame durations from each backend report — pushes
+     * each one into the ring buffer for the timeseries/histogram charts
+     * and updates the running aggregate stats.
+     *
+     * Timestamps are spaced evenly across the batch so the timeseries chart
+     * plots them at their approximate real occurrence times rather than
+     * stacking them all at a single point.
+     */
+    pushBackendDurations(durationsMs: number[]): void {
+        if (durationsMs.length === 0) return;
+        const now = Date.now();
+        // Total span of this batch in ms (sum of durations ≈ elapsed time)
+        let totalSpan = 0;
+        for (const d of durationsMs) {
+            totalSpan += d;
+        }
+        // Place each duration at its approximate real timestamp within the batch
+        let elapsed = 0;
+        for (const d of durationsMs) {
+            if (d > 0) {
+                const t = now - totalSpan + elapsed + d / 2;
+                this._recentBackendDurations.push(t, d);
+                this._backendStats.update(d);
+            }
+            elapsed += d;
         }
     }
 
+    /**
+     * Set the latest display summary stats (for the "Recent" column in the stats table).
+     */
     updateFrontend(data: DetailedFramerate): void {
         this.currentFrontendFramerate = data;
-        if (data.mean_frame_duration_ms > 0) {
-            this._recentFrontendDurations.push(Date.now(), data.mean_frame_duration_ms);
-            this._frontendStats.update(data.mean_frame_duration_ms);
+    }
+
+    /**
+     * Record a single display frame duration observation.
+     * Called once per frame dispatch — pushes the individual inter-frame
+     * duration into the ring buffer for the timeseries/histogram charts
+     * and updates the running aggregate stats.
+     */
+    pushFrontendDuration(durationMs: number): void {
+        if (durationMs > 0) {
+            this._recentFrontendDurations.push(Date.now(), durationMs);
+            this._frontendStats.update(durationMs);
         }
     }
 
