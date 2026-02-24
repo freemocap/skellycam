@@ -1,10 +1,10 @@
 // src/components/framerate-viewer/FramerateHistogramView.tsx
-import {useCallback} from "react"
+import {useCallback, useRef} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
-import {applyAxisStyles, createTooltip, renderEmptyChart} from "./d3ChartUtils"
+import {applyAxisStyles, createTooltip} from "./d3ChartUtils"
 import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
-import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView"
+import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
 
 type FramerateHistogramProps = {
@@ -74,20 +74,28 @@ export default function FramerateHistogramView({
     const theme = useTheme()
     const {t} = useTranslation()
 
-    const renderChart = useCallback(
-        ({
-            svg,
-            chartArea,
-            width,
-            height,
-        }: {
-            svg: d3.Selection<SVGGElement, unknown, null, undefined>
-            chartArea: d3.Selection<SVGGElement, unknown, null, undefined>
-            width: number
-            height: number
-            margin: {top: number; right: number; bottom: number; left: number}
-        }) => {
-            // Extract fps values from timestamped duration samples
+    const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, any> | null>(null)
+
+    // initChart — called once on mount/resize, creates the tooltip
+    const initChart = useCallback(
+        (_scaffolding: ChartScaffolding): ChartLifecycle => {
+            tooltipRef.current?.remove()
+            const tooltip = createTooltip(theme)
+            tooltipRef.current = tooltip
+
+            return {
+                cleanup: () => {
+                    tooltip.remove()
+                    tooltipRef.current = null
+                },
+            }
+        },
+        [theme]
+    )
+
+    // updateChart — called on every data poll, does in-place D3 updates
+    const updateChart = useCallback(
+        ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
             const frontendFps = recentFrontendDurations.filter((s) => s.value > 0).map((s) => 1000 / s.value)
             const backendFps = recentBackendDurations.filter((s) => s.value > 0).map((s) => 1000 / s.value)
 
@@ -106,8 +114,21 @@ export default function FramerateHistogramView({
                 },
             ]
 
+            // Clear previous data elements (but NOT axes groups or clip paths)
+            chartArea.selectAll("*").remove()
+            svg.selectAll(".empty-text").remove()
+
             if (sources.every((s) => !s.hist)) {
-                renderEmptyChart(svg, width, height, theme, t("waitingForData"))
+                svg.append("text")
+                    .attr("class", "empty-text")
+                    .attr("x", width / 2)
+                    .attr("y", height / 2)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "central")
+                    .style("font-family", "monospace")
+                    .style("font-size", "12px")
+                    .style("fill", theme.palette.text.disabled)
+                    .text(t("waitingForData"))
                 return
             }
 
@@ -141,13 +162,7 @@ export default function FramerateHistogramView({
                 .domain([0, maxDensity * 1.15])
                 .range([height, 0])
 
-            // Axes (initial, no zoom)
-            const xAxisG = svg
-                .append("g")
-                .attr("class", "x-axis")
-                .attr("transform", `translate(0,${height})`)
-            const yAxisG = svg.append("g").attr("class", "y-axis")
-
+            // Update axes in-place
             const xAxisGen = d3
                 .axisBottom(xScale)
                 .ticks(Math.max(2, Math.min(8, Math.floor(width / 50))))
@@ -163,6 +178,7 @@ export default function FramerateHistogramView({
 
             // Draw bars
             const barInset = sources.filter((s) => s.hist).length > 1 ? 1 : 0
+            const tooltip = tooltipRef.current
 
             sources.forEach((source, srcIdx) => {
                 if (!source.hist) return
@@ -193,74 +209,43 @@ export default function FramerateHistogramView({
                     .attr("opacity", 0.7)
             })
 
-            // Tooltip
-            const tooltip = createTooltip(theme)
-
-            sources.forEach((source) => {
-                if (!source.hist) return
-
-                chartArea
-                    .selectAll(`.bar-${source.id}`)
-                    .on("mouseover", function (event, d: any) {
-                        d3.select(this).attr("opacity", 1).attr("stroke-width", 1)
-
-                        tooltip
-                            .style("opacity", 1)
-                            .html(
-                                `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                <span style="color: ${source.color};">${source.name}</span>
-                <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
-                <span>${d.x0.toFixed(1)} – ${d.x1.toFixed(1)} fps</span>
-                <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
-                <span>${d.count} samples</span>
-                <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
-                <span>${(d.density * 100).toFixed(1)}%</span>
-              </div>`
-                            )
-                            .style("left", event.pageX + 10 + "px")
-                            .style("top", event.pageY - 28 + "px")
-                    })
-                    .on("mouseout", function () {
-                        d3.select(this).attr("opacity", 0.7).attr("stroke-width", 0.5)
-                        tooltip.style("opacity", 0)
-                    })
-            })
-
-            // Zoom handler: updates axes + bar positions via D3 without React re-render
-            const onZoom = (transform: d3.ZoomTransform): void => {
-                const xz = transform.rescaleX(xScale)
-                const yz = transform.rescaleY(yScale)
-
-                xAxisG.call(xAxisGen.scale(xz))
-                yAxisG.call(yAxisGen.scale(yz))
-                applyAxisStyles(svg, theme)
-
-                sources.forEach((source, srcIdx) => {
+            // Attach tooltip events
+            if (tooltip) {
+                sources.forEach((source) => {
                     if (!source.hist) return
+
                     chartArea
-                        .selectAll<SVGRectElement, HistogramBin>(`.bar-${source.id}`)
-                        .attr("x", (d) => xz(d.x0) + srcIdx * barInset)
-                        .attr("width", (d) => Math.max(1, xz(d.x1) - xz(d.x0) - barInset))
-                        .attr("y", (d) => {
-                            const y = yz(d.density)
-                            return isNaN(y) ? height : Math.min(height, Math.max(0, y))
+                        .selectAll(`.bar-${source.id}`)
+                        .on("mouseover", function (event, d: any) {
+                            d3.select(this).attr("opacity", 1).attr("stroke-width", 1)
+
+                            tooltip
+                                .style("opacity", 1)
+                                .html(
+                                    `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
+                    <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
+                    <span style="color: ${source.color};">${source.name}</span>
+                    <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
+                    <span>${d.x0.toFixed(1)} – ${d.x1.toFixed(1)} fps</span>
+                    <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
+                    <span>${d.count} samples</span>
+                    <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
+                    <span>${(d.density * 100).toFixed(1)}%</span>
+                  </div>`
+                                )
+                                .style("left", event.pageX + 10 + "px")
+                                .style("top", event.pageY - 28 + "px")
                         })
-                        .attr("height", (d) => {
-                            const y = yz(d.density)
-                            if (isNaN(y)) return 0
-                            return Math.max(0, height - Math.min(height, Math.max(0, y)))
+                        .on("mouseout", function () {
+                            d3.select(this).attr("opacity", 0.7).attr("stroke-width", 0.5)
+                            tooltip.style("opacity", 0)
                         })
                 })
             }
-
-            return {
-                onZoom,
-                cleanup: () => tooltip.remove(),
-            }
         },
-        [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme]
+        [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
     )
 
-    return <BaseD3ChartView title={title} renderChart={renderChart} margin={{top: 20, right: 10, bottom: 35, left: 35}} />
+    return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}
+                            margin={{top: 20, right: 10, bottom: 35, left: 35}} />
 }

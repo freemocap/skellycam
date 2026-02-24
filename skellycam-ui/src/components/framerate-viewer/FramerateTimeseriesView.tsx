@@ -1,10 +1,10 @@
 // src/components/framerate-viewer/FramerateTimeseriesView.tsx
-import {useCallback} from "react"
+import {useCallback, useRef} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
 import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
-import {applyAxisStyles, createTooltip, renderEmptyChart} from "@/components/framerate-viewer/d3ChartUtils"
-import BaseD3ChartView from "@/components/framerate-viewer/BaseD3ChartView"
+import {applyAxisStyles, createTooltip} from "@/components/framerate-viewer/d3ChartUtils"
+import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
 
 type FramerateTimeseriesProps = {
@@ -17,37 +17,51 @@ type FramerateTimeseriesProps = {
     title?: string
 }
 
-type ChartRenderProps = {
-    svg: d3.Selection<SVGGElement, unknown, null, undefined>
-    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>
-    width: number
-    height: number
-    margin: { top: number; right: number; bottom: number; left: number }
-}
-
 type FpsSample = { timestamp: number; value: number }
 
 /** How many seconds of data the rolling window shows. */
 const WINDOW_SECONDS = 60
 
+const toFps = (samples: TimestampedSample[]): FpsSample[] =>
+    samples.filter((s) => s.value > 0).map((s) => ({timestamp: s.timestamp, value: 1000 / s.value}))
+
 export default function FramerateTimeseriesView({
-                                                    frontendFramerate,
-                                                    backendFramerate,
-                                                    recentFrontendDurations,
-                                                    recentBackendDurations,
-                                                    frontendColor,
-                                                    backendColor,
-                                                    title = "Framerate Over Time",
-                                                }: FramerateTimeseriesProps) {
+    frontendFramerate,
+    backendFramerate,
+    recentFrontendDurations,
+    recentBackendDurations,
+    frontendColor,
+    backendColor,
+    title = "Framerate Over Time",
+}: FramerateTimeseriesProps) {
     const theme = useTheme()
     const {t} = useTranslation()
 
-    const renderChart = useCallback(
-        ({svg, chartArea, width, height}: ChartRenderProps) => {
-            // Convert timestamped duration samples → timestamped FPS values
-            const toFps = (samples: TimestampedSample[]): FpsSample[] =>
-                samples.filter((s) => s.value > 0).map((s) => ({timestamp: s.timestamp, value: 1000 / s.value}))
+    // Mutable ref holding the tooltip so it survives across data updates
+    const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, any> | null>(null)
 
+    // initChart — called once on mount/resize, creates the tooltip
+    const initChart = useCallback(
+        (_scaffolding: ChartScaffolding): ChartLifecycle => {
+            // Clean up any previous tooltip (shouldn't happen, but safety)
+            tooltipRef.current?.remove()
+            const tooltip = createTooltip(theme)
+            tooltipRef.current = tooltip
+
+            return {
+                cleanup: () => {
+                    tooltip.remove()
+                    tooltipRef.current = null
+                },
+            }
+        },
+        // theme is stable within a session (only changes on light/dark toggle)
+        [theme]
+    )
+
+    // updateChart — called on every data poll, does in-place D3 updates
+    const updateChart = useCallback(
+        ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
             const sources = [
                 {
                     id: "frontend",
@@ -63,18 +77,31 @@ export default function FramerateTimeseriesView({
                 },
             ]
 
+            // Clear previous data elements (but NOT axes groups or clip paths)
+            chartArea.selectAll("*").remove()
+            // Clear any previous empty-chart text on the svg group
+            svg.selectAll(".empty-text").remove()
+
             if (sources.every((s) => s.data.length === 0)) {
-                renderEmptyChart(svg, width, height, theme, t("waitingForData"))
+                svg.append("text")
+                    .attr("class", "empty-text")
+                    .attr("x", width / 2)
+                    .attr("y", height / 2)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "central")
+                    .style("font-family", "monospace")
+                    .style("font-size", "12px")
+                    .style("fill", theme.palette.text.disabled)
+                    .text(t("waitingForData"))
                 return
             }
 
-            // Determine the window from the actual data timestamps.
+            // Determine the window from the actual data timestamps
             const allTimestamps = sources.flatMap((s) => s.data.map((d) => d.timestamp))
             const latestTimestamp = Math.max(...allTimestamps)
             const windowEnd = latestTimestamp
             const windowStart = windowEnd - WINDOW_SECONDS * 1000
 
-            // Only keep data points within the window
             const windowedSources = sources.map((s) => ({
                 ...s,
                 data: s.data.filter((d) => d.timestamp >= windowStart),
@@ -82,7 +109,16 @@ export default function FramerateTimeseriesView({
 
             const visibleData = windowedSources.flatMap((s) => s.data)
             if (visibleData.length === 0) {
-                renderEmptyChart(svg, width, height, theme, t("waitingForData"))
+                svg.append("text")
+                    .attr("class", "empty-text")
+                    .attr("x", width / 2)
+                    .attr("y", height / 2)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "central")
+                    .style("font-family", "monospace")
+                    .style("font-size", "12px")
+                    .style("fill", theme.palette.text.disabled)
+                    .text(t("waitingForData"))
                 return
             }
 
@@ -102,13 +138,7 @@ export default function FramerateTimeseriesView({
                 .domain([Math.max(0, yMin - yPadding), yMax + yPadding])
                 .range([height, 0])
 
-            // Axes (initial, no zoom)
-            const xAxisG = svg
-                .append("g")
-                .attr("class", "x-axis")
-                .attr("transform", `translate(0,${height})`)
-            const yAxisG = svg.append("g").attr("class", "y-axis")
-
+            // Update axes in-place (reusing the persistent axis groups)
             const xAxisGen = d3
                 .axisBottom(xScale)
                 .ticks(Math.max(2, Math.min(5, Math.floor(width / 120))))
@@ -124,14 +154,16 @@ export default function FramerateTimeseriesView({
             yAxisG.call(yAxisGen)
             applyAxisStyles(svg, theme)
 
-            // Line generator — uses base scales, zoom handled in onZoom
+            // Line generator
             const line = d3
                 .line<FpsSample>()
                 .x((d) => xScale(new Date(d.timestamp)))
                 .y((d) => yScale(d.value))
                 .curve(d3.curveLinear)
 
-            // Draw lines and dots
+            // Draw lines and dots into the persistent chartArea
+            const tooltip = tooltipRef.current
+
             windowedSources.forEach((source) => {
                 if (source.data.length === 0) return
 
@@ -157,78 +189,45 @@ export default function FramerateTimeseriesView({
                     .attr("opacity", 0.8)
             })
 
-            // Tooltip
-            const tooltip = createTooltip(theme)
-
-            windowedSources.forEach((source) => {
-                if (source.data.length === 0) return
-
-                chartArea.selectAll(`.dot-${source.id}`).on("mouseover", function (event: MouseEvent, d: any) {
-                    const element = this as unknown as SVGCircleElement
-                    d3.select(element)
-                        .attr("r", 5)
-                        .attr("fill", d3.color(source.color)!.brighter(0.5).toString())
-
-                    tooltip
-                        .style("opacity", 1)
-                        .html(
-                            `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                <span style="color: ${source.color};">${source.name}</span>
-                <span style="color: ${theme.palette.text.secondary};">TIME:</span>
-                <span>${new Date(d.timestamp).toISOString().substr(11, 12)}</span>
-                <span style="color: ${theme.palette.text.secondary};">FPS:</span>
-                <span>${d.value.toFixed(2)}</span>
-                <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
-                <span>${(1000 / d.value).toFixed(2)} ms</span>
-              </div>`
-                        )
-                        .style("left", event.pageX + 10 + "px")
-                        .style("top", event.pageY - 28 + "px")
-                })
-                    .on("mouseout", function () {
-                        d3.select(this).attr("r", 2).attr("fill", source.color)
-                        tooltip.style("opacity", 0)
-                    })
-            })
-
-            // Zoom handler: updates axes + elements via D3 without React re-render
-            const onZoom = (transform: d3.ZoomTransform): void => {
-                const xz = transform.rescaleX(xScale)
-                const yz = transform.rescaleY(yScale)
-
-                xAxisG.call(xAxisGen.scale(xz))
-                yAxisG.call(yAxisGen.scale(yz))
-                applyAxisStyles(svg, theme)
-
-                // Update line paths
-                const zoomedLine = d3
-                    .line<FpsSample>()
-                    .x((d) => xz(new Date(d.timestamp)))
-                    .y((d) => yz(d.value))
-                    .curve(d3.curveLinear)
-
+            // Attach tooltip events
+            if (tooltip) {
                 windowedSources.forEach((source) => {
                     if (source.data.length === 0) return
 
-                    const path = chartArea.select<SVGPathElement>(`.line-${source.id}`)
-                    path.attr("d", zoomedLine(path.datum() as FpsSample[]) ?? "")
+                    chartArea.selectAll(`.dot-${source.id}`)
+                        .on("mouseover", function (event: MouseEvent, d: any) {
+                            const element = this as unknown as SVGCircleElement
+                            d3.select(element)
+                                .attr("r", 5)
+                                .attr("fill", d3.color(source.color)!.brighter(0.5).toString())
 
-                    chartArea
-                        .selectAll<SVGCircleElement, FpsSample>(`.dot-${source.id}`)
-                        .attr("cx", (d) => xz(new Date(d.timestamp)))
-                        .attr("cy", (d) => yz(d.value))
+                            tooltip
+                                .style("opacity", 1)
+                                .html(
+                                    `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
+                    <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
+                    <span style="color: ${source.color};">${source.name}</span>
+                    <span style="color: ${theme.palette.text.secondary};">TIME:</span>
+                    <span>${new Date(d.timestamp).toISOString().substr(11, 12)}</span>
+                    <span style="color: ${theme.palette.text.secondary};">FPS:</span>
+                    <span>${d.value.toFixed(2)}</span>
+                    <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
+                    <span>${(1000 / d.value).toFixed(2)} ms</span>
+                  </div>`
+                                )
+                                .style("left", event.pageX + 10 + "px")
+                                .style("top", event.pageY - 28 + "px")
+                        })
+                        .on("mouseout", function () {
+                            d3.select(this).attr("r", 2).attr("fill", source.color)
+                            tooltip.style("opacity", 0)
+                        })
                 })
             }
-
-            return {
-                onZoom,
-                cleanup: () => tooltip.remove(),
-            }
         },
-        [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme]
+        [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
     )
 
-    return <BaseD3ChartView title={title} renderChart={renderChart}
+    return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}
                             margin={{top: 20, right: 10, bottom: 35, left: 35}}/>
 }

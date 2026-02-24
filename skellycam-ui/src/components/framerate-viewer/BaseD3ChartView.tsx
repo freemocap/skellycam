@@ -12,29 +12,38 @@ export type ChartMargins = {
     left: number
 }
 
+/** Persistent D3 scaffolding created once on mount/resize. */
+export type ChartScaffolding = {
+    svg: d3.Selection<SVGGElement, unknown, null, undefined>
+    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>
+    xAxisG: d3.Selection<SVGGElement, unknown, null, undefined>
+    yAxisG: d3.Selection<SVGGElement, unknown, null, undefined>
+    width: number
+    height: number
+    margin: ChartMargins
+}
+
+/** Returned by initChart, stored by BaseD3ChartView for the lifetime of the scaffolding. */
+export type ChartLifecycle = {
+    onZoom?: (transform: d3.ZoomTransform) => void
+    cleanup?: () => void
+}
+
 type BaseChartViewProps = {
     title?: string
-    /**
-     * Called once when the chart mounts or resizes. Draws the initial state of the chart.
-     * Returns an optional update function that is called on zoom transform changes,
-     * and an optional cleanup function for disposing tooltips etc.
-     */
-    renderChart: (params: {
-        svg: d3.Selection<SVGGElement, unknown, null, undefined>
-        chartArea: d3.Selection<SVGGElement, unknown, null, undefined>
-        width: number
-        height: number
-        margin: ChartMargins
-    }) => {
-        onZoom?: (transform: d3.ZoomTransform) => void
-        cleanup?: () => void
-    } | void
+    /** Called once when the chart mounts or resizes. Creates persistent DOM elements (tooltip, etc). */
+    initChart: (scaffolding: ChartScaffolding) => ChartLifecycle | void
+    /** Called on every data update. Performs in-place D3 updates on the existing scaffolding. */
+    updateChart: (scaffolding: ChartScaffolding) => void
     margin?: ChartMargins
 }
 
+let nextClipId = 0
+
 export default function BaseD3ChartView({
     title,
-    renderChart,
+    initChart,
+    updateChart,
     margin = {top: 20, right: 20, bottom: 30, left: 50},
 }: BaseChartViewProps) {
     const {t} = useTranslation()
@@ -43,8 +52,10 @@ export default function BaseD3ChartView({
     const chartStateRef = useRef<{
         cleanup?: () => void
         onZoom?: (transform: d3.ZoomTransform) => void
+        scaffolding?: ChartScaffolding
     }>({})
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+    const clipIdRef = useRef<string>(`clip-chart-${nextClipId++}`)
     const [showControls, setShowControls] = useState(false)
     const [containerSize, setContainerSize] = useState<{width: number; height: number}>({width: 0, height: 0})
 
@@ -68,21 +79,22 @@ export default function BaseD3ChartView({
         return () => observer.disconnect()
     }, [])
 
-    // Render chart — only on data/size changes, NOT on zoom
+    // Build chart scaffolding on mount/resize — runs rarely
     useEffect(() => {
         if (!svgRef.current || containerSize.width === 0 || containerSize.height === 0) return
 
-        // Tear down previous chart
+        // Tear down previous scaffolding
         d3.select(svgRef.current).selectAll("*").remove()
         if (chartStateRef.current.cleanup) {
             chartStateRef.current.cleanup()
-            chartStateRef.current.cleanup = undefined
-            chartStateRef.current.onZoom = undefined
         }
+        chartStateRef.current = {}
 
         const width = Math.max(0, containerSize.width - margin.left - margin.right)
         const height = Math.max(0, containerSize.height - margin.top - margin.bottom)
         if (width <= 0 || height <= 0) return
+
+        const clipId = clipIdRef.current
 
         const svg = d3.select(svgRef.current)
             .append("g")
@@ -90,22 +102,29 @@ export default function BaseD3ChartView({
 
         svg.append("defs")
             .append("clipPath")
-            .attr("id", "clip-chart")
+            .attr("id", clipId)
             .append("rect")
             .attr("width", width)
             .attr("height", height)
 
-        const chartArea = svg.append("g").attr("clip-path", "url(#clip-chart)")
+        const chartArea = svg.append("g").attr("clip-path", `url(#${clipId})`)
 
-        const result = renderChart({svg, chartArea, width, height, margin})
+        const xAxisG = svg
+            .append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0,${height})`)
+        const yAxisG = svg.append("g").attr("class", "y-axis")
 
+        const scaffolding: ChartScaffolding = {svg, chartArea, xAxisG, yAxisG, width, height, margin}
+        chartStateRef.current.scaffolding = scaffolding
+
+        const result = initChart(scaffolding)
         if (result) {
             chartStateRef.current.cleanup = result.cleanup
             chartStateRef.current.onZoom = result.onZoom
         }
 
-        // Set up zoom behavior — zoom events call the onZoom callback directly
-        // instead of triggering a full re-render via setState
+        // Set up zoom behavior
         const zoom = d3
             .zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.5, 20])
@@ -120,11 +139,17 @@ export default function BaseD3ChartView({
         return () => {
             if (chartStateRef.current.cleanup) {
                 chartStateRef.current.cleanup()
-                chartStateRef.current.cleanup = undefined
-                chartStateRef.current.onZoom = undefined
+                chartStateRef.current = {}
             }
         }
-    }, [renderChart, margin, containerSize])
+    }, [initChart, margin, containerSize])
+
+    // In-place data update — runs on every data change, does NOT rebuild the DOM
+    useEffect(() => {
+        const scaffolding = chartStateRef.current.scaffolding
+        if (!scaffolding) return
+        updateChart(scaffolding)
+    }, [updateChart])
 
     const handleZoomIn = useCallback(() => {
         if (svgRef.current && zoomRef.current) {

@@ -14,7 +14,7 @@ type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"
 export const backendColor: string = "#ff4d00"
 
-const POLL_INTERVAL_MS = 250;
+const POLL_INTERVAL_MS = 500;
 
 export const FramerateViewerPanel = () => {
     const theme = useTheme()
