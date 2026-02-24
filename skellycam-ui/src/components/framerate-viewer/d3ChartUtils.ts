@@ -2,7 +2,11 @@
 import * as d3 from "d3"
 import {Theme} from "@mui/material/styles"
 
-export function createTooltip(theme: Theme) {
+/**
+ * Create a tooltip div appended to document body.
+ * Caller is responsible for calling .remove() on the returned selection during cleanup.
+ */
+export function createTooltip(theme: Theme): d3.Selection<HTMLDivElement, unknown, HTMLElement, any> {
     return d3
         .select("body")
         .append("div")
@@ -22,7 +26,7 @@ export function createTooltip(theme: Theme) {
 export function applyAxisStyles(
     svg: d3.Selection<SVGGElement, unknown, null, undefined>,
     theme: Theme
-) {
+): void {
     svg.selectAll(".tick line")
         .attr("stroke", theme.palette.divider)
         .attr("stroke-dasharray", "2,2")
@@ -39,7 +43,7 @@ export function renderEmptyChart(
     height: number,
     theme: Theme,
     text: string = "Waiting for data…"
-) {
+): void {
     svg
         .append("text")
         .attr("x", width / 2)
@@ -54,16 +58,15 @@ export function renderEmptyChart(
 
 export function renderThresholdLines(
     chartArea: d3.Selection<SVGGElement, unknown, null, undefined>,
-    thresholds: { value: number, label: string, color: string }[],
-    xScale: any, // Allow both time and linear scales
+    thresholds: {value: number; label: string; color: string}[],
+    xScale: any,
     yScale: d3.ScaleLinear<number, number>,
     width: number,
     height: number,
     isHorizontal: boolean
-) {
+): void {
     thresholds.forEach((threshold) => {
         if (isHorizontal) {
-            // Horizontal threshold line (for time series)
             chartArea
                 .append("line")
                 .attr("class", "threshold-line")
@@ -75,7 +78,6 @@ export function renderThresholdLines(
                 .attr("stroke-width", 1)
                 .attr("stroke-dasharray", "4,4")
 
-            // Add threshold label
             chartArea
                 .append("text")
                 .attr("class", "threshold-label")
@@ -87,7 +89,6 @@ export function renderThresholdLines(
                 .style("fill", threshold.color)
                 .text(threshold.label)
         } else {
-            // Vertical threshold line (for histogram)
             chartArea
                 .append("line")
                 .attr("class", "threshold-line")
@@ -99,7 +100,6 @@ export function renderThresholdLines(
                 .attr("stroke-width", 1.5)
                 .attr("stroke-dasharray", "4,4")
 
-            // Add threshold label
             chartArea
                 .append("text")
                 .attr("class", "threshold-label")
@@ -112,72 +112,4 @@ export function renderThresholdLines(
                 .text(threshold.label)
         }
     })
-}
-
-// Helper functions for zoom updates
-
-// Update thresholds on zoom
-export function updateThresholdsOnZoom(
-    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>,
-    transform: d3.ZoomTransform,
-    xScale: any,
-    yScale: d3.ScaleLinear<number, number>,
-    isHorizontal: boolean
-) {
-    if (isHorizontal) {
-        // Update horizontal threshold lines
-        chartArea.selectAll(".threshold-line")
-            .attr("y1", (d: any) => transform.applyY(yScale(d.value)))
-            .attr("y2", (d: any) => transform.applyY(yScale(d.value)));
-
-        // Update labels
-        chartArea.selectAll(".threshold-label")
-            .attr("y", (d: any) => transform.applyY(yScale(d.value)) - 5);
-    } else {
-        // Update vertical threshold lines
-        chartArea.selectAll(".threshold-line")
-            .attr("x1", (d: any) => transform.applyX(xScale(d.value)))
-            .attr("x2", (d: any) => transform.applyX(xScale(d.value)));
-
-        // Update labels
-        chartArea.selectAll(".threshold-label")
-            .attr("x", (d: any) => transform.applyX(xScale(d.value)));
-    }
-}
-
-// Update histogram bars on zoom
-export function updateHistogramBarsOnZoom(
-    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>,
-    selector: string,
-    transform: d3.ZoomTransform,
-    xScale: d3.ScaleLinear<number, number>,
-    yScale: d3.ScaleLinear<number, number>,
-    height: number
-) {
-    chartArea.selectAll(selector)
-        .attr("x", (d: any) => transform.applyX(xScale(d.x0)))
-        .attr("y", (d: any) => transform.applyY(yScale(d.density)))
-        .attr("width", (d: any) => Math.max(0, transform.k * (xScale(d.x1) - xScale(d.x0)) - 1))
-        .attr("height", (d: any) => height - transform.applyY(yScale(d.density)));
-}
-
-// Update time series lines on zoom
-export function updateTimeSeriesOnZoom(
-    chartArea: d3.Selection<SVGGElement, unknown, null, undefined>,
-    transform: d3.ZoomTransform,
-    xScale: d3.ScaleTime<number, number>,
-    yScale: d3.ScaleLinear<number, number>
-) {
-    // Update line paths
-    chartArea.selectAll("path")
-        .attr("d", (data) =>
-            d3.line<any>()
-                .x(d => transform.applyX(xScale(new Date(d.timestamp))))
-                .y(d => transform.applyY(yScale(d.value)))
-                .curve(d3.curveLinear)(data as any)
-        );
-    // Update data points
-    chartArea.selectAll("circle")
-        .attr("cx", (d: any) => transform.applyX(xScale(new Date(d.timestamp))))
-        .attr("cy", (d: any) => transform.applyY(yScale(d.value)));
 }

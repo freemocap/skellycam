@@ -3,7 +3,7 @@ import {useEffect, useRef, useState, useCallback} from "react"
 import * as d3 from "d3"
 import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
 import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
-import { useTranslation } from "react-i18next";
+import {useTranslation} from "react-i18next"
 
 export type ChartMargins = {
     top: number
@@ -12,39 +12,41 @@ export type ChartMargins = {
     left: number
 }
 
-export type ZoomableElement = {
-    selector: string;
-    updateFn: (selection: d3.Selection<any, any, any, any>, transform: d3.ZoomTransform) => void;
-}
-
 type BaseChartViewProps = {
     title?: string
+    /**
+     * Called once when the chart mounts or resizes. Draws the initial state of the chart.
+     * Returns an optional update function that is called on zoom transform changes,
+     * and an optional cleanup function for disposing tooltips etc.
+     */
     renderChart: (params: {
         svg: d3.Selection<SVGGElement, unknown, null, undefined>
         chartArea: d3.Selection<SVGGElement, unknown, null, undefined>
         width: number
         height: number
         margin: ChartMargins
-        transform: d3.ZoomTransform
-    }) => void
+    }) => {
+        onZoom?: (transform: d3.ZoomTransform) => void
+        cleanup?: () => void
+    } | void
     margin?: ChartMargins
 }
 
 export default function BaseD3ChartView({
-                                            title,
-                                            renderChart,
-                                            margin = {top: 20, right: 20, bottom: 30, left: 50}
-                                        }: BaseChartViewProps) {
-    const { t } = useTranslation();
+    title,
+    renderChart,
+    margin = {top: 20, right: 20, bottom: 30, left: 50},
+}: BaseChartViewProps) {
+    const {t} = useTranslation()
     const svgRef = useRef<SVGSVGElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-    const chartRef = useRef<{
+    const chartStateRef = useRef<{
         cleanup?: () => void
+        onZoom?: (transform: d3.ZoomTransform) => void
     }>({})
-    const [transform, setTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity)
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
     const [showControls, setShowControls] = useState(false)
-    const [containerSize, setContainerSize] = useState<{width: number, height: number}>({width: 0, height: 0})
+    const [containerSize, setContainerSize] = useState<{width: number; height: number}>({width: 0, height: 0})
 
     // Track container size with ResizeObserver
     useEffect(() => {
@@ -55,8 +57,10 @@ export default function BaseD3ChartView({
             for (const entry of entries) {
                 const {width, height} = entry.contentRect
                 setContainerSize(prev => {
-                    if (prev.width === Math.round(width) && prev.height === Math.round(height)) return prev
-                    return {width: Math.round(width), height: Math.round(height)}
+                    const w = Math.round(width)
+                    const h = Math.round(height)
+                    if (prev.width === w && prev.height === h) return prev
+                    return {width: w, height: h}
                 })
             }
         })
@@ -64,70 +68,63 @@ export default function BaseD3ChartView({
         return () => observer.disconnect()
     }, [])
 
+    // Render chart — only on data/size changes, NOT on zoom
     useEffect(() => {
         if (!svgRef.current || containerSize.width === 0 || containerSize.height === 0) return
 
-        // Clear previous chart
+        // Tear down previous chart
         d3.select(svgRef.current).selectAll("*").remove()
-
-        // Cleanup previous tooltips
-        if (chartRef.current.cleanup) {
-            chartRef.current.cleanup()
-            chartRef.current.cleanup = undefined
+        if (chartStateRef.current.cleanup) {
+            chartStateRef.current.cleanup()
+            chartStateRef.current.cleanup = undefined
+            chartStateRef.current.onZoom = undefined
         }
 
-        // Set up dimensions from observed container size
         const width = Math.max(0, containerSize.width - margin.left - margin.right)
         const height = Math.max(0, containerSize.height - margin.top - margin.bottom)
-
         if (width <= 0 || height <= 0) return
 
-        // Create SVG group with margin offset
         const svg = d3.select(svgRef.current)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`)
 
-        // Add clip path to prevent drawing outside the chart area
-        svg
-            .append("defs")
+        svg.append("defs")
             .append("clipPath")
             .attr("id", "clip-chart")
             .append("rect")
             .attr("width", width)
             .attr("height", height)
 
-        // Create a group for the chart content that will be clipped
         const chartArea = svg.append("g").attr("clip-path", "url(#clip-chart)")
 
-        // Call the render function provided by the child component
-        const cleanup = renderChart({svg, chartArea, width, height, margin, transform})
+        const result = renderChart({svg, chartArea, width, height, margin})
 
-        if (typeof cleanup === 'function') {
-            chartRef.current.cleanup = cleanup
+        if (result) {
+            chartStateRef.current.cleanup = result.cleanup
+            chartStateRef.current.onZoom = result.onZoom
         }
 
-        // Define zoom behavior
+        // Set up zoom behavior — zoom events call the onZoom callback directly
+        // instead of triggering a full re-render via setState
         const zoom = d3
             .zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.5, 20])
-            .extent([
-                [0, 0],
-                [width, height],
-            ])
+            .extent([[0, 0], [width, height]])
             .on("zoom", (event) => {
-                setTransform(event.transform)
+                chartStateRef.current.onZoom?.(event.transform)
             })
 
         zoomRef.current = zoom
         d3.select(svgRef.current).call(zoom)
 
         return () => {
-            if (chartRef.current.cleanup) {
-                chartRef.current.cleanup()
-                chartRef.current.cleanup = undefined
+            if (chartStateRef.current.cleanup) {
+                chartStateRef.current.cleanup()
+                chartStateRef.current.cleanup = undefined
+                chartStateRef.current.onZoom = undefined
             }
         }
-    }, [renderChart, margin, transform, containerSize])
+    }, [renderChart, margin, containerSize])
 
     const handleZoomIn = useCallback(() => {
         if (svgRef.current && zoomRef.current) {
@@ -154,7 +151,7 @@ export default function BaseD3ChartView({
                 width: "100%",
                 height: "100%",
                 position: "relative",
-                overflow: "hidden"
+                overflow: "hidden",
             }}
             onMouseEnter={() => setShowControls(true)}
             onMouseLeave={() => setShowControls(false)}
@@ -166,10 +163,10 @@ export default function BaseD3ChartView({
                         position: "absolute",
                         top: 2,
                         left: 8,
-                        fontSize: '0.7rem',
+                        fontSize: "0.7rem",
                         opacity: 0.9,
                         zIndex: 5,
-                        bgcolor: 'background.default',
+                        bgcolor: "background.default",
                         px: 0.5,
                         borderRadius: 0.5,
                         lineHeight: 1.4,
@@ -179,7 +176,6 @@ export default function BaseD3ChartView({
                 </Typography>
             )}
 
-            {/* Zoom controls that fade in/out on hover */}
             <Fade in={showControls}>
                 <Box
                     sx={{
@@ -197,17 +193,17 @@ export default function BaseD3ChartView({
                 >
                     <Tooltip title={t("zoomIn")} placement="right">
                         <IconButton size="small" onClick={handleZoomIn} sx={{p: 0.5}}>
-                            <ZoomIn fontSize="small"/>
+                            <ZoomIn fontSize="small" />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title={t("zoomOut")} placement="right">
                         <IconButton size="small" onClick={handleZoomOut} sx={{p: 0.5}}>
-                            <ZoomOut fontSize="small"/>
+                            <ZoomOut fontSize="small" />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title={t("resetZoom")} placement="right">
                         <IconButton size="small" onClick={handleResetZoom} sx={{p: 0.5}}>
-                            <RestartAlt fontSize="small"/>
+                            <RestartAlt fontSize="small" />
                         </IconButton>
                     </Tooltip>
                 </Box>
@@ -217,10 +213,7 @@ export default function BaseD3ChartView({
                 ref={svgRef}
                 width={containerSize.width}
                 height={containerSize.height}
-                style={{
-                    display: 'block',
-                    overflow: "hidden"
-                }}
+                style={{display: "block", overflow: "hidden"}}
             />
         </Box>
     )
