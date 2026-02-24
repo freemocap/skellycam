@@ -235,5 +235,10 @@
   "menuGitHubRepository": "የGitHub ማከማቻ",
   "menuReportIssue": "ችግር ሪፖርት አድርግ…",
   "menuAbout": "ስለ SkellyCam",
-  "menuPlayback": "ማጫወት"
+  "menuPlayback": "ማጫወት",
+  "videoPlayback": "ማጫወት",
+  "copyLogsToClipboard": "ሎግ ወደ ቅንጥብ ሰሌዳ ቅዳ",
+  "saveLogsToFile": "ሎግ ወደ ፋይል አስቀምጥ",
+  "copied": "ተቀድቷል!",
+  "timestampFromRecording": "ከቀረጻ ውሂብ የጊዜ ማህተም"
 }

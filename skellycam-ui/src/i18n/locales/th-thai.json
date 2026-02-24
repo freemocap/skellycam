@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub Repository",
   "menuReportIssue": "รายงานปัญหา…",
   "menuAbout": "เกี่ยวกับ SkellyCam",
-  "menuPlayback": "เล่นย้อน"
+  "menuPlayback": "เล่นย้อน",
+  "videoPlayback": "เล่นย้อนหลัง",
+  "copyLogsToClipboard": "คัดลอกบันทึกไปยังคลิปบอร์ด",
+  "saveLogsToFile": "บันทึกล็อกลงไฟล์",
+  "copied": "คัดลอกแล้ว!",
+  "timestampFromRecording": "ประทับเวลาจากข้อมูลการบันทึก"
 }

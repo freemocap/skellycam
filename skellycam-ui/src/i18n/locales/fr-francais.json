@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Dépôt GitHub",
   "menuReportIssue": "Signaler un problème…",
   "menuAbout": "À propos de SkellyCam",
-  "menuPlayback": "Lecture"
+  "menuPlayback": "Lecture",
+  "videoPlayback": "Lecture",
+  "copyLogsToClipboard": "Copier les journaux dans le presse-papiers",
+  "saveLogsToFile": "Enregistrer les journaux dans un fichier",
+  "copied": "Copié !",
+  "timestampFromRecording": "Horodatage des données d'enregistrement"
 }

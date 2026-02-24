@@ -8,6 +8,7 @@ interface StartStopButtonProps {
     isPending: boolean;
     countdown: number | null;
     recordingStartTime: number | null;
+    disabled: boolean;
     onClick: () => void;
 }
 
@@ -68,6 +69,7 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
     isPending,
     countdown,
     recordingStartTime,
+    disabled,
     onClick
 }) => {
     const [recordingDuration, setRecordingDuration] = useState<number>(0);
@@ -147,7 +149,7 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
             variant="contained"
             isRecording={isRecording}
             isPending={isPending}
-            disabled={isPending || countdown !== null}
+            disabled={disabled || isPending || countdown !== null}
             fullWidth
         >
             {getButtonContent()}

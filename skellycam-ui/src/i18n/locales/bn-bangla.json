@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub রিপোজিটরি",
   "menuReportIssue": "সমস্যা রিপোর্ট করুন…",
   "menuAbout": "SkellyCam সম্পর্কে",
-  "menuPlayback": "প্লেব্যাক"
+  "menuPlayback": "প্লেব্যাক",
+  "videoPlayback": "প্লেব্যাক",
+  "copyLogsToClipboard": "লগ ক্লিপবোর্ডে কপি করুন",
+  "saveLogsToFile": "লগ ফাইলে সংরক্ষণ করুন",
+  "copied": "কপি হয়েছে!",
+  "timestampFromRecording": "রেকর্ডিং ডেটা থেকে টাইমস্ট্যাম্প"
 }

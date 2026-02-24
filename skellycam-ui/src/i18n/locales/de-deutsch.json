@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub-Repository",
   "menuReportIssue": "Problem melden…",
   "menuAbout": "Über SkellyCam",
-  "menuPlayback": "Wiedergabe"
+  "menuPlayback": "Wiedergabe",
+  "videoPlayback": "Wiedergabe",
+  "copyLogsToClipboard": "Protokolle in Zwischenablage kopieren",
+  "saveLogsToFile": "Protokolle in Datei speichern",
+  "copied": "Kopiert!",
+  "timestampFromRecording": "Zeitstempel aus Aufnahmedaten"
 }

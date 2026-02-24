@@ -6,7 +6,7 @@
   },
   "appName": "SkellyCam",
   "appNameDecorated": "📸💀 SkellyCam",
-  "welcomeTitle": "مرحباً بك في SkellyCam",
+  "welcomeTitle": "SkellyCam أهلاً بك في",
   "welcomeSubtitle": "سجّل وشاهد مقاطع فيديو متزامنة",
   "sendAnonymousPings": "إرسال بيانات استخدام مجهولة",
   "footerWith": "بـ",
@@ -238,5 +238,10 @@
   "menuGitHubRepository": "مستودع GitHub",
   "menuReportIssue": "الإبلاغ عن مشكلة…",
   "menuAbout": "حول SkellyCam",
-  "menuPlayback": "تشغيل"
+  "menuPlayback": "تشغيل",
+  "videoPlayback": "التشغيل",
+  "copyLogsToClipboard": "نسخ السجلات إلى الحافظة",
+  "saveLogsToFile": "حفظ السجلات في ملف",
+  "copied": "تم النسخ!",
+  "timestampFromRecording": "طابع زمني من بيانات التسجيل"
 }

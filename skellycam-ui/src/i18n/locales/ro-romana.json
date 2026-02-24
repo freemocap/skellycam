@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Depozit GitHub",
   "menuReportIssue": "Raportează o problemă…",
   "menuAbout": "Despre SkellyCam",
-  "menuPlayback": "Redare"
+  "menuPlayback": "Redare",
+  "videoPlayback": "Redare",
+  "copyLogsToClipboard": "Copiază jurnalele în clipboard",
+  "saveLogsToFile": "Salvează jurnalele într-un fișier",
+  "copied": "Copiat!",
+  "timestampFromRecording": "Marcaj temporal din datele înregistrării"
 }

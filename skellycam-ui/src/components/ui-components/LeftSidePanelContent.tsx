@@ -1,7 +1,7 @@
 // skellycam-ui/src/components/ui-components/LeftSidePanelContent.tsx
 import * as React from 'react';
 import Box from "@mui/material/Box";
-import {IconButton, List, ListItem, Tooltip, useTheme} from "@mui/material";
+import {Button, IconButton, List, ListItem, Tooltip, useTheme} from "@mui/material";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import ThemeToggle from "@/components/ui-components/ThemeToggle";
 import HomeIcon from '@mui/icons-material/Home';
@@ -18,6 +18,11 @@ import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {startRecording, stopRecording} from "@/store";
 import {useTranslation} from "react-i18next";
+import {useServer} from "@/services/server/ServerContextProvider";
+import {TreeItem} from "@mui/x-tree-view/TreeItem";
+import {MicrophoneSelector} from "@/components/recording-info-panel/recording-subcomponents/MicrophoneSelector";
+import {useElectronIPC} from "@/services";
+import {useState} from "react";
 
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
@@ -54,8 +59,9 @@ const scrollbarStyles = {
 const CollapsedToolbar: React.FC<{
     onToggleCollapse: () => void;
     isRecording: boolean;
+    noCameras: boolean;
     onRecordClick: () => void;
-}> = ({onToggleCollapse, isRecording, onRecordClick}) => {
+}> = ({onToggleCollapse, isRecording, noCameras, onRecordClick}) => {
     const theme = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
@@ -83,9 +89,11 @@ const CollapsedToolbar: React.FC<{
 
             {/* Record button */}
             <Tooltip title={isRecording ? t('stopRecording') : t('startRecording')} placement="right">
+                <span>
                 <IconButton
                     size="small"
                     onClick={onRecordClick}
+                    disabled={noCameras && !isRecording}
                     sx={{
                         color: isRecording ? '#fb1402' : theme.palette.text.secondary,
                         animation: isRecording ? 'pulse-record 2s infinite' : 'none',
@@ -97,6 +105,7 @@ const CollapsedToolbar: React.FC<{
                 >
                     {isRecording ? <StopIcon fontSize="small"/> : <FiberManualRecordIcon fontSize="small"/>}
                 </IconButton>
+                </span>
             </Tooltip>
 
             {/* Cameras page */}
@@ -130,7 +139,7 @@ const CollapsedToolbar: React.FC<{
             </Tooltip>
 
             {/* Spacer */}
-            <Box sx={{ flex: 1 }} />
+            <Box sx={{flex: 1}}/>
 
             {/* Settings page */}
             <Tooltip title={t('settings')} placement="right">
@@ -152,9 +161,9 @@ const CollapsedToolbar: React.FC<{
 };
 
 export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
-                                                                             isCollapsed,
-                                                                             onToggleCollapse,
-                                                                         }) => {
+                                                                              isCollapsed,
+                                                                              onToggleCollapse,
+                                                                          }) => {
     const theme = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
@@ -162,6 +171,9 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
     const {t} = useTranslation();
 
     const isRecording = useAppSelector((state) => state.recording.isRecording);
+    const {connectedCameraIds} = useServer();
+    const noCameras = connectedCameraIds.length === 0;
+    const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
 
     const handleCollapsedRecordClick = async (): Promise<void> => {
         if (isRecording) {
@@ -187,6 +199,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
             <CollapsedToolbar
                 onToggleCollapse={onToggleCollapse}
                 isRecording={isRecording}
+                noCameras={noCameras}
                 onRecordClick={handleCollapsedRecordClick}
             />
         );
@@ -226,7 +239,8 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                 >
                     {/* Hamburger to collapse */}
                     <Tooltip title={t('collapseSidebar')}>
-                        <IconButton size="small" onClick={onToggleCollapse} sx={{color: theme.palette.text.primary, flexShrink: 0}}>
+                        <IconButton size="small" onClick={onToggleCollapse}
+                                    sx={{color: theme.palette.text.primary, flexShrink: 0}}>
                             <MenuOpenIcon fontSize="small"/>
                         </IconButton>
                     </Tooltip>
@@ -261,26 +275,6 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                             </IconButton>
                         </Tooltip>
 
-                        <Tooltip title={t('cameras')}>
-                            <IconButton
-                                size="small"
-                                onClick={() => navigate('/cameras')}
-                                sx={navButtonSx(location.pathname === '/cameras')}
-                            >
-                                <VideocamIcon sx={{fontSize: 18}}/>
-                            </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title={t('videos')}>
-                            <IconButton
-                                size="small"
-                                onClick={() => navigate('/playback')}
-                                sx={navButtonSx(location.pathname === '/playback')}
-                            >
-                                <SlideshowIcon sx={{fontSize: 18}}/>
-                            </IconButton>
-                        </Tooltip>
-
                         <Tooltip title={t('settings')}>
                             <IconButton
                                 size="small"
@@ -295,9 +289,80 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                     </Box>
                 </ListItem>
             </List>
-
             {/* Server Settings */}
             <ServerConnectionStatus/>
+            {/* Prominent Cameras / Playback page toggle */}
+            <Box sx={{
+                display: 'flex',
+                gap: 0.5,
+                px: 0.75,
+                py: 0.75,
+                borderBottom: theme.palette.mode === 'dark'
+                    ? '1px solid rgba(255,255,255,0.08)'
+                    : '1px solid rgba(0,0,0,0.08)',
+            }}>
+                <Button
+                    variant={location.pathname === '/cameras' ? 'contained' : 'outlined'}
+                    size="small"
+                    startIcon={<VideocamIcon sx={{fontSize: 16}}/>}
+                    onClick={() => navigate('/cameras')}
+                    fullWidth
+                    sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        py: 0.75,
+                        ...(location.pathname === '/cameras' ? {
+                            backgroundColor: theme.palette.success.main,
+                            color: '#fff',
+                            '&:hover': {backgroundColor: theme.palette.success.dark},
+                        } : {
+                            borderColor: theme.palette.divider,
+                            color: theme.palette.text.secondary,
+                            '&:hover': {
+                                borderColor: theme.palette.success.main,
+                                color: theme.palette.success.main,
+                                backgroundColor: theme.palette.mode === 'dark'
+                                    ? 'rgba(76,175,80,0.08)'
+                                    : 'rgba(76,175,80,0.04)',
+                            },
+                        }),
+                    }}
+                >
+                    {t('cameras')}
+                </Button>
+                <Button
+                    variant={location.pathname === '/playback' ? 'contained' : 'outlined'}
+                    size="small"
+                    startIcon={<SlideshowIcon sx={{fontSize: 16}}/>}
+                    onClick={() => navigate('/playback')}
+                    fullWidth
+                    sx={{
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        py: 0.75,
+                        ...(location.pathname === '/playback' ? {
+                            backgroundColor: theme.palette.info.main,
+                            color: '#fff',
+                            '&:hover': {backgroundColor: theme.palette.info.dark},
+                        } : {
+                            borderColor: theme.palette.divider,
+                            color: theme.palette.text.secondary,
+                            '&:hover': {
+                                borderColor: theme.palette.info.main,
+                                color: theme.palette.info.main,
+                                backgroundColor: theme.palette.mode === 'dark'
+                                    ? 'rgba(41,182,246,0.08)'
+                                    : 'rgba(41,182,246,0.04)',
+                            },
+                        }),
+                    }}
+                >
+                    {t('videoPlayback')}
+                </Button>
+            </Box>
+
 
             {/* Main Content Area */}
             <Box sx={{

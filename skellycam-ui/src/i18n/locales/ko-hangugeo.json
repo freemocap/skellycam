@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub 저장소",
   "menuReportIssue": "문제 신고…",
   "menuAbout": "SkellyCam 정보",
-  "menuPlayback": "재생"
+  "menuPlayback": "재생",
+  "videoPlayback": "재생",
+  "copyLogsToClipboard": "로그를 클립보드에 복사",
+  "saveLogsToFile": "로그를 파일로 저장",
+  "copied": "복사됨!",
+  "timestampFromRecording": "녹화 데이터의 타임스탬프"
 }

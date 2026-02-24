@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Repositorio de GitHub",
   "menuReportIssue": "Reportar un problema…",
   "menuAbout": "Acerca de SkellyCam",
-  "menuPlayback": "Reproducción"
+  "menuPlayback": "Reproducción",
+  "videoPlayback": "Reproducción",
+  "copyLogsToClipboard": "Copiar registros al portapapeles",
+  "saveLogsToFile": "Guardar registros en archivo",
+  "copied": "¡Copiado!",
+  "timestampFromRecording": "Marca de tiempo de los datos de grabación"
 }

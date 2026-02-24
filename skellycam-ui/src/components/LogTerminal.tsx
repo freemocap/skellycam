@@ -11,7 +11,7 @@ import {
     Tooltip,
     useTheme,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/store";
 import {
     selectFilteredLogs,
@@ -30,7 +30,9 @@ import {
     Pause as PauseIcon,
     PlayArrow as PlayArrowIcon,
     Search as SearchIcon,
-    Warning as WarningIcon
+    Warning as WarningIcon,
+    ContentCopy as ContentCopyIcon,
+    SaveAlt as SaveAltIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 
@@ -202,6 +204,33 @@ export const LogTerminal = () => {
     const [showSearch, setShowSearch] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
     const shouldAutoScroll = useRef(true);
+    const [copyFeedback, setCopyFeedback] = useState(false);
+
+    const formatLogsForExport = useCallback((): string => {
+        return logs.map((log) =>
+            `[${log.asctime}] [${log.levelname}] ${log.module}:${log.funcName}:${log.lineno} - ${log.message}`
+        ).join('\n');
+    }, [logs]);
+
+    const handleCopyToClipboard = useCallback(async () => {
+        const text = formatLogsForExport();
+        await navigator.clipboard.writeText(text);
+        setCopyFeedback(true);
+        setTimeout(() => setCopyFeedback(false), 2000);
+    }, [formatLogsForExport]);
+
+    const handleSaveToDisk = useCallback(() => {
+        const text = formatLogsForExport();
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `skellycam-logs-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, [formatLogsForExport]);
 
     // Update filter when levels or search text changes
     useEffect(() => {
@@ -343,6 +372,26 @@ export const LogTerminal = () => {
                 </ToggleButtonGroup>
 
                 <Box sx={{ ml: "auto", display: "flex", gap: 0.5 }}>
+                    <Tooltip title={copyFeedback ? t("copied") : t("copyLogsToClipboard")}>
+                        <IconButton
+                            size="small"
+                            onClick={handleCopyToClipboard}
+                            sx={{ color: copyFeedback ? theme.palette.success.main : theme.palette.text.secondary }}
+                        >
+                            <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title={t("saveLogsToFile")}>
+                        <IconButton
+                            size="small"
+                            onClick={handleSaveToDisk}
+                            sx={{ color: theme.palette.text.secondary }}
+                        >
+                            <SaveAltIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+
                     <IconButton
                         size="small"
                         onClick={() => setShowSearch(!showSearch)}

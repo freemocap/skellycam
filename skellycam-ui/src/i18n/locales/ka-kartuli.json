@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub რეპოზიტორია",
   "menuReportIssue": "პრობლემის შეტყობინება…",
   "menuAbout": "SkellyCam-ის შესახებ",
-  "menuPlayback": "დაკვრა"
+  "menuPlayback": "დაკვრა",
+  "videoPlayback": "დაკვრა",
+  "copyLogsToClipboard": "ჟურნალის კოპირება ბუფერში",
+  "saveLogsToFile": "ჟურნალის შენახვა ფაილში",
+  "copied": "კოპირებულია!",
+  "timestampFromRecording": "დროის ნიშნული ჩანაწერის მონაცემებიდან"
 }

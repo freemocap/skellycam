@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Αποθετήριο GitHub",
   "menuReportIssue": "Αναφορά προβλήματος…",
   "menuAbout": "Σχετικά με το SkellyCam",
-  "menuPlayback": "Αναπαραγωγή"
+  "menuPlayback": "Αναπαραγωγή",
+  "videoPlayback": "Αναπαραγωγή",
+  "copyLogsToClipboard": "Αντιγραφή αρχείων καταγραφής στο πρόχειρο",
+  "saveLogsToFile": "Αποθήκευση αρχείων καταγραφής σε αρχείο",
+  "copied": "Αντιγράφηκε!",
+  "timestampFromRecording": "Χρονοσήμανση από δεδομένα εγγραφής"
 }

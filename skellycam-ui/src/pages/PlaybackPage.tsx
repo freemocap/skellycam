@@ -1,12 +1,14 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Chip, IconButton, Tooltip, Typography, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import StorageIcon from '@mui/icons-material/Storage';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { Footer } from '@/components/ui-components/Footer';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { RecordingBrowser, LoadedVideo } from '@/components/playback/RecordingBrowser';
 import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
+import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { useTranslation } from 'react-i18next';
 
 const PlaybackPage: React.FC = () => {
@@ -16,17 +18,47 @@ const PlaybackPage: React.FC = () => {
     const [loadedVideos, setLoadedVideos] = useState<LoadedVideo[]>([]);
     const [recordingPath, setRecordingPath] = useState<string | null>(null);
     const [recordingFps, setRecordingFps] = useState<number | undefined>(undefined);
+    const [frameTimestamps, setFrameTimestamps] = useState<Record<string, number[]> | null>(null);
 
     const handleRecordingLoaded = useCallback((videos: LoadedVideo[], path: string, fps?: number) => {
         setLoadedVideos(videos);
         setRecordingPath(path);
         setRecordingFps(fps);
+        setFrameTimestamps(null);
     }, []);
+
+    // After a recording is loaded, try to fetch real timestamps from the server
+    useEffect(() => {
+        if (loadedVideos.length === 0) return;
+
+        const fetchTimestamps = async () => {
+            try {
+                const response = await fetch(serverUrls.endpoints.playbackAllTimestamps);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.timestamps && Object.keys(data.timestamps).length > 0) {
+                    setFrameTimestamps(data.timestamps);
+                }
+            } catch {
+                // Timestamps not available — SyncedVideoPlayer will use approximation
+            }
+        };
+        fetchTimestamps();
+    }, [loadedVideos]);
 
     const handleBack = useCallback(() => {
         setLoadedVideos([]);
         setRecordingPath(null);
         setRecordingFps(undefined);
+        setFrameTimestamps(null);
+    }, []);
+
+    const handleOpenFolder = useCallback(async () => {
+        try {
+            await fetch(serverUrls.endpoints.playbackOpenFolder, { method: 'POST' });
+        } catch {
+            // Best-effort — server might not support it in dev mode
+        }
     }, []);
 
     const hasVideos = loadedVideos.length > 0;
@@ -55,7 +87,7 @@ const PlaybackPage: React.FC = () => {
                 <ErrorBoundary>
                     {hasVideos ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            {/* Recording header bar — prominent stats */}
+                            {/* Recording header bar */}
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -90,6 +122,28 @@ const PlaybackPage: React.FC = () => {
                                 >
                                     {recordingName}
                                 </Typography>
+
+                                {/* Open Folder button */}
+                                <Tooltip title={t('openFolder')}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleOpenFolder}
+                                        sx={{
+                                            color: isDark ? '#ffcc80' : theme.palette.warning.dark,
+                                            border: `1px solid ${isDark ? 'rgba(255,204,128,0.3)' : theme.palette.warning.light}`,
+                                            borderRadius: '6px',
+                                            px: 1,
+                                            gap: 0.5,
+                                            fontSize: '0.75rem',
+                                            fontFamily: monoFont,
+                                            '&:hover': {
+                                                backgroundColor: isDark ? 'rgba(255,204,128,0.1)' : 'rgba(255,152,0,0.08)',
+                                            },
+                                        }}
+                                    >
+                                        <FolderOpenIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
 
                                 {/* Spacer */}
                                 <Box sx={{ flex: 1 }} />
@@ -158,6 +212,7 @@ const PlaybackPage: React.FC = () => {
                                         streamUrl: v.streamUrl,
                                     }))}
                                     recordingFps={recordingFps}
+                                    frameTimestamps={frameTimestamps}
                                 />
                             </Box>
                         </Box>

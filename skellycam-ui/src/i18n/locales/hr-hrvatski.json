@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub repozitorij",
   "menuReportIssue": "Prijavi problem…",
   "menuAbout": "O SkellyCam-u",
-  "menuPlayback": "Reprodukcija"
+  "menuPlayback": "Reprodukcija",
+  "videoPlayback": "Reprodukcija",
+  "copyLogsToClipboard": "Kopiraj zapise u međuspremnik",
+  "saveLogsToFile": "Spremi zapise u datoteku",
+  "copied": "Kopirano!",
+  "timestampFromRecording": "Vremenska oznaka iz podataka snimke"
 }

@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub repozitář",
   "menuReportIssue": "Nahlásit problém…",
   "menuAbout": "O aplikaci SkellyCam",
-  "menuPlayback": "Přehrávání"
+  "menuPlayback": "Přehrávání",
+  "videoPlayback": "Přehrávání",
+  "copyLogsToClipboard": "Kopírovat logy do schránky",
+  "saveLogsToFile": "Uložit logy do souboru",
+  "copied": "Zkopírováno!",
+  "timestampFromRecording": "Časové razítko z dat nahrávky"
 }

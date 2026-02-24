@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub-förråd",
   "menuReportIssue": "Rapportera ett problem…",
   "menuAbout": "Om SkellyCam",
-  "menuPlayback": "Uppspelning"
+  "menuPlayback": "Uppspelning",
+  "videoPlayback": "Uppspelning",
+  "copyLogsToClipboard": "Kopiera loggar till urklipp",
+  "saveLogsToFile": "Spara loggar till fil",
+  "copied": "Kopierat!",
+  "timestampFromRecording": "Tidsstämpel från inspelningsdata"
 }

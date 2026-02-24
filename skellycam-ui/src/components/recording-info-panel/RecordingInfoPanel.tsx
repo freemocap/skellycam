@@ -15,6 +15,7 @@ import {
 import {startRecording, stopRecording, recordingInfoUpdated} from "@/store";
 import {RecordingPathTreeItem} from "@/components/recording-info-panel/RecordingPathTreeItem";
 import {electronIpc, useElectronIPC} from "@/services/electron-ipc/electron-ipc";
+import {useServer} from "@/services/server/ServerContextProvider";
 
 interface RecordingOperation {
     type: 'start' | 'stop';
@@ -47,6 +48,8 @@ export const RecordingInfoPanel: React.FC = () => {
     const [recordingTag, setRecordingTag] = useState<string>("");
     const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
     const {isElectron, api} = useElectronIPC();
+    const {connectedCameraIds} = useServer();
+    const noCamerasConnected = connectedCameraIds.length === 0;
 
     // Track when recording state changes to clear pending state
     useEffect(() => {
@@ -92,7 +95,7 @@ export const RecordingInfoPanel: React.FC = () => {
                     const updatedDirectory = recordingInfo.recordingDirectory.replace(
                         "~",
                         homePath
-                    );
+                    ).replace(/\\/g, "/");
                     dispatch(recordingInfoUpdated({recordingDirectory: updatedDirectory}));
                 })
                 .catch((error: unknown) => {
@@ -273,13 +276,16 @@ export const RecordingInfoPanel: React.FC = () => {
                                 Record
                             </Typography>
 
-                            <StartStopRecordingButton
-                                isRecording={recordingInfo.isRecording}
-                                isPending={pendingOperation !== null}
-                                countdown={countdown}
-                                recordingStartTime={recordingStartTime}
-                                onClick={handleRecordButtonClick}
-                            />
+                            <Box onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} sx={{ flexGrow: 1, ml: 1.5 }}>
+                                <StartStopRecordingButton
+                                    isRecording={recordingInfo.isRecording}
+                                    isPending={pendingOperation !== null}
+                                    countdown={countdown}
+                                    recordingStartTime={recordingStartTime}
+                                    disabled={noCamerasConnected && !recordingInfo.isRecording}
+                                    onClick={handleRecordButtonClick}
+                                />
+                            </Box>
                         </Box>
                     }
                 >{/* Microphone selector */}

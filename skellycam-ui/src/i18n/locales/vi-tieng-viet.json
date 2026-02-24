@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Kho lưu trữ GitHub",
   "menuReportIssue": "Báo cáo sự cố…",
   "menuAbout": "Về SkellyCam",
-  "menuPlayback": "Phát lại"
+  "menuPlayback": "Phát lại",
+  "videoPlayback": "Phát lại",
+  "copyLogsToClipboard": "Sao chép nhật ký vào bộ nhớ tạm",
+  "saveLogsToFile": "Lưu nhật ký vào tập tin",
+  "copied": "Đã sao chép!",
+  "timestampFromRecording": "Dấu thời gian từ dữ liệu ghi hình"
 }

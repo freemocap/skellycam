@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub ගබඩාව",
   "menuReportIssue": "ගැටලුවක් වාර්තා කරන්න…",
   "menuAbout": "SkellyCam ගැන",
-  "menuPlayback": "නැවත ධාවනය"
+  "menuPlayback": "නැවත ධාවනය",
+  "videoPlayback": "නැවත ධාවනය",
+  "copyLogsToClipboard": "ලොග් පසුරු පුවරුවට පිටපත් කරන්න",
+  "saveLogsToFile": "ලොග් ගොනුවට සුරකින්න",
+  "copied": "පිටපත් කළා!",
+  "timestampFromRecording": "පටිගත කිරීමේ දත්ත වලින් කාල මුද්‍රාව"
 }

@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Repositori GitHub",
   "menuReportIssue": "Laporkan masalah…",
   "menuAbout": "Tentang SkellyCam",
-  "menuPlayback": "Main balik"
+  "menuPlayback": "Main balik",
+  "videoPlayback": "Main Balik",
+  "copyLogsToClipboard": "Salin log ke papan klip",
+  "saveLogsToFile": "Simpan log ke fail",
+  "copied": "Disalin!",
+  "timestampFromRecording": "Cap masa daripada data rakaman"
 }

@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub Repository",
   "menuReportIssue": "ပြဿနာတင်ပြ…",
   "menuAbout": "SkellyCam အကြောင်း",
-  "menuPlayback": "ပြန်ဖွင့်"
+  "menuPlayback": "ပြန်ဖွင့်",
+  "videoPlayback": "ပြန်ဖွင့်",
+  "copyLogsToClipboard": "မှတ်တမ်းများကို ကလစ်ဘုတ်သို့ ကူးယူ",
+  "saveLogsToFile": "မှတ်တမ်းများကို ဖိုင်သို့ သိမ်းဆည်း",
+  "copied": "ကူးယူပြီး!",
+  "timestampFromRecording": "အသံဖမ်းဒေတာမှ အချိန်တံဆိပ်"
 }

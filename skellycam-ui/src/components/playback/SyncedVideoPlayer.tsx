@@ -17,6 +17,8 @@ export interface PlaybackSettings {
 interface SyncedVideoPlayerProps {
     videos: VideoEntry[];
     recordingFps?: number;
+    /** Per-camera frame timestamps in seconds from recording start, loaded from CSV files */
+    frameTimestamps?: Record<string, number[]> | null;
 }
 
 function formatTimecode(frame: number, fps: number): string {
@@ -26,6 +28,16 @@ function formatTimecode(frame: number, fps: number): string {
     const m = Math.floor((totalSec % 3600) / 60);
     const s = Math.floor(totalSec % 60);
     const f = frame % Math.round(fps);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
+}
+
+function formatTimecodeFromSeconds(seconds: number, fps: number): string {
+    if (fps <= 0) return '00:00:00:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const f = Math.floor((seconds % 1) * fps);
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
 }
@@ -46,7 +58,7 @@ function formatSeconds(frame: number, fps: number): string {
  *
  * This keeps the rAF loop ~0ms per tick with zero React re-renders during playback.
  */
-export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps }) => {
+export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps }) => {
     const theme = useTheme();
     const { t } = useTranslation();
     const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -66,6 +78,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const rafRef = useRef<number | null>(null);
     const syncCheckCounter = useRef(0);
     const settingsRef = useRef<PlaybackSettings>({ showOverlays: true, timestampFormat: 'seconds' });
+    const frameTimestampsRef = useRef<Record<string, number[]> | null>(null);
 
     const SYNC_CHECK_INTERVAL = 3;
     const SYNC_TOLERANCE_FRAMES = 0.5;
@@ -101,6 +114,9 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     // Keep settingsRef in sync
     useEffect(() => { settingsRef.current = settings; }, [settings]);
 
+    // Keep frameTimestampsRef in sync
+    useEffect(() => { frameTimestampsRef.current = frameTimestamps ?? null; }, [frameTimestamps]);
+
     useEffect(() => {
         if (recordingFps && recordingFps > 0) fpsRef.current = recordingFps;
     }, [recordingFps]);
@@ -110,11 +126,31 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     // -----------------------------------------------------------------------
     const updateOverlays = useCallback((frame: number) => {
         const s = settingsRef.current;
+        const ts = frameTimestampsRef.current;
         const padLen = Math.max(String(totalFramesRef.current).length, 1);
         const frameText = 'F' + String(frame).padStart(padLen, '0');
-        const timeText = '~' + (s.timestampFormat === 'timecode'
-            ? formatTimecode(frame, fpsRef.current)
-            : formatSeconds(frame, fpsRef.current));
+
+        // Use real timestamps if available, otherwise approximate from frame/fps
+        let timeText: string;
+        if (ts) {
+            // Pick the first camera's timestamps as the canonical source
+            const firstKey = Object.keys(ts)[0];
+            const camTs = firstKey ? ts[firstKey] : null;
+            if (camTs && frame < camTs.length) {
+                const realSec = camTs[frame];
+                timeText = s.timestampFormat === 'timecode'
+                    ? formatTimecodeFromSeconds(realSec, fpsRef.current)
+                    : `${realSec.toFixed(3)}s`;
+            } else {
+                timeText = '~' + (s.timestampFormat === 'timecode'
+                    ? formatTimecode(frame, fpsRef.current)
+                    : formatSeconds(frame, fpsRef.current));
+            }
+        } else {
+            timeText = '~' + (s.timestampFormat === 'timecode'
+                ? formatTimecode(frame, fpsRef.current)
+                : formatSeconds(frame, fpsRef.current));
+        }
 
         frameOverlayRefs.current.forEach((el) => { el.textContent = frameText; });
         timeOverlayRefs.current.forEach((el) => { el.textContent = timeText; });
@@ -361,9 +397,29 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
 
     const framePadLen = Math.max(String(totalFrames).length, 1);
     const initialFrameText = 'F' + String(currentFrame).padStart(framePadLen, '0');
-    const initialTimeText = '~' + (settings.timestampFormat === 'timecode'
-        ? formatTimecode(currentFrame, fps)
-        : formatSeconds(currentFrame, fps));
+
+    // Compute initial time text using real timestamps if available
+    let initialTimeText: string;
+    let timestampsAreReal = false;
+    if (frameTimestamps) {
+        const firstKey = Object.keys(frameTimestamps)[0];
+        const camTs = firstKey ? frameTimestamps[firstKey] : null;
+        if (camTs && currentFrame < camTs.length) {
+            const realSec = camTs[currentFrame];
+            initialTimeText = settings.timestampFormat === 'timecode'
+                ? formatTimecodeFromSeconds(realSec, fps)
+                : `${realSec.toFixed(3)}s`;
+            timestampsAreReal = true;
+        } else {
+            initialTimeText = '~' + (settings.timestampFormat === 'timecode'
+                ? formatTimecode(currentFrame, fps)
+                : formatSeconds(currentFrame, fps));
+        }
+    } else {
+        initialTimeText = '~' + (settings.timestampFormat === 'timecode'
+            ? formatTimecode(currentFrame, fps)
+            : formatSeconds(currentFrame, fps));
+    }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
@@ -438,7 +494,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                                 </Box>
 
                                 {/* TIMECODE — DOM ref, updated directly */}
-                                <Tooltip title={t("estimatedFromFrameNumber")} placement="top-end">
+                                <Tooltip title={timestampsAreReal ? t("timestampFromRecording") : t("estimatedFromFrameNumber")} placement="top-end">
                                     <Box
                                         ref={(el: HTMLElement | null) => setTimeOverlayRef(video.videoId, el)}
                                         sx={{

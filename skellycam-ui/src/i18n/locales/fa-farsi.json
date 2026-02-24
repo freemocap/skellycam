@@ -235,5 +235,10 @@
   "menuGitHubRepository": "مخزن GitHub",
   "menuReportIssue": "گزارش مشکل…",
   "menuAbout": "درباره SkellyCam",
-  "menuPlayback": "پخش"
+  "menuPlayback": "پخش",
+  "videoPlayback": "پخش",
+  "copyLogsToClipboard": "کپی گزارش‌ها در کلیپ‌بورد",
+  "saveLogsToFile": "ذخیره گزارش‌ها در فایل",
+  "copied": "کپی شد!",
+  "timestampFromRecording": "مهر زمانی از داده‌های ضبط"
 }

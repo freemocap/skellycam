@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Репозиторій GitHub",
   "menuReportIssue": "Повідомити про помилку…",
   "menuAbout": "Про SkellyCam",
-  "menuPlayback": "Відтворення"
+  "menuPlayback": "Відтворення",
+  "videoPlayback": "Відтворення",
+  "copyLogsToClipboard": "Копіювати журнали в буфер обміну",
+  "saveLogsToFile": "Зберегти журнали у файл",
+  "copied": "Скопійовано!",
+  "timestampFromRecording": "Мітка часу з даних запису"
 }

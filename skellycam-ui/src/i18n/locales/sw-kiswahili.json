@@ -235,5 +235,10 @@
   "menuGitHubRepository": "Hifadhi ya GitHub",
   "menuReportIssue": "Ripoti tatizo…",
   "menuAbout": "Kuhusu SkellyCam",
-  "menuPlayback": "Cheza upya"
+  "menuPlayback": "Cheza upya",
+  "videoPlayback": "Uchezaji",
+  "copyLogsToClipboard": "Nakili kumbukumbu kwenye ubao wa kunakili",
+  "saveLogsToFile": "Hifadhi kumbukumbu kwenye faili",
+  "copied": "Imenakiliwa!",
+  "timestampFromRecording": "Mhuri wa wakati kutoka data ya kurekodi"
 }

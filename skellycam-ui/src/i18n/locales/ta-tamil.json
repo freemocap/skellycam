@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub களஞ்சியம்",
   "menuReportIssue": "சிக்கலைப் புகாரளி…",
   "menuAbout": "SkellyCam பற்றி",
-  "menuPlayback": "பின்னோக்கி இயக்கு"
+  "menuPlayback": "பின்னோக்கி இயக்கு",
+  "videoPlayback": "மீளியக்கம்",
+  "copyLogsToClipboard": "பதிவுகளை கிளிப்போர்டுக்கு நகலெடு",
+  "saveLogsToFile": "பதிவுகளை கோப்பில் சேமி",
+  "copied": "நகலெடுக்கப்பட்டது!",
+  "timestampFromRecording": "பதிவுத் தரவிலிருந்து நேர முத்திரை"
 }

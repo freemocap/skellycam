@@ -38,7 +38,8 @@
     "oneClick": false,
     "perMachine": false,
     "allowToChangeInstallationDirectory": true,
-    "deleteAppDataOnUninstall": false
+    "deleteAppDataOnUninstall": false,
+    "language": "1033"
   },
   "publish": {
     "provider": "generic",

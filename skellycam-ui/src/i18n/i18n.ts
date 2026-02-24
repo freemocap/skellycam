@@ -131,12 +131,13 @@ i18n
     resources: Object.fromEntries(
       Object.entries(ALL_RESOURCES).map(([code, data]) => [code, { translation: data }])
     ),
+    lng: FALLBACK_LOCALE,
     fallbackLng: FALLBACK_LOCALE,
     interpolation: {
       escapeValue: false,
     },
     detection: {
-      order: ["localStorage", "navigator"],
+      order: ["localStorage"],
       lookupLocalStorage: "skellycam:locale",
       caches: ["localStorage"],
     },

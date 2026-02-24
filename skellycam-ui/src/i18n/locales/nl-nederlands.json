@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub-repository",
   "menuReportIssue": "Probleem melden…",
   "menuAbout": "Over SkellyCam",
-  "menuPlayback": "Afspelen"
+  "menuPlayback": "Afspelen",
+  "videoPlayback": "Afspelen",
+  "copyLogsToClipboard": "Logboeken naar klembord kopiëren",
+  "saveLogsToFile": "Logboeken opslaan als bestand",
+  "copied": "Gekopieerd!",
+  "timestampFromRecording": "Tijdstempel uit opnamegegevens"
 }

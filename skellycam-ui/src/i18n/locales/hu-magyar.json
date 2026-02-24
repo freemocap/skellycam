@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub tárház",
   "menuReportIssue": "Hiba bejelentése…",
   "menuAbout": "A SkellyCam-ról",
-  "menuPlayback": "Lejátszás"
+  "menuPlayback": "Lejátszás",
+  "videoPlayback": "Lejátszás",
+  "copyLogsToClipboard": "Naplók másolása a vágólapra",
+  "saveLogsToFile": "Naplók mentése fájlba",
+  "copied": "Másolva!",
+  "timestampFromRecording": "Időbélyeg a felvételi adatokból"
 }

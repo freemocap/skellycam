@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub Repository",
   "menuReportIssue": "Mag-ulat ng isyu…",
   "menuAbout": "Tungkol sa SkellyCam",
-  "menuPlayback": "Playback"
+  "menuPlayback": "Playback",
+  "videoPlayback": "Pag-playback",
+  "copyLogsToClipboard": "Kopyahin ang mga log sa clipboard",
+  "saveLogsToFile": "I-save ang mga log sa file",
+  "copied": "Nakopya!",
+  "timestampFromRecording": "Timestamp mula sa data ng recording"
 }

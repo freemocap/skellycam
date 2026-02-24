@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHubリポジトリ",
   "menuReportIssue": "問題を報告…",
   "menuAbout": "SkellyCamについて",
-  "menuPlayback": "再生"
+  "menuPlayback": "再生",
+  "videoPlayback": "再生",
+  "copyLogsToClipboard": "ログをクリップボードにコピー",
+  "saveLogsToFile": "ログをファイルに保存",
+  "copied": "コピーしました！",
+  "timestampFromRecording": "録画データからのタイムスタンプ"
 }

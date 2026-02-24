@@ -235,5 +235,10 @@
   "menuGitHubRepository": "GitHub deposu",
   "menuReportIssue": "Sorun bildir…",
   "menuAbout": "SkellyCam hakkında",
-  "menuPlayback": "Oynatma"
+  "menuPlayback": "Oynatma",
+  "videoPlayback": "Oynatma",
+  "copyLogsToClipboard": "Günlükleri panoya kopyala",
+  "saveLogsToFile": "Günlükleri dosyaya kaydet",
+  "copied": "Kopyalandı!",
+  "timestampFromRecording": "Kayıt verilerinden zaman damgası"
 }
