@@ -85,7 +85,13 @@ jobs:
             libxext6 \
             libxrender1 \
             libv4l-dev \
-            libfuse2
+            libfuse2 \
+            upx-ucl
+
+      # ── macOS UPX for binary compression ──
+      - name: Install UPX (macOS)
+        if: matrix.platform == 'macos'
+        run: brew install upx
 
       # ── Common setup ──
       - name: Setup Node.js
@@ -220,7 +226,6 @@ jobs:
           name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             skellycam-ui/release/*/*.dmg
-            skellycam-ui/release/*/*.zip
           include-hidden-files: true
 
       - name: Upload installer artifacts (Linux)
@@ -230,5 +235,4 @@ jobs:
           name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             skellycam-ui/release/*/*.AppImage
-            skellycam-ui/release/*/*.deb
           include-hidden-files: true

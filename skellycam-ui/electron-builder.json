@@ -16,6 +16,7 @@
     "**/skellycam_server*",
     "**/skellycam-logo.png"
   ],
+  "compression": "maximum",
 
   "win": {
     "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
@@ -42,16 +43,11 @@
       {
         "target": "dmg",
         "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "zip",
-        "arch": ["x64", "arm64"]
       }
     ],
     "artifactName": "${productName}_${version}_${arch}_installer.${ext}",
     "hardenedRuntime": false,
-    "gatekeeperAssess": false,
-    "extraResources": []
+    "gatekeeperAssess": false
   },
   "dmg": {
     "contents": [
@@ -67,30 +63,14 @@
       {
         "target": "AppImage",
         "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "deb",
-        "arch": ["x64", "arm64"]
       }
     ],
     "artifactName": "${productName}_${version}_${arch}.${ext}",
     "desktop": {
-      "entry": {
-        "Name": "SkellyCam",
-        "Comment": "Camera backend for FreeMoCap",
-        "Categories": "Video;AudioVideo;"
-      }
+      "Name": "SkellyCam",
+      "Comment": "Camera backend for FreeMoCap",
+      "Categories": "Video;AudioVideo;"
     }
-  },
-  "deb": {
-    "depends": [
-      "libgl1-mesa-glx",
-      "libglib2.0-0",
-      "libsm6",
-      "libxext6",
-      "libxrender1",
-      "libv4l-0"
-    ]
   },
 
   "publish": {

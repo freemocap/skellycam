@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_submodules
 import cv2
 import os
 
@@ -8,39 +8,13 @@ datas = []
 binaries = []
 hiddenimports = ["encodings.idna"]
 
-# Collect all for cv2
-cv2_datas, cv2_binaries, cv2_hiddenimports = collect_all('cv2')
-datas.extend(cv2_datas)
-binaries.extend(cv2_binaries)
-hiddenimports.extend(cv2_hiddenimports)
-
-# cv2 submodules that collect_all sometimes misses
-hiddenimports.extend([
-    'cv2.cv2',
-    'cv2.data',
-    'cv2.aruco',
-    'cv2.dnn',
-    'cv2.fisheye',
-    'cv2.flann',
-    'cv2.img_hash',
-    'cv2.optflow',
-    'cv2.plot',
-    'cv2.rgbd',
-    'cv2.saliency',
-    'cv2.stereo',
-    'cv2.structured_light',
-    'cv2.text',
-    'cv2.videostab',
-    'cv2.xfeatures2d',
-    'cv2.ximgproc',
-    'cv2.xphoto',
-])
-
-# Collect cv2 native libraries (handles .dll, .so, .dylib across platforms)
-from PyInstaller.utils.hooks import collect_dynamic_libs
+# ── OpenCV ──
+# Only collect what we need from cv2 instead of collect_all which grabs
+# test data, haarcascades, DNN models, and other bloat.
 binaries.extend(collect_dynamic_libs('cv2'))
+hiddenimports.extend(collect_submodules('cv2'))
 
-# Collect setuptools data files
+# ── setuptools (needed by some vendored deps at runtime) ──
 setuptools_datas, _, setuptools_hidden = collect_all('setuptools')
 datas.extend(setuptools_datas)
 hiddenimports.extend(setuptools_hidden)
@@ -60,7 +34,38 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        # ── Test frameworks ──
+        'pytest',
+        'pytest_asyncio',
+        '_pytest',
+
+        # ── Dev/build tools ──
+        'nuitka',
+        'ruff',
+        'bumpver',
+        'pip_tools',
+        'poethepoet',
+        'pyinstaller',
+        'setuptools',
+
+        # ── scipy is only used in tests ──
+        'scipy',
+
+        # ── Heavy unused stdlib/third-party modules ──
+        'tkinter',
+        '_tkinter',
+        'matplotlib',
+        'IPython',
+        'notebook',
+        'sphinx',
+        'docutils',
+
+        # ── Debug/profile tools ──
+        'pdb',
+        'cProfile',
+        'profile',
+    ],
     noarchive=False,
 )
 
@@ -76,7 +81,7 @@ exe = EXE(
     name='skellycam_server',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
+    strip=True,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
