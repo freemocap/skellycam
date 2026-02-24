@@ -1,8 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-import platform
-import sys
-
 from PyInstaller.utils.hooks import collect_all
 import cv2
 import os
@@ -57,14 +54,9 @@ hiddenimports.extend([
     'cv2.xphoto',
 ])
 
-# Platform-specific native library bundling
-cv2_path = os.path.dirname(cv2.__file__)
-if sys.platform == 'win32':
-    binaries.append((os.path.join(cv2_path, '*.dll'), '.'))
-elif sys.platform == 'darwin':
-    binaries.append((os.path.join(cv2_path, '*.dylib'), '.'))
-else:
-    binaries.append((os.path.join(cv2_path, '*.so*'), '.'))
+# Collect cv2 native libraries (handles .dll, .so, .dylib across platforms)
+from PyInstaller.utils.hooks import collect_dynamic_libs
+binaries.extend(collect_dynamic_libs('cv2'))
 
 # Collect setuptools data files
 setuptools_datas, _, setuptools_hidden = collect_all('setuptools')
