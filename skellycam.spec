@@ -1,30 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_submodules
-import cv2
-import os
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 
 datas = []
 binaries = []
 hiddenimports = ["encodings.idna"]
 
 # ── OpenCV ──
-# Only collect what we need from cv2 instead of collect_all which grabs
-# test data, haarcascades, DNN models, and other bloat.
+# Collect only the dynamic libs and submodules from cv2 (not test data,
+# haarcascades, DNN models, etc.).
 binaries.extend(collect_dynamic_libs('cv2'))
 hiddenimports.extend(collect_submodules('cv2'))
-
-# ── setuptools (needed by some vendored deps at runtime) ──
-setuptools_datas, _, setuptools_hidden = collect_all('setuptools')
-datas.extend(setuptools_datas)
-hiddenimports.extend(setuptools_hidden)
-
-# Ensure jaraco.text lorem ipsum file is included
-jaraco_text_path = os.path.join(
-    os.path.dirname(__import__('setuptools', fromlist=['_vendor']).__file__),
-    '_vendor', 'jaraco', 'text'
-)
-datas.append((os.path.join(jaraco_text_path, '*.txt'), 'setuptools/_vendor/jaraco/text/'))
 
 a = Analysis(
     ['skellycam/__main__.py'],
@@ -81,7 +67,7 @@ exe = EXE(
     name='skellycam_server',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,

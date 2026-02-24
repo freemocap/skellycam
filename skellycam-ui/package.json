@@ -14,7 +14,8 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env NODE_ENV=development vite",
-    "build": "tsc && vite build && electron-builder",
+    "build:vite": "tsc && vite build",
+    "build": "npm run build:vite && electron-builder",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
     "e2e": "playwright test"

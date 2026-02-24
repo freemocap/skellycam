@@ -20,12 +20,7 @@
 
   "win": {
     "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
-    "target": [
-      {
-        "target": "nsis",
-        "arch": ["x64"]
-      }
-    ],
+    "target": "nsis",
     "artifactName": "${productName}_${version}_installer.${ext}"
   },
   "nsis": {
@@ -39,16 +34,7 @@
   "mac": {
     "icon": "../shared/skellycam-logo/skellycam-logo.png",
     "category": "public.app-category.video",
-    "target": [
-      {
-        "target": "dmg",
-        "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "zip",
-        "arch": ["x64", "arm64"]
-      }
-    ],
+    "target": ["dmg", "zip"],
     "artifactName": "${productName}_${version}_${arch}_installer.${ext}",
     "hardenedRuntime": false,
     "gatekeeperAssess": false
@@ -63,16 +49,7 @@
   "linux": {
     "icon": "../shared/skellycam-logo/skellycam-logo.png",
     "category": "Video",
-    "target": [
-      {
-        "target": "AppImage",
-        "arch": ["x64", "arm64"]
-      },
-      {
-        "target": "deb",
-        "arch": ["x64", "arm64"]
-      }
-    ],
+    "target": ["AppImage", "deb"],
     "artifactName": "${productName}_${version}_${arch}.${ext}",
     "desktop": {
       "Name": "SkellyCam",

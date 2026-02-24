@@ -175,7 +175,8 @@ jobs:
         if: matrix.platform == 'windows'
         run: |
           cd skellycam-ui
-          npm run build
+          npm run build:vite
+          npx electron-builder --win --${{ matrix.electron-arch }}
 
       - name: Build UI (macOS)
         if: matrix.platform == 'macos'
@@ -183,13 +184,15 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: |
           cd skellycam-ui
-          npm run build -- --${{ matrix.electron-arch }}
+          npm run build:vite
+          npx electron-builder --mac --${{ matrix.electron-arch }}
 
       - name: Build UI (Linux)
         if: matrix.platform == 'linux'
         run: |
           cd skellycam-ui
-          npm run build -- --${{ matrix.electron-arch }}
+          npm run build:vite
+          npx electron-builder --linux --${{ matrix.electron-arch }}
 
       # ── Windows installer signing ──
       - name: Sign Electron installer with Trusted Signing
