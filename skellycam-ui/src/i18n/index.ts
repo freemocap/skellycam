@@ -4,5 +4,6 @@ export {
   FALLBACK_LOCALE,
   getLocaleDirection,
   getTranslationSource,
+  loadLocale,
 } from "./i18n";
 export type { SupportedLocale } from "./i18n";

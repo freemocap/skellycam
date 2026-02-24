@@ -2,45 +2,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
+// Only eagerly load the fallback locale — all others are lazy-loaded on demand
 import en from "./locales/en-english.json";
-import es from "./locales/es-espanol.json";
-import ar from "./locales/ar-arabic.json";
-import zhCN from "./locales/zh-CN-zhongwen.json";
-import hi from "./locales/hi-hindi.json";
-import fr from "./locales/fr-francais.json";
-import ptBR from "./locales/pt-BR-portugues-brasil.json";
-import bn from "./locales/bn-bangla.json";
-import ru from "./locales/ru-russkiy.json";
-import ja from "./locales/ja-nihongo.json";
-import de from "./locales/de-deutsch.json";
-import ko from "./locales/ko-hangugeo.json";
-import tr from "./locales/tr-turkce.json";
-import it from "./locales/it-italiano.json";
-import vi from "./locales/vi-tieng-viet.json";
-import pl from "./locales/pl-polski.json";
-import uk from "./locales/uk-ukrainska.json";
-import nl from "./locales/nl-nederlands.json";
-import th from "./locales/th-thai.json";
-import id from "./locales/id-bahasa-indonesia.json";
-import sv from "./locales/sv-svenska.json";
-import cs from "./locales/cs-cestina.json";
-import fa from "./locales/fa-farsi.json";
-import sw from "./locales/sw-kiswahili.json";
-import am from "./locales/am-amharic.json";
-import tl from "./locales/tl-tagalog.json";
-import ms from "./locales/ms-melayu.json";
-import ro from "./locales/ro-romana.json";
-import el from "./locales/el-ellinika.json";
-import hu from "./locales/hu-magyar.json";
-import ta from "./locales/ta-tamil.json";
-import ur from "./locales/ur-urdu.json";
-import my from "./locales/my-myanmar.json";
-import ne from "./locales/ne-nepali.json";
-import si from "./locales/si-sinhala.json";
-import ka from "./locales/ka-kartuli.json";
-import sr from "./locales/sr-srpski.json";
-import hr from "./locales/hr-hrvatski.json";
-import ca from "./locales/ca-catala.json";
 
 export const SUPPORTED_LOCALES = {
   en: { label: "English", dir: "ltr" as const, flag: "US" },
@@ -99,21 +62,81 @@ export function getLocaleDirection(locale: string): "ltr" | "rtl" {
   return "ltr";
 }
 
-const ALL_RESOURCES: Record<string, { _meta?: { translationSource?: string } }> = {
-  en, es, fr, de, it, "pt-BR": ptBR, nl, sv, pl, cs, uk, ru, tr,
-  ar, fa, ur, hi, bn, ta, ne, si,
-  "zh-CN": zhCN, ja, ko, th, vi, id, ms, tl, my,
-  sw, am, ro, el, hu, ka, sr, hr, ca,
+/**
+ * Dynamic import loaders for each non-English locale.
+ * Vite splits each into a separate chunk that's only fetched when needed.
+ */
+const LOCALE_LOADERS: Record<string, () => Promise<{ default: Record<string, any> }>> = {
+  es: () => import("./locales/es-espanol.json"),
+  fr: () => import("./locales/fr-francais.json"),
+  de: () => import("./locales/de-deutsch.json"),
+  it: () => import("./locales/it-italiano.json"),
+  "pt-BR": () => import("./locales/pt-BR-portugues-brasil.json"),
+  nl: () => import("./locales/nl-nederlands.json"),
+  sv: () => import("./locales/sv-svenska.json"),
+  pl: () => import("./locales/pl-polski.json"),
+  cs: () => import("./locales/cs-cestina.json"),
+  uk: () => import("./locales/uk-ukrainska.json"),
+  ru: () => import("./locales/ru-russkiy.json"),
+  tr: () => import("./locales/tr-turkce.json"),
+  ar: () => import("./locales/ar-arabic.json"),
+  fa: () => import("./locales/fa-farsi.json"),
+  ur: () => import("./locales/ur-urdu.json"),
+  hi: () => import("./locales/hi-hindi.json"),
+  bn: () => import("./locales/bn-bangla.json"),
+  ta: () => import("./locales/ta-tamil.json"),
+  ne: () => import("./locales/ne-nepali.json"),
+  si: () => import("./locales/si-sinhala.json"),
+  "zh-CN": () => import("./locales/zh-CN-zhongwen.json"),
+  ja: () => import("./locales/ja-nihongo.json"),
+  ko: () => import("./locales/ko-hangugeo.json"),
+  th: () => import("./locales/th-thai.json"),
+  vi: () => import("./locales/vi-tieng-viet.json"),
+  id: () => import("./locales/id-bahasa-indonesia.json"),
+  ms: () => import("./locales/ms-melayu.json"),
+  tl: () => import("./locales/tl-tagalog.json"),
+  my: () => import("./locales/my-myanmar.json"),
+  sw: () => import("./locales/sw-kiswahili.json"),
+  am: () => import("./locales/am-amharic.json"),
+  ro: () => import("./locales/ro-romana.json"),
+  el: () => import("./locales/el-ellinika.json"),
+  hu: () => import("./locales/hu-magyar.json"),
+  ka: () => import("./locales/ka-kartuli.json"),
+  sr: () => import("./locales/sr-srpski.json"),
+  hr: () => import("./locales/hr-hrvatski.json"),
+  ca: () => import("./locales/ca-catala.json"),
 };
+
+/** Tracks which locales have already been loaded to avoid duplicate fetches. */
+const loadedLocales = new Set<string>(["en"]);
+
+/**
+ * Load a locale's translations on demand. If already loaded, resolves immediately.
+ * Called automatically by the languageChanged event and can be called manually.
+ */
+export async function loadLocale(locale: string): Promise<void> {
+  if (loadedLocales.has(locale)) return;
+
+  const loader = LOCALE_LOADERS[locale];
+  if (!loader) {
+    throw new Error(`No locale loader registered for "${locale}". Supported: ${Object.keys(LOCALE_LOADERS).join(", ")}`);
+  }
+
+  const module = await loader();
+  const translations = module.default;
+  i18n.addResourceBundle(locale, "translation", translations, true, true);
+  loadedLocales.add(locale);
+}
 
 /**
  * Returns the _meta.translationSource value from a locale's translations.
- * Used to display AI-translation warnings in the UI.
+ * Only works for locales that have already been loaded.
  */
 export function getTranslationSource(
   locale: string
 ): "human-authored" | "ai-generated" | "human-validated" {
-  const meta = ALL_RESOURCES[locale]?._meta;
+  const resources = i18n.getResourceBundle(locale, "translation");
+  const meta = resources?._meta;
   if (
     meta?.translationSource === "human-authored" ||
     meta?.translationSource === "ai-generated" ||
@@ -128,9 +151,9 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources: Object.fromEntries(
-      Object.entries(ALL_RESOURCES).map(([code, data]) => [code, { translation: data }])
-    ),
+    resources: {
+      en: { translation: en },
+    },
     lng: FALLBACK_LOCALE,
     fallbackLng: FALLBACK_LOCALE,
     interpolation: {
@@ -142,5 +165,19 @@ i18n
       caches: ["localStorage"],
     },
   });
+
+// When the language changes (via user selection or detection), load the locale on demand.
+// The UI briefly shows English keys until the async load completes, then re-renders.
+i18n.on("languageChanged", (lng: string) => {
+  if (lng !== FALLBACK_LOCALE) {
+    loadLocale(lng);
+  }
+});
+
+// If the detected language on startup is not English, load it immediately
+const detectedLng = i18n.language;
+if (detectedLng && detectedLng !== FALLBACK_LOCALE && !loadedLocales.has(detectedLng)) {
+  loadLocale(detectedLng);
+}
 
 export default i18n;

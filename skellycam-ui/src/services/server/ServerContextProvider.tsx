@@ -1,5 +1,5 @@
 // ServerContextProvider.tsx
-import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 
 import { ConnectionState, WebSocketConnection } from "@/services/server/server-helpers/websocket-connection";
 import { FrameProcessor } from "@/services/server/server-helpers/frame-processor/frame-processor";
@@ -312,20 +312,22 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         }
     }, []);
 
+    const contextValue = useMemo(() => ({
+        isConnected,
+        connect,
+        disconnect,
+        send,
+        setCanvasForCamera,
+        getFps,
+        getServerFps,
+        getFramerateStore,
+        getLogStore,
+        connectedCameraIds,
+        updateServerConnection,
+    }), [isConnected, connectedCameraIds, connect, disconnect, send, setCanvasForCamera, getFps, getServerFps, getFramerateStore, getLogStore, updateServerConnection]);
+
     return (
-        <ServerContext.Provider value={{
-            isConnected,
-            connect,
-            disconnect,
-            send,
-            setCanvasForCamera,
-            getFps,
-            getServerFps,
-            getFramerateStore,
-            getLogStore,
-            connectedCameraIds,
-            updateServerConnection,
-        }}>
+        <ServerContext.Provider value={contextValue}>
             {children}
         </ServerContext.Provider>
     );
