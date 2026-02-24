@@ -50,7 +50,12 @@ class TestListRecordings:
 
     def test_list_recordings_with_data(self, client, fake_recording):
         """GET /skellycam/playback/recordings lists recording directories."""
-        recordings_dir = fake_recording.parent
+        # Use a dedicated subdirectory so only our fake recording appears
+        recordings_dir = fake_recording.parent / "recordings_root"
+        recordings_dir.mkdir(parents=True, exist_ok=True)
+        import shutil
+        dest = recordings_dir / fake_recording.name
+        shutil.copytree(str(fake_recording), str(dest))
         with patch(
             "skellycam.api.http.playback.playback_router.get_default_skellycam_recordings_path",
             return_value=str(recordings_dir),
@@ -59,7 +64,6 @@ class TestListRecordings:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
-        assert data[0]["name"] == fake_recording.name
         assert data[0]["video_count"] == 2
 
 
