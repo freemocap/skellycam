@@ -27,7 +27,7 @@ const PlaybackPage: React.FC = () => {
         setFrameTimestamps(null);
     }, []);
 
-    // After a recording is loaded, try to fetch real timestamps from the server
+    // After a recording is loaded, fetch real timestamps from the server
     useEffect(() => {
         if (loadedVideos.length === 0) return;
 
@@ -54,12 +54,20 @@ const PlaybackPage: React.FC = () => {
     }, []);
 
     const handleOpenFolder = useCallback(async () => {
+        if (!recordingPath) return;
         try {
-            await fetch(serverUrls.endpoints.playbackOpenFolder, { method: 'POST' });
-        } catch {
-            // Best-effort — server might not support it in dev mode
+            const response = await fetch(serverUrls.endpoints.playbackOpenFolder, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recording_path: recordingPath }),
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to open folder: ${response.statusText}`);
+            }
+        } catch (err) {
+            console.error('Failed to open recording folder:', err);
         }
-    }, []);
+    }, [recordingPath]);
 
     const hasVideos = loadedVideos.length > 0;
     const totalSize = loadedVideos.reduce((sum, v) => sum + v.sizeBytes, 0);

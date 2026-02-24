@@ -48,15 +48,18 @@ function formatSeconds(frame: number, fps: number): string {
 }
 
 /**
- * High-performance frame-locked multi-video player.
+ * Frame-locked multi-video player using a "leader" video element as the
+ * canonical time source. All other videos sync to the leader.
  *
- * CRITICAL PERFORMANCE DESIGN:
- * During playback, we NEVER call React setState per-frame. Instead:
- *   - Frame number overlays are updated via direct DOM manipulation (refs)
- *   - React state (for controls/slider) is updated at ~5Hz via a throttle
- *   - Videos use native .play() with periodic drift correction
- *
- * This keeps the rAF loop ~0ms per tick with zero React re-renders during playback.
+ * SYNC STRATEGY:
+ * - The first video is the "leader" and drives canonical time via its
+ *   native currentTime property, which naturally accounts for decode
+ *   latency, buffering, and rate changes.
+ * - The rAF loop reads leader.currentTime to derive the frame number.
+ * - Follower videos are corrected ONLY when they drift beyond a generous
+ *   tolerance (2 frames), avoiding micro-stutter from frequent seeks.
+ * - Overlays update via direct DOM manipulation (zero React re-renders).
+ * - React state for controls/slider updates at ~5Hz.
  */
 export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps }) => {
     const theme = useTheme();
@@ -73,24 +76,25 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const totalFramesRef = useRef(0);
     const fpsRef = useRef(recordingFps || 30);
     const playbackRateRef = useRef(1);
-    const playStartTimeRef = useRef<number | null>(null);
-    const playStartFrameRef = useRef(0);
     const rafRef = useRef<number | null>(null);
-    const syncCheckCounter = useRef(0);
     const settingsRef = useRef<PlaybackSettings>({ showOverlays: true, timestampFormat: 'seconds' });
     const frameTimestampsRef = useRef<Record<string, number[]> | null>(null);
 
-    const SYNC_CHECK_INTERVAL = 3;
-    const SYNC_TOLERANCE_FRAMES = 0.5;
-    // Grace period: skip sync corrections for the first N ms after play starts
-    // to let the browser's video decoder buffer and stabilize
-    const SYNC_GRACE_PERIOD_MS = 600;
+    // Leader-based sync: first video is the time authority
+    const leaderIdRef = useRef<string | null>(null);
 
-    // Throttle: only push to React state every ~200ms
+    // Follower drift correction: generous tolerance to avoid stutter.
+    // Only correct followers that are more than 2 frames away from leader.
+    const FOLLOWER_DRIFT_TOLERANCE_FRAMES = 2;
+    // Check followers every N rAF ticks (~250ms at 60fps)
+    const FOLLOWER_CHECK_INTERVAL = 15;
+    const followerCheckCounter = useRef(0);
+
+    // Throttle React state updates to ~5Hz
     const lastReactUpdateRef = useRef(0);
     const REACT_UPDATE_INTERVAL_MS = 200;
 
-    // Slider drag state — tracked in refs so rAF loop can read it
+    // Slider drag state
     const isDraggingRef = useRef(false);
     const wasPlayingBeforeDragRef = useRef(false);
 
@@ -111,15 +115,17 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const columns = videos.length <= 1 ? 1 : videos.length <= 4 ? 2 : videos.length <= 9 ? 3 : 4;
     const currentTime = fpsRef.current > 0 ? currentFrameRef.current / fpsRef.current : 0;
 
-    // Keep settingsRef in sync
+    // Keep refs in sync with props/state
     useEffect(() => { settingsRef.current = settings; }, [settings]);
-
-    // Keep frameTimestampsRef in sync
     useEffect(() => { frameTimestampsRef.current = frameTimestamps ?? null; }, [frameTimestamps]);
-
     useEffect(() => {
         if (recordingFps && recordingFps > 0) fpsRef.current = recordingFps;
     }, [recordingFps]);
+
+    // Elect leader whenever video list changes
+    useEffect(() => {
+        leaderIdRef.current = videos.length > 0 ? videos[0].videoId : null;
+    }, [videos]);
 
     // -----------------------------------------------------------------------
     // Direct DOM overlay updates — fast, no React involved
@@ -130,10 +136,8 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const padLen = Math.max(String(totalFramesRef.current).length, 1);
         const frameText = 'F' + String(frame).padStart(padLen, '0');
 
-        // Use real timestamps if available, otherwise approximate from frame/fps
         let timeText: string;
         if (ts) {
-            // Pick the first camera's timestamps as the canonical source
             const firstKey = Object.keys(ts)[0];
             const camTs = firstKey ? ts[firstKey] : null;
             if (camTs && frame < camTs.length) {
@@ -182,7 +186,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const targetTime = fpsRef.current > 0 ? clamped / fpsRef.current : 0;
         videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
         currentFrameRef.current = clamped;
-        setCurrentFrame(clamped);      // OK when paused — not per-frame
+        setCurrentFrame(clamped);
         updateOverlays(clamped);
     }, [updateOverlays]);
 
@@ -190,8 +194,17 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     // Native play/pause
     // -----------------------------------------------------------------------
     const playAllVideos = useCallback(() => {
-        videoRefs.current.forEach((el) => {
-            el.playbackRate = playbackRateRef.current;
+        const rate = playbackRateRef.current;
+        // Play leader first so it starts decoding immediately
+        const leaderId = leaderIdRef.current;
+        const leader = leaderId ? videoRefs.current.get(leaderId) : null;
+        if (leader) {
+            leader.playbackRate = rate;
+            leader.play().catch(() => {});
+        }
+        videoRefs.current.forEach((el, id) => {
+            if (id === leaderId) return;
+            el.playbackRate = rate;
             el.play().catch(() => {});
         });
     }, []);
@@ -201,28 +214,32 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     }, []);
 
     // -----------------------------------------------------------------------
-    // rAF playback loop — ZERO React state updates per frame
+    // rAF playback loop — reads leader.currentTime as the time source.
+    //
+    // This eliminates the wall-clock-vs-decode-pipeline fight that causes
+    // stutter. The leader's currentTime naturally accounts for buffering,
+    // decode latency, and rate changes. We just read it and derive frames.
     // -----------------------------------------------------------------------
     const tick = useCallback((timestamp: DOMHighResTimeStamp) => {
         if (!isPlayingRef.current) return;
 
-        if (playStartTimeRef.current === null) {
-            playStartTimeRef.current = timestamp;
-            lastReactUpdateRef.current = timestamp;
+        const leaderId = leaderIdRef.current;
+        const leader = leaderId ? videoRefs.current.get(leaderId) : null;
+        if (!leader) {
+            rafRef.current = requestAnimationFrame(tick);
+            return;
         }
 
-        const elapsedSec = (timestamp - playStartTimeRef.current) / 1000;
-        const newFrame = playStartFrameRef.current + (elapsedSec * fpsRef.current * playbackRateRef.current);
+        const leaderTime = leader.currentTime;
+        const newFrame = leaderTime * fpsRef.current;
 
         // End of video
         if (newFrame >= totalFramesRef.current) {
             pauseAllVideos();
             isPlayingRef.current = false;
-            playStartTimeRef.current = null;
             const endFrame = totalFramesRef.current - 1;
             currentFrameRef.current = endFrame;
             updateOverlays(endFrame);
-            // Single React update on stop
             setIsPlaying(false);
             setCurrentFrame(endFrame);
             return;
@@ -232,27 +249,33 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const prevIntFrame = Math.floor(currentFrameRef.current);
         currentFrameRef.current = newFrame;
 
-        // Update DOM overlays directly on frame change — FAST
+        // Update DOM overlays on frame change
         if (intFrame !== prevIntFrame) {
             updateOverlays(intFrame);
         }
 
-        // Throttled React update for controls/slider (~5Hz)
+        // Throttled React update for slider (~5Hz)
         if (timestamp - lastReactUpdateRef.current >= REACT_UPDATE_INTERVAL_MS) {
             lastReactUpdateRef.current = timestamp;
             setCurrentFrame(intFrame);
         }
 
-        // Periodic video sync check — skip during grace period after start
-        syncCheckCounter.current++;
-        const elapsedMs = timestamp - playStartTimeRef.current!;
-        if (syncCheckCounter.current >= SYNC_CHECK_INTERVAL && elapsedMs > SYNC_GRACE_PERIOD_MS) {
-            syncCheckCounter.current = 0;
-            const targetTime = newFrame / fpsRef.current;
-            const toleranceSec = SYNC_TOLERANCE_FRAMES / fpsRef.current;
-            videoRefs.current.forEach((el) => {
-                if (Math.abs(el.currentTime - targetTime) > toleranceSec) el.currentTime = targetTime;
-                if (Math.abs(el.playbackRate - playbackRateRef.current) > 0.01) el.playbackRate = playbackRateRef.current;
+        // Periodic follower drift correction — only when drift exceeds tolerance.
+        // This is the key to smooth playback: let browser-native playback run
+        // undisturbed and only intervene when followers genuinely desync.
+        followerCheckCounter.current++;
+        if (followerCheckCounter.current >= FOLLOWER_CHECK_INTERVAL) {
+            followerCheckCounter.current = 0;
+            const toleranceSec = FOLLOWER_DRIFT_TOLERANCE_FRAMES / fpsRef.current;
+            const rate = playbackRateRef.current;
+            videoRefs.current.forEach((el, id) => {
+                if (id === leaderId) return;
+                if (Math.abs(el.currentTime - leaderTime) > toleranceSec) {
+                    el.currentTime = leaderTime;
+                }
+                if (Math.abs(el.playbackRate - rate) > 0.01) {
+                    el.playbackRate = rate;
+                }
             });
         }
 
@@ -260,15 +283,13 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     }, [pauseAllVideos, updateOverlays]);
 
     const startLoop = useCallback(() => {
-        playStartTimeRef.current = null;
-        playStartFrameRef.current = Math.floor(currentFrameRef.current);
-        syncCheckCounter.current = 0;
+        followerCheckCounter.current = 0;
+        lastReactUpdateRef.current = 0;
         rafRef.current = requestAnimationFrame(tick);
     }, [tick]);
 
     const stopLoop = useCallback(() => {
         if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-        playStartTimeRef.current = null;
     }, []);
 
     useEffect(() => stopLoop, [stopLoop]);
@@ -296,18 +317,31 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     // -----------------------------------------------------------------------
     const handlePlayPause = useCallback(() => {
         if (isPlayingRef.current) {
-            isPlayingRef.current = false; stopLoop(); pauseAllVideos(); setIsPlaying(false);
-            seekAllToFrame(Math.floor(currentFrameRef.current));
+            isPlayingRef.current = false;
+            stopLoop();
+            pauseAllVideos();
+            setIsPlaying(false);
+            // Snap all videos to leader's position on pause for perfect alignment
+            const leaderId = leaderIdRef.current;
+            const leader = leaderId ? videoRefs.current.get(leaderId) : null;
+            if (leader) {
+                const pauseFrame = Math.floor(leader.currentTime * fpsRef.current);
+                seekAllToFrame(pauseFrame);
+            }
         } else {
-            if (Math.floor(currentFrameRef.current) >= totalFramesRef.current - 1) seekAllToFrame(0);
-            isPlayingRef.current = true; setIsPlaying(true); playAllVideos(); startLoop();
+            if (Math.floor(currentFrameRef.current) >= totalFramesRef.current - 1) {
+                seekAllToFrame(0);
+            }
+            isPlayingRef.current = true;
+            setIsPlaying(true);
+            playAllVideos();
+            startLoop();
         }
     }, [seekAllToFrame, startLoop, stopLoop, playAllVideos, pauseAllVideos]);
 
-    // Slider DRAG — lightweight: just update overlays + pause once, no play/restart
+    // Slider DRAG — pause once, then scrub as user drags
     const handleSeekDrag = useCallback((frame: number) => {
         if (!isDraggingRef.current) {
-            // First drag tick — pause if playing
             isDraggingRef.current = true;
             wasPlayingBeforeDragRef.current = isPlayingRef.current;
             if (isPlayingRef.current) {
@@ -316,12 +350,10 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                 pauseAllVideos();
             }
         }
-        // Update overlays instantly via DOM
         const clamped = Math.max(0, Math.min(frame, totalFramesRef.current - 1));
         currentFrameRef.current = clamped;
         updateOverlays(clamped);
         setCurrentFrame(clamped);
-        // Seek videos (they're paused, so this is just setting the poster frame)
         const targetTime = fpsRef.current > 0 ? clamped / fpsRef.current : 0;
         videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
     }, [stopLoop, pauseAllVideos, updateOverlays]);
@@ -346,19 +378,16 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     }, [seekAllToFrame, stopLoop, pauseAllVideos]);
 
     const handlePlaybackRateChange = useCallback((rate: number) => {
-        playbackRateRef.current = rate; setPlaybackRate(rate);
-        if (isPlayingRef.current) {
-            videoRefs.current.forEach((el) => { el.playbackRate = rate; });
-            playStartTimeRef.current = null;
-            playStartFrameRef.current = Math.floor(currentFrameRef.current);
-        }
+        playbackRateRef.current = rate;
+        setPlaybackRate(rate);
+        videoRefs.current.forEach((el) => { el.playbackRate = rate; });
     }, []);
 
     const handleSeekToStart = useCallback(() => {
-        const w = isPlayingRef.current;
-        if (w) { isPlayingRef.current = false; stopLoop(); pauseAllVideos(); }
+        const wasPlaying = isPlayingRef.current;
+        if (wasPlaying) { isPlayingRef.current = false; stopLoop(); pauseAllVideos(); }
         seekAllToFrame(0);
-        if (w) { isPlayingRef.current = true; setIsPlaying(true); playAllVideos(); startLoop(); }
+        if (wasPlaying) { isPlayingRef.current = true; setIsPlaying(true); playAllVideos(); startLoop(); }
     }, [seekAllToFrame, stopLoop, startLoop, playAllVideos, pauseAllVideos]);
 
     const handleSeekToEnd = useCallback(() => {
@@ -385,7 +414,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     }, [handlePlayPause, handleFrameStep, handleSeekToStart, handleSeekToEnd]);
 
     // -----------------------------------------------------------------------
-    // Render — overlays use callback refs for direct DOM updates
+    // Render
     // -----------------------------------------------------------------------
     if (videos.length === 0) {
         return (
@@ -398,7 +427,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const framePadLen = Math.max(String(totalFrames).length, 1);
     const initialFrameText = 'F' + String(currentFrame).padStart(framePadLen, '0');
 
-    // Compute initial time text using real timestamps if available
     let initialTimeText: string;
     let timestampsAreReal = false;
     if (frameTimestamps) {
@@ -481,7 +509,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                                     {initialFrameText}
                                 </Box>
 
-                                {/* CAMERA ID — static, never changes */}
+                                {/* CAMERA ID — static */}
                                 <Box sx={{
                                     position: 'absolute', bottom: 6, left: 6,
                                     backgroundColor: 'rgba(0, 0, 0, 0.75)',
