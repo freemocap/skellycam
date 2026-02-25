@@ -1,24 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { Footer } from "@/components/ui-components/Footer";
 import { useTheme } from "@mui/material/styles";
 import { CameraViewsGrid } from "@/components/camera-views/CameraViewsGrid";
-import {CamerasViewSettingsOverlay} from "@/components/camera-view-settings-overlay/CamerasViewSettingsOverlay";
-
-interface CameraSettings {
-    columns: number | null;
-}
 
 export const CamerasPage = () => {
     const theme = useTheme();
-    const [settings, setSettings] = useState<CameraSettings>({
-        columns: null, // auto
-    });
-
-    const handleSettingsChange = (newSettings: CameraSettings) => {
-        setSettings(newSettings);
-    };
 
     return (
         <React.Fragment>
@@ -33,17 +21,16 @@ export const CamerasPage = () => {
                 backgroundColor: theme.palette.mode === 'dark'
                     ? theme.palette.background.default
                     : theme.palette.background.paper,
-                overflow: "scroll",
-                position: 'relative', // For absolute positioning of overlay
+                overflow: "hidden",
+                position: 'relative',
             }}>
-                <CamerasViewSettingsOverlay onSettingsChange={handleSettingsChange} />
-
-                <Box>
+                {/* Camera views fill all available space */}
+                <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                     <ErrorBoundary>
-                        <CameraViewsGrid settings={settings} />
+                        <CameraViewsGrid />
                     </ErrorBoundary>
                 </Box>
-                <Box component="footer" sx={{ p: 1 }}>
+                <Box component="footer" sx={{ p: 1, flexShrink: 0 }}>
                     <Footer />
                 </Box>
             </Box>
