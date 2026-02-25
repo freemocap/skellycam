@@ -82,9 +82,11 @@ All SkellyCam data is stored under `~/skellycam_data/` by default. This base dir
 │               └── camera_timestamps/
 │                   ├── *.camera0.timestamps.csv
 │                   └── *.camera1.timestamps.csv
-└── logs_info_and_settings/
-    └── logs/
-        └── log_*.log                       # Timestamped log files
+├── logs_info_and_settings/
+│   └── logs/
+│       └── log_*.log                       # Timestamped log files
+├── telemetry_config.json                   # Telemetry opt-in/opt-out
+└── telemetry_uid                           # Anonymous user ID for telemetry
 ```
 
 ### Recording Metadata
@@ -95,25 +97,34 @@ The `_info.json` file contains the recording configuration including camera sett
 
 Per-camera timestamp files contain one row per frame with high-resolution `perf_counter_ns` timestamps at each lifecycle stage. The multi-frame timestamp file contains inter-camera synchronization data.
 
-## Logging Configuration
+## Logging
 
-SkellyCam uses custom log levels defined in `skellycam/system/logging_configuration/log_levels.py`:
-
-| Level | Value | Description |
-|-------|-------|-------------|
-| `LOOP` | 3 | Logs inside tight loops (debug only) |
-| `TRACE` | 5 | Low-level debug information |
-| `DEBUG` | 10 | Standard debug output |
-| `INFO` | 20 | General information |
-| `SUCCESS` | 22 | Operation completed successfully |
-| `API` | 25 | API request/response logging |
-| `WARNING` | 30 | Unexpected but non-fatal conditions |
-| `ERROR` | 40 | Errors |
-
-The default log level is `TRACE`. Logs at `TRACE` level and above are forwarded to connected WebSocket clients for display in the UI's log terminal.
-
-To change the log level, edit `LOG_LEVEL` in `skellycam/__init__.py`:
+SkellyCam uses [skellylogs](https://github.com/freemocap/skellylogs) for logging, which provides custom log levels and WebSocket log forwarding. The log level is set in `skellycam/__init__.py`:
 
 ```python
 LOG_LEVEL = LogLevels.TRACE  # Change to LogLevels.INFO for less verbose output
 ```
+
+Logs at `TRACE` level and above are forwarded to connected WebSocket clients for display in the UI's log terminal.
+
+For details on log levels, handlers, and configuration options, see the [skellylogs repository](https://github.com/freemocap/skellylogs).
+
+## Telemetry
+
+SkellyCam collects anonymous usage telemetry to help the development team understand how the software is used. Telemetry is managed by the [skellypings](https://github.com/freemocap/skellypings) package.
+
+### What Is Collected
+
+An `app_opened` event is sent at startup containing anonymous system specifications: OS name and version, CPU architecture, CPU count (physical and logical), total RAM, and Python version. No camera data, recordings, or personally identifiable information is collected.
+
+### Opting Out
+
+Telemetry is enabled by default. To disable it, edit `~/skellycam_data/telemetry_config.json`:
+
+```json
+{
+  "telemetry_enabled": false
+}
+```
+
+You can also toggle telemetry from the Settings page in the UI. The setting takes effect on the next server start.

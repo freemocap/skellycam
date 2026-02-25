@@ -13,11 +13,99 @@ The WebSocket endpoint at `/skellycam/websocket/connect` carries three types of 
 3. Client begins receiving messages immediately.
 4. When the client disconnects (or the server shuts down), all tasks are cancelled and the connection is closed.
 
-## Binary Frame Payload
+## Binary Frame Payload Format
 
-When cameras are active, the server sends binary (bytes) messages containing JPEG-compressed frames from all cameras in the active group. The binary format is defined by the frontend's `binary-protocol.ts` and the backend's `create_frontend_payload_bytearray.py`.
+When cameras are active, the server sends binary (bytes) messages containing JPEG-compressed frames from all cameras in the active group. Each binary message is a self-contained multi-frame payload with the following structure:
 
-The payload structure packs multiple camera frames into a single binary message, allowing the frontend to parse and render all cameras from one WebSocket message.
+```
+┌────────────────────────────────────────────┐
+│              Payload Header (24 bytes)      │
+├────────────────────────────────────────────┤
+│         Frame Header Camera 0 (56 bytes)   │
+├────────────────────────────────────────────┤
+│         JPEG Data Camera 0 (variable)      │
+├────────────────────────────────────────────┤
+│         Frame Header Camera 1 (56 bytes)   │
+├────────────────────────────────────────────┤
+│         JPEG Data Camera 1 (variable)      │
+├────────────────────────────────────────────┤
+│                    ...                      │
+├────────────────────────────────────────────┤
+│         Frame Header Camera N (56 bytes)   │
+├────────────────────────────────────────────┤
+│         JPEG Data Camera N (variable)      │
+├────────────────────────────────────────────┤
+│              Payload Footer (24 bytes)      │
+└────────────────────────────────────────────┘
+```
+
+All multi-byte integers are **little-endian**. Structures use **aligned** layout (numpy `align=True`), which introduces padding bytes for natural alignment.
+
+### Payload Header (24 bytes)
+
+| Offset | Size | Type | Field | Description |
+|--------|------|------|-------|-------------|
+| 0 | 1 | `uint8` | `message_type` | Always `0` (PAYLOAD_HEADER) |
+| 1–7 | 7 | — | *(padding)* | Alignment padding for 8-byte `frame_number` |
+| 8 | 8 | `int64` | `frame_number` | Monotonically increasing frame counter |
+| 16 | 4 | `int32` | `number_of_cameras` | Number of camera frames in this payload |
+| 20–23 | 4 | — | *(padding)* | Struct alignment padding |
+
+### Frame Header (56 bytes, one per camera)
+
+| Offset | Size | Type | Field | Description |
+|--------|------|------|-------|-------------|
+| 0 | 1 | `uint8` | `message_type` | Always `1` (FRAME_HEADER) |
+| 1–7 | 7 | — | *(padding)* | Alignment padding |
+| 8 | 8 | `int64` | `frame_number` | Same frame number as the payload header |
+| 16 | 16 | `ascii` | `camera_id` | Null-terminated ASCII string, zero-padded to 16 bytes |
+| 32 | 4 | `int32` | `camera_index` | Integer index of the camera |
+| 36 | 4 | `int32` | `image_width` | Width of the JPEG image in pixels |
+| 40 | 4 | `int32` | `image_height` | Height of the JPEG image in pixels |
+| 44 | 4 | `int32` | `color_channels` | Number of color channels (typically 3) |
+| 48 | 4 | `int32` | `jpeg_string_length` | Length of the following JPEG data in bytes |
+| 52–55 | 4 | — | *(padding)* | Struct alignment padding |
+
+Immediately following each frame header is the raw JPEG data (`jpeg_string_length` bytes). There is no padding between the JPEG data and the next frame header.
+
+### Payload Footer (24 bytes)
+
+| Offset | Size | Type | Field | Description |
+|--------|------|------|-------|-------------|
+| 0 | 1 | `uint8` | `message_type` | Always `2` (PAYLOAD_FOOTER) |
+| 1–7 | 7 | — | *(padding)* | Alignment padding |
+| 8 | 8 | `int64` | `frame_number` | Must match the payload header's frame number |
+| 16 | 4 | `int32` | `number_of_cameras` | Must match the payload header's camera count |
+| 20–23 | 4 | — | *(padding)* | Struct alignment padding |
+
+The footer serves as a consistency check — parsers can verify that `frame_number` and `number_of_cameras` match the header.
+
+### Message Type Constants
+
+| Value | Name | Description |
+|-------|------|-------------|
+| `0` | `PAYLOAD_HEADER` | Start of a multi-frame payload |
+| `1` | `FRAME_HEADER` | Per-camera frame metadata (followed by JPEG data) |
+| `2` | `PAYLOAD_FOOTER` | End of a multi-frame payload |
+
+### Parsing a Payload
+
+To parse a binary payload:
+
+1. Read 24 bytes → payload header. Verify `message_type == 0`. Extract `frame_number` and `number_of_cameras`.
+2. For each camera (`number_of_cameras` times):
+    1. Read 56 bytes → frame header. Verify `message_type == 1`. Extract `jpeg_string_length`.
+    2. Read `jpeg_string_length` bytes → raw JPEG image data.
+3. Read 24 bytes → payload footer. Verify `message_type == 2` and that `frame_number` / `number_of_cameras` match the header.
+
+### Implementation References
+
+- **Python (server):** `skellycam/core/types/frontend_payload_bytearray.py` — `create_frontend_payload()` builds the binary payload using numpy structured arrays.
+- **TypeScript (client):** `skellycam-ui/src/services/server/server-helpers/frame-processor/binary-protocol.ts` — struct definitions and field offsets. `binary-frame-parser.ts` — `parseMultiFramePayload()` parses the binary data and creates `ImageBitmap` objects.
+
+### Image Processing Notes
+
+The server resizes each camera frame before JPEG encoding. If the client has sent `displayImageSizes` in a frame acknowledgment, the server resizes to match the client's display dimensions. Otherwise, images are scaled to 50% of their native resolution. JPEG encoding uses quality level 80 by default.
 
 ## JSON Messages (Server → Client)
 
@@ -39,7 +127,7 @@ The payload structure packs multiple camera frames into a single binary message,
 }
 ```
 
-Log records with a level at or above `TRACE` (level 5) are forwarded to the WebSocket. The frontend displays these in the log terminal panel.
+Log records at `TRACE` level (level 5) and above are forwarded to the WebSocket. The frontend displays these in the log terminal panel. Log records are produced by [skellylogs](https://github.com/freemocap/skellylogs).
 
 ### Framerate Updates
 
@@ -68,7 +156,7 @@ Log records with a level at or above `TRACE` (level 5) are forwarded to the WebS
 }
 ```
 
-Sent approximately once per second when cameras are active. The `backend_framerate` represents the true camera capture rate (computed from frame numbers and capture timestamps, accurate even when the WebSocket skips frames due to backpressure). The `frontend_framerate` represents the WebSocket delivery rate (what the UI actually receives).
+Sent approximately every 250ms when cameras are active. The `backend_framerate` represents the true camera capture rate (computed from frame numbers and capture timestamps, accurate even when the WebSocket skips frames due to backpressure). The `frontend_framerate` represents the WebSocket delivery rate (what the UI actually receives).
 
 ### Application State
 
@@ -88,7 +176,7 @@ Sent approximately once per second when cameras are active. The `backend_framera
 }
 ```
 
-Sent periodically (every ~1 second) and whenever the application state changes.
+Sent approximately every 1 second and whenever the application state changes (e.g., recording starts/stops).
 
 ## Client → Server Messages
 
@@ -110,7 +198,7 @@ After processing a binary frame payload, the client sends an acknowledgment:
 
 The `frameNumber` field tells the server which frame has been rendered. The server uses this for backpressure management — it will not send new frames until the previous frame is acknowledged. If the frontend falls behind, the server skips frames to prevent buffer bloat.
 
-The `displayImageSizes` field (optional) tells the server the current display dimensions, allowing it to resize JPEG frames to match, reducing bandwidth.
+The `displayImageSizes` field (optional) tells the server the current display dimensions for each camera, allowing it to resize JPEG frames to match, reducing bandwidth.
 
 ### Ping/Pong
 

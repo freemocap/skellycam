@@ -86,6 +86,21 @@ class TimestampedRingBuffer {
         return result;
     }
 
+    /** Copy current values into a Float64Array in chronological order (for stats computation). */
+    valuesToFloat64Array(): Float64Array {
+        const result = new Float64Array(this.count);
+        if (this.count < this.values.length) {
+            for (let i = 0; i < this.count; i++) {
+                result[i] = this.values[i];
+            }
+        } else {
+            for (let i = 0; i < this.count; i++) {
+                result[i] = this.values[(this.writeIndex + i) % this.values.length];
+            }
+        }
+        return result;
+    }
+
     getCount(): number {
         return this.count;
     }
@@ -99,95 +114,63 @@ class TimestampedRingBuffer {
 }
 
 /**
- * Incrementally maintained running statistics for a stream of duration samples.
- * Uses Welford's online algorithm for variance — O(1) per update, no sorting.
- * Median is approximated by tracking a sorted insertion array that is rebuilt
- * only when the ring buffer wraps (i.e. every MAX_DURATION_HISTORY samples).
+ * Computes statistics over the current contents of a ring buffer.
+ * All stats reflect only the windowed data (last MAX_DURATION_HISTORY samples),
+ * not all-time accumulations.
  */
-class RunningStats {
-    private _count: number = 0;
-    private _sum: number = 0;
-    private _m2: number = 0; // sum of squared deviations (Welford)
-    private _min: number = Infinity;
-    private _max: number = -Infinity;
-
-    /** Ring buffer values for median — rebuilt lazily on snapshot. */
-    private _dirty: boolean = false;
-    private _sortedCache: Float64Array | null = null;
-
-    /** Reference to the ring buffer to pull raw values for median calculation. */
+class WindowedStats {
     private _buffer: TimestampedRingBuffer;
 
     constructor(buffer: TimestampedRingBuffer) {
         this._buffer = buffer;
     }
 
-    update(value: number): void {
-        this._count++;
-        this._sum += value;
-
-        // Welford's running variance
-        const mean = this._sum / this._count;
-        const delta = value - mean;
-        this._m2 += delta * (value - mean);
-
-        if (value < this._min) this._min = value;
-        if (value > this._max) this._max = value;
-        this._dirty = true;
-    }
-
-    /** Compute aggregate stats. Sorting only happens here (at snapshot frequency, ~4Hz). */
+    /** Compute stats from the ring buffer's current window. */
     computeAggregate(source: string): DetailedFramerate | null {
-        if (this._count === 0) return null;
+        const count = this._buffer.getCount();
+        if (count === 0) return null;
 
-        const mean = this._sum / this._count;
-        const variance = this._count > 1 ? this._m2 / this._count : 0;
+        const values = this._buffer.valuesToFloat64Array();
+
+        let sum = 0;
+        let min = Infinity;
+        let max = -Infinity;
+        for (let i = 0; i < values.length; i++) {
+            const v = values[i];
+            sum += v;
+            if (v < min) min = v;
+            if (v > max) max = v;
+        }
+
+        const mean = sum / count;
+
+        let m2 = 0;
+        for (let i = 0; i < values.length; i++) {
+            const d = values[i] - mean;
+            m2 += d * d;
+        }
+        const variance = count > 1 ? m2 / count : 0;
         const stddev = Math.sqrt(variance);
         const cv = mean > 0 ? stddev / mean : 0;
 
-        // Median: sort only when dirty
-        let median = mean; // fallback
-        if (this._dirty || this._sortedCache === null) {
-            const samples = this._buffer.toArray();
-            const durations = new Float64Array(samples.length);
-            for (let i = 0; i < samples.length; i++) {
-                durations[i] = samples[i].value;
-            }
-            durations.sort();
-            this._sortedCache = durations;
-            this._dirty = false;
-        }
-
-        const sorted = this._sortedCache;
-        const n = sorted.length;
-        if (n > 0) {
-            median = n % 2 === 0
-                ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-                : sorted[Math.floor(n / 2)];
-        }
+        // Sort for median
+        values.sort();
+        const median = count % 2 === 0
+            ? (values[count / 2 - 1] + values[count / 2]) / 2
+            : values[Math.floor(count / 2)];
 
         return {
             mean_frame_duration_ms: mean,
             mean_frames_per_second: mean > 0 ? 1000 / mean : 0,
             frame_duration_mean: mean,
             frame_duration_median: median,
-            frame_duration_min: this._min,
-            frame_duration_max: this._max,
+            frame_duration_min: min,
+            frame_duration_max: max,
             frame_duration_stddev: stddev,
             frame_duration_coefficient_of_variation: cv,
-            calculation_window_size: this._count,
+            calculation_window_size: count,
             framerate_source: source,
         };
-    }
-
-    clear(): void {
-        this._count = 0;
-        this._sum = 0;
-        this._m2 = 0;
-        this._min = Infinity;
-        this._max = -Infinity;
-        this._sortedCache = null;
-        this._dirty = false;
     }
 }
 
@@ -196,7 +179,7 @@ class RunningStats {
  * Lives in a ref — no Redux, no immutable copies, no re-renders on every update.
  * Components poll via getSnapshot() on their own schedule.
  *
- * Uses incremental statistics (RunningStats) so getSnapshot() is cheap.
+ * Aggregate statistics are computed from the windowed ring buffer on each snapshot (~4Hz).
  */
 export class FramerateStore {
     currentBackendFramerate: DetailedFramerate | null = null;
@@ -204,14 +187,13 @@ export class FramerateStore {
 
     private _recentFrontendDurations = new TimestampedRingBuffer(MAX_DURATION_HISTORY);
     private _recentBackendDurations = new TimestampedRingBuffer(MAX_DURATION_HISTORY);
-    private _frontendStats = new RunningStats(this._recentFrontendDurations);
-    private _backendStats = new RunningStats(this._recentBackendDurations);
+    private _frontendStats = new WindowedStats(this._recentFrontendDurations);
+    private _backendStats = new WindowedStats(this._recentBackendDurations);
 
     updateBackend(data: DetailedFramerate): void {
         this.currentBackendFramerate = data;
         if (data.mean_frame_duration_ms > 0) {
             this._recentBackendDurations.push(Date.now(), data.mean_frame_duration_ms);
-            this._backendStats.update(data.mean_frame_duration_ms);
         }
     }
 
@@ -219,7 +201,6 @@ export class FramerateStore {
         this.currentFrontendFramerate = data;
         if (data.mean_frame_duration_ms > 0) {
             this._recentFrontendDurations.push(Date.now(), data.mean_frame_duration_ms);
-            this._frontendStats.update(data.mean_frame_duration_ms);
         }
     }
 
@@ -244,7 +225,5 @@ export class FramerateStore {
         this.currentFrontendFramerate = null;
         this._recentFrontendDurations.clear();
         this._recentBackendDurations.clear();
-        this._frontendStats.clear();
-        this._backendStats.clear();
     }
 }

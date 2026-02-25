@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Python 3.10+** — [python.org/downloads](https://www.python.org/downloads/)
+- **Python 3.11+** (3.12 recommended) — [python.org/downloads](https://www.python.org/downloads/)
 - **uv** — Fast Python package manager: [astral.sh/uv](https://github.com/astral-sh/uv)
 - **Node.js 18+** — Required for the React/Electron UI: [nodejs.org](https://nodejs.org/)
 - **USB cameras or built-in webcams**
@@ -47,6 +47,12 @@ npm install
 python -m skellycam
 ```
 
+After installing with `uv sync`, you can also use the `skellycam` command directly:
+
+```bash
+skellycam
+```
+
 The server starts on `http://localhost:53117`. You can verify it is running by visiting `http://localhost:53117/health` in your browser — you should see `"Hello👋"`.
 
 The interactive Swagger API documentation is at `http://localhost:53117/docs`.
@@ -67,7 +73,7 @@ This launches the Vite dev server. If running inside Electron, it launches the E
 1. **Detect cameras** — The UI or a `POST /skellycam/camera/detect` call scans for available USB cameras.
 2. **Create camera group** — Select cameras and configure resolution/framerate/exposure via the UI or `POST /skellycam/camera/group/apply`.
 3. **Live preview** — The WebSocket connection streams frames to the UI in real time.
-4. **Record** — Click record or `POST /skellycam/camera/group/all/record/start` to begin recording. Stop with the stop button or `GET /skellycam/camera/group/all/record/stop`.
+4. **Record** — Click record or `POST /skellycam/camera/group/all/record/start` to begin recording. Optionally select a microphone to capture audio alongside video. Stop with the stop button or `GET /skellycam/camera/group/all/record/stop`.
 5. **Review** — Recordings are saved under `~/skellycam_data/recordings/` with synchronized video files and timestamp CSVs. Use the Playback page to review recordings with frame-locked multi-video playback — all videos always display the same frame number.
 
 ## Verifying the Installation
@@ -79,3 +85,11 @@ uv run pytest skellycam/tests/ -v
 ```
 
 All tests should pass without requiring physical cameras — the test suite uses mocks and a lightweight FastAPI test client.
+
+## Troubleshooting
+
+**Port 53117 already in use** — SkellyCam automatically kills any existing process on port 53117 at startup. If this fails, manually stop the conflicting process or change the port in `skellycam/api/server_constants.py`.
+
+**No cameras detected** — Check that your USB cameras are plugged in and recognized by the OS. On Linux, ensure your user has permission to access `/dev/video*` devices (you may need to add your user to the `video` group: `sudo usermod -aG video $USER`).
+
+**Audio not working on Linux** — Make sure you've installed the system packages: `sudo apt install clang portaudio19-dev`.

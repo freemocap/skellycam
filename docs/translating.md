@@ -1,0 +1,37 @@
+# 🌐 Translating SkellyCam
+
+We use community translations to make motion capture accessible worldwide. No coding required — just edit a JSON file and open a PR.
+
+**[→ Browse translation files on GitHub](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/i18n/locales)**
+
+## Current Status
+
+All non-English translations are **AI-generated and unreviewed** — they almost certainly contain errors. Even fixing a few strings helps!
+
+## Translation Files
+
+All UI strings live in `skellycam-ui/src/i18n/locales/`. English (`en-english.json`) is the source of truth. All other languages are AI-generated and waiting for community review.
+
+Currently supported: English, Spanish, French, German, Italian, Portuguese (Brazil), Catalan, Dutch, Swedish, Polish, Czech, Romanian, Hungarian, Greek, Croatian, Serbian, Ukrainian, Russian, Georgian, Turkish, Arabic, Farsi, Urdu, Hindi, Bengali, Tamil, Nepali, Sinhala, Chinese (Simplified), Japanese, Korean, Thai, Vietnamese, Indonesian, Malay, Tagalog, Myanmar, Swahili, and Amharic.
+
+## How to Contribute
+
+1. Click any language file above (or find it in `skellycam-ui/src/i18n/locales/`)
+2. Click the pencil icon to edit directly on GitHub
+3. Fix any translations you see that are wrong or awkward
+4. Submit a pull request
+
+Strings use i18next format — preserve `{{variables}}` exactly as-is and keep `_one`/`_other` suffixes for plurals.
+
+Backend strings (camera names, log messages, codecs, file paths) don't need translation.
+
+## Adding a New Language
+
+1. Copy `en-english.json` to `<locale-code>-<language-name>.json`
+2. Translate the values (not the keys)
+3. Set `_meta.translationSource` to `"ai-generated"` or `"human-authored"`
+4. Open an issue or PR — we'll wire it into the app
+
+## Questions?
+
+Open an issue on GitHub or reach out on the [FreeMoCap Discord](https://discord.gg/freemocap).

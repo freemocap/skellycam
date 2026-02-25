@@ -20,7 +20,7 @@ Most multi-camera setups suffer from inter-camera drift — cameras run on indep
 | [Architecture](architecture.md) | Synchronization protocol, process model, data flow |
 | [API Reference](api-reference.md) | HTTP and WebSocket endpoint documentation |
 | [WebSocket Protocol](websocket-protocol.md) | Binary frame format, JSON messages, backpressure |
-| [Configuration](configuration.md) | Server settings, camera config, data directories |
+| [Configuration](configuration.md) | Server settings, camera config, data directories, telemetry |
 | [Development](development.md) | Testing, linting, CI, and contributing guidelines |
 
 ## Quick Start
@@ -32,6 +32,7 @@ uv venv && source .venv/bin/activate
 uv sync
 
 python -m skellycam          # Start server on localhost:53117
+# or just: skellycam
 
 # In another terminal:
 cd skellycam-ui

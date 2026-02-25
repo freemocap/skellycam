@@ -29,10 +29,10 @@ use [Github Flow](https://guides.github.com/introduction/flow/index.html)). We a
 In short, when you submit code changes, your submissions are understood to be under the same [AGPL](LICENSE) that covers
 the project. Feel free to contact the maintainers to understand what that means.
 
-## Report bugs using Github's [issues](https://github.com/freemocap/freemocap/issues)
+## Report bugs using Github's [issues](https://github.com/freemocap/skellycam/issues)
 
 We use GitHub issues to track public bugs. Report a bug
-by [opening a new issue](https://github.com/freemocap/freemocap/issues/new); it's that easy!
+by [opening a new issue](https://github.com/freemocap/skellycam/issues/new); it's that easy!
 
 ## Write bug reports with detail, background, and sample code
 
@@ -43,7 +43,7 @@ by [opening a new issue](https://github.com/freemocap/freemocap/issues/new); it'
 - A quick summary and/or background
 - Steps to reproduce
     - Be specific!
-    - Include an uploaded ZIP of the freemocap data session you ran that produced the issue.
+    - Include an uploaded ZIP of the skellycam recording session you ran that produced the issue.
     - Give sample code if you can. [This stackoverflow question](http://stackoverflow.com/q/12488905/180626)
       demonstrates the user giving as much information as possible.
 - What you expected would happen
@@ -64,7 +64,7 @@ stems from how well you can help them understand you. :)
 
 ## Use a Consistent Coding Style
 
-We use the [Black](https://black.readthedocs.io/en/stable/) autoformatter as the de-facto syntax style guide of choice.
+We use [Ruff](https://docs.astral.sh/ruff/) for linting. Run `uv run ruff check skellycam/` to check and `uv run ruff check --fix skellycam/` to auto-fix.
 
 ## License
 

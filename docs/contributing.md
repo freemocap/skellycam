@@ -1,0 +1,47 @@
+# Contributing to SkellyCam
+
+We love your input! We want to make contributing to this project as easy and transparent as possible, whether it's reporting a bug, discussing the current state of the code, submitting a fix, proposing new features, or becoming a maintainer.
+
+## Development with GitHub
+
+We use GitHub to host code, track issues and feature requests, and accept pull requests.
+
+## GitHub Flow
+
+We use [GitHub Flow](https://guides.github.com/introduction/flow/index.html), so all code changes happen through pull requests:
+
+1. Fork the repo and create your branch from `main`.
+2. If you've added code that should be tested, add tests.
+3. If you've changed APIs, update the documentation.
+4. Ensure the test suite passes.
+5. Make sure your code lints (`uv run ruff check skellycam/`).
+6. Issue that pull request!
+
+## Licensing
+
+Any contributions you make will be under the AGPL Software License. When you submit code changes, your submissions are understood to be under the same [AGPL](https://github.com/freemocap/skellycam/blob/main/LICENSE) that covers the project.
+
+## Reporting Bugs
+
+We use [GitHub Issues](https://github.com/freemocap/skellycam/issues) to track bugs. Report a bug by [opening a new issue](https://github.com/freemocap/skellycam/issues/new).
+
+**Great bug reports** tend to have:
+
+- A quick summary and/or background
+- Steps to reproduce (be specific!)
+- Include an uploaded ZIP of the skellycam recording session you ran that produced the issue
+- What you expected would happen
+- What actually happens
+- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
+
+## Pull Request Guidelines
+
+- Any code that comes through a PR should be covered with tests
+- Those tests must pass the GitHub Actions workflow before they may be merged
+- Any UI changes should include a small video of the working application with the change included
+
+## Coding Style
+
+We use [Ruff](https://docs.astral.sh/ruff/) for linting. Run `uv run ruff check skellycam/` to check and `uv run ruff check --fix skellycam/` to auto-fix.
+
+See the [Development guide](development.md) for more details on the development workflow.

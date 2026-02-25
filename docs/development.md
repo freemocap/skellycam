@@ -29,21 +29,32 @@ uv run pytest skellycam/tests/ -v --tb=short
 
 The test suite uses a lightweight FastAPI `TestClient` with mocked camera dependencies. No physical cameras are required.
 
+!!! note
+    `asyncio_mode = "auto"` is set in `pyproject.toml`, so async test functions do not need the `@pytest.mark.asyncio` decorator.
+
 ### Test Structure
 
 ```
 skellycam/tests/
-├── conftest.py                   # Shared fixtures (mock app, client, mock managers)
+├── conftest.py                            # Shared fixtures (mock app, client, mock managers)
 ├── mocks/
-│   ├── camera_mock.py            # MockVideoCapture (simulates cv2.VideoCapture)
-│   └── test_camera_mock.py       # Tests for the mock itself
-├── test_camera_config.py         # CameraConfig model logic
-├── test_camera_group_manager.py  # CameraGroupManager creation and singleton
-├── test_camera_router.py         # Camera REST endpoint tests
-├── test_health.py                # Health and root endpoint tests
-├── test_playback.py              # Playback endpoint tests
-├── test_shutdown.py              # Shutdown endpoint tests
-└── test_websocket.py             # WebSocket connection and protocol tests
+│   ├── camera_mock.py                     # MockVideoCapture (simulates cv2.VideoCapture)
+│   └── test_camera_mock.py                # Tests for the mock itself
+├── test_camera_config.py                  # CameraConfig model logic
+├── test_camera_config_extended.py         # Extended config tests
+├── test_camera_group_manager.py           # CameraGroupManager creation and singleton
+├── test_camera_orchestrator.py            # Orchestrator synchronization tests
+├── test_camera_router.py                  # Camera REST endpoint tests
+├── test_frontend_payload_and_recording.py # Binary payload creation and recording tests
+├── test_health.py                         # Health and root endpoint tests
+├── test_playback.py                       # Playback endpoint tests
+├── test_pubsub.py                         # IPC publish/subscribe tests
+├── test_shared_memory.py                  # Shared memory ring buffer tests
+├── test_shutdown.py                       # Shutdown endpoint tests
+├── test_timestamps_and_framerate.py       # Timestamp and framerate tracking tests
+├── test_websocket.py                      # WebSocket connection and protocol tests
+├── test_websocket_internals.py            # WebSocket server internal logic tests
+└── test_worker_lifecycle.py               # Worker process lifecycle tests
 ```
 
 ### Key Test Fixtures (conftest.py)
@@ -103,7 +114,7 @@ uv run poe tc          # Apply imports + run tests to verify
 
 GitHub Actions runs on every push and pull request (`.github/workflows/test.yml`):
 
-- **Backend tests** — Python 3.10, 3.11, 3.12 on Ubuntu, Windows, and macOS
+- **Backend tests** — Python 3.11 and 3.12 on Ubuntu, Windows, and macOS
 - **Linting** — Ruff check on all platforms
 - **Frontend typecheck** — TypeScript `tsc --noEmit` on Ubuntu
 
@@ -116,11 +127,11 @@ GitHub Actions runs on every push and pull request (`.github/workflows/test.yml`
 - **Global imports only** — No local imports inside functions or methods.
 - **Fail loudly** — Raise exceptions on errors instead of printing warnings or returning defaults.
 - **Pydantic models** — Used for all API request/response schemas and configuration objects.
-- **Custom log levels** — Use `logger.trace()`, `logger.success()`, `logger.api()` for domain-specific logging.
+- **Logging** — Uses [skellylogs](https://github.com/freemocap/skellylogs) with custom levels like `logger.trace()`, `logger.success()`, and `logger.api()`.
 
 ### TypeScript (Frontend)
 
-- **React functional components** with hooks
+- **React 19** functional components with hooks
 - **Redux Toolkit** for state management with typed hooks
 - **Material UI** for component styling
 - **OffscreenCanvas workers** for live camera frame rendering
@@ -142,8 +153,24 @@ GitHub Actions runs on every push and pull request (`.github/workflows/test.yml`
 1. Create a test file in `skellycam/tests/test_*.py`.
 2. Use the `client` fixture for HTTP/WebSocket endpoint tests.
 3. Use `mock_camera_group_manager` for tests that need to interact with camera management.
-4. All async test functions should be decorated with `@pytest.mark.asyncio`.
+4. Async test functions work automatically — no decorator needed (`asyncio_mode = "auto"`).
 
 ## Building Installers
 
-See the [README](../README.md#building-installers) for installer build instructions using Nuitka and Electron Builder.
+### Python Executable (Nuitka)
+
+```bash
+cd skellycam-ui
+..\installers\nuitka_scripts\nuitka_installer_windows.bat
+```
+
+This produces a standalone executable (build takes ~1 hour).
+
+### Electron App
+
+```bash
+cd skellycam-ui
+npm install && npm run build
+```
+
+See `electron-builder.json` for packaging configuration.
