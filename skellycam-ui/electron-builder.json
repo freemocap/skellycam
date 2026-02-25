@@ -2,13 +2,14 @@
   "appId": "skellycam.app",
   "productName": "skellycam",
   "directories": {
-    "output": "release",
-    "buildResources": "build"
+    "output": "release/${version}"
   },
   "files": [
     "dist-electron",
     "dist",
-    "skellycam_server*"
+    "skellycam_server*",
+    "../shared/skellycam-logo/skellycam-favicon.ico",
+    "../shared/skellycam-logo/skellycam-logo.png"
   ],
   "asar": true,
   "asarUnpack": [
@@ -16,15 +17,9 @@
     "**/skellycam-logo.png"
   ],
   "compression": "maximum",
-  "extraResources": [
-    {
-      "from": "build/skellycam-logo.png",
-      "to": "skellycam-logo.png"
-    }
-  ],
 
   "win": {
-    "icon": "build/skellycam-favicon.ico",
+    "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
     "target": [
       {
         "target": "nsis",
@@ -42,7 +37,7 @@
   },
 
   "mac": {
-    "icon": "build/skellycam-logo.png",
+    "icon": "../shared/skellycam-logo/skellycam-logo.png",
     "category": "public.app-category.video",
     "target": [
       {
@@ -66,7 +61,7 @@
   },
 
   "linux": {
-    "icon": "build/skellycam-logo.png",
+    "icon": "../shared/skellycam-logo/skellycam-logo.png",
     "category": "Video",
     "target": [
       {
@@ -80,9 +75,11 @@
     ],
     "artifactName": "${productName}_${version}_${arch}.${ext}",
     "desktop": {
-      "Name": "SkellyCam",
-      "Comment": "Camera backend for FreeMoCap",
-      "Categories": "Video;AudioVideo;"
+      "entry": {
+        "Name": "SkellyCam",
+        "Comment": "Camera backend for FreeMoCap",
+        "Categories": "Video;AudioVideo;"
+      }
     }
   },
   "deb": {
