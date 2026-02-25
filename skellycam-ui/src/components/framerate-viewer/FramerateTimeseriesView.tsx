@@ -22,8 +22,33 @@ type FpsSample = { timestamp: number; value: number }
 /** How many seconds of data the rolling window shows. */
 const WINDOW_SECONDS = 60
 
-const toFps = (samples: TimestampedSample[]): FpsSample[] =>
-    samples.filter((s) => s.value > 0).map((s) => ({timestamp: s.timestamp, value: 1000 / s.value}))
+/** Fixed relative-time tick positions (seconds ago). These never change,
+ *  so D3's axis join always matches existing tick elements — zero DOM churn. */
+const RELATIVE_TICK_SECONDS = [0, -15, -30, -45, -60]
+
+/**
+ * Convert duration samples to FPS in-place into a reusable output array.
+ * Avoids allocating a fresh array on every update call.
+ */
+function toFpsInPlace(
+    samples: TimestampedSample[],
+    out: FpsSample[],
+): void {
+    let writeIdx = 0
+    for (let i = 0; i < samples.length; i++) {
+        const s = samples[i]
+        if (s.value > 0) {
+            if (writeIdx < out.length) {
+                out[writeIdx].timestamp = s.timestamp
+                out[writeIdx].value = 1000 / s.value
+            } else {
+                out.push({timestamp: s.timestamp, value: 1000 / s.value})
+            }
+            writeIdx++
+        }
+    }
+    out.length = writeIdx
+}
 
 /**
  * Persistent mutable state shared between initChart and updateChart.
@@ -33,13 +58,17 @@ const toFps = (samples: TimestampedSample[]): FpsSample[] =>
 type ChartState = {
     frontendPath: d3.Selection<SVGPathElement, unknown, null, undefined>
     backendPath: d3.Selection<SVGPathElement, unknown, null, undefined>
-    xScale: d3.ScaleTime<number, number>
+    xScale: d3.ScaleLinear<number, number>
     yScale: d3.ScaleLinear<number, number>
     tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>
-    // Current data snapshots for bisect-based tooltip lookup
+    // Current windowed data for bisect-based tooltip lookup
     frontendData: FpsSample[]
     backendData: FpsSample[]
     sources: Array<{id: string; name: string; color: string}>
+    windowEnd: number
+    // Reusable scratch arrays to avoid per-update allocations
+    frontendFpsBuf: FpsSample[]
+    backendFpsBuf: FpsSample[]
 }
 
 export default function FramerateTimeseriesView({
@@ -57,11 +86,55 @@ export default function FramerateTimeseriesView({
 
     // initChart — creates persistent SVG elements that live for the chart's lifetime
     const initChart = useCallback(
-        ({chartArea, width, height}: ChartScaffolding): ChartLifecycle => {
+        ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding): ChartLifecycle => {
             const tooltip = createTooltip(theme)
 
-            const xScale = d3.scaleTime().range([0, width])
+            // X-axis uses relative seconds (0 = now, -60 = oldest).
+            // Fixed domain means axis ticks never enter/exit — zero DOM churn.
+            const xScale = d3.scaleLinear().domain([-WINDOW_SECONDS, 0]).range([0, width])
             const yScale = d3.scaleLinear().range([height, 0])
+
+            // Build the x-axis once with fixed tick values
+            const xAxisGen = d3
+                .axisBottom(xScale)
+                .tickValues(RELATIVE_TICK_SECONDS)
+                .tickSize(-height)
+                .tickFormat((d) => {
+                    const sec = d as number
+                    return sec === 0 ? "now" : `${sec}s`
+                })
+            xAxisG.call(xAxisGen)
+
+            // Build the y-axis with initial placeholder ticks
+            const yAxisGen = d3
+                .axisLeft(yScale)
+                .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
+                .tickSize(-width)
+            yAxisG.call(yAxisGen)
+
+            applyAxisStyles(chartArea, theme)
+
+            // Axis labels (appended to svg root group, outside clip-path)
+            svg.append("text")
+                .attr("class", "x-axis-label")
+                .attr("x", width / 2)
+                .attr("y", height + 32)
+                .attr("text-anchor", "middle")
+                .style("font-family", "monospace")
+                .style("font-size", "10px")
+                .style("fill", theme.palette.text.secondary)
+                .text("Time")
+
+            svg.append("text")
+                .attr("class", "y-axis-label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -28)
+                .attr("text-anchor", "middle")
+                .style("font-family", "monospace")
+                .style("font-size", "10px")
+                .style("fill", theme.palette.text.secondary)
+                .text("FPS")
 
             // Persistent path elements — one per series, never removed
             const frontendPath = chartArea.append("path")
@@ -86,7 +159,7 @@ export default function FramerateTimeseriesView({
                 .style("fill", theme.palette.text.disabled)
                 .style("display", "none")
 
-            // Invisible overlay rect for bisect-based tooltip — single event listener
+            // Invisible overlay rect for bisect-based tooltip
             const overlay = chartArea.append("rect")
                 .attr("width", width)
                 .attr("height", height)
@@ -98,9 +171,10 @@ export default function FramerateTimeseriesView({
                 if (!state) return
 
                 const [mx] = d3.pointer(event)
-                const mouseTime = state.xScale.invert(mx).getTime()
+                // Convert pixel → relative seconds → absolute timestamp
+                const relativeSeconds = state.xScale.invert(mx)
+                const mouseTime = state.windowEnd + relativeSeconds * 1000
 
-                // Find nearest point across both series using bisect
                 let bestDist = Infinity
                 let bestSample: FpsSample | null = null
                 let bestSource: {id: string; name: string; color: string} | null = null
@@ -160,6 +234,9 @@ export default function FramerateTimeseriesView({
                     {id: "frontend", name: "", color: frontendColor},
                     {id: "backend", name: "", color: backendColor},
                 ],
+                windowEnd: 0,
+                frontendFpsBuf: [],
+                backendFpsBuf: [],
             }
 
             return {
@@ -172,23 +249,25 @@ export default function FramerateTimeseriesView({
         [theme, frontendColor, backendColor]
     )
 
-    // updateChart — only mutates existing elements, zero DOM adds/removes
+    // updateChart — only mutates path `d` attrs and y-axis ticks. Zero DOM adds/removes for x-axis.
     const updateChart = useCallback(
-        ({svg, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
+        ({svg, yAxisG, width, height}: ChartScaffolding) => {
             const state = stateRef.current
             if (!state) return
 
-            const frontendFps = toFps(recentFrontendDurations)
-            const backendFps = toFps(recentBackendDurations)
+            // Convert durations→FPS using reusable scratch buffers
+            toFpsInPlace(recentFrontendDurations, state.frontendFpsBuf)
+            toFpsInPlace(recentBackendDurations, state.backendFpsBuf)
 
-            // Update source names for tooltip display
+            const frontendFps = state.frontendFpsBuf
+            const backendFps = state.backendFpsBuf
+
             state.sources[0].name = frontendFramerate?.framerate_source || t("display")
             state.sources[1].name = backendFramerate?.framerate_source || t("server")
 
-            const allData = [...frontendFps, ...backendFps]
             const emptyText = svg.select<SVGTextElement>(".empty-text")
 
-            if (allData.length === 0) {
+            if (frontendFps.length === 0 && backendFps.length === 0) {
                 state.frontendPath.attr("d", null)
                 state.backendPath.attr("d", null)
                 emptyText.style("display", null).text(t("waitingForData"))
@@ -197,64 +276,70 @@ export default function FramerateTimeseriesView({
 
             emptyText.style("display", "none")
 
-            // Compute the rolling window
-            const latestTimestamp = Math.max(...allData.map((d) => d.timestamp))
+            // Find latest timestamp without allocating
+            let latestTimestamp = -Infinity
+            for (let i = 0; i < frontendFps.length; i++) {
+                if (frontendFps[i].timestamp > latestTimestamp) latestTimestamp = frontendFps[i].timestamp
+            }
+            for (let i = 0; i < backendFps.length; i++) {
+                if (backendFps[i].timestamp > latestTimestamp) latestTimestamp = backendFps[i].timestamp
+            }
+
             const windowEnd = latestTimestamp
             const windowStart = windowEnd - WINDOW_SECONDS * 1000
+            state.windowEnd = windowEnd
 
-            const windowedFrontend = frontendFps.filter((d) => d.timestamp >= windowStart)
-            const windowedBackend = backendFps.filter((d) => d.timestamp >= windowStart)
+            // Filter to window and store for tooltip bisect lookup
+            state.frontendData = frontendFps.filter((d) => d.timestamp >= windowStart)
+            state.backendData = backendFps.filter((d) => d.timestamp >= windowStart)
 
-            // Store windowed data for bisect tooltip lookup
-            state.frontendData = windowedFrontend
-            state.backendData = windowedBackend
-
-            const visibleData = [...windowedFrontend, ...windowedBackend]
-            if (visibleData.length === 0) {
+            if (state.frontendData.length === 0 && state.backendData.length === 0) {
                 state.frontendPath.attr("d", null)
                 state.backendPath.attr("d", null)
                 emptyText.style("display", null).text(t("waitingForData"))
                 return
             }
 
-            // Update scale domains
-            const yMax = d3.max(visibleData, (d) => d.value) as number
-            const yMin = d3.min(visibleData, (d) => d.value) as number
+            // Compute y-domain without allocating a merged array
+            let yMin = Infinity
+            let yMax = -Infinity
+            for (let i = 0; i < state.frontendData.length; i++) {
+                const v = state.frontendData[i].value
+                if (v < yMin) yMin = v
+                if (v > yMax) yMax = v
+            }
+            for (let i = 0; i < state.backendData.length; i++) {
+                const v = state.backendData[i].value
+                if (v < yMin) yMin = v
+                if (v > yMax) yMax = v
+            }
+
             const yRange = yMax - yMin
             const yPadding = Math.max(1, yRange * 0.3)
-
-            state.xScale.domain([new Date(windowStart), new Date(windowEnd)])
             state.yScale.domain([Math.max(0, yMin - yPadding), yMax + yPadding])
 
-            // Update axes in-place
-            const xAxisGen = d3
-                .axisBottom(state.xScale)
-                .ticks(Math.max(2, Math.min(5, Math.floor(width / 120))))
-                .tickSize(-height)
-                .tickFormat(d3.timeFormat("%H:%M:%S") as any)
-
+            // Only y-axis needs updating (domain changes with data).
+            // X-axis is fixed at [-60, 0] with stable tick elements.
             const yAxisGen = d3
                 .axisLeft(state.yScale)
                 .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
                 .tickSize(-width)
-
-            xAxisG.call(xAxisGen)
             yAxisG.call(yAxisGen)
             applyAxisStyles(svg, theme)
 
-            // Update path d attributes — the only DOM mutation per update
+            // Line generator maps absolute timestamps → relative seconds for the fixed x-axis
             const line = d3
                 .line<FpsSample>()
-                .x((d) => state.xScale(new Date(d.timestamp)))
+                .x((d) => state.xScale((d.timestamp - windowEnd) / 1000))
                 .y((d) => state.yScale(d.value))
                 .curve(d3.curveLinear)
 
-            state.frontendPath.attr("d", windowedFrontend.length > 0 ? line(windowedFrontend) : null)
-            state.backendPath.attr("d", windowedBackend.length > 0 ? line(windowedBackend) : null)
+            state.frontendPath.attr("d", state.frontendData.length > 0 ? line(state.frontendData) : null)
+            state.backendPath.attr("d", state.backendData.length > 0 ? line(state.backendData) : null)
         },
         [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
     )
 
     return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}
-                            margin={{top: 20, right: 10, bottom: 35, left: 35}}/>
+                            margin={{top: 20, right: 10, bottom: 42, left: 40}}/>
 }

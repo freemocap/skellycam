@@ -33,6 +33,7 @@
     "d3": "^7.9.0",
     "electron-updater": "^6.1.8",
     "i18next-browser-languagedetector": "^8.2.1",
+    "react-grid-layout": "^2.2.2",
     "react-i18next": "^16.5.4",
     "react-redux": "^9.1.2",
     "react-resizable-panels": "^2.1.7",

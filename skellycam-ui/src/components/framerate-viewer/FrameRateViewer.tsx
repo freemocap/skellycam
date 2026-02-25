@@ -1,7 +1,7 @@
 // src/components/framerate-viewer/FrameRateViewer.tsx
-import {useState, useEffect, useRef} from "react"
+import {useState, useEffect} from "react"
 import {Box, IconButton, Paper, Stack, Tooltip, Typography} from "@mui/material"
-import {BarChart, ShowChart, ViewCompact, ViewDay} from "@mui/icons-material"
+import {BarChart, ShowChart, TableChart} from "@mui/icons-material"
 import {alpha, useTheme} from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
@@ -10,7 +10,6 @@ import {useServer} from "@/services/server/ServerContextProvider";
 import {FramerateSnapshot} from "@/services/server/server-helpers/framerate-store";
 import { useTranslation } from "react-i18next";
 
-type ViewType = "timeseries" | "histogram" | "both"
 export const frontendColor: string = "#1976D2"
 export const backendColor: string = "#ff4d00"
 
@@ -19,7 +18,9 @@ const POLL_INTERVAL_MS = 500;
 export const FramerateViewerPanel = () => {
     const theme = useTheme()
     const { t } = useTranslation();
-    const [viewType, setViewType] = useState<ViewType>("both")
+    const [showStats, setShowStats] = useState(true)
+    const [showTimeseries, setShowTimeseries] = useState(true)
+    const [showHistogram, setShowHistogram] = useState(true)
     const {getFramerateStore} = useServer();
 
     // Poll the mutable store on a fixed interval instead of reacting to Redux
@@ -71,12 +72,20 @@ export const FramerateViewerPanel = () => {
 
                 {/* View type selector as icon buttons */}
                 <Stack direction="row" spacing={0.25}>
+                    <Tooltip title={t("statisticsView")}>
+                        <IconButton
+                            size="small"
+                            onClick={() => setShowStats((v) => !v)}
+                            sx={{padding: '2px', opacity: showStats ? 1 : 0.3}}
+                        >
+                            <TableChart sx={{fontSize: '1rem'}}/>
+                        </IconButton>
+                    </Tooltip>
                     <Tooltip title={t("timelineView")}>
                         <IconButton
                             size="small"
-                            onClick={() => setViewType("timeseries")}
-                            color={viewType === "timeseries" ? "primary" : "default"}
-                            sx={{padding: '2px'}}
+                            onClick={() => setShowTimeseries((v) => !v)}
+                            sx={{padding: '2px', opacity: showTimeseries ? 1 : 0.3}}
                         >
                             <ShowChart sx={{fontSize: '1rem'}}/>
                         </IconButton>
@@ -84,31 +93,17 @@ export const FramerateViewerPanel = () => {
                     <Tooltip title={t("distributionView")}>
                         <IconButton
                             size="small"
-                            onClick={() => setViewType("histogram")}
-                            color={viewType === "histogram" ? "primary" : "default"}
-                            sx={{padding: '2px'}}
+                            onClick={() => setShowHistogram((v) => !v)}
+                            sx={{padding: '2px', opacity: showHistogram ? 1 : 0.3}}
                         >
                             <BarChart sx={{fontSize: '1rem'}}/>
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t("combinedView")}>
-                        <IconButton
-                            size="small"
-                            onClick={() => setViewType("both")}
-                            color={viewType === "both" ? "primary" : "default"}
-                            sx={{padding: '2px'}}
-                        >
-                            {theme.direction === 'ltr' ? (
-                                <ViewDay sx={{fontSize: '1rem'}}/>
-                            ) : (
-                                <ViewCompact sx={{fontSize: '1rem'}}/>
-                            )}
                         </IconButton>
                     </Tooltip>
                 </Stack>
             </Box>
 
             {/* Stats section - ultra compact */}
+            {showStats && (
             <Box sx={{
                 px: 0.25,
                 mb: 0.25,
@@ -130,16 +125,17 @@ export const FramerateViewerPanel = () => {
                     />
                 </Paper>
             </Box>
+            )}
 
             {/* Main visualization area with flex-based layout */}
             <Box sx={{
                 flex: 1,
                 display: 'flex',
-                flexDirection: viewType === 'both' ? 'row' : 'column',
+                flexDirection: (showTimeseries && showHistogram) ? 'row' : 'column',
                 gap: 0.25,
                 overflow: 'hidden'
             }}>
-                {(viewType === 'timeseries' || viewType === 'both') && (
+                {showTimeseries && (
                     <Paper
                         elevation={0}
                         sx={{
@@ -163,7 +159,7 @@ export const FramerateViewerPanel = () => {
                     </Paper>
                 )}
 
-                {(viewType === 'histogram' || viewType === 'both') && (
+                {showHistogram && (
                     <Paper
                         elevation={0}
                         sx={{

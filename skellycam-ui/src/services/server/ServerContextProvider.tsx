@@ -239,10 +239,8 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                         framerateStoreRef.current.updateBackend(jsonData.backend_framerate);
                         framerateStoreRef.current.updateFrontend(jsonData.frontend_framerate);
                     }
-                    // Handle other message types
-                    else {
-                        console.debug('Received unhandled JSON message:', jsonData);
-                    }
+                    // Handle other message types (silently ignored to avoid
+                    // retaining object references in the DevTools console)
                 } catch (error) {
                     console.error('Error parsing JSON message:', error);
                 }

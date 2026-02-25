@@ -89,16 +89,22 @@ class TimestampedRingBuffer {
     /** Copy current values into a Float64Array in chronological order (for stats computation). */
     valuesToFloat64Array(): Float64Array {
         const result = new Float64Array(this.count);
+        this.copyValuesInto(result);
+        return result;
+    }
+
+    /** Copy current values in chronological order into the provided array.
+     *  The target must have at least `count` elements. */
+    copyValuesInto(target: Float64Array): void {
         if (this.count < this.values.length) {
             for (let i = 0; i < this.count; i++) {
-                result[i] = this.values[i];
+                target[i] = this.values[i];
             }
         } else {
             for (let i = 0; i < this.count; i++) {
-                result[i] = this.values[(this.writeIndex + i) % this.values.length];
+                target[i] = this.values[(this.writeIndex + i) % this.values.length];
             }
         }
-        return result;
     }
 
     getCount(): number {
@@ -120,9 +126,12 @@ class TimestampedRingBuffer {
  */
 class WindowedStats {
     private _buffer: TimestampedRingBuffer;
+    /** Reusable typed array to avoid allocating a fresh one on every snapshot. */
+    private _valuesBuf: Float64Array;
 
-    constructor(buffer: TimestampedRingBuffer) {
+    constructor(buffer: TimestampedRingBuffer, capacity: number) {
         this._buffer = buffer;
+        this._valuesBuf = new Float64Array(capacity);
     }
 
     /** Compute stats from the ring buffer's current window. */
@@ -130,7 +139,12 @@ class WindowedStats {
         const count = this._buffer.getCount();
         if (count === 0) return null;
 
-        const values = this._buffer.valuesToFloat64Array();
+        // Reuse the pre-allocated buffer, only reallocating if capacity grew
+        if (this._valuesBuf.length < count) {
+            this._valuesBuf = new Float64Array(count);
+        }
+        const values = this._valuesBuf.subarray(0, count);
+        this._buffer.copyValuesInto(values);
 
         let sum = 0;
         let min = Infinity;
@@ -187,8 +201,8 @@ export class FramerateStore {
 
     private _recentFrontendDurations = new TimestampedRingBuffer(MAX_DURATION_HISTORY);
     private _recentBackendDurations = new TimestampedRingBuffer(MAX_DURATION_HISTORY);
-    private _frontendStats = new WindowedStats(this._recentFrontendDurations);
-    private _backendStats = new WindowedStats(this._recentBackendDurations);
+    private _frontendStats = new WindowedStats(this._recentFrontendDurations, MAX_DURATION_HISTORY);
+    private _backendStats = new WindowedStats(this._recentBackendDurations, MAX_DURATION_HISTORY);
 
     updateBackend(data: DetailedFramerate): void {
         this.currentBackendFramerate = data;

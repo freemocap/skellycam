@@ -89,7 +89,7 @@ export default function FramerateHistogramView({
 
     // initChart — creates persistent groups and a single hover overlay
     const initChart = useCallback(
-        ({chartArea, width, height}: ChartScaffolding): ChartLifecycle => {
+        ({svg, chartArea, width, height}: ChartScaffolding): ChartLifecycle => {
             const tooltip = createTooltip(theme)
 
             const xScale = d3.scaleLinear().range([0, width])
@@ -98,6 +98,28 @@ export default function FramerateHistogramView({
             // Persistent bar groups — one per series, never removed
             const frontendBarGroup = chartArea.append("g").attr("class", "bars-frontend")
             const backendBarGroup = chartArea.append("g").attr("class", "bars-backend")
+
+            // Axis labels (appended to svg root group, outside clip-path)
+            svg.append("text")
+                .attr("class", "x-axis-label")
+                .attr("x", width / 2)
+                .attr("y", height + 32)
+                .attr("text-anchor", "middle")
+                .style("font-family", "monospace")
+                .style("font-size", "10px")
+                .style("fill", theme.palette.text.secondary)
+                .text("FPS")
+
+            svg.append("text")
+                .attr("class", "y-axis-label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -28)
+                .attr("text-anchor", "middle")
+                .style("font-family", "monospace")
+                .style("font-size", "10px")
+                .style("fill", theme.palette.text.secondary)
+                .text("Density")
 
             // Persistent empty-state text (hidden by default)
             chartArea.append("text")
@@ -255,7 +277,12 @@ export default function FramerateHistogramView({
                 .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
                 .tickSize(-width)
 
+            // Clear old tick elements before redrawing to prevent SVG element accumulation.
+            // The histogram domain shifts as bin ranges change, so unlike the timeseries
+            // (which uses fixed relative-time ticks), we must explicitly remove stale ticks.
+            xAxisG.selectAll("*").remove()
             xAxisG.call(xAxisGen)
+            yAxisG.selectAll("*").remove()
             yAxisG.call(yAxisGen)
             applyAxisStyles(svg, theme)
 
@@ -308,5 +335,5 @@ export default function FramerateHistogramView({
     )
 
     return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}
-                            margin={{top: 20, right: 10, bottom: 35, left: 35}} />
+                            margin={{top: 20, right: 10, bottom: 42, left: 40}} />
 }
