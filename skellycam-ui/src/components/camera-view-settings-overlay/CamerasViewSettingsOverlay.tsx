@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Box, IconButton, Paper, TextField, Checkbox, FormControlLabel, Tooltip } from '@mui/material';
+import { Box, Button, IconButton, Paper, TextField, Checkbox, FormControlLabel, Tooltip } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CloseIcon from '@mui/icons-material/Close';
 import GridViewIcon from '@mui/icons-material/GridView';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -12,10 +13,12 @@ interface CameraSettings {
 
 interface CamerasViewSettingsOverlayProps {
     onSettingsChange: (settings: CameraSettings) => void;
+    onResetLayout: () => void;
 }
 
 export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProps> = ({
-                                                                                          onSettingsChange
+                                                                                          onSettingsChange,
+                                                                                          onResetLayout,
                                                                                       }) => {
     const { connectedCameraIds } = useServer();
     const { t } = useTranslation();
@@ -43,7 +46,6 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         if (!isNaN(value) && value > 0) {
             setManualColumns(value);
             if (isAuto) {
-                // User is adjusting input while Auto is checked, so uncheck Auto
                 setIsAuto(false);
             }
             onSettingsChange({ columns: value });
@@ -95,7 +97,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                         <Box sx={{ fontWeight: 600 }}>{t("gridColumns")}</Box>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
                         <FormControlLabel
                             control={
                                 <Checkbox
@@ -124,6 +126,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                             helperText={isAuto ? `Auto-detected: ${autoColumns}` : "Enter any positive number"}
                         />
                     </Box>
+
                 </Paper>
             )}
         </>

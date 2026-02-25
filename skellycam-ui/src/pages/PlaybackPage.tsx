@@ -8,6 +8,7 @@ import { Footer } from '@/components/ui-components/Footer';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { RecordingBrowser, LoadedVideo } from '@/components/playback/RecordingBrowser';
 import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
+import { CamerasViewSettingsOverlay } from '@/components/camera-view-settings-overlay/CamerasViewSettingsOverlay';
 import { useElectronIPC } from '@/services';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +22,8 @@ const PlaybackPage: React.FC = () => {
     const [recordingPath, setRecordingPath] = useState<string | null>(null);
     const [recordingFps, setRecordingFps] = useState<number | undefined>(undefined);
     const [frameTimestamps, setFrameTimestamps] = useState<Record<string, number[]> | null>(null);
+    const [manualColumns, setManualColumns] = useState<number | null>(null);
+    const [resetKey, setResetKey] = useState<number>(0);
 
     const handleRecordingLoaded = useCallback((videos: LoadedVideo[], path: string, fps?: number) => {
         setLoadedVideos(videos);
@@ -65,6 +68,14 @@ const PlaybackPage: React.FC = () => {
         }
     }, [recordingPath, api]);
 
+    const handleSettingsChange = useCallback((settings: { columns: number | null }) => {
+        setManualColumns(settings.columns);
+    }, []);
+
+    const handleResetLayout = useCallback(() => {
+        setResetKey((v) => v + 1);
+    }, []);
+
     const hasVideos = loadedVideos.length > 0;
     const totalSize = loadedVideos.reduce((sum, v) => sum + v.sizeBytes, 0);
     const monoFont = '"JetBrains Mono", "Fira Code", "SF Mono", monospace';
@@ -90,7 +101,13 @@ const PlaybackPage: React.FC = () => {
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <ErrorBoundary>
                     {hasVideos ? (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+                            {/* Settings overlay for grid columns */}
+                            <CamerasViewSettingsOverlay
+                                onSettingsChange={handleSettingsChange}
+                                onResetLayout={handleResetLayout}
+                            />
+
                             {/* Recording header bar */}
                             <Box
                                 sx={{
@@ -217,6 +234,8 @@ const PlaybackPage: React.FC = () => {
                                     }))}
                                     recordingFps={recordingFps}
                                     frameTimestamps={frameTimestamps}
+                                    manualColumns={manualColumns}
+                                    resetKey={resetKey}
                                 />
                             </Box>
                         </Box>

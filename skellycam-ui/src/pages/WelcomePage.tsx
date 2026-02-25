@@ -6,7 +6,7 @@ import {Footer} from '@/components/ui-components/Footer';
 import {useElectronIPC} from "@/services";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {useTranslation} from "react-i18next";
-import {LanguageSwitcher} from "@/components/LanguageSwitcher";
+import {LanguageSwitcher} from "@/components/languages/LanguageSwitcher";
 
 const WelcomePage: React.FC = () => {
     const {t} = useTranslation();

@@ -25,8 +25,12 @@ import {
 } from "@/i18n";
 import type { SupportedLocale } from "@/i18n";
 import * as Flags from "country-flag-icons/react/3x2";
+import {CherokeeFlag} from "@/components/languages/CherokeeFlag";
+import {YiddishFlag} from "@/components/languages/YiddishFlag";
 
 const FlagIcon: React.FC<{ countryCode: string }> = ({ countryCode }) => {
+  if (countryCode === "CHEROKEE") return <CherokeeFlag />;
+  if (countryCode === "YIDDISH") return <YiddishFlag />;
   const Flag = Flags[countryCode as keyof typeof Flags];
   if (!Flag) return null;
   return <Flag style={{ width: 20, height: 14, borderRadius: 2, flexShrink: 0 }} />;

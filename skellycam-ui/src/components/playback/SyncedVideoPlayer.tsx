@@ -1,5 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Box, Tooltip, Typography, useTheme } from '@mui/material';
+import ReactGridLayout, { noCompactor } from 'react-grid-layout';
+import type { Layout, LayoutItem } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import { PlaybackControls } from './PlaybackControls';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +23,10 @@ interface SyncedVideoPlayerProps {
     recordingFps?: number;
     /** Per-camera frame timestamps in seconds from recording start, loaded from CSV files */
     frameTimestamps?: Record<string, number[]> | null;
+    /** null = auto-optimize, number = manual column count */
+    manualColumns: number | null;
+    /** Increment to force layout reset */
+    resetKey: number;
 }
 
 function formatTimecode(frame: number, fps: number): string {
@@ -61,7 +69,7 @@ function formatSeconds(frame: number, fps: number): string {
  * - Overlays update via direct DOM manipulation (zero React re-renders).
  * - React state for controls/slider updates at ~5Hz.
  */
-export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps }) => {
+export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps, manualColumns, resetKey }) => {
     const theme = useTheme();
     const { t } = useTranslation();
     const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -112,8 +120,121 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
 
     const fps = recordingFps || 30;
     const allReady = videosReady >= videos.length && videos.length > 0;
-    const columns = videos.length <= 1 ? 1 : videos.length <= 4 ? 2 : videos.length <= 9 ? 3 : 4;
     const currentTime = fpsRef.current > 0 ? currentFrameRef.current / fpsRef.current : 0;
+
+    // -----------------------------------------------------------------------
+    // Grid layout (same auto-tiling as CameraViewsGrid)
+    // -----------------------------------------------------------------------
+    const GRID_COLS = 12;
+    const GRID_MARGIN: [number, number] = [2, 2];
+
+    const gridContainerRef = useRef<HTMLDivElement>(null);
+    const [gridWidth, setGridWidth] = useState<number>(800);
+    const [gridHeight, setGridHeight] = useState<number>(400);
+
+    useEffect(() => {
+        const el = gridContainerRef.current;
+        if (!el) return;
+        const measure = () => {
+            const rect = el.getBoundingClientRect();
+            setGridWidth(rect.width);
+            setGridHeight(rect.height);
+        };
+        measure();
+        const observer = new ResizeObserver(() => measure());
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
+    const computeTiling = (n: number, w: number, h: number) => {
+        if (n <= 1) return { cols: 1, rows: 1 };
+        let bestCols = 1;
+        let bestArea = 0;
+        for (let cols = 1; cols <= n; cols++) {
+            const rows = Math.ceil(n / cols);
+            const cellW = (w - GRID_MARGIN[0] * (cols - 1)) / cols;
+            const cellH = (h - GRID_MARGIN[1] * (rows - 1)) / rows;
+            if (cellW < 80 || cellH < 60) continue;
+            const area = n * cellW * cellH;
+            if (area > bestArea) { bestArea = area; bestCols = cols; }
+        }
+        return { cols: bestCols, rows: Math.ceil(n / bestCols) };
+    };
+
+    const prevTilingRef = useRef({ cols: 1, rows: 1 });
+    const tiling = useMemo(() => {
+        const candidate = manualColumns !== null
+            ? { cols: Math.max(1, Math.min(manualColumns, videos.length || 1)), rows: Math.ceil((videos.length || 1) / Math.max(1, Math.min(manualColumns, videos.length || 1))) }
+            : computeTiling(videos.length, gridWidth, gridHeight);
+        const prev = prevTilingRef.current;
+        if (candidate.cols === prev.cols && candidate.rows === prev.rows) return prev;
+        prevTilingRef.current = candidate;
+        return candidate;
+    }, [videos.length, gridWidth, gridHeight, manualColumns]);
+
+    const buildVideoLayout = (vids: VideoEntry[]): LayoutItem[] => {
+        if (vids.length === 0) return [];
+        const colSpan = Math.floor(GRID_COLS / tiling.cols);
+        return vids.map((v, i) => ({
+            i: v.videoId,
+            x: (i % tiling.cols) * colSpan,
+            y: Math.floor(i / tiling.cols),
+            w: colSpan,
+            h: 1,
+            minW: 1,
+            minH: 1,
+        }));
+    };
+
+    const [gridLayout, setGridLayout] = useState<LayoutItem[]>(() => buildVideoLayout(videos));
+
+    useEffect(() => {
+        setGridLayout(buildVideoLayout(videos));
+    }, [videos, tiling, resetKey]);
+
+    const gridLayoutBeforeDragRef = useRef<LayoutItem[]>(gridLayout);
+
+    const handleGridDragStart = useCallback(() => {
+        gridLayoutBeforeDragRef.current = gridLayout;
+    }, [gridLayout]);
+
+    const handleGridDragStop = useCallback((_newLayout: Layout, _oldItem: LayoutItem | null, newItem: LayoutItem | null) => {
+        if (!newItem) return;
+        const preDrag = gridLayoutBeforeDragRef.current;
+        const draggedBefore = preDrag.find((l) => l.i === newItem.i);
+        if (!draggedBefore) return;
+
+        const swapTarget = preDrag.find((l) => {
+            if (l.i === newItem.i) return false;
+            return newItem.x < l.x + l.w && newItem.x + newItem.w > l.x
+                && newItem.y < l.y + l.h && newItem.y + newItem.h > l.y;
+        });
+
+        if (swapTarget) {
+            setGridLayout(preDrag.map((l) => {
+                if (l.i === newItem.i) return { ...l, x: swapTarget.x, y: swapTarget.y };
+                if (l.i === swapTarget.i) return { ...l, x: draggedBefore.x, y: draggedBefore.y };
+                return l;
+            }));
+        } else {
+            const maxX = GRID_COLS - newItem.w;
+            const maxY = tiling.rows - newItem.h;
+            setGridLayout(preDrag.map((l) => {
+                if (l.i === newItem.i) {
+                    return { ...l, x: Math.max(0, Math.min(newItem.x, maxX)), y: Math.max(0, Math.min(newItem.y, maxY)) };
+                }
+                return l;
+            }));
+        }
+    }, [tiling.rows]);
+
+    const handleGridLayoutChange = useCallback((_: Layout) => {}, []);
+    const handleGridResizeStop = useCallback((newLayout: Layout) => { setGridLayout([...newLayout]); }, []);
+
+    const gridRowHeight = useMemo(() => {
+        const totalMargin = (tiling.rows - 1) * GRID_MARGIN[1];
+        return Math.max(30, (gridHeight - totalMargin) / tiling.rows);
+    }, [gridHeight, tiling.rows]);
 
     // Keep refs in sync with props/state
     useEffect(() => { settingsRef.current = settings; }, [settings]);
@@ -453,28 +574,49 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
             {/* Video grid */}
             <Box
+                ref={gridContainerRef}
                 sx={{
                     flex: 1,
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                    gap: '2px',
-                    p: '2px',
+                    position: 'relative',
                     overflow: 'hidden',
                     backgroundColor: '#0a0a0a',
                     minHeight: 0,
+                    '& .react-grid-placeholder': {
+                        backgroundColor: 'primary.main',
+                        opacity: 0.15,
+                        borderRadius: '4px',
+                    },
+                    '& .react-resizable-handle': {
+                        zIndex: 10,
+                    },
                 }}
             >
+                <ReactGridLayout
+                    width={gridWidth}
+                    layout={gridLayout}
+                    gridConfig={{
+                        cols: GRID_COLS,
+                        rowHeight: gridRowHeight,
+                        margin: GRID_MARGIN,
+                        containerPadding: [0, 0] as [number, number],
+                    }}
+                    dragConfig={{ enabled: true }}
+                    resizeConfig={{ enabled: true }}
+                    compactor={noCompactor}
+                    onLayoutChange={handleGridLayoutChange}
+                    onDragStart={handleGridDragStart}
+                    onDragStop={handleGridDragStop}
+                    onResizeStop={handleGridResizeStop}
+                >
                 {videos.map((video) => (
-                    <Box
+                    <div
                         key={video.videoId}
-                        sx={{
+                        style={{
                             position: 'relative',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: '#000',
                             overflow: 'hidden',
-                            minHeight: 120,
+                            backgroundColor: '#000',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255,255,255,0.15)',
                         }}
                     >
                         <video
@@ -539,8 +681,9 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                                 </Tooltip>
                             </>
                         )}
-                    </Box>
+                    </div>
                 ))}
+                </ReactGridLayout>
             </Box>
 
             {!allReady && videos.length > 0 && (

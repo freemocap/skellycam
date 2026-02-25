@@ -45,6 +45,8 @@ export const SUPPORTED_LOCALES = {
   sr: { label: "Српски", dir: "ltr" as const, flag: "RS" },
   hr: { label: "Hrvatski", dir: "ltr" as const, flag: "HR" },
   ca: { label: "Català", dir: "ltr" as const, flag: "ES" },
+  chr: { label: "ᏣᎳᎩ", dir: "ltr" as const, flag: "CHEROKEE" },
+  yi: { label: "ייִדיש", dir: "rtl" as const, flag: "YIDDISH" },
 } as const;
 
 export type SupportedLocale = keyof typeof SUPPORTED_LOCALES;
@@ -105,6 +107,8 @@ const LOCALE_LOADERS: Record<string, () => Promise<{ default: Record<string, any
   sr: () => import("./locales/sr-srpski.json"),
   hr: () => import("./locales/hr-hrvatski.json"),
   ca: () => import("./locales/ca-catala.json"),
+  chr: () => import("./locales/chr-tsalagi.json"),
+  yi: () => import("./locales/yi-yidish.json"),
 };
 
 /** Tracks which locales have already been loaded to avoid duplicate fetches. */
@@ -126,6 +130,12 @@ export async function loadLocale(locale: string): Promise<void> {
   const translations = module.default;
   i18n.addResourceBundle(locale, "translation", translations, true, true);
   loadedLocales.add(locale);
+
+  // Re-trigger changeLanguage after the bundle is loaded so react-i18next
+  // detects the new resources and re-renders all translated components.
+  if (i18n.language === locale) {
+    await i18n.changeLanguage(locale);
+  }
 }
 
 /**

@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import Box from "@mui/material/Box";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { Footer } from "@/components/ui-components/Footer";
 import { useTheme } from "@mui/material/styles";
 import { CameraViewsGrid } from "@/components/camera-views/CameraViewsGrid";
+import { CamerasViewSettingsOverlay } from "@/components/camera-view-settings-overlay/CamerasViewSettingsOverlay";
 
 export const CamerasPage = () => {
     const theme = useTheme();
+    const [manualColumns, setManualColumns] = useState<number | null>(null);
+    const [resetKey, setResetKey] = useState<number>(0);
+
+    const handleSettingsChange = useCallback((settings: { columns: number | null }) => {
+        setManualColumns(settings.columns);
+    }, []);
+
+    const handleResetLayout = useCallback(() => {
+        setResetKey((v) => v + 1);
+    }, []);
 
     return (
         <React.Fragment>
@@ -24,10 +35,17 @@ export const CamerasPage = () => {
                 overflow: "hidden",
                 position: 'relative',
             }}>
-                {/* Camera views fill all available space */}
+                <CamerasViewSettingsOverlay
+                    onSettingsChange={handleSettingsChange}
+                    onResetLayout={handleResetLayout}
+                />
+
                 <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                     <ErrorBoundary>
-                        <CameraViewsGrid />
+                        <CameraViewsGrid
+                            manualColumns={manualColumns}
+                            resetKey={resetKey}
+                        />
                     </ErrorBoundary>
                 </Box>
                 <Box component="footer" sx={{ p: 1, flexShrink: 0 }}>
