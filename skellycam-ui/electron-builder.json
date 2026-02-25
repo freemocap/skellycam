@@ -2,14 +2,13 @@
   "appId": "skellycam.app",
   "productName": "skellycam",
   "directories": {
-    "output": "release/${version}"
+    "output": "release",
+    "buildResources": "build"
   },
   "files": [
     "dist-electron",
     "dist",
-    "skellycam_server*",
-    "../shared/skellycam-logo/skellycam-favicon.ico",
-    "../shared/skellycam-logo/skellycam-logo.png"
+    "skellycam_server*"
   ],
   "asar": true,
   "asarUnpack": [
@@ -17,9 +16,15 @@
     "**/skellycam-logo.png"
   ],
   "compression": "maximum",
+  "extraResources": [
+    {
+      "from": "build/skellycam-logo.png",
+      "to": "skellycam-logo.png"
+    }
+  ],
 
   "win": {
-    "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
+    "icon": "build/skellycam-favicon.ico",
     "target": [
       {
         "target": "nsis",
@@ -37,7 +42,7 @@
   },
 
   "mac": {
-    "icon": "../shared/skellycam-logo/skellycam-logo.png",
+    "icon": "build/skellycam-logo.png",
     "category": "public.app-category.video",
     "target": [
       {
@@ -61,7 +66,7 @@
   },
 
   "linux": {
-    "icon": "../shared/skellycam-logo/skellycam-logo.png",
+    "icon": "build/skellycam-logo.png",
     "category": "Video",
     "target": [
       {
