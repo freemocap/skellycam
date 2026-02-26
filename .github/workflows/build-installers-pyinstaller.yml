@@ -4,9 +4,14 @@ on:
   push:
     branches:
       - development
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
+  # ═══════════════════════════════════════════════════════
+  # BUILD — runs on all 5 platform/arch combos
+  # ═══════════════════════════════════════════════════════
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -20,15 +25,14 @@ jobs:
             server-binary: skellycam_server.exe
             electron-arch: x64
 
-          # macOS Intel (x64) — macos-15-intel is the standard free runner
-          # replacing the retired macos-13. Available until ~Aug 2027.
+          # macOS Intel (x64) — macos-15-intel replaces retired macos-13
           - os: macos-15-intel
             platform: macos
             arch: x64
             server-binary: skellycam_server
             electron-arch: x64
 
-          # macOS Apple Silicon (arm64) — macos-latest is arm64 (macos-15)
+          # macOS Apple Silicon (arm64)
           - os: macos-latest
             platform: macos
             arch: arm64
@@ -53,7 +57,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── Windows code-signing prereqs (Windows only) ──
+      # ── Windows code-signing prereqs ──
       - name: Validate code signing prerequisites
         if: matrix.platform == 'windows'
         run: |
@@ -122,6 +126,27 @@ jobs:
       - name: Verify installation 3/3
         run: uv pip show opencv-contrib-python
 
+      # ── Write build metadata and secrets into the Python package ──
+      - name: Write build info
+        shell: bash
+        run: |
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-8)
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          cat > skellycam/build_info.py << EOF
+          """Build metadata and secrets populated by CI."""
+          BUILD_GIT_SHA: str = "${{ github.sha }}"
+          BUILD_GIT_SHA_SHORT: str = "${SHA_SHORT}"
+          BUILD_NUMBER: str = "${{ github.run_number }}"
+          BUILD_TIMESTAMP: str = "${TIMESTAMP}"
+          BUILD_TAG: str = "${{ github.ref_name }}"
+          SKELLYPINGS_SERVER_URL: str = "https://skellypings-401698866387.northamerica-northeast1.run.app"
+          SKELLYPINGS_SECRET: str = "${{ secrets.SKELLYPINGS_SECRET }}"
+          EOF
+
+          echo "--- build_info.py (secret redacted) ---"
+          sed 's/SKELLYPINGS_SECRET:.*/SKELLYPINGS_SECRET: str = "***"/' skellycam/build_info.py
+
       # ── PyInstaller build ──
       - name: Build with PyInstaller
         run: |
@@ -160,7 +185,7 @@ jobs:
       - name: Upload server binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-SERVER-ONLY-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
+          name: server-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             skellycam-ui/${{ matrix.server-binary }}
           include-hidden-files: true
@@ -214,7 +239,7 @@ jobs:
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
+          name: installer-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
@@ -223,7 +248,7 @@ jobs:
         if: matrix.platform == 'macos'
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
+          name: installer-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             skellycam-ui/release/*/*.dmg
             skellycam-ui/release/*/*.zip
@@ -233,8 +258,72 @@ jobs:
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: skellycam-FULL-APP-installer-${{ matrix.platform }}-${{ matrix.arch }}-${{ github.run_id }}
+          name: installer-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             skellycam-ui/release/*/*.AppImage
             skellycam-ui/release/*/*.deb
           include-hidden-files: true
+
+  # ═══════════════════════════════════════════════════════
+  # RELEASE — only runs on tag pushes (e.g. v2.0.0)
+  #
+  # Downloads all build artifacts, renames server binaries
+  # with platform suffixes, and attaches everything to a
+  # GitHub Release.
+  # ═══════════════════════════════════════════════════════
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: find artifacts -type f | sort
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # Extract version from tag (e.g. refs/tags/v2.0.0 → 2.0.0)
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION=$VERSION"
+
+          # ── Full App installers ──
+          # Already have correct versioned filenames from electron-builder
+          find artifacts/installer-* -type f \( \
+            -name '*.exe' -o \
+            -name '*.dmg' -o \
+            -name '*.zip' -o \
+            -name '*.AppImage' -o \
+            -name '*.deb' \
+          \) -exec cp {} release-assets/ \;
+
+          # ── Server binaries ──
+          # Rename with version and platform/arch suffixes
+          for dir in artifacts/server-*; do
+            basename=$(basename "$dir")
+            platform=$(echo "$basename" | cut -d'-' -f2)
+            arch=$(echo "$basename" | cut -d'-' -f3)
+
+            if [ "$platform" = "windows" ]; then
+              cp "$dir/skellycam_server.exe" "release-assets/skellycam_server_${VERSION}_${platform}_${arch}.exe"
+            else
+              cp "$dir/skellycam_server" "release-assets/skellycam_server_${VERSION}_${platform}_${arch}"
+            fi
+          done
+
+          echo "=== Release assets ==="
+          ls -lh release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+          draft: true

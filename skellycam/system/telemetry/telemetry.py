@@ -4,6 +4,10 @@ Telemetry integration for SkellyCam.
 Initializes the skellypings TelemetryClient on startup and sends
 an app_opened event with system specifications. Respects the user's
 opt-in/opt-out choice stored in telemetry_config.json.
+
+The telemetry secret is injected at CI build time via build_info.py.
+During local development the default placeholder prevents telemetry
+from authenticating (events are silently dropped by the server).
 """
 
 import logging
@@ -13,14 +17,12 @@ from pathlib import Path
 import psutil
 
 import skellycam
+from skellycam.system.telemetry.build_info import SKELLYPINGS_SECRET, SKELLYPINGS_SERVER_URL
 from skellycam.system.default_paths import get_default_skellycam_base_folder_path
 from skellycam.system.telemetry.telemetry_config import read_telemetry_enabled
 from skellypings import TelemetryClient
 
 logger = logging.getLogger(__name__)
-
-SKELLYPINGS_SERVER_URL: str = "https://skellypings-401698866387.northamerica-northeast1.run.app"
-SKELLYPINGS_SECRET: str = "b51d08425d492ebfcf5dd833da245fa8bff9ec54602bafea59ae6732d1c406c5"
 
 _client: TelemetryClient | None = None
 
@@ -41,7 +43,6 @@ def _collect_system_specs() -> dict[str, object]:
         "cpu_count_physical": psutil.cpu_count(logical=False),
         "cpu_count_logical": psutil.cpu_count(logical=True),
         "ram_total_gb": round(mem.total / (1024 ** 3), 1),
-
     }
 
 
@@ -52,6 +53,9 @@ def initialize_telemetry() -> None:
     if not read_telemetry_enabled():
         logger.info("Telemetry is disabled by user preference")
         return
+
+    if SKELLYPINGS_SECRET == "not-configured":
+        logger.info("Telemetry secret not configured (local dev / from-source build), events will be stored as unverified")
 
     _client = TelemetryClient(
         server_url=SKELLYPINGS_SERVER_URL,

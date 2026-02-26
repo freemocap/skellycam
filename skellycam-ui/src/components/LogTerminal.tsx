@@ -63,9 +63,8 @@ const LogEntryRow = React.memo(({ log, style }: { log: LogRecord; style: React.C
                 fontFamily: "monospace",
                 fontSize: "0.85em",
                 lineHeight: `${ROW_HEIGHT}px`,
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-                textOverflow: "ellipsis",
+                overflow: "visible",
+                whiteSpace: "pre",
             }}
             onClick={() => setExpanded((prev) => !prev)}
         >
@@ -493,7 +492,7 @@ export const LogTerminal = () => {
                 style={{
                     flex: 1,
                     overflowY: "auto",
-                    overflowX: "hidden",
+                    overflowX: "auto",
                     position: "relative",
                     // Thin scrollbar styling via CSS properties
                     scrollbarWidth: "thin" as any,
@@ -531,7 +530,7 @@ export const LogTerminal = () => {
                                 <LogEntryRow
                                     key={`${log.created}-${log.thread}-${startIdx + i}`}
                                     log={log}
-                                    style={{ height: ROW_HEIGHT }}
+                                    style={{ minHeight: ROW_HEIGHT }}
                                 />
                             ))}
                         </div>
