@@ -3,7 +3,7 @@ import {useCallback, useRef} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
 import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
-import {applyAxisStyles, createTooltip} from "@/components/framerate-viewer/d3ChartUtils"
+import {applyAxisStyles} from "@/components/framerate-viewer/d3ChartUtils"
 import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
 
@@ -60,11 +60,8 @@ type ChartState = {
     backendPath: d3.Selection<SVGPathElement, unknown, null, undefined>
     xScale: d3.ScaleLinear<number, number>
     yScale: d3.ScaleLinear<number, number>
-    tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>
-    // Current windowed data for bisect-based tooltip lookup
     frontendData: FpsSample[]
     backendData: FpsSample[]
-    sources: Array<{id: string; name: string; color: string}>
     windowEnd: number
     // Reusable scratch arrays to avoid per-update allocations
     frontendFpsBuf: FpsSample[]
@@ -87,8 +84,6 @@ export default function FramerateTimeseriesView({
     // initChart — creates persistent SVG elements that live for the chart's lifetime
     const initChart = useCallback(
         ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding): ChartLifecycle => {
-            const tooltip = createTooltip(theme)
-
             // X-axis uses relative seconds (0 = now, -60 = oldest).
             // Fixed domain means axis ticks never enter/exit — zero DOM churn.
             const xScale = d3.scaleLinear().domain([-WINDOW_SECONDS, 0]).range([0, width])
@@ -159,81 +154,13 @@ export default function FramerateTimeseriesView({
                 .style("fill", theme.palette.text.disabled)
                 .style("display", "none")
 
-            // Invisible overlay rect for bisect-based tooltip
-            const overlay = chartArea.append("rect")
-                .attr("width", width)
-                .attr("height", height)
-                .attr("fill", "none")
-                .attr("pointer-events", "all")
-
-            overlay.on("mousemove", (event: MouseEvent) => {
-                const state = stateRef.current
-                if (!state) return
-
-                const [mx] = d3.pointer(event)
-                // Convert pixel → relative seconds → absolute timestamp
-                const relativeSeconds = state.xScale.invert(mx)
-                const mouseTime = state.windowEnd + relativeSeconds * 1000
-
-                let bestDist = Infinity
-                let bestSample: FpsSample | null = null
-                let bestSource: {id: string; name: string; color: string} | null = null
-
-                const datasets = [
-                    {data: state.frontendData, source: state.sources[0]},
-                    {data: state.backendData, source: state.sources[1]},
-                ]
-
-                for (const {data, source} of datasets) {
-                    if (data.length === 0) continue
-                    const bisect = d3.bisector<FpsSample, number>((d) => d.timestamp).center
-                    const idx = bisect(data, mouseTime)
-                    const sample = data[idx]
-                    if (!sample) continue
-                    const dist = Math.abs(sample.timestamp - mouseTime)
-                    if (dist < bestDist) {
-                        bestDist = dist
-                        bestSample = sample
-                        bestSource = source
-                    }
-                }
-
-                if (bestSample && bestSource) {
-                    tooltip
-                        .style("opacity", 1)
-                        .html(
-                            `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                <span style="color: ${bestSource.color};">${bestSource.name}</span>
-                <span style="color: ${theme.palette.text.secondary};">TIME:</span>
-                <span>${new Date(bestSample.timestamp).toISOString().substr(11, 12)}</span>
-                <span style="color: ${theme.palette.text.secondary};">FPS:</span>
-                <span>${bestSample.value.toFixed(2)}</span>
-                <span style="color: ${theme.palette.text.secondary};">DURATION:</span>
-                <span>${(1000 / bestSample.value).toFixed(2)} ms</span>
-              </div>`
-                        )
-                        .style("left", event.pageX + 10 + "px")
-                        .style("top", event.pageY - 28 + "px")
-                }
-            })
-
-            overlay.on("mouseleave", () => {
-                tooltip.style("opacity", 0)
-            })
-
             stateRef.current = {
                 frontendPath,
                 backendPath,
                 xScale,
                 yScale,
-                tooltip,
                 frontendData: [],
                 backendData: [],
-                sources: [
-                    {id: "frontend", name: "", color: frontendColor},
-                    {id: "backend", name: "", color: backendColor},
-                ],
                 windowEnd: 0,
                 frontendFpsBuf: [],
                 backendFpsBuf: [],
@@ -241,7 +168,6 @@ export default function FramerateTimeseriesView({
 
             return {
                 cleanup: () => {
-                    tooltip.remove()
                     stateRef.current = null
                 },
             }
@@ -261,9 +187,6 @@ export default function FramerateTimeseriesView({
 
             const frontendFps = state.frontendFpsBuf
             const backendFps = state.backendFpsBuf
-
-            state.sources[0].name = frontendFramerate?.framerate_source || t("display")
-            state.sources[1].name = backendFramerate?.framerate_source || t("server")
 
             const emptyText = svg.select<SVGTextElement>(".empty-text")
 
@@ -289,7 +212,7 @@ export default function FramerateTimeseriesView({
             const windowStart = windowEnd - WINDOW_SECONDS * 1000
             state.windowEnd = windowEnd
 
-            // Filter to window and store for tooltip bisect lookup
+            // Filter to window
             state.frontendData = frontendFps.filter((d) => d.timestamp >= windowStart)
             state.backendData = backendFps.filter((d) => d.timestamp >= windowStart)
 

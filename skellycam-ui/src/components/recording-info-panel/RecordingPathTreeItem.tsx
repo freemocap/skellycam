@@ -72,8 +72,10 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
                 </Box>
             }
         >
-            <Box sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}>
-                {/* Countdown display in controls section */}
+            <Box
+                onKeyDown={(e) => e.stopPropagation()}
+                sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}
+            >
                 {countdown !== null && (
                     <Typography variant="h4" align="center" color="secondary">
                         Starting in {countdown}...

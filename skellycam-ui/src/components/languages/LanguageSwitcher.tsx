@@ -25,8 +25,8 @@ import {
 } from "@/i18n";
 import type { SupportedLocale } from "@/i18n";
 import * as Flags from "country-flag-icons/react/3x2";
-import {CherokeeFlag} from "@/components/languages/CherokeeFlag";
-import {YiddishFlag} from "@/components/languages/YiddishFlag";
+import {CherokeeFlag} from "@/components/languages/custom-flag-icons/CherokeeFlag";
+import {YiddishFlag} from "@/components/languages/custom-flag-icons/YiddishFlag";
 
 const FlagIcon: React.FC<{ countryCode: string }> = ({ countryCode }) => {
   if (countryCode === "CHEROKEE") return <CherokeeFlag />;
@@ -80,7 +80,7 @@ export const LanguageSwitcher: React.FC = () => {
       }}
     >
       <FormControl size="small" sx={{
-        minWidth: 140,
+        minWidth: 200,
         "& .MuiInputLabel-root": {
           color: "text.secondary",
         },
@@ -101,7 +101,7 @@ export const LanguageSwitcher: React.FC = () => {
             },
           }}
         >
-          {Object.entries(SUPPORTED_LOCALES).map(([code, { label, dir, flag }]) => (
+          {Object.entries(SUPPORTED_LOCALES).map(([code, { label, englishName, dir, flag }]) => (
             <MenuItem key={code} value={code}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <FlagIcon countryCode={flag} />
@@ -114,6 +114,17 @@ export const LanguageSwitcher: React.FC = () => {
                 >
                   {label}
                 </Typography>
+                {label !== englishName && (
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: 11,
+                      color: "text.secondary",
+                    }}
+                  >
+                    {englishName}
+                  </Typography>
+                )}
                 <Typography
                   component="span"
                   sx={{

@@ -2,27 +2,6 @@
 import * as d3 from "d3"
 import {Theme} from "@mui/material/styles"
 
-/**
- * Create a tooltip div appended to document body.
- * Caller is responsible for calling .remove() on the returned selection during cleanup.
- */
-export function createTooltip(theme: Theme): d3.Selection<HTMLDivElement, unknown, HTMLElement, any> {
-    return d3
-        .select("body")
-        .append("div")
-        .style("position", "absolute")
-        .style("background-color", theme.palette.mode === "dark" ? "rgba(0, 0, 0, 0.85)" : "rgba(255, 255, 255, 0.9)")
-        .style("border", `1px solid ${theme.palette.divider}`)
-        .style("border-radius", "4px")
-        .style("padding", "8px")
-        .style("font-family", "monospace")
-        .style("font-size", "12px")
-        .style("pointer-events", "none")
-        .style("opacity", 0)
-        .style("z-index", 1000)
-        .style("color", theme.palette.text.primary)
-}
-
 export function applyAxisStyles(
     svg: d3.Selection<SVGGElement, unknown, null, undefined>,
     theme: Theme

@@ -2,7 +2,7 @@
 import {useCallback, useRef} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
-import {applyAxisStyles, createTooltip} from "./d3ChartUtils"
+import {applyAxisStyles} from "./d3ChartUtils"
 import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
 import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
@@ -69,8 +69,6 @@ type ChartState = {
     backendBarGroup: d3.Selection<SVGGElement, unknown, null, undefined>
     xScale: d3.ScaleLinear<number, number>
     yScale: d3.ScaleLinear<number, number>
-    tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>
-    sources: Array<{id: string; name: string; color: string; bins: HistogramBin[]}>
     height: number
 }
 
@@ -87,11 +85,9 @@ export default function FramerateHistogramView({
     const {t} = useTranslation()
     const stateRef = useRef<ChartState | null>(null)
 
-    // initChart — creates persistent groups and a single hover overlay
+    // initChart — creates persistent groups
     const initChart = useCallback(
         ({svg, chartArea, width, height}: ChartScaffolding): ChartLifecycle => {
-            const tooltip = createTooltip(theme)
-
             const xScale = d3.scaleLinear().range([0, width])
             const yScale = d3.scaleLinear().range([height, 0])
 
@@ -133,78 +129,16 @@ export default function FramerateHistogramView({
                 .style("fill", theme.palette.text.disabled)
                 .style("display", "none")
 
-            // Invisible overlay for tooltip — single event listener
-            const overlay = chartArea.append("rect")
-                .attr("width", width)
-                .attr("height", height)
-                .attr("fill", "none")
-                .attr("pointer-events", "all")
-
-            overlay.on("mousemove", (event: MouseEvent) => {
-                const state = stateRef.current
-                if (!state) return
-
-                const [mx] = d3.pointer(event)
-                const mouseX = state.xScale.invert(mx)
-
-                // Find which bin the mouse is over, across both series
-                let bestBin: HistogramBin | null = null
-                let bestSource: {name: string; color: string} | null = null
-
-                for (const source of state.sources) {
-                    for (const bin of source.bins) {
-                        if (mouseX >= bin.x0 && mouseX < bin.x1) {
-                            // Prefer the bin with higher density if overlapping
-                            if (!bestBin || bin.density > bestBin.density) {
-                                bestBin = bin
-                                bestSource = source
-                            }
-                        }
-                    }
-                }
-
-                if (bestBin && bestSource) {
-                    tooltip
-                        .style("opacity", 1)
-                        .html(
-                            `<div style="display: grid; grid-template-columns: auto auto; gap: 4px;">
-                <span style="color: ${theme.palette.text.secondary};">SOURCE:</span>
-                <span style="color: ${bestSource.color};">${bestSource.name}</span>
-                <span style="color: ${theme.palette.text.secondary};">RANGE:</span>
-                <span>${bestBin.x0.toFixed(1)} – ${bestBin.x1.toFixed(1)} fps</span>
-                <span style="color: ${theme.palette.text.secondary};">COUNT:</span>
-                <span>${bestBin.count} samples</span>
-                <span style="color: ${theme.palette.text.secondary};">PERCENTAGE:</span>
-                <span>${(bestBin.density * 100).toFixed(1)}%</span>
-              </div>`
-                        )
-                        .style("left", event.pageX + 10 + "px")
-                        .style("top", event.pageY - 28 + "px")
-                } else {
-                    tooltip.style("opacity", 0)
-                }
-            })
-
-            overlay.on("mouseleave", () => {
-                tooltip.style("opacity", 0)
-            })
-
             stateRef.current = {
                 frontendBarGroup,
                 backendBarGroup,
                 xScale,
                 yScale,
-                tooltip,
-                sources: [
-                    {id: "frontend", name: "", color: frontendColor, bins: []},
-                    {id: "backend", name: "", color: backendColor, bins: []},
-                ],
                 height,
             }
 
             return {
                 cleanup: () => {
-                    tooltip.remove()
                     stateRef.current = null
                 },
             }
@@ -224,11 +158,6 @@ export default function FramerateHistogramView({
             const frontendHist = buildHistogram(frontendFps)
             const backendHist = buildHistogram(backendFps)
 
-            // Update source metadata for tooltip
-            state.sources[0].name = frontendFramerate?.framerate_source || t("display")
-            state.sources[1].name = backendFramerate?.framerate_source || t("server")
-            state.sources[0].bins = frontendHist?.bins ?? []
-            state.sources[1].bins = backendHist?.bins ?? []
             state.height = height
 
             const emptyText = chartArea.select<SVGTextElement>(".empty-text")

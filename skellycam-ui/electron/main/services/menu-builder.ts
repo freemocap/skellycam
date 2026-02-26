@@ -112,33 +112,6 @@ function buildFileMenu(t: MenuLabels, locales: LocaleEntry[], currentLocale: str
         label: t.menuFile,
         submenu: [
             {
-                label: t.menuDetectCameras,
-                accelerator: 'CmdOrCtrl+D',
-                click: () => sendMenuAction('detect-cameras'),
-            },
-            {
-                label: t.menuConnectCameras,
-                accelerator: 'CmdOrCtrl+Shift+C',
-                click: () => sendMenuAction('connect-cameras'),
-            },
-            {
-                label: t.menuCloseAllCameras,
-                accelerator: 'CmdOrCtrl+Shift+W',
-                click: () => sendMenuAction('close-cameras'),
-            },
-            { type: 'separator' },
-            {
-                label: t.startRecording,
-                accelerator: 'CmdOrCtrl+R',
-                click: () => sendMenuAction('start-recording'),
-            },
-            {
-                label: t.stopRecording,
-                accelerator: 'CmdOrCtrl+Shift+R',
-                click: () => sendMenuAction('stop-recording'),
-            },
-            { type: 'separator' },
-            {
                 label: t.menuOpenRecordingFolder,
                 accelerator: 'CmdOrCtrl+O',
                 click: () => sendMenuAction('open-recording-folder'),
@@ -241,18 +214,17 @@ function buildRecordingMenu(t: MenuLabels): MenuItemConstructorOptions {
         submenu: [
             {
                 label: t.startRecording,
-                accelerator: 'CmdOrCtrl+R',
+                accelerator: 'CmdOrCtrl+Shift+S',
                 click: () => sendMenuAction('start-recording'),
             },
             {
                 label: t.stopRecording,
-                accelerator: 'CmdOrCtrl+Shift+R',
+                accelerator: 'CmdOrCtrl+Shift+X',
                 click: () => sendMenuAction('stop-recording'),
             },
             { type: 'separator' },
             {
                 label: t.menuOpenRecordingFolder,
-                accelerator: 'CmdOrCtrl+O',
                 click: () => sendMenuAction('open-recording-folder'),
             },
         ],

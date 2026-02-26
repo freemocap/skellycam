@@ -40,7 +40,7 @@ import {
 import type { SupportedLocale } from "@/i18n";
 import type { ThemeMode } from "@/store/slices/theme";
 import * as Flags from "country-flag-icons/react/3x2";
-import {CherokeeFlag} from "@/components/languages/CherokeeFlag";
+import {CherokeeFlag} from "@/components/languages/custom-flag-icons/CherokeeFlag";
 
 const FlagIcon: React.FC<{ countryCode: string }> = ({ countryCode }) => {
   if (countryCode === "CHEROKEE") return <CherokeeFlag />;
