@@ -6,8 +6,8 @@ an app_opened event with system specifications. Respects the user's
 opt-in/opt-out choice stored in telemetry_config.json.
 
 The telemetry secret is injected at CI build time via build_info.py.
-During local development the default placeholder prevents telemetry
-from authenticating (events are silently dropped by the server).
+During local development the default placeholder sends events as
+unverified (the server accepts them but stores them separately).
 """
 
 import logging
@@ -47,38 +47,53 @@ def _collect_system_specs() -> dict[str, object]:
 
 
 def initialize_telemetry() -> None:
-    """Start the telemetry client and send an app_opened event, if enabled."""
+    """Start the skellypings telemetry client and send an app_opened event, if enabled."""
     global _client
 
     if not read_telemetry_enabled():
-        logger.info("Telemetry is disabled by user preference")
+        logger.info("Skellypings telemetry is disabled by user preference")
         return
 
-    if SKELLYPINGS_SECRET == "not-configured":
-        logger.info("Telemetry secret not configured (local dev / from-source build), events will be stored as unverified")
+    secret_status: str = "CONFIGURED" if SKELLYPINGS_SECRET != "not-configured" else "NOT CONFIGURED (events will be unverified)"
+    logger.info(
+        "Skellypings telemetry initializing: server_url=%s, secret=%s, app_version=%s",
+        SKELLYPINGS_SERVER_URL,
+        secret_status,
+        skellycam.__version__,
+    )
+
+    user_id_file: Path = _get_user_id_file()
+    logger.info("Skellypings user_id_file: %s", user_id_file)
 
     _client = TelemetryClient(
         server_url=SKELLYPINGS_SERVER_URL,
         secret=SKELLYPINGS_SECRET,
         app_version=skellycam.__version__,
-        user_id_file=_get_user_id_file(),
+        user_id_file=user_id_file,
     )
 
-    specs = _collect_system_specs()
+    specs: dict[str, object] = _collect_system_specs()
+    logger.info("Skellypings sending 'app_opened' event with payload: %s", specs)
     _client.track("app_opened", payload=specs)
-    logger.info("Telemetry initialized (user_id=%s)", _client.user_id)
+    logger.info(
+        "Skellypings telemetry initialized (user_id=%s, flush_interval=%.1fs)",
+        _client.user_id,
+        _client._flush_interval,
+    )
 
 
 def shutdown_telemetry() -> None:
-    """Flush remaining events and stop the telemetry client."""
+    """Flush remaining skellypings events and stop the telemetry client."""
     global _client
     if _client is not None:
+        logger.info("Skellypings telemetry shutting down, flushing remaining events...")
         _client.shutdown()
         _client = None
-        logger.info("Telemetry shut down")
+        logger.info("Skellypings telemetry shut down")
 
 
 def track_event(event_type: str, payload: dict[str, object] | None = None) -> None:
-    """Track a telemetry event. No-op if telemetry is disabled."""
+    """Track a skellypings telemetry event. No-op if telemetry is disabled."""
     if _client is not None:
+        logger.info("Skellypings tracking event: type=%s, payload=%s", event_type, payload)
         _client.track(event_type=event_type, payload=payload)
