@@ -25,19 +25,19 @@ jobs:
             server-binary: skellycam_server.exe
             electron-arch: x64
 
-#          # macOS Intel (x64) — macos-15-intel replaces retired macos-13
-#          - os: macos-15-intel
-#            platform: macos
-#            arch: x64
-#            server-binary: skellycam_server
-#            electron-arch: x64
-#
-#          # macOS Apple Silicon (arm64)
-#          - os: macos-latest
-#            platform: macos
-#            arch: arm64
-#            server-binary: skellycam_server
-#            electron-arch: arm64
+          # macOS Intel (x64) — macos-15-intel replaces retired macos-13
+          - os: macos-15-intel
+            platform: macos
+            arch: x64
+            server-binary: skellycam_server
+            electron-arch: x64
+
+          # macOS Apple Silicon (arm64)
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            server-binary: skellycam_server
+            electron-arch: arm64
 
           # Linux x64
           - os: ubuntu-22.04
