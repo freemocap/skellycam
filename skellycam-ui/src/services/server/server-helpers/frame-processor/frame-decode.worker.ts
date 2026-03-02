@@ -141,13 +141,21 @@ async function decodePayload(data) {
 
     frameMetadata.length = validFrameCount;
 
-    // Create ImageBitmaps in parallel — all Blob allocation + async decode
-    // happens here in the worker thread, never on main thread
-    const bitmapPromises = frameMetadata.map(async (meta) => {
+    // Decode JPEGs sequentially so only one Blob's backing store exists
+    // at a time. Blob data lives in the browser's blob subsystem (outside
+    // the V8 heap) and relies on Blink GC to free it. In a Worker with no
+    // idle time, parallel Blob creation causes backing stores to accumulate
+    // faster than GC can reclaim them, producing a slowly rising memory
+    // floor. Sequential decode with explicit nulling keeps peak blob memory
+    // at one JPEG instead of N, and gives the browser a clear release signal.
+    const frames = new Array(validFrameCount);
+    for (let i = 0; i < validFrameCount; i++) {
+        const meta = frameMetadata[i];
         const jpegData = new Uint8Array(data, meta.jpegStart, meta.jpegLength);
-        const blob = new Blob([jpegData], { type: 'image/jpeg' });
+        let blob = new Blob([jpegData], { type: 'image/jpeg' });
         const bitmap = await createImageBitmap(blob, BITMAP_OPTIONS);
-        return {
+        blob = null;
+        frames[i] = {
             cameraId: meta.cameraId,
             cameraIndex: meta.cameraIndex,
             frameNumber: meta.frameNumber,
@@ -156,9 +164,9 @@ async function decodePayload(data) {
             colorChannels: meta.colorChannels,
             bitmap: bitmap,
         };
-    });
+    }
 
-    return Promise.all(bitmapPromises);
+    return frames;
 }
 
 // ─── Worker message handler ───

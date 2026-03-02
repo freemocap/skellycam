@@ -1,19 +1,15 @@
 // src/components/framerate-viewer/FrameRateViewer.tsx
-import {useState, useEffect} from "react"
+import {useState} from "react"
 import {Box, IconButton, Paper, Stack, Tooltip, Typography} from "@mui/material"
 import {BarChart, ShowChart, TableChart} from "@mui/icons-material"
 import {alpha, useTheme} from "@mui/material/styles"
 import FramerateTimeseriesView from "./FramerateTimeseriesView"
 import FramerateHistogramView from "./FramerateHistogramView"
 import FramerateStatisticsView from "./FramerateStatisticsView"
-import {useServer} from "@/services/server/ServerContextProvider";
-import {FramerateSnapshot} from "@/services/server/server-helpers/framerate-store";
 import { useTranslation } from "react-i18next";
 
 export const frontendColor: string = "#1976D2"
 export const backendColor: string = "#ff4d00"
-
-const POLL_INTERVAL_MS = 500;
 
 export const FramerateViewerPanel = () => {
     const theme = useTheme()
@@ -21,33 +17,6 @@ export const FramerateViewerPanel = () => {
     const [showStats, setShowStats] = useState(true)
     const [showTimeseries, setShowTimeseries] = useState(true)
     const [showHistogram, setShowHistogram] = useState(true)
-    const {getFramerateStore} = useServer();
-
-    // Poll the mutable store on a fixed interval instead of reacting to Redux
-    const [snapshot, setSnapshot] = useState<FramerateSnapshot>({
-        currentBackendFramerate: null,
-        currentFrontendFramerate: null,
-        aggregateBackendFramerate: null,
-        aggregateFrontendFramerate: null,
-        recentFrontendDurations: [],
-        recentBackendDurations: [],
-    });
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setSnapshot(getFramerateStore().getSnapshot());
-        }, POLL_INTERVAL_MS);
-        return () => clearInterval(interval);
-    }, [getFramerateStore]);
-
-    const {
-        currentFrontendFramerate,
-        currentBackendFramerate,
-        aggregateFrontendFramerate,
-        aggregateBackendFramerate,
-        recentFrontendDurations,
-        recentBackendDurations
-    } = snapshot;
 
     return (
         <Box sx={{
@@ -117,10 +86,6 @@ export const FramerateViewerPanel = () => {
                     }}
                 >
                     <FramerateStatisticsView
-                        frontendFramerate={currentFrontendFramerate}
-                        backendFramerate={currentBackendFramerate}
-                        aggregateFrontendFramerate={aggregateFrontendFramerate}
-                        aggregateBackendFramerate={aggregateBackendFramerate}
                         compact={true}
                     />
                 </Paper>
@@ -148,10 +113,6 @@ export const FramerateViewerPanel = () => {
                         }}
                     >
                         <FramerateTimeseriesView
-                            frontendFramerate={currentFrontendFramerate}
-                            backendFramerate={currentBackendFramerate}
-                            recentFrontendDurations={recentFrontendDurations}
-                            recentBackendDurations={recentBackendDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
                             title={t("framerateTimeline")}
@@ -172,10 +133,6 @@ export const FramerateViewerPanel = () => {
                         }}
                     >
                         <FramerateHistogramView
-                            frontendFramerate={currentFrontendFramerate}
-                            backendFramerate={currentBackendFramerate}
-                            recentFrontendDurations={recentFrontendDurations}
-                            recentBackendDurations={recentBackendDurations}
                             frontendColor={frontendColor}
                             backendColor={backendColor}
                             title={t("framerateDistribution")}

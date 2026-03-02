@@ -2,16 +2,13 @@
 import {useCallback, useRef} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
-import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
+import {TimestampedSample} from "@/services/server/server-helpers/framerate-store"
 import {applyAxisStyles} from "@/components/framerate-viewer/d3ChartUtils"
 import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
+import {useServer} from "@/services/server/ServerContextProvider"
 
 type FramerateTimeseriesProps = {
-    frontendFramerate: DetailedFramerate | null
-    backendFramerate: DetailedFramerate | null
-    recentFrontendDurations: TimestampedSample[]
-    recentBackendDurations: TimestampedSample[]
     frontendColor: string
     backendColor: string
     title?: string
@@ -69,10 +66,6 @@ type ChartState = {
 }
 
 export default function FramerateTimeseriesView({
-    frontendFramerate,
-    backendFramerate,
-    recentFrontendDurations,
-    recentBackendDurations,
     frontendColor,
     backendColor,
     title = "Framerate Over Time",
@@ -80,6 +73,7 @@ export default function FramerateTimeseriesView({
     const theme = useTheme()
     const {t} = useTranslation()
     const stateRef = useRef<ChartState | null>(null)
+    const {getFramerateStore} = useServer()
 
     // initChart — creates persistent SVG elements that live for the chart's lifetime
     const initChart = useCallback(
@@ -181,6 +175,11 @@ export default function FramerateTimeseriesView({
             const state = stateRef.current
             if (!state) return
 
+            // Read fresh data directly from the store — no React state involved.
+            const snapshot = getFramerateStore().getSnapshot()
+            const recentFrontendDurations = snapshot.recentFrontendDurations
+            const recentBackendDurations = snapshot.recentBackendDurations
+
             // Convert durations→FPS using reusable scratch buffers
             toFpsInPlace(recentFrontendDurations, state.frontendFpsBuf)
             toFpsInPlace(recentBackendDurations, state.backendFpsBuf)
@@ -260,7 +259,7 @@ export default function FramerateTimeseriesView({
             state.frontendPath.attr("d", state.frontendData.length > 0 ? line(state.frontendData) : null)
             state.backendPath.attr("d", state.backendData.length > 0 ? line(state.backendData) : null)
         },
-        [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
+        [getFramerateStore, frontendColor, backendColor, theme, t]
     )
 
     return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}

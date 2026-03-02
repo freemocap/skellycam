@@ -1,5 +1,5 @@
 // src/components/framerate-viewer/BaseD3ChartView.tsx
-import {useEffect, useRef, useState, useCallback} from "react"
+import {useEffect, useRef, useState, useCallback, memo} from "react"
 import * as d3 from "d3"
 import {Box, Fade, IconButton, Tooltip, Typography} from "@mui/material"
 import {RestartAlt, ZoomIn, ZoomOut} from "@mui/icons-material"
@@ -40,7 +40,10 @@ type BaseChartViewProps = {
 
 let nextClipId = 0
 
-export default function BaseD3ChartView({
+/** How often (ms) to run the imperative D3 data-update. */
+const CHART_UPDATE_INTERVAL_MS = 500
+
+export default memo(function BaseD3ChartView({
     title,
     initChart,
     updateChart,
@@ -58,6 +61,10 @@ export default function BaseD3ChartView({
     const clipIdRef = useRef<string>(`clip-chart-${nextClipId++}`)
     const [showControls, setShowControls] = useState(false)
     const [containerSize, setContainerSize] = useState<{width: number; height: number}>({width: 0, height: 0})
+
+    // Always holds the latest updateChart without triggering re-renders.
+    const updateChartRef = useRef(updateChart)
+    updateChartRef.current = updateChart
 
     // Track container size with ResizeObserver
     useEffect(() => {
@@ -144,12 +151,18 @@ export default function BaseD3ChartView({
         }
     }, [initChart, margin, containerSize])
 
-    // In-place data update — runs on every data change, does NOT rebuild the DOM
+    // Imperative D3 data update on a fixed interval. The updateChart callback
+    // (stored in the ref) reads directly from the FramerateStore each tick,
+    // so no React state or re-renders are involved in the data path.
     useEffect(() => {
-        const scaffolding = chartStateRef.current.scaffolding
-        if (!scaffolding) return
-        updateChart(scaffolding)
-    }, [updateChart])
+        const tick = () => {
+            const scaffolding = chartStateRef.current.scaffolding
+            if (scaffolding) updateChartRef.current(scaffolding)
+        }
+        tick()
+        const id = setInterval(tick, CHART_UPDATE_INTERVAL_MS)
+        return () => clearInterval(id)
+    }, [])
 
     const handleZoomIn = useCallback(() => {
         if (svgRef.current && zoomRef.current) {
@@ -242,4 +255,8 @@ export default function BaseD3ChartView({
             />
         </Box>
     )
-}
+}, (prev, next) => {
+    return prev.title === next.title
+        && prev.initChart === next.initChart
+        && prev.margin === next.margin
+})

@@ -3,15 +3,11 @@ import {useCallback, useRef} from "react"
 import * as d3 from "d3"
 import {useTheme} from "@mui/material/styles"
 import {applyAxisStyles} from "./d3ChartUtils"
-import {DetailedFramerate, TimestampedSample} from "@/services/server/server-helpers/framerate-store"
 import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
+import {useServer} from "@/services/server/ServerContextProvider"
 
 type FramerateHistogramProps = {
-    frontendFramerate: DetailedFramerate | null
-    backendFramerate: DetailedFramerate | null
-    recentFrontendDurations: TimestampedSample[]
-    recentBackendDurations: TimestampedSample[]
     frontendColor: string
     backendColor: string
     title?: string
@@ -73,10 +69,6 @@ type ChartState = {
 }
 
 export default function FramerateHistogramView({
-    frontendFramerate,
-    backendFramerate,
-    recentFrontendDurations,
-    recentBackendDurations,
     frontendColor,
     backendColor,
     title = "Framerate Distribution",
@@ -84,6 +76,7 @@ export default function FramerateHistogramView({
     const theme = useTheme()
     const {t} = useTranslation()
     const stateRef = useRef<ChartState | null>(null)
+    const {getFramerateStore} = useServer()
 
     // initChart — creates persistent groups
     const initChart = useCallback(
@@ -151,6 +144,11 @@ export default function FramerateHistogramView({
         ({svg, chartArea, xAxisG, yAxisG, width, height}: ChartScaffolding) => {
             const state = stateRef.current
             if (!state) return
+
+            // Read fresh data directly from the store — no React state involved.
+            const snapshot = getFramerateStore().getSnapshot()
+            const recentFrontendDurations = snapshot.recentFrontendDurations
+            const recentBackendDurations = snapshot.recentBackendDurations
 
             const frontendFps = recentFrontendDurations.filter((s) => s.value > 0).map((s) => 1000 / s.value)
             const backendFps = recentBackendDurations.filter((s) => s.value > 0).map((s) => 1000 / s.value)
@@ -260,7 +258,7 @@ export default function FramerateHistogramView({
             updateBars(state.frontendBarGroup, frontendHist?.bins ?? [], frontendColor, 0)
             updateBars(state.backendBarGroup, backendHist?.bins ?? [], backendColor, numSources > 1 ? 1 : 0)
         },
-        [frontendFramerate, backendFramerate, recentFrontendDurations, recentBackendDurations, frontendColor, backendColor, theme, t]
+        [getFramerateStore, frontendColor, backendColor, theme, t]
     )
 
     return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}
