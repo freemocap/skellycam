@@ -26,7 +26,7 @@ import { useTranslation } from "react-i18next";
 
 const LOG_POLL_INTERVAL_MS = 500;
 
-/** Estimated height of a single collapsed log row in pixels. */
+/** Fixed height of a single collapsed log row in pixels. */
 const ROW_HEIGHT = 28;
 
 /** Extra rows rendered above/below the visible viewport. */
@@ -41,6 +41,40 @@ const LOG_COLORS: Record<string, string> = {
     WARNING: "#FFFF66",
     ERROR: "#FF6666",
     CRITICAL: "#FF0000",
+};
+
+// ---------------------------------------------------------------------------
+// URL linkification — splits text on http/https URLs and renders them as
+// clickable <a> tags. When split() is called with a capture group, matched
+// segments land at odd indices, so i % 2 === 1 identifies URLs.
+// ---------------------------------------------------------------------------
+
+const URL_REGEX = /(https?:\/\/[^\s)"'>\]]+)/g;
+
+const Linkify = ({ text }: { text: string }) => {
+    const parts = text.split(URL_REGEX);
+    if (parts.length === 1) return <>{text}</>;
+
+    return (
+        <>
+            {parts.map((part, i) =>
+                i % 2 === 1 ? (
+                    <a
+                        key={i}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#58a6ff", textDecoration: "underline" }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part}
+                    </a>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+        </>
+    );
 };
 
 // ---------------------------------------------------------------------------
@@ -89,7 +123,7 @@ const LogEntryRow = React.memo(({ log, style }: { log: LogRecord; style: React.C
             >
                 {log.levelname}
             </span>
-            <span style={{ color: "#fff" }}>{log.message}</span>
+            <span style={{ color: "#fff" }}><Linkify text={log.message} /></span>
 
             {/* Expanded detail panel */}
             {expanded && (
@@ -121,17 +155,17 @@ const LogEntryDetail = ({ log, color }: { log: LogRecord; color: string }) => {
             <div>Location: {log.module}:{log.funcName}:Line#{log.lineno}</div>
             <div>{t("fileLabel")}: {log.filename}</div>
             <div>{t("timeDelta")}: {log.delta_t}</div>
-            <div>{t("pathLabel")}: {log.pathname}</div>
+            <div>{t("pathLabel")}: <Linkify text={log.pathname} /></div>
             {log.formatted_message && (
-                <div>{t("rawMessage")}: {log.formatted_message}</div>
+                <div>{t("rawMessage")}: <Linkify text={log.formatted_message} /></div>
             )}
             <div>Thread: {log.threadName} (ID: {log.thread})</div>
             <div>Process: {log.processName} (ID: {log.process})</div>
             {(log.exc_info || log.exc_text) && (
                 <div>
                     <div>{t("exceptionDetails")}:</div>
-                    {log.exc_info && <div>{log.exc_info}</div>}
-                    {log.exc_text && <div>{log.exc_text}</div>}
+                    {log.exc_info && <div><Linkify text={log.exc_info} /></div>}
+                    {log.exc_text && <div><Linkify text={log.exc_text} /></div>}
                 </div>
             )}
             {log.stack_info && (
@@ -146,7 +180,7 @@ const LogEntryDetail = ({ log, color }: { log: LogRecord; color: string }) => {
                             margin: "8px 0",
                         }}
                     >
-                        {log.stack_info}
+                        <Linkify text={log.stack_info} />
                     </pre>
                 </div>
             )}
@@ -200,6 +234,7 @@ export const LogTerminal = () => {
         version: 0,
     });
 
+    const [isPaused, setIsPaused] = useState(false);
     const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
     const [searchText, setSearchText] = useState<string>("");
     const [showSearch, setShowSearch] = useState(false);
@@ -216,6 +251,7 @@ export const LogTerminal = () => {
 
     // Poll the mutable LogStore on a fixed interval.
     useEffect(() => {
+        if (isPaused) return;
 
         const poll = () => {
             const snap = getLogStore().getSnapshot();
@@ -230,7 +266,7 @@ export const LogTerminal = () => {
 
         const interval = setInterval(poll, LOG_POLL_INTERVAL_MS);
         return () => clearInterval(interval);
-    }, [getLogStore]);
+    }, [getLogStore, isPaused]);
 
     const filteredLogs = applyFilters(snapshot.entries, selectedLevels, searchText);
 
@@ -248,9 +284,13 @@ export const LogTerminal = () => {
         return () => observer.disconnect();
     }, []);
 
-    // Auto-scroll to bottom when new logs arrive
+    // Auto-scroll to bottom when new logs arrive.
+    // Deferred via requestAnimationFrame so that the DOM has painted the
+    // updated totalHeight before we read scrollHeight — without this, the
+    // scroll position gets set against a stale (shorter) scrollHeight and
+    // then snaps back once layout catches up, causing a visible bounce.
     useEffect(() => {
-        if (shouldAutoScroll.current && scrollContainerRef.current) {
+        if (!isPaused && shouldAutoScroll.current && scrollContainerRef.current) {
             requestAnimationFrame(() => {
                 const el = scrollContainerRef.current;
                 if (el) {
@@ -258,15 +298,26 @@ export const LogTerminal = () => {
                 }
             });
         }
-    }, [filteredLogs]);
+    }, [filteredLogs, isPaused]);
 
-    
     const handleScroll = useCallback(() => {
         const el = scrollContainerRef.current;
         if (!el) return;
         setScrollTop(el.scrollTop);
+        // Tight tolerance (< 2px) accounts for sub-pixel rounding while
+        // ensuring the user must be truly at the bottom to re-engage
+        // auto-scroll. A large tolerance causes auto-scroll to stay active
+        // when the user is trying to read entries near the bottom.
         const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 2;
         shouldAutoScroll.current = isAtBottom;
+    }, []);
+
+    const scrollToBottom = useCallback(() => {
+        const el = scrollContainerRef.current;
+        if (el) {
+            el.scrollTop = el.scrollHeight;
+            shouldAutoScroll.current = true;
+        }
     }, []);
 
     // Compute the visible window of log entries
@@ -306,12 +357,16 @@ export const LogTerminal = () => {
         setSelectedLevels(newLevels);
     };
 
+    const handlePauseToggle = (): void => {
+        setIsPaused(prev => !prev);
+    };
 
     const handleClear = (): void => {
         getLogStore().clear();
         setSelectedLevels([]);
         setSearchText("");
         setShowSearch(false);
+        setIsPaused(false);
         lastVersionRef.current = -1;
         setSnapshot({ entries: [], hasErrors: false, countsByLevel: {}, version: 0 });
     };
@@ -447,18 +502,13 @@ export const LogTerminal = () => {
                     <Tooltip title="Scroll to bottom">
                         <IconButton
                             size="small"
-                            onClick={() => {
-                                const el = scrollContainerRef.current;
-                                if (el) {
-                                    el.scrollTop = el.scrollHeight;
-                                    shouldAutoScroll.current = true;
-                                }
-                            }}
+                            onClick={scrollToBottom}
                             sx={{ color: theme.palette.text.secondary }}
                         >
                             <ScrollToBottomIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
+
                     <IconButton
                         size="small"
                         onClick={() => setShowSearch(!showSearch)}
@@ -467,6 +517,15 @@ export const LogTerminal = () => {
                         <SearchIcon fontSize="small" />
                     </IconButton>
 
+                    <IconButton
+                        size="small"
+                        onClick={handlePauseToggle}
+                        sx={{
+                            color: isPaused ? theme.palette.warning.main : theme.palette.text.secondary
+                        }}
+                    >
+                        {isPaused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
+                    </IconButton>
 
                     <IconButton
                         size="small"
@@ -502,7 +561,6 @@ export const LogTerminal = () => {
                     overflowY: "auto",
                     overflowX: "auto",
                     position: "relative",
-                    // Thin scrollbar styling via CSS properties
                     scrollbarWidth: "thin" as any,
                     scrollbarColor:
                         theme.palette.mode === "dark"
@@ -520,7 +578,7 @@ export const LogTerminal = () => {
                             color: theme.palette.text.disabled,
                         }}
                     >
-                        {t("noLogsToDisplay")}
+                        {isPaused ? t("loggingPaused") : t("noLogsToDisplay")}
                     </div>
                 ) : (
                     // Outer div creates the full scrollable height
