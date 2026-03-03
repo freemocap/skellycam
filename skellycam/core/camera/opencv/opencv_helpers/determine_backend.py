@@ -1,4 +1,5 @@
 import logging
+import sys
 from platform import platform
 
 import cv2
@@ -38,8 +39,28 @@ def determine_opencv_camera_backend() -> OpenCVBackend:
         #   - More direct access to the driver's sample delivery
         #   - Better multi-camera synchronization because frame delivery timing is more predictable
         backend = OpenCVBackend.from_backend_id(cv2.CAP_DSHOW)
+    elif sys.platform == "linux":
+        # V4L2 (Video4Linux2) is the native camera API on Linux.
+        #
+        # GStreamer may appear as supported_backends[0] from cv2_enumerate_cameras, but opening
+        # a camera via cv2.VideoCapture(index, CAP_GSTREAMER) with a plain integer index fails
+        # because GStreamer expects a pipeline string (e.g. "v4l2src device=/dev/video0 ! ..."),
+        # not a numeric device index.
+        #
+        # V4L2 works correctly with integer device indices and provides direct, low-latency
+        # access to the kernel's camera driver — analogous to DSHOW on Windows.
+        if cv2.CAP_V4L2 in supported_backends:
+            backend = OpenCVBackend.from_backend_id(cv2.CAP_V4L2)
+        else:
+            raise RuntimeError(
+                f"V4L2 backend not available. "
+                f"Supported backends: {[getBackendName(b) for b in supported_backends]}"
+            )
     else:
-        backend = OpenCVBackend.from_backend_id(supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY)
+        # macOS / other — use the first available backend, or CAP_ANY as fallback.
+        backend = OpenCVBackend.from_backend_id(
+            supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY
+        )
     logger.debug(f"Determined OpenCV backend: {backend.name} (ID: {backend.id})")
     return backend
 
