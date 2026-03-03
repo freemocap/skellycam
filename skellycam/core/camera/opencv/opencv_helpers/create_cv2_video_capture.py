@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import cv2
 
@@ -45,6 +44,18 @@ def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tupl
                 capture = None
                 continue
             raise FailedToOpenCameraException()
+
+        # Set fourcc, resolution, and framerate before the first read() so that the V4L2
+        # driver negotiates the correct pixel format, frame size, and frame interval when
+        # streaming begins.  Without this, the driver may default to a lower framerate
+        # (e.g. 15fps instead of 30fps) or a format the camera cannot deliver, causing
+        # select() timeouts or degraded performance.
+        if config.capture_fourcc:
+            capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc))
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
+        if config.framerate > 0:
+            capture.set(cv2.CAP_PROP_FPS, config.framerate)
 
         # Minimize the driver-side frame buffer to reduce stale-frame latency.
         # This makes grab() timestamps a tighter proxy for actual frame capture time.

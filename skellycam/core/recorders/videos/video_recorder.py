@@ -1,6 +1,7 @@
 import logging
-import sys
 import os
+import signal
+import sys
 import tempfile
 import time
 from copy import copy
@@ -31,17 +32,35 @@ _FOURCC_TO_EXTENSION: dict[str, str] = {
     "MP4V": "mp4",
 }
 
+_CODEC_PROBE_TIMEOUT_SECONDS = 5
+
+
+class _CodecProbeTimeout(Exception):
+    pass
+
+
 def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
     """Return True if cv2.VideoWriter can write a frame with this codec.
 
     Uses a unique temp file per call to avoid race conditions when multiple
-    camera worker processes probe codecs simultaneously.
+    camera worker processes probe codecs simultaneously.  Times out after
+    _CODEC_PROBE_TIMEOUT_SECONDS to avoid hanging on broken codec backends.
     """
+    logger.debug(f"Probing video codec '{fourcc_str}' with frame size {frame_size}...")
     ext = _FOURCC_TO_EXTENSION.get(fourcc_str, "avi")
     fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}", prefix="_skellycam_codec_probe_")
     os.close(fd)
     test_frame = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
     writer: cv2.VideoWriter | None = None
+
+    def _timeout_handler(signum: int, frame: object) -> None:
+        raise _CodecProbeTimeout(f"Codec probe for '{fourcc_str}' timed out after {_CODEC_PROBE_TIMEOUT_SECONDS}s")
+
+    old_handler = None
+    if sys.platform != "win32":
+        old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(_CODEC_PROBE_TIMEOUT_SECONDS)
+
     try:
         writer = cv2.VideoWriter(
             tmp_path,
@@ -50,15 +69,26 @@ def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
             frame_size,
         )
         if not writer.isOpened():
+            logger.debug(f"Codec '{fourcc_str}' failed: writer did not open")
             return False
         writer.write(test_frame)
         writer.release()
         writer = None
         # Verify the file has actual content (some backends open but write nothing)
-        return Path(tmp_path).stat().st_size >= 100
-    except Exception:
+        ok = Path(tmp_path).stat().st_size >= 100
+        logger.debug(f"Codec '{fourcc_str}' probe {'succeeded' if ok else 'failed (empty file)'}")
+        return ok
+    except _CodecProbeTimeout:
+        logger.warning(f"Codec '{fourcc_str}' probe timed out — skipping")
+        return False
+    except Exception as e:
+        logger.debug(f"Codec '{fourcc_str}' probe failed with {type(e).__name__}: {e}")
         return False
     finally:
+        if sys.platform != "win32":
+            signal.alarm(0)
+            if old_handler is not None:
+                signal.signal(signal.SIGALRM, old_handler)
         if writer is not None:
             writer.release()
         Path(tmp_path).unlink(missing_ok=True)
