@@ -117,6 +117,8 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         showOverlays: true,
         timestampFormat: 'seconds',
     });
+    const [isLooping, setIsLooping] = useState(false);
+    const isLoopingRef = useRef(false);
 
     const fps = recordingFps || 30;
     const allReady = videosReady >= videos.length && videos.length > 0;
@@ -238,6 +240,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
 
     // Keep refs in sync with props/state
     useEffect(() => { settingsRef.current = settings; }, [settings]);
+    useEffect(() => { isLoopingRef.current = isLooping; }, [isLooping]);
     useEffect(() => { frameTimestampsRef.current = frameTimestamps ?? null; }, [frameTimestamps]);
     useEffect(() => {
         if (recordingFps && recordingFps > 0) fpsRef.current = recordingFps;
@@ -354,8 +357,23 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const leaderTime = leader.currentTime;
         const newFrame = leaderTime * fpsRef.current;
 
-        // End of video
+        // End of video — loop back to start or stop
         if (newFrame >= totalFramesRef.current) {
+            if (isLoopingRef.current) {
+                // Pause all videos, seek cleanly to frame 0, then restart playback.
+                // Seeking while videos are still playing causes the browser's decode
+                // pipeline to stall, producing choppy playback on subsequent loops.
+                pauseAllVideos();
+                const targetTime = 0;
+                videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
+                currentFrameRef.current = 0;
+                followerCheckCounter.current = 0;
+                updateOverlays(0);
+                setCurrentFrame(0);
+                playAllVideos();
+                rafRef.current = requestAnimationFrame(tick);
+                return;
+            }
             pauseAllVideos();
             isPlayingRef.current = false;
             const endFrame = totalFramesRef.current - 1;
@@ -401,7 +419,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         }
 
         rafRef.current = requestAnimationFrame(tick);
-    }, [pauseAllVideos, updateOverlays]);
+    }, [pauseAllVideos, playAllVideos, updateOverlays]);
 
     const startLoop = useCallback(() => {
         followerCheckCounter.current = 0;
@@ -516,6 +534,10 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         seekAllToFrame(totalFramesRef.current - 1);
     }, [seekAllToFrame, stopLoop, pauseAllVideos]);
 
+    const handleToggleLoop = useCallback(() => {
+        setIsLooping((prev) => !prev);
+    }, []);
+
     // -----------------------------------------------------------------------
     // Keyboard
     // -----------------------------------------------------------------------
@@ -528,11 +550,12 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                 case 'ArrowRight': e.preventDefault(); handleFrameStep(e.shiftKey ? 10 : 1); break;
                 case 'Home': e.preventDefault(); handleSeekToStart(); break;
                 case 'End': e.preventDefault(); handleSeekToEnd(); break;
+                case 'l': case 'L': e.preventDefault(); handleToggleLoop(); break;
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handlePlayPause, handleFrameStep, handleSeekToStart, handleSeekToEnd]);
+    }, [handlePlayPause, handleFrameStep, handleSeekToStart, handleSeekToEnd, handleToggleLoop]);
 
     // -----------------------------------------------------------------------
     // Render
@@ -710,6 +733,8 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                 onPlaybackRateChange={handlePlaybackRateChange}
                 onSeekToStart={handleSeekToStart}
                 onSeekToEnd={handleSeekToEnd}
+                isLooping={isLooping}
+                onToggleLoop={handleToggleLoop}
             />
         </Box>
     );

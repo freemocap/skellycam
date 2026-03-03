@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
     Box,
     Checkbox,
+    Collapse,
     FormControlLabel,
     IconButton,
     MenuItem,
@@ -21,6 +22,8 @@ import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import RepeatIcon from '@mui/icons-material/Repeat';
 import SettingsIcon from '@mui/icons-material/Settings';
 import type { PlaybackSettings } from './SyncedVideoPlayer';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +46,8 @@ interface PlaybackControlsProps {
     onPlaybackRateChange: (rate: number) => void;
     onSeekToStart: () => void;
     onSeekToEnd: () => void;
+    isLooping: boolean;
+    onToggleLoop: () => void;
 }
 
 const PLAYBACK_RATES = [0.1, 0.25, 0.5, 1, 1.5, 2, 4, 8];
@@ -72,6 +77,8 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     onPlaybackRateChange,
     onSeekToStart,
     onSeekToEnd,
+    isLooping,
+    onToggleLoop,
 }) => {
     const theme = useTheme();
     const { t } = useTranslation();
@@ -91,6 +98,9 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     // Settings popover
     const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
     const settingsOpen = Boolean(settingsAnchor);
+
+    // Sync info collapse
+    const [syncInfoOpen, setSyncInfoOpen] = useState(false);
 
     const updateSetting = <K extends keyof PlaybackSettings>(key: K, value: PlaybackSettings[K]) => {
         onSettingsChange({ ...settings, [key]: value });
@@ -240,6 +250,29 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                     </IconButton>
                 </Tooltip>
 
+                <Tooltip title={isLooping ? t("loopOn") : t("loopOff")}>
+                    <IconButton
+                        size="small"
+                        onClick={onToggleLoop}
+                        sx={{
+                            color: isLooping
+                                ? accentBlue
+                                : (isDark ? '#b3b9c6' : undefined),
+                            backgroundColor: isLooping
+                                ? (isDark ? 'rgba(41, 182, 246, 0.15)' : 'rgba(25, 118, 210, 0.1)')
+                                : undefined,
+                            border: isLooping ? `1px solid ${accentBlue}` : '1px solid transparent',
+                            '&:hover': {
+                                backgroundColor: isLooping
+                                    ? (isDark ? 'rgba(41, 182, 246, 0.25)' : 'rgba(25, 118, 210, 0.2)')
+                                    : undefined,
+                            },
+                        }}
+                    >
+                        <RepeatIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+
                 {/* Right: speed selector + settings */}
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 2, gap: 1 }}>
                     <Tooltip title={t("playbackSpeed")}>
@@ -274,6 +307,22 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                                 ))}
                             </Select>
                         </Box>
+                    </Tooltip>
+
+                    {/* Sync info */}
+                    <Tooltip title={t("syncInfo")}>
+                        <IconButton
+                            size="small"
+                            onClick={() => setSyncInfoOpen((prev) => !prev)}
+                            sx={{
+                                color: syncInfoOpen
+                                    ? (isDark ? '#ffcc80' : theme.palette.warning.dark)
+                                    : (isDark ? 'rgba(255,255,255,0.3)' : theme.palette.text.disabled),
+                                fontSize: '0.85rem',
+                            }}
+                        >
+                            <InfoOutlinedIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
                     </Tooltip>
 
                     {/* Settings gear */}
@@ -366,6 +415,42 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                     <ToggleButton value="timecode">HH:MM:SS:FF</ToggleButton>
                 </ToggleButtonGroup>
             </Popover>
+
+            {/* Sync info panel */}
+            <Collapse in={syncInfoOpen}>
+                <Box
+                    sx={{
+                        px: 2,
+                        py: 1,
+                        mt: 0.5,
+                        borderRadius: 1,
+                        backgroundColor: isDark ? 'rgba(255, 204, 128, 0.06)' : 'rgba(255, 152, 0, 0.05)',
+                        border: `1px solid ${isDark ? 'rgba(255, 204, 128, 0.15)' : 'rgba(255, 152, 0, 0.2)'}`,
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            display: 'block',
+                            color: isDark ? '#ffcc80' : theme.palette.warning.dark,
+                            fontWeight: 600,
+                            mb: 0.5,
+                        }}
+                    >
+                        {t("syncInfoTitle")}
+                    </Typography>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            display: 'block',
+                            color: theme.palette.text.secondary,
+                            lineHeight: 1.5,
+                        }}
+                    >
+                        {t("syncInfoBody")}
+                    </Typography>
+                </Box>
+            </Collapse>
         </Box>
     );
 };
