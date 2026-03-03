@@ -86,9 +86,10 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
         device = CameraDeviceInfo.from_camera_info(camera_info)
         if filter_virtual and 'virtual' in camera_info.name.lower():
             continue
-        if camera_info.vid is None or camera_info.pid is None:
-            if 'facetime' not in camera_info.name.lower():
-                # Skip cameras without VID and PID (unless its a 'facetime' camera on macOS)
+        if 'darwin' not in platform().lower():
+            # On Windows/Linux, VID/PID is reliably provided - skip cameras without it.
+            # On macOS (AVFoundation), VID/PID are often unavailable even for real USB cameras.
+            if camera_info.vid is None or camera_info.pid is None:
                 continue
         cameras.append(device)
     logger.debug(f"Detected {len(cameras)} cameras:\n {tabulate([camera.model_dump() for camera in cameras], headers='keys')}\n)")
