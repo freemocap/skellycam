@@ -9,7 +9,7 @@ import {
     Tooltip,
     useTheme,
 } from "@mui/material";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServer } from "@/services/server/ServerContextProvider";
 import { LogRecord, LogSnapshot } from "@/services/server/server-helpers/log-store";
 import {
@@ -26,8 +26,11 @@ import { useTranslation } from "react-i18next";
 
 const LOG_POLL_INTERVAL_MS = 500;
 
-/** Fixed height of a single collapsed log row in pixels. */
-const ROW_HEIGHT = 28;
+/** Height of a single line of monospace text in the log view. */
+const LINE_HEIGHT = 20;
+
+/** Vertical padding added to each log entry. */
+const ROW_PADDING = 8;
 
 /** Extra rows rendered above/below the visible viewport. */
 const OVERSCAN = 10;
@@ -78,56 +81,148 @@ const Linkify = ({ text }: { text: string }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Lightweight log entry — plain divs instead of MUI Box / Chip / Collapse
+// Variable-height virtualization helpers.
+// Each log entry's height depends on the number of lines in its message.
+// Single-line messages get a compact row; multi-line messages expand to
+// show every line, rendered with preserved whitespace like a real terminal.
+// ---------------------------------------------------------------------------
+
+/** Count lines in a message. A message with no newlines has 1 line. */
+const countLines = (text: string): number => {
+    if (!text) return 1;
+    let count = 1;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === "\n") count++;
+    }
+    return count;
+};
+
+/** Compute the pixel height of a log entry based on its line count. */
+const getRowHeight = (log: LogRecord): number => {
+    const lines = countLines(log.message);
+    if (lines === 1) {
+        // Single-line: one line of text + padding
+        return LINE_HEIGHT + ROW_PADDING;
+    }
+    // Multi-line: header line + all message lines + padding
+    return LINE_HEIGHT + lines * LINE_HEIGHT + ROW_PADDING;
+};
+
+/**
+ * Build a prefix-sum array of cumulative heights for variable-height virtualization.
+ * prefixHeights[i] = total height of rows 0..i-1 (the Y offset of row i).
+ * prefixHeights[n] = total height of all rows.
+ */
+const buildPrefixHeights = (logs: LogRecord[]): number[] => {
+    const prefixes = new Array<number>(logs.length + 1);
+    prefixes[0] = 0;
+    for (let i = 0; i < logs.length; i++) {
+        prefixes[i + 1] = prefixes[i] + getRowHeight(logs[i]);
+    }
+    return prefixes;
+};
+
+/** Binary search for the first row whose bottom edge is past the given Y offset. */
+const findStartIndex = (prefixHeights: number[], y: number): number => {
+    let lo = 0;
+    let hi = prefixHeights.length - 2;
+    while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (prefixHeights[mid + 1] <= y) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+};
+
+// ---------------------------------------------------------------------------
+// Lightweight log entry — renders multi-line messages with preserved whitespace
 // ---------------------------------------------------------------------------
 
 const LogEntryRow = React.memo(({ log, style }: { log: LogRecord; style: React.CSSProperties }) => {
     const [expanded, setExpanded] = useState(false);
     const color = LOG_COLORS[log.levelname.toUpperCase()] || "#ccc";
+    const multiLine = log.message.includes("\n");
 
     return (
         <div
             style={{
                 ...style,
-                // When expanded, override the fixed height so the detail panel is visible
-                height: expanded ? "auto" : style.height,
                 borderLeft: `2px solid ${color}`,
                 paddingLeft: 8,
+                paddingTop: ROW_PADDING / 2,
+                paddingBottom: ROW_PADDING / 2,
                 backgroundColor: expanded ? `${color}1a` : "rgba(0,0,0,0.2)",
                 cursor: "pointer",
                 fontFamily: "monospace",
                 fontSize: "0.85em",
-                lineHeight: `${ROW_HEIGHT}px`,
-                overflow: "visible",
-                whiteSpace: "pre",
+                lineHeight: `${LINE_HEIGHT}px`,
+                overflow: "hidden",
+                position: "relative",
             }}
             onClick={() => setExpanded((prev) => !prev)}
         >
-            {/* Collapsed single-line summary */}
-            <span style={{ color: "#888", marginRight: 8, fontSize: "0.9em" }}>
-                {log.asctime}
-            </span>
-            <span
-                style={{
-                    backgroundColor: color,
-                    color: "#000",
-                    padding: "1px 5px",
-                    borderRadius: 2,
-                    fontSize: "0.75em",
-                    fontWeight: 600,
-                    marginRight: 8,
-                    display: "inline-block",
-                    lineHeight: "normal",
-                    verticalAlign: "middle",
-                }}
-            >
-                {log.levelname}
-            </span>
-            <span style={{ color: "#fff" }}><Linkify text={log.message} /></span>
+            {/* Header line: timestamp + level badge + first line (or entire message if single-line) */}
+            <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <span style={{ color: "#888", marginRight: 8, fontSize: "0.9em" }}>
+                    {log.asctime}
+                </span>
+                <span
+                    style={{
+                        backgroundColor: color,
+                        color: "#000",
+                        padding: "1px 5px",
+                        borderRadius: 2,
+                        fontSize: "0.75em",
+                        fontWeight: 600,
+                        marginRight: 8,
+                        display: "inline-block",
+                        lineHeight: "normal",
+                        verticalAlign: "middle",
+                    }}
+                >
+                    {log.levelname}
+                </span>
+                <span style={{ color: "#fff" }}>
+                    <Linkify text={multiLine ? log.message.split("\n")[0] : log.message} />
+                </span>
+            </div>
 
-            {/* Expanded detail panel */}
+            {/* Multi-line message body: remaining lines rendered with preserved whitespace */}
+            {multiLine && (
+                <div
+                    style={{
+                        whiteSpace: "pre",
+                        color: "#fff",
+                        paddingLeft: 4,
+                    }}
+                >
+                    <Linkify text={log.message.split("\n").slice(1).join("\n")} />
+                </div>
+            )}
+
+            {/* Expanded overlay for log metadata (click to toggle) */}
             {expanded && (
-                <LogEntryDetail log={log} color={color} />
+                <div
+                    style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        zIndex: 10,
+                        backgroundColor: "#1a1a1a",
+                        borderLeft: `2px solid ${color}`,
+                        borderBottom: `1px solid ${color}`,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                        overflow: "auto",
+                        maxHeight: 400,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <LogEntryDetail log={log} color={color} />
+                </div>
             )}
         </div>
     );
@@ -270,6 +365,11 @@ export const LogTerminal = () => {
 
     const filteredLogs = applyFilters(snapshot.entries, selectedLevels, searchText);
 
+    // Build prefix-sum height array for variable-height virtualization.
+    // Recomputed when filteredLogs changes (memoized to avoid recalc on scroll).
+    const prefixHeights = useMemo(() => buildPrefixHeights(filteredLogs), [filteredLogs]);
+    const totalHeight = prefixHeights[filteredLogs.length] || 0;
+
     // Track container height via ResizeObserver
     useEffect(() => {
         const container = scrollContainerRef.current;
@@ -320,12 +420,11 @@ export const LogTerminal = () => {
         }
     }, []);
 
-    // Compute the visible window of log entries
-    const totalHeight = filteredLogs.length * ROW_HEIGHT;
-    const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
-    const visibleCount = Math.ceil(containerHeight / ROW_HEIGHT) + 2 * OVERSCAN;
-    const endIdx = Math.min(filteredLogs.length, startIdx + visibleCount);
-    const offsetY = startIdx * ROW_HEIGHT;
+    // Compute visible row window using variable-height prefix sums
+    const startIdx = Math.max(0, findStartIndex(prefixHeights, scrollTop) - OVERSCAN);
+    const endScrollTop = scrollTop + containerHeight;
+    const endIdx = Math.min(filteredLogs.length, findStartIndex(prefixHeights, endScrollTop) + 1 + OVERSCAN);
+    const offsetY = prefixHeights[startIdx];
 
     const formatLogsForExport = useCallback((): string => {
         return filteredLogs.map((log) =>
@@ -592,13 +691,17 @@ export const LogTerminal = () => {
                                 right: 0,
                             }}
                         >
-                            {filteredLogs.slice(startIdx, endIdx).map((log, i) => (
-                                <LogEntryRow
-                                    key={`${log.created}-${log.thread}-${startIdx + i}`}
-                                    log={log}
-                                    style={{ height: ROW_HEIGHT }}
-                                />
-                            ))}
+                            {filteredLogs.slice(startIdx, endIdx).map((log, i) => {
+                                const rowIdx = startIdx + i;
+                                const rowHeight = prefixHeights[rowIdx + 1] - prefixHeights[rowIdx];
+                                return (
+                                    <LogEntryRow
+                                        key={`${log.created}-${log.thread}-${rowIdx}`}
+                                        log={log}
+                                        style={{ height: rowHeight }}
+                                    />
+                                );
+                            })}
                         </div>
                     </div>
                 )}
