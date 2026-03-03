@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 import tempfile
 import time
 from copy import copy
@@ -30,12 +31,17 @@ _FOURCC_TO_EXTENSION: dict[str, str] = {
     "MP4V": "mp4",
 }
 
-
 def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
-    """Return True if cv2.VideoWriter can write a frame with this codec."""
+    """Return True if cv2.VideoWriter can write a frame with this codec.
+
+    Uses a unique temp file per call to avoid race conditions when multiple
+    camera worker processes probe codecs simultaneously.
+    """
     ext = _FOURCC_TO_EXTENSION.get(fourcc_str, "avi")
-    tmp_path = str(Path(tempfile.gettempdir()) / f"_skellycam_codec_probe.{ext}")
+    fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}", prefix="_skellycam_codec_probe_")
+    os.close(fd)
     test_frame = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
+    writer: cv2.VideoWriter | None = None
     try:
         writer = cv2.VideoWriter(
             tmp_path,
@@ -44,17 +50,18 @@ def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
             frame_size,
         )
         if not writer.isOpened():
-            writer.release()
             return False
         writer.write(test_frame)
         writer.release()
+        writer = None
         # Verify the file has actual content (some backends open but write nothing)
         return Path(tmp_path).stat().st_size >= 100
     except Exception:
         return False
     finally:
+        if writer is not None:
+            writer.release()
         Path(tmp_path).unlink(missing_ok=True)
-
 
 def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) -> str:
     """Return a working fourcc string, trying the requested one first then fallbacks.
