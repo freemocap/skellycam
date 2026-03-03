@@ -19,7 +19,8 @@ import {
     Search as SearchIcon,
     Warning as WarningIcon,
     ContentCopy as ContentCopyIcon,
-    SaveAlt as SaveAltIcon,
+    Save as SaveIcon,
+    SaveAlt as ScrollToBottomIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 
@@ -199,7 +200,6 @@ export const LogTerminal = () => {
         version: 0,
     });
 
-    const [isPaused, setIsPaused] = useState(false);
     const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
     const [searchText, setSearchText] = useState<string>("");
     const [showSearch, setShowSearch] = useState(false);
@@ -216,7 +216,6 @@ export const LogTerminal = () => {
 
     // Poll the mutable LogStore on a fixed interval.
     useEffect(() => {
-        if (isPaused) return;
 
         const poll = () => {
             const snap = getLogStore().getSnapshot();
@@ -231,7 +230,7 @@ export const LogTerminal = () => {
 
         const interval = setInterval(poll, LOG_POLL_INTERVAL_MS);
         return () => clearInterval(interval);
-    }, [getLogStore, isPaused]);
+    }, [getLogStore]);
 
     const filteredLogs = applyFilters(snapshot.entries, selectedLevels, searchText);
 
@@ -251,15 +250,22 @@ export const LogTerminal = () => {
 
     // Auto-scroll to bottom when new logs arrive
     useEffect(() => {
-        if (!isPaused && shouldAutoScroll.current && scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        if (shouldAutoScroll.current && scrollContainerRef.current) {
+            requestAnimationFrame(() => {
+                const el = scrollContainerRef.current;
+                if (el) {
+                    el.scrollTop = el.scrollHeight;
+                }
+            });
         }
-    }, [filteredLogs, isPaused]);
+    }, [filteredLogs]);
 
-    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        const el = e.currentTarget;
+    
+    const handleScroll = useCallback(() => {
+        const el = scrollContainerRef.current;
+        if (!el) return;
         setScrollTop(el.scrollTop);
-        const isAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 50;
+        const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 2;
         shouldAutoScroll.current = isAtBottom;
     }, []);
 
@@ -300,16 +306,12 @@ export const LogTerminal = () => {
         setSelectedLevels(newLevels);
     };
 
-    const handlePauseToggle = (): void => {
-        setIsPaused(prev => !prev);
-    };
 
     const handleClear = (): void => {
         getLogStore().clear();
         setSelectedLevels([]);
         setSearchText("");
         setShowSearch(false);
-        setIsPaused(false);
         lastVersionRef.current = -1;
         setSnapshot({ entries: [], hasErrors: false, countsByLevel: {}, version: 0 });
     };
@@ -438,10 +440,25 @@ export const LogTerminal = () => {
                             onClick={handleSaveToDisk}
                             sx={{ color: theme.palette.text.secondary }}
                         >
-                            <SaveAltIcon fontSize="small" />
+                            <SaveIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
 
+                    <Tooltip title="Scroll to bottom">
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                const el = scrollContainerRef.current;
+                                if (el) {
+                                    el.scrollTop = el.scrollHeight;
+                                    shouldAutoScroll.current = true;
+                                }
+                            }}
+                            sx={{ color: theme.palette.text.secondary }}
+                        >
+                            <ScrollToBottomIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                     <IconButton
                         size="small"
                         onClick={() => setShowSearch(!showSearch)}
@@ -450,15 +467,6 @@ export const LogTerminal = () => {
                         <SearchIcon fontSize="small" />
                     </IconButton>
 
-                    <IconButton
-                        size="small"
-                        onClick={handlePauseToggle}
-                        sx={{
-                            color: isPaused ? theme.palette.warning.main : theme.palette.text.secondary
-                        }}
-                    >
-                        {isPaused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
-                    </IconButton>
 
                     <IconButton
                         size="small"
@@ -512,7 +520,7 @@ export const LogTerminal = () => {
                             color: theme.palette.text.disabled,
                         }}
                     >
-                        {isPaused ? t("loggingPaused") : t("noLogsToDisplay")}
+                        {t("noLogsToDisplay")}
                     </div>
                 ) : (
                     // Outer div creates the full scrollable height
@@ -530,7 +538,7 @@ export const LogTerminal = () => {
                                 <LogEntryRow
                                     key={`${log.created}-${log.thread}-${startIdx + i}`}
                                     log={log}
-                                    style={{ minHeight: ROW_HEIGHT }}
+                                    style={{ height: ROW_HEIGHT }}
                                 />
                             ))}
                         </div>
