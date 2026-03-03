@@ -50,8 +50,13 @@
       }
     ],
     "artifactName": "${productName}_${version}_${arch}_installer.${ext}",
-    "hardenedRuntime": false,
-    "gatekeeperAssess": false
+    "hardenedRuntime": true,
+    "notarize": true,
+    "extendInfo": {
+      "NSCameraUsageDescription": "SkellyCam needs camera access to capture video for motion capture recording.",
+      "NSMicrophoneUsageDescription": "SkellyCam needs microphone access to record audio alongside video.",
+      "NSCameraUseContinuityCameraDeviceType": true
+    }
   },
   "dmg": {
     "contents": [
@@ -96,6 +101,6 @@
   "publish": {
     "provider": "generic",
     "channel": "latest",
-    "url": "https://github.com/freemocap/freemocap"
+    "url": "https://github.com/freemocap/skellycam"
   }
 }
