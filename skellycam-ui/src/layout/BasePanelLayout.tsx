@@ -6,6 +6,7 @@ import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
 import {useTheme} from "@mui/material/styles";
 import {Box} from "@mui/material";
 import {useMenuActions} from "@/hooks/useMenuActions";
+import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const theme = useTheme();
@@ -33,6 +34,9 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
     // Connect native menu actions to the app
     useMenuActions({ onToggleSidebar: handleToggleCollapse });
+
+    // Register global keyboard shortcuts (Ctrl+Shift+L, Shift+Space, etc.)
+    useKeyboardShortcuts();
 
     return (
         <Box sx={{display: 'flex', flexDirection: 'column', height: '100vh'}}>

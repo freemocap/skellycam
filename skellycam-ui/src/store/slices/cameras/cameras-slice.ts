@@ -8,6 +8,7 @@ import {
     detectCameras,
     camerasConnectOrUpdate,
     closeCameras,
+    pauseUnpauseCameras,
 } from './cameras-thunks';
 import {
     savePersistedCameraSettings,
@@ -27,6 +28,7 @@ function persistAllCameraSettings(state: CamerasState): void {
 
 const initialState: CamerasState = {
     cameras: [],
+    isPaused: false,
     isLoading: false,
     error: null,
 };
@@ -153,6 +155,12 @@ export const cameraSlice = createSlice({
                     camera.metrics = undefined;
                     camera.hasConfigMismatch = false;
                 });
+                state.isPaused = false;
+            })
+
+            // ========== Pause / Unpause Cameras ==========
+            .addCase(pauseUnpauseCameras.fulfilled, (state) => {
+                state.isPaused = !state.isPaused;
             });
     },
 });

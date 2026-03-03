@@ -19,6 +19,7 @@ export type MenuAction =
     | 'stop-recording'
     | 'open-recording-folder'
     | 'toggle-fullscreen'
+    | 'toggle-locale'
     | `change-locale:${string}`;
 
 export interface LocaleEntry {
@@ -98,12 +99,20 @@ const isMac = process.platform === 'darwin';
 function buildLanguageSubmenu(t: MenuLabels, locales: LocaleEntry[], currentLocale: string): MenuItemConstructorOptions {
     return {
         label: t.language,
-        submenu: locales.map((locale): MenuItemConstructorOptions => ({
-            label: locale.label,
-            type: 'radio',
-            checked: locale.code === currentLocale,
-            click: () => sendMenuAction(`change-locale:${locale.code}`),
-        })),
+        submenu: [
+            {
+                label: 'Toggle Language',
+                accelerator: 'CmdOrCtrl+Shift+L',
+                click: () => sendMenuAction('toggle-locale'),
+            },
+            { type: 'separator' },
+            ...locales.map((locale): MenuItemConstructorOptions => ({
+                label: locale.label,
+                type: 'radio',
+                checked: locale.code === currentLocale,
+                click: () => sendMenuAction(`change-locale:${locale.code}`),
+            })),
+        ],
     };
 }
 
@@ -201,7 +210,7 @@ function buildCameraMenu(t: MenuLabels): MenuItemConstructorOptions {
             { type: 'separator' },
             {
                 label: t.menuPauseUnpause,
-                accelerator: 'CmdOrCtrl+P',
+                accelerator: 'Shift+Space',
                 click: () => sendMenuAction('pause-unpause-cameras'),
             },
         ],

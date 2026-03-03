@@ -545,7 +545,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
             switch (e.key) {
-                case ' ': e.preventDefault(); handlePlayPause(); break;
+                case ' ': if (e.shiftKey) break; e.preventDefault(); handlePlayPause(); break;
                 case 'ArrowLeft': e.preventDefault(); handleFrameStep(e.shiftKey ? -10 : -1); break;
                 case 'ArrowRight': e.preventDefault(); handleFrameStep(e.shiftKey ? 10 : 1); break;
                 case 'Home': e.preventDefault(); handleSeekToStart(); break;

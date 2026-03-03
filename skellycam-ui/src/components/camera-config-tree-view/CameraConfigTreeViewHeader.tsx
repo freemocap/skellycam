@@ -22,7 +22,6 @@ interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
     isLoading: boolean;
     isPaused: boolean;
-    onPauseToggle: () => void;
     hasSelectedCameras: boolean;
 }
 
@@ -30,7 +29,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
     cameraCount,
     isLoading,
     isPaused,
-    onPauseToggle,
 }) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
@@ -86,7 +84,6 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
         setIsActionInProgress(true);
         try {
             await dispatch(pauseUnpauseCameras()).unwrap();
-            onPauseToggle();
         } catch (error) {
             console.error('Error pausing/unpausing cameras:', error);
         } finally {

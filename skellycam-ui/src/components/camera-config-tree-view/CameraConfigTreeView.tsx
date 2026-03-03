@@ -21,6 +21,7 @@ import {
     selectIsLoading,
     selectConnectedCameras,
     selectSelectedCameras,
+    selectIsPaused,
     detectCameras,
     Camera
 } from "@/store";
@@ -45,7 +46,9 @@ export const CameraConfigTreeView: React.FC = () => {
         "cameras-connected",
         "cameras-available"
     ]);
-    const [isPaused, setIsPaused] = useState<boolean>(false);
+
+    // Pause state from Redux (shared with keyboard shortcut)
+    const isPaused = useAppSelector(selectIsPaused);
 
     // Group cameras by status
     const availableCameras = cameras.filter((cam: Camera) => cam.connectionStatus !== "connected");
@@ -64,10 +67,6 @@ export const CameraConfigTreeView: React.FC = () => {
         itemIds: string[]
     ): void => {
         setExpandedItems(itemIds);
-    };
-
-    const handlePauseToggle = (): void => {
-        setIsPaused(!isPaused);
     };
 
 
@@ -94,7 +93,6 @@ export const CameraConfigTreeView: React.FC = () => {
                             cameraCount={cameras.length}
                             isLoading={isLoading}
                             isPaused={isPaused}
-                            onPauseToggle={handlePauseToggle}
                             hasSelectedCameras={hasSelectedCameras}
                         />
                     }

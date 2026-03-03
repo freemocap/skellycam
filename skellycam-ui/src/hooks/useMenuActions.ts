@@ -7,7 +7,7 @@ import { themeModeToggled } from '@/store/slices/theme';
 import { detectCameras, camerasConnectOrUpdate, closeCameras, pauseUnpauseCameras } from '@/store/slices/cameras';
 import { stopRecording } from '@/store/slices/recording';
 import { selectVideoLoadFolder } from '@/store/slices/videos';
-import { localeChanged, selectLocale } from '@/store/slices/settings';
+import { localeChanged, selectLocale, localeToggled } from '@/store/slices/settings';
 import { isElectron } from '@/services/electron-ipc/electron-ipc';
 import { SUPPORTED_LOCALES } from '@/i18n';
 
@@ -136,6 +136,11 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
                     break;
                 case 'pause-unpause-cameras':
                     dispatch(pauseUnpauseCameras());
+                    break;
+
+                // Locale toggle
+                case 'toggle-locale':
+                    dispatch(localeToggled());
                     break;
 
                 // Recording actions

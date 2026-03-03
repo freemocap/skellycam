@@ -5,6 +5,7 @@ import {CameraConfig} from './cameras-types';
 
 // ========== Basic Selectors ==========
 export const selectCameras = (state: RootState) => state.cameras.cameras;
+export const selectIsPaused = (state: RootState) => state.cameras.isPaused;
 export const selectIsLoading = (state: RootState) => state.cameras.isLoading;
 export const selectError = (state: RootState) => state.cameras.error;
 

@@ -263,7 +263,7 @@ jobs:
         if: matrix.platform == 'windows'
         run: |
           cd skellycam-ui
-          npm run build
+          npm run build -- --publish never
 
       - name: Build UI (macOS)
         if: matrix.platform == 'macos'
@@ -274,13 +274,22 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd skellycam-ui
-          npm run build -- --${{ matrix.electron-arch }}
+          for attempt in 1 2 3; do
+            echo "=== Build + notarize attempt $attempt of 3 ==="
+            npm run build -- --${{ matrix.electron-arch }} --publish never && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "All 3 attempts failed"
+              exit 1
+            fi
+            echo "Build/notarize failed on attempt $attempt. Retrying in 30s..."
+            sleep 30
+          done
 
       - name: Build UI (Linux)
         if: matrix.platform == 'linux'
         run: |
           cd skellycam-ui
-          npm run build -- --${{ matrix.electron-arch }}
+          npm run build -- --${{ matrix.electron-arch }} --publish never
 
       # ── Windows installer signing ──
       - name: Sign Electron installer with Trusted Signing

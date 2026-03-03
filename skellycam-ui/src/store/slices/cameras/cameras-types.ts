@@ -91,6 +91,7 @@ export interface Camera {
 // ==================== Store State ====================
 export interface CamerasState {
     cameras: Camera[];
+    isPaused: boolean;
     isLoading: boolean;
     error: string | null;
 }
