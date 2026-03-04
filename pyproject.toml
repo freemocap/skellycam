@@ -84,7 +84,7 @@ package = true
 Homepage = "https://github.com/freemocap/skellycam"
 
 [project.scripts]
-skellycam = "skellycam.__main__:main"
+skellycam = "skellycam.__main__:entry_point"
 
 [tool.setuptools]
 py-modules = ["skellycam"]

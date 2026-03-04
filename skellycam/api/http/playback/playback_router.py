@@ -183,16 +183,66 @@ def _get_recording_stats(recording_path: Path, video_folder: Path) -> dict:
     return stats
 
 
-def _get_created_timestamp(recording_path: Path) -> Optional[str]:
+def _get_created_timestamp(recording_path: Path) -> str | None:
     """Try to determine the recording creation time from folder name or file metadata."""
     try:
-        # Most reliable: folder creation / modification time
         stat = recording_path.stat()
         from datetime import datetime
         created = datetime.fromtimestamp(stat.st_mtime)
         return created.isoformat(timespec="seconds")
     except OSError:
         return None
+
+
+def _read_timestamp_values_for_video(video_id: str) -> list[float] | None:
+    """Read the timestamp CSV for a video and return the list of float timestamps.
+
+    Returns None if no matching CSV can be found or parsed.
+    """
+    if _loaded_recording_path is None:
+        return None
+
+    timestamp_dirs = [
+        _loaded_recording_path / "synchronized_videos" / "timestamps" / "camera_timestamps",
+        _loaded_recording_path / "synchronized_videos" / "timestamps",
+        _loaded_recording_path / "timestamps",
+    ]
+
+    for ts_dir in timestamp_dirs:
+        if not ts_dir.is_dir():
+            continue
+        for ts_file in ts_dir.iterdir():
+            if ts_file.suffix.lower() != ".csv" or video_id not in ts_file.stem:
+                continue
+            try:
+                with open(ts_file, "r", newline="") as f:
+                    reader = csv.reader(f)
+                    header = next(reader, None)
+                    if header is None:
+                        continue
+                    rows = list(reader)
+                    if len(rows) < 2:
+                        continue
+
+                    # Find the timestamp column
+                    timestamp_col: int | None = None
+                    for i, col_name in enumerate(header):
+                        col_lower = col_name.strip().lower()
+                        if any(kw in col_lower for kw in ["timestamp", "time", "elapsed", "seconds"]):
+                            timestamp_col = i
+                            break
+
+                    if timestamp_col is None:
+                        continue
+
+                    values: list[float] = []
+                    for row in rows:
+                        values.append(float(row[timestamp_col]))
+                    return values
+            except (OSError, csv.Error, ValueError, IndexError):
+                continue
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +365,29 @@ def stream_video(video_id: str) -> FileResponse:
         media_type=media_type,
         filename=video_path.name,
     )
+
+
+@playback_router.get(
+    "/timestamps",
+    summary="Get timestamps for all loaded videos as {video_id: [float, ...]}",
+)
+def get_all_timestamps() -> dict:
+    """Return frame timestamps for every loaded video.
+
+    Response shape: {"timestamps": {"<video_id>": [t0, t1, ...], ...}}
+    Videos without discoverable timestamp CSVs are silently omitted.
+    """
+    if _loaded_recording_path is None:
+        raise HTTPException(status_code=404, detail="No recording loaded")
+
+    all_timestamps: dict[str, list[float]] = {}
+
+    for video_id in _loaded_videos:
+        ts_values = _read_timestamp_values_for_video(video_id=video_id)
+        if ts_values is not None:
+            all_timestamps[video_id] = ts_values
+
+    return {"timestamps": all_timestamps}
 
 
 @playback_router.get(

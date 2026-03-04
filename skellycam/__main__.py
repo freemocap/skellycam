@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 async def main() -> None:
+    import sys
     import uvicorn
     from skellycam.api.server_constants import HOSTNAME, PORT
     from skellycam.app import create_fastapi_app
@@ -15,6 +16,25 @@ async def main() -> None:
     from skellycam.core.ipc.process_management.managed_worker import WorkerMode
     from skellycam.utilities.kill_process_on_port import kill_process_on_port
     from skellycam.utilities.wait_functions import await_1s
+
+    # Suppress benign ConnectionResetError from Windows ProactorEventLoop.
+    # When browsers close range-request connections early (normal for <video> streaming),
+    # the proactor tries to shutdown an already-closed socket and raises ConnectionResetError.
+    # These are harmless — the requests complete successfully (HTTP 206).
+    if sys.platform == "win32":
+        loop = asyncio.get_event_loop()
+        _default_handler = loop.get_exception_handler()
+
+        def _suppress_connection_reset(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+            exception = context.get("exception")
+            if isinstance(exception, ConnectionResetError):
+                return
+            if _default_handler is not None:
+                _default_handler(loop, context)
+            else:
+                loop.default_exception_handler(context)
+
+        loop.set_exception_handler(_suppress_connection_reset)
 
     global_kill_flag = multiprocessing.Value("b", False)
     worker_registry = WorkerRegistry(
@@ -70,7 +90,8 @@ async def main() -> None:
         logger.success("Done! Thank you for using SkellyCam 💀📸✨")
 
 
-if __name__ == "__main__":
+def entry_point() -> None:
+    """Sync entry point for the `skellycam` console script."""
     multiprocessing.freeze_support()
     try:
         asyncio.run(main())
@@ -79,3 +100,7 @@ if __name__ == "__main__":
         os._exit(1)
     print("Done!")
     os._exit(0)
+
+
+if __name__ == "__main__":
+    entry_point()
