@@ -269,9 +269,9 @@ jobs:
         if: matrix.platform == 'macos'
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "true"
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          #APPLE_ID: ${{ secrets.APPLE_ID }}
+          #APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          #APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd skellycam-ui
           for attempt in 1 2 3; do
