@@ -1,3 +1,6 @@
+---
+sidebar_position: 7
+---
 # Development
 
 ## Setting Up the Development Environment
@@ -29,8 +32,9 @@ uv run pytest skellycam/tests/ -v --tb=short
 
 The test suite uses a lightweight FastAPI `TestClient` with mocked camera dependencies. No physical cameras are required.
 
-!!! note
-    `asyncio_mode = "auto"` is set in `pyproject.toml`, so async test functions do not need the `@pytest.mark.asyncio` decorator.
+:::note
+`asyncio_mode = "auto"` is set in `pyproject.toml`, so async test functions do not need the `@pytest.mark.asyncio` decorator.
+:::
 
 ### Test Structure
 

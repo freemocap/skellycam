@@ -1,3 +1,6 @@
+---
+sidebar_position: 9
+---
 # 🌐 Translating SkellyCam
 
 We use community translations to make motion capture accessible worldwide. No coding required — just edit a JSON file and open a PR.

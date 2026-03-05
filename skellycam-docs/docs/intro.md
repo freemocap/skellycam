@@ -1,47 +1,44 @@
 ---
 sidebar_position: 1
+slug: /
+title: SkellyCam Documentation 💀📸
 ---
 
-# Tutorial Intro
+SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera system. It is the camera backend for the [FreeMoCap](https://github.com/freemocap/freemocap) motion capture project.
 
-Let's discover **Docusaurus in less than 5 minutes**.
+## What Makes SkellyCam Different
 
-## Getting Started
+Most multi-camera setups suffer from inter-camera drift — cameras run on independent clocks, so frame N from camera A does not correspond to frame N from camera B. SkellyCam solves this with a two-phase coordinated capture protocol (grab, then retrieve) that ensures every "multi-frame" event contains one image from every camera captured at the same wall-clock instant.
 
-Get started by **creating a new site**.
+**The guarantees:**
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+- All recorded videos have **precisely the same frame count**
+- Each multi-frame payload delivered over WebSocket contains **exactly one image per camera** for that frame event
+- Playback of recorded videos is **hard frame-locked** — all videos always display the same frame number, no drift, no tolerance
 
-### What you'll need
+## Documentation
 
-- [Node.js](https://nodejs.org/en/download/) version 20.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+| Page | Description |
+|------|-------------|
+| [Getting Started](getting-started.md) | Installation, first run, and basic usage |
+| [Architecture](architecture.md) | Synchronization protocol, process model, data flow |
+| [API Reference](api-reference.md) | HTTP and WebSocket endpoint documentation |
+| [WebSocket Protocol](websocket-protocol.md) | Binary frame format, JSON messages, backpressure |
+| [Configuration](configuration.md) | Server settings, camera config, data directories, telemetry |
+| [Development](development.md) | Testing, linting, CI, and contributing guidelines |
 
-## Generate a new site
-
-Generate a new Docusaurus site using the **classic template**.
-
-The classic template will automatically be added to your project after you run the command:
-
-```bash
-npm init docusaurus@latest my-website classic
-```
-
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
-
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
+## Quick Start
 
 ```bash
-cd my-website
-npm run start
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv && source .venv/bin/activate
+uv sync
+
+python -m skellycam          # Start server on localhost:53117
+# or just: skellycam
+
+# In another terminal:
+cd skellycam-ui
+npm install && npm run dev   # Start UI
 ```
-
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
-
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
-
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.

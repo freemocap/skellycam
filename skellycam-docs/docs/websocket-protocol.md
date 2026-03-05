@@ -1,3 +1,6 @@
+---
+sidebar_position: 5
+---
 # WebSocket Protocol
 
 The WebSocket endpoint at `/skellycam/websocket/connect` carries three types of traffic:

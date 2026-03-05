@@ -1,3 +1,6 @@
+---
+sidebar_position: 4
+---
 # API Reference
 
 The SkellyCam server exposes a REST API for camera management and a WebSocket endpoint for real-time streaming. Interactive Swagger documentation is available at `http://localhost:53117/docs` when the server is running.

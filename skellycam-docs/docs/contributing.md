@@ -1,3 +1,6 @@
+---
+sidebar_position: 8
+---
 # Contributing to SkellyCam
 
 We love your input! We want to make contributing to this project as easy and transparent as possible, whether it's reporting a bug, discussing the current state of the code, submitting a fix, proposing new features, or becoming a maintainer.
