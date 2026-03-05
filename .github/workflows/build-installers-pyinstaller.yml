@@ -234,6 +234,7 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+
       # ── macOS code signing (server binary) ──
       - name: Sign skellycam_server with codesign
         if: matrix.platform == 'macos'
@@ -243,8 +244,7 @@ jobs:
             "./skellycam-ui/${{ matrix.server-binary }}"
           codesign --verify --verbose "./skellycam-ui/${{ matrix.server-binary }}"
           echo "Server binary signed and verified successfully"
-
-      # ── Upload server-only artifact (uses label for human-readable names) ──
+      # ── Upload server-only artifact ──
       - name: Upload server binary artifact
         uses: actions/upload-artifact@v4
         with:
@@ -316,7 +316,7 @@ jobs:
         with:
           name: installer-${{ matrix.label }}
           path: |
-            skellycam-ui/release/*/skellycam_*_installer.exe
+            skellycam-ui/release/*/*.exe
           include-hidden-files: true
 
       - name: Upload installer artifacts (macOS)
@@ -339,6 +339,7 @@ jobs:
             skellycam-ui/release/*/*.deb
           include-hidden-files: true
 
+
       # ── macOS keychain cleanup ──
       - name: Clean up macOS keychain
         if: matrix.platform == 'macos' && always()
@@ -348,13 +349,12 @@ jobs:
           if [ -f "$KEYCHAIN_PATH" ]; then
             security delete-keychain "$KEYCHAIN_PATH"
           fi
-
   # ═══════════════════════════════════════════════════════
   # RELEASE — only runs on tag pushes (e.g. v2.0.0)
   #
-  # Downloads all build artifacts, renames server binaries
-  # with platform suffixes, and attaches everything to a
-  # GitHub Release.
+  # Downloads all build artifacts and renames them with
+  # human-readable platform/arch labels for the GitHub
+  # Release page.
   # ═══════════════════════════════════════════════════════
   release:
     needs: build
@@ -379,21 +379,11 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "VERSION=$VERSION"
 
-          # ── Full App installers ──
-          # Already have correct versioned filenames from electron-builder
-          find artifacts/installer-* -type f \( \
-            -name '*.exe' -o \
-            -name '*.dmg' -o \
-            -name '*.zip' -o \
-            -name '*.AppImage' -o \
-            -name '*.deb' \
-          \) -exec cp {} release-assets/ \;
-
           # ── Server binaries ──
-          # Directory names match the label from the build matrix:
+          # Artifact directories are named server-<label>, e.g.:
           #   server-windows-x64, server-macos-x64-intel,
           #   server-macos-arm64-apple-silicon, server-linux-x64, server-linux-arm64
-          # Strip the "server-" prefix to get the suffix for the release filename.
+          # Strip the "server-" prefix to get the human-readable suffix.
           for dir in artifacts/server-*; do
             label=$(basename "$dir" | sed 's/^server-//')
 
@@ -407,12 +397,45 @@ jobs:
             fi
           done
 
+          # ── App installers ──
+          # Artifact directories are named installer-<label>, e.g.:
+          #   installer-windows-x64, installer-macos-x64-intel, etc.
+          # Electron-builder names only contain the arch (x64/arm64),
+          # so we rename each file to: skellycam_<VERSION>_<label>.<ext>
+          for dir in artifacts/installer-*; do
+            label=$(basename "$dir" | sed 's/^installer-//')
+
+            find "$dir" -type f \( \
+              -name '*.exe' -o \
+              -name '*.dmg' -o \
+              -name '*.zip' -o \
+              -name '*.AppImage' -o \
+              -name '*.deb' \
+            \) | while read -r file; do
+              ext="${file##*.}"
+              cp "$file" "release-assets/skellycam_${VERSION}_${label}.${ext}"
+            done
+          done
+
           echo "=== Release assets ==="
           ls -lh release-assets/
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release-assets/*
-          generate_release_notes: true
-          draft: true
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" &>/dev/null; then
+            echo "Release $TAG already exists — uploading new assets only"
+            gh release upload "$TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            echo "Creating new draft release for $TAG"
+            gh release create "$TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --generate-notes \
+              --title "$TAG"
+          fi
