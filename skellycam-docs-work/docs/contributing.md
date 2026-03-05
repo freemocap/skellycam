@@ -13,7 +13,7 @@ We use GitHub to host code, track issues and feature requests, and accept pull r
 
 We use [GitHub Flow](https://guides.github.com/introduction/flow/index.html), so all code changes happen through pull requests:
 
-1. Fork the repo and create your branch from `main`.
+1. Fork the repo and create your branch from `development`.
 2. If you've added code that should be tested, add tests.
 3. If you've changed APIs, update the documentation.
 4. Ensure the test suite passes.

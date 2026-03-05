@@ -8,7 +8,7 @@ SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera
 
 ## What Makes SkellyCam Different
 
-Most multi-camera setups suffer from inter-camera drift — cameras run on independent clocks, so frame N from camera A does not correspond to frame N from camera B. SkellyCam solves this with a two-phase coordinated capture protocol (grab, then retrieve) that ensures every "multi-frame" event contains one image from every camera captured at the same wall-clock instant.
+Most multi-camera setups suffer from inter-camera drift — cameras run on independent clocks, so frame N from camera A does not correspond to frame N from camera B. SkellyCam solves this with a frame-count-gated capture protocol: each camera's grab/retrieve cycle is coordinated so that no camera ever gets more than one frame ahead of the others, ensuring every "multi-frame" event contains one image from every camera captured at approximately the same instant.
 
 **The guarantees:**
 
@@ -26,6 +26,8 @@ Most multi-camera setups suffer from inter-camera drift — cameras run on indep
 | [WebSocket Protocol](websocket-protocol.md) | Binary frame format, JSON messages, backpressure |
 | [Configuration](configuration.md) | Server settings, camera config, data directories, telemetry |
 | [Development](development.md) | Testing, linting, CI, and contributing guidelines |
+| [Contributing](contributing.md) | How to report bugs and submit pull requests |
+| [Translating](translating.md) | Help translate the UI into your language |
 
 ## Quick Start
 

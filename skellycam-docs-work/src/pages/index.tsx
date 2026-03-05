@@ -50,13 +50,13 @@ const FEATURES: {icon: string; title: string; description: string}[] = [
     icon: '🔒',
     title: 'Frame-Perfect Sync',
     description:
-      'A coordinated two-phase capture protocol (grab, then retrieve) ensures every multi-frame payload contains exactly one image per camera from the same instant. All recorded videos have identical frame counts — no drift, no tolerance, no dropped frames.',
+      'A frame-count-gated capture protocol ensures no camera ever gets more than one frame ahead of the others. The OpenCV grab/retrieve split minimizes inter-camera timing spread. All recorded videos have identical frame counts — no drift, no dropped frames.',
   },
   {
     icon: '⚡',
     title: 'Multi-Process Capture',
     description:
-      'Each camera runs in its own process with shared-memory ring buffers for zero-copy frame transfer. A central orchestrator coordinates all cameras through synchronized grab/retrieve cycles, guaranteeing hard frame-lock across the entire group.',
+      'Each camera runs in its own process with shared-memory ring buffers for zero-copy frame transfer. The CameraOrchestrator gates each camera\'s grab cycle based on relative frame counts, maintaining lock-step progression across the entire group.',
   },
   {
     icon: '📡',

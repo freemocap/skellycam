@@ -18,11 +18,10 @@
 /* ── Hero ── */
 .hero {
   position: relative;
-  min-height: 80vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6rem 2rem 4rem;
+  padding: 4rem 2rem 2rem;
   background:
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(167, 139, 250, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse 60% 50% at 80% 20%, rgba(110, 231, 183, 0.05) 0%, transparent 50%),
@@ -91,7 +90,7 @@
 .heroDescription {
   font-size: 0.95rem;
   color: var(--text-dim);
-  margin: 0 0 2rem;
+  margin: 0 0 1.5rem;
   line-height: 1.6;
   opacity: 0.8;
 }
@@ -112,7 +111,7 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
@@ -196,7 +195,7 @@
 
 /* ── Features ── */
 .features {
-  padding: 4rem 2rem 5rem;
+  padding: 2rem 2rem 4rem;
   background:
     linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-surface) 100%);
 }
