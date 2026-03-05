@@ -86,8 +86,12 @@ Homepage = "https://github.com/freemocap/skellycam"
 [project.scripts]
 skellycam = "skellycam.__main__:entry_point"
 
-[tool.setuptools]
-py-modules = ["skellycam"]
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
 
 [tool.bumpver]
 current_version = "v2024.09.1094"
