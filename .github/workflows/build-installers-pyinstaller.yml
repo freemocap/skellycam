@@ -18,38 +18,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Windows x64
           - os: windows-latest
             platform: windows
             arch: x64
+            label: windows-x64
             server-binary: skellycam_server.exe
             electron-arch: x64
 
-          # macOS Intel (x64) — macos-15-intel replaces retired macos-13
           - os: macos-15-intel
             platform: macos
             arch: x64
+            label: macos-x64-intel
             server-binary: skellycam_server
             electron-arch: x64
 
-          # macOS Apple Silicon (arm64)
           - os: macos-latest
             platform: macos
             arch: arm64
+            label: macos-arm64-apple-silicon
             server-binary: skellycam_server
             electron-arch: arm64
 
-          # Linux x64
           - os: ubuntu-22.04
             platform: linux
             arch: x64
+            label: linux-x64
             server-binary: skellycam_server
             electron-arch: x64
 
-          # Linux ARM64
           - os: ubuntu-22.04-arm
             platform: linux
             arch: arm64
+            label: linux-arm64
             server-binary: skellycam_server
             electron-arch: arm64
 
@@ -234,7 +234,6 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-
       # ── macOS code signing (server binary) ──
       - name: Sign skellycam_server with codesign
         if: matrix.platform == 'macos'
@@ -244,11 +243,12 @@ jobs:
             "./skellycam-ui/${{ matrix.server-binary }}"
           codesign --verify --verbose "./skellycam-ui/${{ matrix.server-binary }}"
           echo "Server binary signed and verified successfully"
-      # ── Upload server-only artifact ──
+
+      # ── Upload server-only artifact (uses label for human-readable names) ──
       - name: Upload server binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: server-${{ matrix.platform }}-${{ matrix.arch }}
+          name: server-${{ matrix.label }}
           path: |
             skellycam-ui/${{ matrix.server-binary }}
           include-hidden-files: true
@@ -309,12 +309,12 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-      # ── Upload final installer artifacts ──
+      # ── Upload final installer artifacts (uses label for human-readable names) ──
       - name: Upload installer artifacts (Windows)
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ matrix.platform }}-${{ matrix.arch }}
+          name: installer-${{ matrix.label }}
           path: |
             skellycam-ui/release/*/skellycam_*_installer.exe
           include-hidden-files: true
@@ -323,7 +323,7 @@ jobs:
         if: matrix.platform == 'macos'
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ matrix.platform }}-${{ matrix.arch }}
+          name: installer-${{ matrix.label }}
           path: |
             skellycam-ui/release/*/*.dmg
             skellycam-ui/release/*/*.zip
@@ -333,12 +333,11 @@ jobs:
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ matrix.platform }}-${{ matrix.arch }}
+          name: installer-${{ matrix.label }}
           path: |
             skellycam-ui/release/*/*.AppImage
             skellycam-ui/release/*/*.deb
           include-hidden-files: true
-
 
       # ── macOS keychain cleanup ──
       - name: Clean up macOS keychain
@@ -349,6 +348,7 @@ jobs:
           if [ -f "$KEYCHAIN_PATH" ]; then
             security delete-keychain "$KEYCHAIN_PATH"
           fi
+
   # ═══════════════════════════════════════════════════════
   # RELEASE — only runs on tag pushes (e.g. v2.0.0)
   #
@@ -390,16 +390,20 @@ jobs:
           \) -exec cp {} release-assets/ \;
 
           # ── Server binaries ──
-          # Rename with version and platform/arch suffixes
+          # Directory names match the label from the build matrix:
+          #   server-windows-x64, server-macos-x64-intel,
+          #   server-macos-arm64-apple-silicon, server-linux-x64, server-linux-arm64
+          # Strip the "server-" prefix to get the suffix for the release filename.
           for dir in artifacts/server-*; do
-            basename=$(basename "$dir")
-            platform=$(echo "$basename" | cut -d'-' -f2)
-            arch=$(echo "$basename" | cut -d'-' -f3)
+            label=$(basename "$dir" | sed 's/^server-//')
 
-            if [ "$platform" = "windows" ]; then
-              cp "$dir/skellycam_server.exe" "release-assets/skellycam_server_${VERSION}_${platform}_${arch}.exe"
+            if [ -f "$dir/skellycam_server.exe" ]; then
+              cp "$dir/skellycam_server.exe" "release-assets/skellycam_server_${VERSION}_${label}.exe"
+            elif [ -f "$dir/skellycam_server" ]; then
+              cp "$dir/skellycam_server" "release-assets/skellycam_server_${VERSION}_${label}"
             else
-              cp "$dir/skellycam_server" "release-assets/skellycam_server_${VERSION}_${platform}_${arch}"
+              echo "::error::No server binary found in $dir"
+              exit 1
             fi
           done
 
