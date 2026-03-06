@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { SKELLYPINGS_SERVER_URL, DOCS_APP_VERSION } from './telemetry';
+
+// ── Styles ──
 
 const containerStyle: React.CSSProperties = {
   marginTop: '2.5rem',
@@ -53,6 +56,73 @@ const linkStyle: React.CSSProperties = {
   textDecoration: 'none',
 };
 
+// ── Anonymous user ID ──
+
+function getAnonymousUserId(): string {
+  const STORAGE_KEY = 'skellycam_docs_uid';
+  try {
+    const existing = localStorage.getItem(STORAGE_KEY);
+    if (existing) return existing;
+  } catch {
+    // localStorage not available (SSR, privacy mode, etc.)
+  }
+
+  // crypto.randomUUID() is available in all modern browsers
+  const uid =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `anon-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, uid);
+  } catch {
+    // Ignore write failure
+  }
+  return uid;
+}
+
+// ── Telemetry send ──
+
+function sendFeedbackEvent(slug: string, vote: 'up' | 'down'): void {
+  const event = {
+    event_type: 'docs_feedback',
+    app_version: DOCS_APP_VERSION,
+    os_platform: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+    user_id: getAnonymousUserId(),
+    timestamp: Date.now() / 1000,
+    payload: {
+      page_slug: slug,
+      vote,
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      referrer: typeof document !== 'undefined' ? document.referrer : '',
+    },
+  };
+
+  const body = JSON.stringify({ events: [event] });
+
+  // Fire-and-forget — feedback is best-effort, never block the UI
+  if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+    // sendBeacon with a Blob lets us set Content-Type without a preflight
+    // for same-site requests. For cross-origin it needs CORS, which the
+    // server now supports.
+    navigator.sendBeacon(
+      `${SKELLYPINGS_SERVER_URL}/events`,
+      new Blob([body], { type: 'application/json' }),
+    );
+  } else {
+    fetch(`${SKELLYPINGS_SERVER_URL}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {
+      // Swallow errors — feedback is non-critical
+    });
+  }
+}
+
+// ── Component ──
+
 interface DocFeedbackProps {
   /** Relative path of the doc file, e.g. "docs/architecture.md" */
   slug?: string;
@@ -60,6 +130,14 @@ interface DocFeedbackProps {
 
 export default function DocFeedback({ slug }: DocFeedbackProps): React.ReactElement {
   const [vote, setVote] = useState<'up' | 'down' | null>(null);
+
+  const handleVote = useCallback(
+    (value: 'up' | 'down') => {
+      setVote(value);
+      sendFeedbackEvent(slug ?? 'unknown', value);
+    },
+    [slug],
+  );
 
   const discussionUrl = slug
     ? `https://github.com/freemocap/skellycam/discussions/new?category=documentation&title=Feedback on ${encodeURIComponent(slug)}`
@@ -76,7 +154,7 @@ export default function DocFeedback({ slug }: DocFeedbackProps): React.ReactElem
         <button
           type="button"
           style={vote === 'up' ? { ...buttonBase, ...selectedStyle } : buttonBase}
-          onClick={() => setVote('up')}
+          onClick={() => handleVote('up')}
           aria-label="Yes, this page was helpful"
         >
           👍 Yes
@@ -84,7 +162,7 @@ export default function DocFeedback({ slug }: DocFeedbackProps): React.ReactElem
         <button
           type="button"
           style={vote === 'down' ? { ...buttonBase, ...selectedStyle } : buttonBase}
-          onClick={() => setVote('down')}
+          onClick={() => handleVote('down')}
           aria-label="No, this page was not helpful"
         >
           👎 No
