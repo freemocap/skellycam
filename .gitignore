@@ -229,5 +229,5 @@ pyapp-latest/*
 pyapp-v*
 *.exe
 *onefile-build
-/skellycam.zip
 *.zip
+.docusaurus/
