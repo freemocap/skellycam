@@ -1,0 +1,48 @@
+---
+sidebar_position: 4
+title: Precise Timestamps
+description: High-resolution timestamps at every stage of the capture pipeline, stored in human-readable format.
+---
+
+import CoreFeatureHeader from '@site/src/components/CoreFeatureHeader';
+import {getFeatureById} from '@site/src/data/core-features';
+
+<CoreFeatureHeader feature={getFeatureById('precise-timestamps')} />
+
+## Why timestamps matter
+
+Most USB cameras do **not** provide real timestamps. The `cv2.VideoCapture` timestamp property (`CAP_PROP_POS_MSEC`) is unreliable across platforms and drivers — sometimes it returns zero, sometimes wall-clock time, sometimes time since the camera was opened. You cannot trust it for scientific measurement.
+
+But if you're doing motion capture, biomechanics, or any time-sensitive analysis, you need to know *when* each frame was captured — not just its frame index.
+
+## What SkellyCam records
+
+SkellyCam captures high-resolution `perf_counter_ns` timestamps at multiple stages of each frame's lifecycle:
+
+- **Pre-grab** — Just before calling `cv2.VideoCapture.grab()`
+- **Post-grab** — Immediately after `grab()` returns
+- **Pre-retrieve** — Just before calling `retrieve()`
+- **Post-retrieve** — Immediately after `retrieve()` returns the decoded frame
+- **Pre/post shared memory copy** — When the frame is written to the shared memory ring buffer
+- **Pre/post record** — When the frame is written to the video file (during recording)
+
+These timestamps are recorded for **every camera** on **every frame**, plus timestamps for the assembled multi-camera payload.
+
+## Output format
+
+When a recording completes, the `RecordingFinalizer` processes all accumulated timestamps and writes them as **CSV files** in human-readable format. The output includes:
+
+- Per-camera timestamp CSVs with all lifecycle stages
+- Multi-camera synchronization statistics (inter-camera spread per frame event)
+- Summary statistics across the full recording
+
+The timestamps use Python's `time.perf_counter_ns()`, which provides nanosecond resolution monotonic timing. While the *absolute* accuracy depends on the OS scheduler, the *relative* timing between events within a frame cycle is highly precise — typically sub-millisecond.
+
+## Using timestamps in your analysis
+
+The timestamp data lets you:
+
+- Measure the actual temporal spread between cameras within each frame event
+- Verify that synchronization is working as expected
+- Correlate frames with external data sources (IMU, force plates, etc.) by aligning monotonic timestamps
+- Quantify system performance (grab latency, retrieve latency, I/O latency)

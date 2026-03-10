@@ -1,4 +1,5 @@
 import React from 'react';
+import Translate from '@docusaurus/Translate';
 
 const bannerStyle: React.CSSProperties = {
   display: 'flex',
@@ -26,13 +27,33 @@ export default function AiGeneratedBanner(): React.ReactElement {
     <div style={bannerStyle}>
       <span style={iconStyle}>🤖</span>
       <span>
-        <strong>AI-generated documentation</strong> — This page was drafted by
-        an AI assistant and may contain inaccuracies. If you spot something
-        wrong, please{' '}
-        <a href="https://github.com/freemocap/skellycam/issues/new?labels=documentation&template=docs-issue.md">
-          open an issue
-        </a>{' '}
-        or use the <em>Edit this page</em> link below to submit a fix.
+        <Translate
+          id="banner.aiGenerated"
+          values={{
+            strong: (
+              <strong>
+                <Translate id="banner.aiGenerated.label">
+                  AI-generated documentation
+                </Translate>
+              </strong>
+            ),
+            issueLink: (
+              <a href="https://github.com/freemocap/skellycam/issues/new?labels=documentation&template=docs-issue.md">
+                <Translate id="banner.aiGenerated.openIssue">
+                  open an issue
+                </Translate>
+              </a>
+            ),
+            editLink: (
+              <em>
+                <Translate id="banner.aiGenerated.editPage">
+                  Edit this page
+                </Translate>
+              </em>
+            ),
+          }}>
+          {'{strong} — This page was drafted by an AI assistant and may contain inaccuracies. If you spot something wrong, please {issueLink} or use the {editLink} link below to submit a fix.'}
+        </Translate>
       </span>
     </div>
   );

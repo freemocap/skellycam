@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { SKELLYPINGS_SERVER_URL, DOCS_APP_VERSION } from './telemetry';
+import React, {useState, useCallback} from 'react';
+import Translate, {translate} from '@docusaurus/Translate';
+import {SKELLYPINGS_SERVER_URL, DOCS_APP_VERSION} from './telemetry';
 
 // ── Styles ──
 
@@ -67,7 +68,6 @@ function getAnonymousUserId(): string {
     // localStorage not available (SSR, privacy mode, etc.)
   }
 
-  // crypto.randomUUID() is available in all modern browsers
   const uid =
     typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
@@ -98,21 +98,17 @@ function sendFeedbackEvent(slug: string, vote: 'up' | 'down'): void {
     },
   };
 
-  const body = JSON.stringify({ events: [event] });
+  const body = JSON.stringify({events: [event]});
 
-  // Fire-and-forget — feedback is best-effort, never block the UI
   if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-    // sendBeacon with a Blob lets us set Content-Type without a preflight
-    // for same-site requests. For cross-origin it needs CORS, which the
-    // server now supports.
     navigator.sendBeacon(
       `${SKELLYPINGS_SERVER_URL}/events`,
-      new Blob([body], { type: 'application/json' }),
+      new Blob([body], {type: 'application/json'}),
     );
   } else {
     fetch(`${SKELLYPINGS_SERVER_URL}/events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
       body,
       keepalive: true,
     }).catch(() => {
@@ -124,11 +120,10 @@ function sendFeedbackEvent(slug: string, vote: 'up' | 'down'): void {
 // ── Component ──
 
 interface DocFeedbackProps {
-  /** Relative path of the doc file, e.g. "docs/architecture.md" */
   slug?: string;
 }
 
-export default function DocFeedback({ slug }: DocFeedbackProps): React.ReactElement {
+export default function DocFeedback({slug}: DocFeedbackProps): React.ReactElement {
   const [vote, setVote] = useState<'up' | 'down' | null>(null);
 
   const handleVote = useCallback(
@@ -150,32 +145,42 @@ export default function DocFeedback({ slug }: DocFeedbackProps): React.ReactElem
   return (
     <div style={containerStyle}>
       <div style={rowStyle}>
-        <span style={labelStyle}>Was this page helpful?</span>
+        <span style={labelStyle}>
+          <Translate id="feedback.question">Was this page helpful?</Translate>
+        </span>
         <button
           type="button"
-          style={vote === 'up' ? { ...buttonBase, ...selectedStyle } : buttonBase}
+          style={vote === 'up' ? {...buttonBase, ...selectedStyle} : buttonBase}
           onClick={() => handleVote('up')}
-          aria-label="Yes, this page was helpful"
-        >
-          👍 Yes
+          aria-label={translate({
+            id: 'feedback.yes.ariaLabel',
+            message: 'Yes, this page was helpful',
+          })}>
+          <Translate id="feedback.yes">👍 Yes</Translate>
         </button>
         <button
           type="button"
-          style={vote === 'down' ? { ...buttonBase, ...selectedStyle } : buttonBase}
+          style={vote === 'down' ? {...buttonBase, ...selectedStyle} : buttonBase}
           onClick={() => handleVote('down')}
-          aria-label="No, this page was not helpful"
-        >
-          👎 No
+          aria-label={translate({
+            id: 'feedback.no.ariaLabel',
+            message: 'No, this page was not helpful',
+          })}>
+          <Translate id="feedback.no">👎 No</Translate>
         </button>
-        {vote && <span style={thankYouStyle}>Thanks for your feedback!</span>}
+        {vote && (
+          <span style={thankYouStyle}>
+            <Translate id="feedback.thankYou">Thanks for your feedback!</Translate>
+          </span>
+        )}
       </div>
       <div style={rowStyle}>
         <a href={discussionUrl} style={linkStyle} target="_blank" rel="noopener noreferrer">
-          💬 Leave a comment
+          <Translate id="feedback.leaveComment">💬 Leave a comment</Translate>
         </a>
-        <span style={{ ...labelStyle, opacity: 0.4 }}>·</span>
+        <span style={{...labelStyle, opacity: 0.4}}>·</span>
         <a href={issueUrl} style={linkStyle} target="_blank" rel="noopener noreferrer">
-          🐛 Report an issue
+          <Translate id="feedback.reportIssue">🐛 Report an issue</Translate>
         </a>
       </div>
     </div>

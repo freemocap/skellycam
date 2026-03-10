@@ -1,0 +1,289 @@
+{
+  "en": {
+    "label": "English",
+    "englishName": "English",
+    "direction": "ltr",
+    "uiLocaleFile": "en-english.json",
+    "docsLocaleDir": "i18n/en/"
+  },
+  "es": {
+    "label": "Español",
+    "englishName": "Spanish",
+    "direction": "ltr",
+    "uiLocaleFile": "es-espanol.json",
+    "docsLocaleDir": "i18n/es/"
+  },
+  "fr": {
+    "label": "Français",
+    "englishName": "French",
+    "direction": "ltr",
+    "uiLocaleFile": "fr-francais.json",
+    "docsLocaleDir": "i18n/fr/"
+  },
+  "de": {
+    "label": "Deutsch",
+    "englishName": "German",
+    "direction": "ltr",
+    "uiLocaleFile": "de-deutsch.json",
+    "docsLocaleDir": "i18n/de/"
+  },
+  "it": {
+    "label": "Italiano",
+    "englishName": "Italian",
+    "direction": "ltr",
+    "uiLocaleFile": "it-italiano.json",
+    "docsLocaleDir": "i18n/it/"
+  },
+  "pt-BR": {
+    "label": "Português (Brasil)",
+    "englishName": "Portuguese (Brazil)",
+    "direction": "ltr",
+    "uiLocaleFile": "pt-BR-portugues-brasil.json",
+    "docsLocaleDir": "i18n/pt-BR/"
+  },
+  "nl": {
+    "label": "Nederlands",
+    "englishName": "Dutch",
+    "direction": "ltr",
+    "uiLocaleFile": "nl-nederlands.json",
+    "docsLocaleDir": "i18n/nl/"
+  },
+  "sv": {
+    "label": "Svenska",
+    "englishName": "Swedish",
+    "direction": "ltr",
+    "uiLocaleFile": "sv-svenska.json",
+    "docsLocaleDir": "i18n/sv/"
+  },
+  "pl": {
+    "label": "Polski",
+    "englishName": "Polish",
+    "direction": "ltr",
+    "uiLocaleFile": "pl-polski.json",
+    "docsLocaleDir": "i18n/pl/"
+  },
+  "cs": {
+    "label": "Čeština",
+    "englishName": "Czech",
+    "direction": "ltr",
+    "uiLocaleFile": "cs-cestina.json",
+    "docsLocaleDir": "i18n/cs/"
+  },
+  "uk": {
+    "label": "Українська",
+    "englishName": "Ukrainian",
+    "direction": "ltr",
+    "uiLocaleFile": "uk-ukrainska.json",
+    "docsLocaleDir": "i18n/uk/"
+  },
+  "ru": {
+    "label": "Русский",
+    "englishName": "Russian",
+    "direction": "ltr",
+    "uiLocaleFile": "ru-russkiy.json",
+    "docsLocaleDir": "i18n/ru/"
+  },
+  "tr": {
+    "label": "Türkçe",
+    "englishName": "Turkish",
+    "direction": "ltr",
+    "uiLocaleFile": "tr-turkce.json",
+    "docsLocaleDir": "i18n/tr/"
+  },
+  "ar": {
+    "label": "العربية",
+    "englishName": "Arabic",
+    "direction": "rtl",
+    "uiLocaleFile": "ar-arabic.json",
+    "docsLocaleDir": "i18n/ar/"
+  },
+  "fa": {
+    "label": "فارسی",
+    "englishName": "Persian",
+    "direction": "rtl",
+    "uiLocaleFile": "fa-farsi.json",
+    "docsLocaleDir": "i18n/fa/"
+  },
+  "ur": {
+    "label": "اردو",
+    "englishName": "Urdu",
+    "direction": "rtl",
+    "uiLocaleFile": "ur-urdu.json",
+    "docsLocaleDir": "i18n/ur/"
+  },
+  "hi": {
+    "label": "हिन्दी",
+    "englishName": "Hindi",
+    "direction": "ltr",
+    "uiLocaleFile": "hi-hindi.json",
+    "docsLocaleDir": "i18n/hi/"
+  },
+  "bn": {
+    "label": "বাংলা",
+    "englishName": "Bengali",
+    "direction": "ltr",
+    "uiLocaleFile": "bn-bangla.json",
+    "docsLocaleDir": "i18n/bn/"
+  },
+  "ta": {
+    "label": "தமிழ்",
+    "englishName": "Tamil",
+    "direction": "ltr",
+    "uiLocaleFile": "ta-tamil.json",
+    "docsLocaleDir": "i18n/ta/"
+  },
+  "ne": {
+    "label": "नेपाली",
+    "englishName": "Nepali",
+    "direction": "ltr",
+    "uiLocaleFile": "ne-nepali.json",
+    "docsLocaleDir": "i18n/ne/"
+  },
+  "si": {
+    "label": "සිංහල",
+    "englishName": "Sinhala",
+    "direction": "ltr",
+    "uiLocaleFile": "si-sinhala.json",
+    "docsLocaleDir": "i18n/si/"
+  },
+  "zh-CN": {
+    "label": "简体中文",
+    "englishName": "Chinese (Simplified)",
+    "direction": "ltr",
+    "uiLocaleFile": "zh-CN-zhongwen.json",
+    "docsLocaleDir": "i18n/zh-CN/"
+  },
+  "ja": {
+    "label": "日本語",
+    "englishName": "Japanese",
+    "direction": "ltr",
+    "uiLocaleFile": "ja-nihongo.json",
+    "docsLocaleDir": "i18n/ja/"
+  },
+  "ko": {
+    "label": "한국어",
+    "englishName": "Korean",
+    "direction": "ltr",
+    "uiLocaleFile": "ko-hangugeo.json",
+    "docsLocaleDir": "i18n/ko/"
+  },
+  "th": {
+    "label": "ไทย",
+    "englishName": "Thai",
+    "direction": "ltr",
+    "uiLocaleFile": "th-thai.json",
+    "docsLocaleDir": "i18n/th/"
+  },
+  "vi": {
+    "label": "Tiếng Việt",
+    "englishName": "Vietnamese",
+    "direction": "ltr",
+    "uiLocaleFile": "vi-tieng-viet.json",
+    "docsLocaleDir": "i18n/vi/"
+  },
+  "id": {
+    "label": "Bahasa Indonesia",
+    "englishName": "Indonesian",
+    "direction": "ltr",
+    "uiLocaleFile": "id-bahasa-indonesia.json",
+    "docsLocaleDir": "i18n/id/"
+  },
+  "ms": {
+    "label": "Bahasa Melayu",
+    "englishName": "Malay",
+    "direction": "ltr",
+    "uiLocaleFile": "ms-melayu.json",
+    "docsLocaleDir": "i18n/ms/"
+  },
+  "tl": {
+    "label": "Tagalog",
+    "englishName": "Tagalog",
+    "direction": "ltr",
+    "uiLocaleFile": "tl-tagalog.json",
+    "docsLocaleDir": "i18n/tl/"
+  },
+  "my": {
+    "label": "မြန်မာ",
+    "englishName": "Burmese",
+    "direction": "ltr",
+    "uiLocaleFile": "my-myanmar.json",
+    "docsLocaleDir": "i18n/my/"
+  },
+  "sw": {
+    "label": "Kiswahili",
+    "englishName": "Swahili",
+    "direction": "ltr",
+    "uiLocaleFile": "sw-kiswahili.json",
+    "docsLocaleDir": "i18n/sw/"
+  },
+  "am": {
+    "label": "አማርኛ",
+    "englishName": "Amharic",
+    "direction": "ltr",
+    "uiLocaleFile": "am-amharic.json",
+    "docsLocaleDir": "i18n/am/"
+  },
+  "ro": {
+    "label": "Română",
+    "englishName": "Romanian",
+    "direction": "ltr",
+    "uiLocaleFile": "ro-romana.json",
+    "docsLocaleDir": "i18n/ro/"
+  },
+  "el": {
+    "label": "Ελληνικά",
+    "englishName": "Greek",
+    "direction": "ltr",
+    "uiLocaleFile": "el-ellinika.json",
+    "docsLocaleDir": "i18n/el/"
+  },
+  "hu": {
+    "label": "Magyar",
+    "englishName": "Hungarian",
+    "direction": "ltr",
+    "uiLocaleFile": "hu-magyar.json",
+    "docsLocaleDir": "i18n/hu/"
+  },
+  "ka": {
+    "label": "ქართული",
+    "englishName": "Georgian",
+    "direction": "ltr",
+    "uiLocaleFile": "ka-kartuli.json",
+    "docsLocaleDir": "i18n/ka/"
+  },
+  "sr": {
+    "label": "Српски",
+    "englishName": "Serbian",
+    "direction": "ltr",
+    "uiLocaleFile": "sr-srpski.json",
+    "docsLocaleDir": "i18n/sr/"
+  },
+  "hr": {
+    "label": "Hrvatski",
+    "englishName": "Croatian",
+    "direction": "ltr",
+    "uiLocaleFile": "hr-hrvatski.json",
+    "docsLocaleDir": "i18n/hr/"
+  },
+  "ca": {
+    "label": "Català",
+    "englishName": "Catalan",
+    "direction": "ltr",
+    "uiLocaleFile": "ca-catala.json",
+    "docsLocaleDir": "i18n/ca/"
+  },
+  "chr": {
+    "label": "ᏣᎳᎩ",
+    "englishName": "Cherokee",
+    "direction": "ltr",
+    "uiLocaleFile": "chr-tsalagi.json",
+    "docsLocaleDir": "i18n/chr/"
+  },
+  "yi": {
+    "label": "ייִדיש",
+    "englishName": "Yiddish",
+    "direction": "rtl",
+    "uiLocaleFile": "yi-yidish.json",
+    "docsLocaleDir": "i18n/yi/"
+  }
+}

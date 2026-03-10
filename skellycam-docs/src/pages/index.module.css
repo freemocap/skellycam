@@ -1,4 +1,4 @@
-/* ── Reset Docusaurus hero defaults ── */
+/* ── Page root ── */
 .main {
   --bg-deep: #06050e;
   --bg-surface: #0e0c1a;
@@ -71,7 +71,7 @@
   font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--text);
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.5rem;
   line-height: 1.1;
 }
 
@@ -79,20 +79,21 @@
   color: var(--accent);
 }
 
-.heroTagline {
-  font-size: 1.15rem;
+.heroSubtitle {
+  font-size: 1.25rem;
   color: var(--text-dim);
-  margin: 0 0 0.75rem;
-  line-height: 1.5;
-  font-weight: 400;
+  margin: 0 0 0.4rem;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
-.heroDescription {
+.heroTagline {
   font-size: 0.95rem;
   color: var(--text-dim);
   margin: 0 0 1.5rem;
-  line-height: 1.6;
-  opacity: 0.8;
+  line-height: 1.5;
+  font-weight: 400;
+  opacity: 0.7;
 }
 
 .heroLink {
@@ -153,7 +154,7 @@
   text-decoration: none;
 }
 
-.ctaGithub {
+.ctaCode {
   font-family: var(--mono);
   font-size: 0.8rem;
   color: var(--text-dim);
@@ -161,39 +162,12 @@
   padding: 0.75rem 0.5rem;
   transition: color 0.15s;
 }
-.ctaGithub:hover {
+.ctaCode:hover {
   color: var(--accent);
   text-decoration: none;
 }
 
-/* ── Code snippet ── */
-.heroCode {
-  display: inline-block;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem 1.5rem;
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  line-height: 1.8;
-  text-align: left;
-  color: var(--text);
-}
-
-.codePrompt {
-  color: var(--accent);
-  user-select: none;
-}
-
-.codeCmd {
-  color: var(--text);
-}
-
-.codeComment {
-  color: #4a4760;
-}
-
-/* ── Features ── */
+/* ── Features grid ── */
 .features {
   padding: 2rem 2rem 4rem;
   background:
@@ -202,27 +176,41 @@
 
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   max-width: 1060px;
   margin: 0 auto;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 720px) {
   .featuresGrid {
     grid-template-columns: 1fr;
     max-width: 520px;
   }
 }
 
+/* Card link wrapper — resets link styles so the card looks normal */
+.featureCardLink {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+}
+.featureCardLink:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
 .featureCard {
+  flex: 1;
   background: rgba(14, 12, 26, 0.6);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 2rem 1.75rem;
   transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
 }
-.featureCard:hover {
+.featureCardLink:hover .featureCard {
   border-color: rgba(167, 139, 250, 0.2);
   background: rgba(167, 139, 250, 0.03);
   transform: translateY(-2px);
@@ -247,7 +235,14 @@
   font-size: 0.85rem;
   color: var(--text-dim);
   line-height: 1.65;
-  margin: 0;
+  margin: 0 0 auto;
+}
+.featureDescription strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.featureDescription em {
+  font-style: italic;
 }
 
 /* ── Guarantees ── */
@@ -259,12 +254,13 @@
 
 .guaranteesTitle {
   font-family: var(--mono);
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 600;
   color: var(--text);
   text-align: center;
   margin: 0 0 2rem;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
 }
 
 .guaranteesGrid {
@@ -297,20 +293,25 @@
   margin-top: 1px;
 }
 
-/* ── Animation ── */
+.guaranteesRoadmap {
+  max-width: 600px;
+  margin: 1.5rem auto 0;
+}
+
+/* ── Animations ── */
 .heroContent,
 .featureCard,
 .guaranteeItem {
   animation: fadeUp 0.6s ease both;
 }
 
-.featureCard:nth-child(1) { animation-delay: 0.1s; }
-.featureCard:nth-child(2) { animation-delay: 0.2s; }
-.featureCard:nth-child(3) { animation-delay: 0.3s; }
+.featureCardLink:nth-child(1) .featureCard { animation-delay: 0.1s; }
+.featureCardLink:nth-child(2) .featureCard { animation-delay: 0.2s; }
+.featureCardLink:nth-child(3) .featureCard { animation-delay: 0.3s; }
+.featureCardLink:nth-child(4) .featureCard { animation-delay: 0.4s; }
 
 .guaranteeItem:nth-child(1) { animation-delay: 0.15s; }
 .guaranteeItem:nth-child(2) { animation-delay: 0.25s; }
-.guaranteeItem:nth-child(3) { animation-delay: 0.35s; }
 
 @keyframes fadeUp {
   from {
