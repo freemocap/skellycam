@@ -72,12 +72,7 @@ The unauthenticated rate limit is 60 requests/hour per IP. With caching, a
 single user generates at most 12 requests/hour even with aggressive page
 reloading. Traffic spikes are handled by the 5-minute cache window.
 
-#### Discussions (not yet supported)
 
-GitHub Discussions require the GraphQL API which needs authentication. For now,
-if you want a discussion to appear on the roadmap, create an Issue that links
-to the discussion and label it `roadmap`. We plan to add native discussion
-support later via a lightweight API proxy.
 
 ### Core feature cards (index page + doc pages)
 
