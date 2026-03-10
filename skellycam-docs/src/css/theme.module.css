@@ -1,0 +1,866 @@
+/* ================================================================
+   theme.module.css — All SkellyCam component and page styles.
+   Import as: import styles from '@site/src/css/theme.module.css';
+   Uses --sk-* CSS variables defined in custom.css.
+   ================================================================ */
+
+
+/* ── Tip (inline tooltip for progressive disclosure) ── */
+
+.tip {
+  position: relative;
+  border-bottom: 1px dotted var(--sk-purple);
+  cursor: help;
+}
+
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--sk-border);
+  color: var(--sk-text);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  white-space: normal;
+  width: max-content;
+  max-width: 280px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+
+/* ── TodoList (collapsible roadmap linking to GitHub issues) ── */
+
+.todoSection {
+  position: relative;
+  z-index: 1;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(26, 23, 48, 0.6);
+}
+
+.todoToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  font-family: var(--sk-mono);
+  color: var(--sk-text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.todoToggle:hover {
+  color: var(--sk-accent);
+}
+
+.todoChevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+  font-size: 0.7rem;
+}
+.todoChevron[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.todoLabel {
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.todoBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  background: var(--sk-purple-dim);
+  color: var(--sk-purple);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0 0.3rem;
+}
+
+.todoItems {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.todoItem {
+  margin: 0;
+  padding: 0;
+}
+
+.todoLink {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--sk-text-dim);
+  text-decoration: none;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+}
+.todoLink:hover {
+  color: var(--sk-accent);
+  background: rgba(110, 231, 183, 0.05);
+  text-decoration: none;
+}
+
+.todoIcon {
+  color: var(--sk-purple);
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.todoArrow {
+  margin-left: auto;
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.todoLink:hover .todoArrow {
+  opacity: 1;
+}
+
+
+/* ── CoreFeatureHeader (summary block at top of core doc pages) ── */
+
+.featureHeader {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(26, 23, 48, 0.6);
+  background: rgba(14, 12, 26, 0.4);
+}
+
+.featureHeaderSummary {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.featureHeaderIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.featureHeaderText {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--ifm-color-emphasis-700);
+}
+.featureHeaderText strong {
+  color: var(--ifm-font-color-base);
+  font-weight: 600;
+}
+
+
+/* ================================================================
+   Index Page — Hero, Feature Cards, Guarantees
+   ================================================================ */
+
+.main {
+  background: var(--sk-bg-deep);
+  overflow-x: hidden;
+}
+
+/* ── Hero ── */
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem 2rem;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(167, 139, 250, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(110, 231, 183, 0.05) 0%, transparent 50%),
+    var(--sk-bg-deep);
+}
+
+.heroGlow {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 400px;
+  background: radial-gradient(
+    ellipse,
+    rgba(167, 139, 250, 0.12) 0%,
+    rgba(110, 231, 183, 0.04) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  filter: blur(40px);
+}
+
+.heroContent {
+  position: relative;
+  text-align: center;
+  max-width: 680px;
+  z-index: 1;
+}
+
+.heroLogo {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 0 32px rgba(110, 231, 183, 0.25));
+  animation: logoFloat 6s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.heroTitle {
+  font-family: var(--sk-mono);
+  font-size: 3.2rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--sk-text);
+  margin: 0 0 0.5rem;
+  line-height: 1.1;
+}
+
+.accent {
+  color: var(--sk-accent);
+}
+
+.heroSubtitle {
+  font-size: 1.25rem;
+  color: var(--sk-text-dim);
+  margin: 0 0 0.4rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.heroTagline {
+  font-size: 0.95rem;
+  color: var(--sk-text-dim);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.heroLink {
+  color: var(--sk-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.heroLink:hover {
+  text-decoration: underline;
+  color: var(--sk-accent);
+}
+
+/* ── CTAs ── */
+
+.heroCtas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sk-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  background: var(--sk-accent);
+  color: #06050e;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+}
+.ctaPrimary:hover {
+  color: #06050e;
+  background: #86efac;
+  box-shadow: 0 0 24px rgba(110, 231, 183, 0.3);
+  text-decoration: none;
+}
+
+.ctaSecondary {
+  font-family: var(--sk-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  background: var(--sk-bg-surface);
+  color: var(--sk-text);
+  border: 1px solid var(--sk-border);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.ctaSecondary:hover {
+  color: var(--sk-text);
+  border-color: var(--sk-accent-dim);
+  background: rgba(110, 231, 183, 0.05);
+  text-decoration: none;
+}
+
+.ctaCode {
+  font-family: var(--sk-mono);
+  font-size: 0.8rem;
+  color: var(--sk-text-dim);
+  text-decoration: none;
+  padding: 0.75rem 0.5rem;
+  transition: color 0.15s;
+}
+.ctaCode:hover {
+  color: var(--sk-accent);
+  text-decoration: none;
+}
+
+/* ── Feature cards grid ── */
+
+.features {
+  padding: 2rem 2rem 4rem;
+  background:
+    linear-gradient(180deg, var(--sk-bg-deep) 0%, var(--sk-bg-surface) 100%);
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  max-width: 1060px;
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+}
+
+.featureCard {
+  background: rgba(14, 12, 26, 0.6);
+  border: 1px solid var(--sk-border);
+  border-radius: 12px;
+  padding: 2rem 1.75rem;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+.featureCard:hover {
+  border-color: rgba(167, 139, 250, 0.2);
+  background: rgba(167, 139, 250, 0.03);
+  transform: translateY(-2px);
+}
+
+.featureCardLink {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.featureCardLink:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.featureIcon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.featureTitle {
+  font-family: var(--sk-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--sk-text);
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.02em;
+}
+
+.featureDescription {
+  font-size: 0.85rem;
+  color: var(--sk-text-dim);
+  line-height: 1.65;
+  margin: 0 0 auto;
+}
+.featureDescription strong {
+  color: var(--sk-text);
+  font-weight: 600;
+}
+.featureDescription em {
+  font-style: italic;
+}
+
+/* ── Guarantees ── */
+
+.guarantees {
+  padding: 4rem 2rem 6rem;
+  background: var(--sk-bg-surface);
+  border-top: 1px solid var(--sk-border);
+}
+
+.guaranteesTitle {
+  font-family: var(--sk-mono);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--sk-text);
+  text-align: center;
+  margin: 0 0 2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+}
+
+.guaranteesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.guaranteeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--sk-text-dim);
+  line-height: 1.5;
+}
+
+.guaranteeItem strong {
+  color: var(--sk-text);
+  font-weight: 600;
+}
+
+.guaranteeCheck {
+  color: var(--sk-accent);
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.guaranteesRoadmap {
+  max-width: 600px;
+  margin: 1.5rem auto 0;
+}
+
+/* ── Animations ── */
+
+.heroContent,
+.featureCard,
+.guaranteeItem {
+  animation: fadeUp 0.6s ease both;
+}
+
+.featureCard:nth-child(1) { animation-delay: 0.1s; }
+.featureCard:nth-child(2) { animation-delay: 0.2s; }
+.featureCard:nth-child(3) { animation-delay: 0.3s; }
+.featureCard:nth-child(4) { animation-delay: 0.4s; }
+
+.guaranteeItem:nth-child(1) { animation-delay: 0.15s; }
+.guaranteeItem:nth-child(2) { animation-delay: 0.25s; }
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ================================================================
+   Roadmap Page
+   ================================================================ */
+
+.roadmap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 3rem 2rem 6rem;
+}
+
+.roadmapHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.roadmapTitle {
+  font-family: var(--sk-mono);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--sk-text);
+  letter-spacing: -0.04em;
+  margin: 0 0 0.75rem;
+}
+
+.roadmapSubtitle {
+  font-size: 0.95rem;
+  color: var(--sk-text-dim);
+  line-height: 1.6;
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+/* ── Error banner ── */
+
+.roadmapError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.06);
+  font-size: 0.82rem;
+  color: #fbbf24;
+}
+
+.roadmapRetry {
+  font-family: var(--sk-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: none;
+  color: #fbbf24;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.roadmapRetry:hover {
+  background: rgba(251, 191, 36, 0.1);
+}
+
+/* ── Filters ── */
+
+.roadmapFilters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.roadmapSearch {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--sk-border);
+  background: var(--sk-bg-surface);
+  color: var(--sk-text);
+  font-family: var(--sk-mono);
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.roadmapSearch::placeholder {
+  color: var(--sk-text-dim);
+  opacity: 0.6;
+}
+.roadmapSearch:focus {
+  border-color: var(--sk-purple);
+}
+
+.roadmapFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.roadmapChipGroup {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.roadmapChip {
+  font-family: var(--sk-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--sk-border);
+  background: none;
+  color: var(--sk-text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.roadmapChip:hover {
+  border-color: var(--sk-purple);
+  color: var(--sk-text);
+}
+.roadmapChipActive {
+  border-color: var(--sk-purple);
+  background: var(--sk-purple-dim);
+  color: var(--sk-purple);
+}
+
+.roadmapSort {
+  font-family: var(--sk-mono);
+  font-size: 0.7rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--sk-border);
+  background: var(--sk-bg-surface);
+  color: var(--sk-text-dim);
+  cursor: pointer;
+  margin-left: auto;
+}
+.roadmapSort:focus {
+  outline: none;
+  border-color: var(--sk-purple);
+}
+
+/* ── Label filter pills ── */
+
+.roadmapLabelBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.roadmapLabelPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--sk-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--sk-border);
+  background: none;
+  color: var(--sk-text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.roadmapLabelPill:hover {
+  border-color: var(--sk-text-dim);
+}
+.roadmapLabelPillActive {
+  border-color: var(--sk-accent);
+  color: var(--sk-accent);
+  background: var(--sk-accent-dim);
+}
+
+.roadmapLabelDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--label-color, var(--sk-text-dim));
+  flex-shrink: 0;
+}
+
+/* ── Results count ── */
+
+.roadmapCount {
+  font-family: var(--sk-mono);
+  font-size: 0.72rem;
+  color: var(--sk-text-dim);
+  margin: 0 0 1rem;
+}
+
+/* ── Card grid ── */
+
+.roadmapGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .roadmapGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Roadmap card ── */
+
+.roadmapCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--sk-border);
+  background: rgba(14, 12, 26, 0.5);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+.roadmapCard:hover {
+  border-color: rgba(167, 139, 250, 0.2);
+  background: rgba(167, 139, 250, 0.03);
+  transform: translateY(-1px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.roadmapCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+}
+
+.roadmapTypeBadgeIssue,
+.roadmapTypeBadgePr {
+  font-family: var(--sk-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.roadmapTypeBadgeIssue {
+  background: var(--sk-purple-dim);
+  color: var(--sk-purple);
+}
+.roadmapTypeBadgePr {
+  background: var(--sk-accent-dim);
+  color: var(--sk-accent);
+}
+
+.roadmapStatusOpen {
+  color: #34d399;
+  font-size: 0.7rem;
+}
+.roadmapStatusClosed {
+  color: var(--sk-text-dim);
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.roadmapCardNumber {
+  color: var(--sk-text-dim);
+  opacity: 0.5;
+  font-family: var(--sk-mono);
+}
+
+.roadmapCardDate {
+  margin-left: auto;
+  color: var(--sk-text-dim);
+  opacity: 0.5;
+  font-family: var(--sk-mono);
+}
+
+.roadmapCardTitle {
+  font-family: var(--sk-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--sk-text);
+  margin: 0;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.roadmapCardExcerpt {
+  font-size: 0.78rem;
+  color: var(--sk-text-dim);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.roadmapCardLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.roadmapCardLabel {
+  font-family: var(--sk-mono);
+  font-size: 0.6rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--label-color) 40%, transparent);
+  color: var(--label-color, var(--sk-text-dim));
+  background: color-mix(in srgb, var(--label-color) 10%, transparent);
+}
+
+.roadmapCardArrow {
+  font-family: var(--sk-mono);
+  font-size: 0.7rem;
+  color: var(--sk-text-dim);
+  margin-top: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.roadmapCard:hover .roadmapCardArrow {
+  opacity: 1;
+  color: var(--sk-accent);
+}
+
+/* ── Loading ── */
+
+.roadmapLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  font-family: var(--sk-mono);
+  font-size: 0.82rem;
+  color: var(--sk-text-dim);
+}
+
+.roadmapSpinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--sk-border);
+  border-top-color: var(--sk-purple);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Empty state ── */
+
+.roadmapEmpty {
+  text-align: center;
+  padding: 4rem 2rem;
+  font-size: 0.85rem;
+  color: var(--sk-text-dim);
+}

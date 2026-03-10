@@ -3,8 +3,7 @@ import Link from '@docusaurus/Link';
 import Layout from '@theme/Layout';
 import TodoList from '@site/src/components/TodoList';
 import {CORE_FEATURES} from '@site/src/data/core-features';
-
-import styles from './index.module.css';
+import styles from '@site/src/css/theme.module.css';
 
 const REPO = 'https://github.com/freemocap/skellycam';
 
@@ -57,18 +56,14 @@ function FeaturesSection() {
     <div className={styles.features}>
       <div className={styles.featuresGrid}>
         {CORE_FEATURES.map((f) => (
-          <Link
-            key={f.id}
-            to={`/docs/${f.docPath}`}
-            className={styles.featureCardLink}
-          >
-            <div className={styles.featureCard}>
+          <div key={f.id} className={styles.featureCard}>
+            <Link to={`/docs/${f.docPath}`} className={styles.featureCardLink}>
               <span className={styles.featureIcon}>{f.icon}</span>
               <h3 className={styles.featureTitle}>{f.title}</h3>
               <div className={styles.featureDescription}>{f.summary}</div>
-              {f.todos.length > 0 && <TodoList items={f.todos} />}
-            </div>
-          </Link>
+            </Link>
+            {f.todos.length > 0 && <TodoList items={f.todos} />}
+          </div>
         ))}
       </div>
     </div>

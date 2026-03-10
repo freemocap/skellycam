@@ -126,6 +126,7 @@ const config: Config = {
         },
         {to: '/blog', label: 'Blog', position: 'left'},
         {to: '/download', label: 'Download', position: 'left'},
+        {to: '/roadmap', label: 'Roadmap', position: 'left'},
         {
           href: 'https://github.com/freemocap/skellycam',
           label: 'GitHub',

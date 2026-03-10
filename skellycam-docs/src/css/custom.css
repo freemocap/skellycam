@@ -1,8 +1,10 @@
-/* ── SkellyCam Docusaurus Theme ── */
+/* ── SkellyCam Docusaurus Theme — Plumbing Only ──
+   Component styles live in theme.module.css */
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
+  /* Docusaurus theme variables */
   --ifm-color-primary: #7c3aed;
   --ifm-color-primary-dark: #6d28d9;
   --ifm-color-primary-darker: #5b21b6;
@@ -13,6 +15,18 @@
   --ifm-code-font-size: 95%;
   --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   --docusaurus-highlighted-code-line-bg: rgba(124, 58, 237, 0.1);
+
+  /* SkellyCam design tokens — consumed by theme.module.css via var() */
+  --sk-bg-deep: #06050e;
+  --sk-bg-surface: #0e0c1a;
+  --sk-border: #1a1730;
+  --sk-text: #e8e6f0;
+  --sk-text-dim: #8a87a0;
+  --sk-accent: #6ee7b7;
+  --sk-accent-dim: rgba(110, 231, 183, 0.15);
+  --sk-purple: #a78bfa;
+  --sk-purple-dim: rgba(167, 139, 250, 0.1);
+  --sk-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 [data-theme='dark'] {
@@ -28,26 +42,24 @@
   --docusaurus-highlighted-code-line-bg: rgba(167, 139, 250, 0.15);
 }
 
-/* ── Navbar ── */
+/* ── Docusaurus element overrides (must be global, can't be modules) ── */
+
 [data-theme='dark'] .navbar {
   background-color: rgba(10, 8, 24, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(26, 23, 48, 0.6);
 }
 
-/* ── Footer ── */
 .footer--dark {
   background-color: #06050e;
   border-top: 1px solid rgba(26, 23, 48, 0.6);
 }
 
-/* ── Sidebar active link ── */
 .menu__link--active:not(.menu__link--sublist) {
   border-left: 3px solid var(--ifm-color-primary);
   padding-left: calc(var(--ifm-menu-link-padding-horizontal) - 3px);
 }
 
-/* ── Code blocks ── */
 [data-theme='dark'] .prism-code {
   background-color: #0e0c1a !important;
   border: 1px solid rgba(26, 23, 48, 0.8);

@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {type MouseEvent, useState} from 'react';
+import styles from '@site/src/css/theme.module.css';
 
 const REPO = 'https://github.com/freemocap/skellycam';
 
@@ -9,37 +10,51 @@ export type TodoItem = {
 
 /**
  * Collapsible "Roadmap" section that links each item to a GitHub issue.
+ * Uses divs instead of ul/li to avoid Docusaurus `.markdown` list style conflicts.
+ * Stops event propagation so parent Link wrappers don't intercept clicks.
  */
 export default function TodoList({items}: {items: TodoItem[]}) {
   const [open, setOpen] = useState(false);
+
+  const handleToggle = (e: MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setOpen((v) => !v);
+  };
+
+  const handleItemClick = (e: MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="sk-todo-section">
+    <div className={styles.todoSection} onClick={(e: MouseEvent) => e.stopPropagation()}>
       <button
-        className="sk-todo-toggle"
-        onClick={() => setOpen((v) => !v)}
+        className={styles.todoToggle}
+        onClick={handleToggle}
         aria-expanded={open}
       >
-        <span className="sk-todo-chevron" data-open={open}>▸</span>
-        <span className="sk-todo-label">Roadmap</span>
-        <span className="sk-todo-badge">{items.length}</span>
+        <span className={styles.todoChevron} data-open={open}>▸</span>
+        <span className={styles.todoLabel}>Roadmap</span>
+        <span className={styles.todoBadge}>{items.length}</span>
       </button>
       {open && (
-        <ul className="sk-todo-items">
+        <div className={styles.todoItems}>
           {items.map((t) => (
-            <li key={t.issueNum} className="sk-todo-item">
+            <div key={t.issueNum} className={styles.todoItem}>
               <a
                 href={`${REPO}/issues/${t.issueNum}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="sk-todo-link"
+                className={styles.todoLink}
+                onClick={handleItemClick}
               >
-                <span className="sk-todo-icon">◇</span>
+                <span className={styles.todoIcon}>◇</span>
                 {t.label}
-                <span className="sk-todo-arrow">↗</span>
+                <span className={styles.todoArrow}>↗</span>
               </a>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

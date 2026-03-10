@@ -1,4 +1,5 @@
 import type {ReactNode} from 'react';
+import styles from '@site/src/css/theme.module.css';
 
 /**
  * Inline tooltip for progressive disclosure. Renders children with a dotted
@@ -6,7 +7,7 @@ import type {ReactNode} from 'react';
  */
 export default function Tip({text, children}: {text: string; children: ReactNode}) {
   return (
-    <span className="sk-tip" data-tip={text}>
+    <span className={styles.tip} data-tip={text}>
       {children}
     </span>
   );

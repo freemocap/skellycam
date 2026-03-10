@@ -1,5 +1,6 @@
 import type {CoreFeature} from '@site/src/data/core-features';
 import TodoList from '@site/src/components/TodoList';
+import styles from '@site/src/css/theme.module.css';
 
 /**
  * Header block for core feature doc pages. Renders the feature's summary
@@ -12,10 +13,10 @@ import TodoList from '@site/src/components/TodoList';
  */
 export default function CoreFeatureHeader({feature}: {feature: CoreFeature}) {
   return (
-    <div className="sk-feature-header">
-      <div className="sk-feature-header-summary">
-        <span className="sk-feature-header-icon">{feature.icon}</span>
-        <div className="sk-feature-header-text">{feature.summary}</div>
+    <div className={styles.featureHeader}>
+      <div className={styles.featureHeaderSummary}>
+        <span className={styles.featureHeaderIcon}>{feature.icon}</span>
+        <div className={styles.featureHeaderText}>{feature.summary}</div>
       </div>
       {feature.todos.length > 0 && (
         <TodoList items={feature.todos} />
