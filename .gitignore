@@ -231,3 +231,8 @@ pyapp-v*
 *onefile-build
 *.zip
 .docusaurus/
+
+# Claude Code — ignore local state, keep shared config
+.claude/*
+!.claude/skills/
+!.claude/settings.json
