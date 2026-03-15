@@ -4,10 +4,12 @@ title: Frame-Perfect Synchronization
 description: How SkellyCam's frame-count-gated capture protocol keeps all cameras in lock-step.
 ---
 
-import CoreFeatureHeader from '@site/src/components/CoreFeatureHeader';
-import {getFeatureById} from '@site/src/data/core-features';
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '../../content.config';
 
-<CoreFeatureHeader feature={getFeatureById('frame-perfect-sync')} />
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'frame-perfect-sync')} repoUrl="https://github.com/freemocap/skellycam" />
 
 ## The problem
 
@@ -38,12 +40,12 @@ sequenceDiagram
     Note over Cam0,Cam1: Frame N
 
     Cam0->>Orch: should_grab?
-    Orch-->>Cam0: ✓ (frame count ≤ all others)
+    Orch-->>Cam0: (frame count <= all others)
     Cam0->>Cam0: grab() + retrieve()
     Cam0->>Orch: frame_count = N+1
 
     Cam1->>Orch: should_grab?
-    Orch-->>Cam1: ✓ (frame count ≤ all others)
+    Orch-->>Cam1: (frame count <= all others)
     Cam1->>Cam1: grab() + retrieve()
     Cam1->>Orch: frame_count = N+1
 

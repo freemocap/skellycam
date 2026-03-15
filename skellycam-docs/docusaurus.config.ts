@@ -1,15 +1,10 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 
 const config: Config = {
   title: 'SkellyCam',
-  tagline: 'Frame-perfect multi-camera synchronization for USB webcams 💀📸',
+  tagline: 'Frame-perfect multi-camera synchronization for USB webcams',
   favicon: 'img/skellycam-favicon.ico',
-
-  future: {
-    v4: true,
-  },
 
   url: 'https://freemocap.github.io',
   baseUrl: '/skellycam/',
@@ -19,12 +14,7 @@ const config: Config = {
 
   onBrokenLinks: 'throw',
 
-  markdown: {
-    mermaid: true,
-    hooks: {
-      onBrokenMarkdownLinks: 'warn',
-    },
-  },
+  markdown: { mermaid: true },
 
   themes: ['@docusaurus/theme-mermaid'],
 
@@ -32,29 +22,44 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en', 'es', 'ar', 'zh-CN'],
     localeConfigs: {
-      en: {label: 'English'},
-      es: {label: 'Español'},
-      ar: {label: 'العربية', direction: 'rtl'},
-      'zh-CN': {label: '简体中文'},
+      en: { label: 'English' },
+      es: { label: 'Español' },
+      ar: { label: 'العربية', direction: 'rtl' },
+      'zh-CN': { label: '简体中文' },
     },
   },
+
+  plugins: [
+    // webpack 5 enforces full file extensions on imports from ESM packages.
+    // tsup/esbuild strips .js extensions in unbundled output, so we relax
+    // that strictness here.
+    function disableFullySpecified() {
+      return {
+        name: 'disable-fully-specified',
+        configureWebpack() {
+          return {
+            module: {
+              rules: [{ test: /\.m?js$/, resolve: { fullySpecified: false } }],
+            },
+          };
+        },
+      };
+    },
+  ],
 
   presets: [
     [
       'classic',
       {
         docs: {
-          sidebarPath: './sidebars.ts',
+          sidebarPath: require.resolve('./sidebars.ts'),
           routeBasePath: 'docs',
           editUrl:
             'https://github.com/freemocap/skellycam/tree/development/skellycam-docs/',
         },
         blog: {
           showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
+          feedOptions: { type: ['rss', 'atom'], xslt: true },
           editUrl:
             'https://github.com/freemocap/skellycam/tree/development/skellycam-docs/',
           onInlineTags: 'warn',
@@ -62,9 +67,9 @@ const config: Config = {
           onUntruncatedBlogPosts: 'warn',
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: [require.resolve('@freemocap/skellydocs/css/custom.css')],
         },
-      } satisfies Preset.Options,
+      },
     ],
   ],
 
@@ -81,24 +86,12 @@ const config: Config = {
         src: 'img/skellycam-logo.svg',
       },
       items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'docsSidebar',
-          position: 'left',
-          label: 'Docs',
-        },
-        {to: '/blog', label: 'Blog', position: 'left'},
-        {to: '/download', label: 'Download', position: 'left'},
-        {to: '/roadmap', label: 'Roadmap', position: 'left'},
-        {
-          href: 'https://github.com/freemocap/skellycam',
-          label: 'GitHub',
-          position: 'right',
-        },
-        {
-          type: 'localeDropdown',
-          position: 'right',
-        },
+        { type: 'docSidebar', sidebarId: 'docsSidebar', position: 'left', label: 'Docs' },
+        { to: '/blog', label: 'Blog', position: 'left' },
+        { to: '/download', label: 'Download', position: 'left' },
+        { to: '/roadmap', label: 'Roadmap', position: 'left' },
+        { href: 'https://github.com/freemocap/skellycam', label: 'GitHub', position: 'right' },
+        { type: 'localeDropdown', position: 'right' },
       ],
     },
     footer: {
@@ -107,52 +100,25 @@ const config: Config = {
         {
           title: 'Documentation',
           items: [
-            {
-              label: 'Getting Started',
-              to: '/docs/getting-started',
-            },
-            {
-              label: 'Architecture',
-              to: '/docs/architecture',
-            },
-            {
-              label: 'API Reference',
-              to: '/docs/api-reference',
-            },
+            { label: 'Getting Started', to: '/docs/getting-started' },
+            { label: 'Architecture', to: '/docs/architecture' },
+            { label: 'API Reference', to: '/docs/api-reference' },
           ],
         },
         {
           title: 'Community',
           items: [
-            {
-              label: 'Discord',
-              href: 'https://discord.gg/freemocap',
-            },
-            {
-              label: 'GitHub Discussions',
-              href: 'https://github.com/freemocap/skellycam/discussions',
-            },
-            {
-              label: 'FreeMoCap',
-              href: 'https://freemocap.org',
-            },
+            { label: 'Discord', href: 'https://discord.gg/freemocap' },
+            { label: 'GitHub Discussions', href: 'https://github.com/freemocap/skellycam/discussions' },
+            { label: 'FreeMoCap', href: 'https://freemocap.org' },
           ],
         },
         {
           title: 'More',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/freemocap/skellycam',
-            },
-            {
-              label: 'Download',
-              to: '/download',
-            },
+            { label: 'Blog', to: '/blog' },
+            { label: 'GitHub', href: 'https://github.com/freemocap/skellycam' },
+            { label: 'Download', to: '/download' },
           ],
         },
       ],
@@ -164,9 +130,9 @@ const config: Config = {
       additionalLanguages: ['bash', 'json', 'python', 'typescript'],
     },
     mermaid: {
-      theme: {light: 'neutral', dark: 'dark'},
+      theme: { light: 'neutral', dark: 'dark' },
     },
-  } satisfies Preset.ThemeConfig & {mermaid?: {theme: {light: string; dark: string}}},
+  },
 };
 
 export default config;

@@ -4,20 +4,24 @@
     "description": "The title in the navbar"
   },
   "logo.alt": {
-    "message": "SkellyCam Logo",
+    "message": "SkellyCam 标志",
     "description": "The alt text of navbar logo"
   },
   "item.label.Docs": {
-    "message": "Docs",
+    "message": "文档",
     "description": "Navbar item with label Docs"
   },
   "item.label.Blog": {
-    "message": "Blog",
+    "message": "博客",
     "description": "Navbar item with label Blog"
   },
   "item.label.Download": {
-    "message": "Download",
+    "message": "下载",
     "description": "Navbar item with label Download"
+  },
+  "item.label.Roadmap": {
+    "message": "路线图",
+    "description": "Navbar item with label Roadmap"
   },
   "item.label.GitHub": {
     "message": "GitHub",

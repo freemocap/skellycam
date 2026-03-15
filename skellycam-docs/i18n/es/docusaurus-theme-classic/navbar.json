@@ -4,11 +4,11 @@
     "description": "The title in the navbar"
   },
   "logo.alt": {
-    "message": "SkellyCam Logo",
+    "message": "Logo de SkellyCam",
     "description": "The alt text of navbar logo"
   },
   "item.label.Docs": {
-    "message": "Docs",
+    "message": "Documentación",
     "description": "Navbar item with label Docs"
   },
   "item.label.Blog": {
@@ -16,8 +16,12 @@
     "description": "Navbar item with label Blog"
   },
   "item.label.Download": {
-    "message": "Download",
+    "message": "Descargar",
     "description": "Navbar item with label Download"
+  },
+  "item.label.Roadmap": {
+    "message": "Hoja de ruta",
+    "description": "Navbar item with label Roadmap"
   },
   "item.label.GitHub": {
     "message": "GitHub",

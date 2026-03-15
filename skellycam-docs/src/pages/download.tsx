@@ -1,12 +1,8 @@
-import type {ReactNode} from 'react';
-import {translate} from '@docusaurus/Translate';
 import Layout from '@theme/Layout';
 
-export default function DownloadPage(): ReactNode {
+export default function DownloadPage() {
   return (
-    <Layout
-      title={translate({id: 'download.title', message: 'Download'})}
-      description={translate({id: 'download.description', message: 'Download SkellyCam'})}>
+    <Layout title="Download" description="Download SkellyCam">
       <iframe
         src="/skellycam/download.html"
         style={{
@@ -14,7 +10,7 @@ export default function DownloadPage(): ReactNode {
           height: 'calc(100vh - 60px)',
           border: 'none',
         }}
-        title={translate({id: 'download.iframe.title', message: 'SkellyCam Download'})}
+        title="SkellyCam Download"
       />
     </Layout>
   );

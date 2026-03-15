@@ -1,115 +1,10 @@
 {
-  "banner.aiGenerated": {
-    "message": "{strong} — This page was drafted by an AI assistant and may contain inaccuracies. If you spot something wrong, please {issueLink} or use the {editLink} link below to submit a fix."
-  },
-  "banner.aiGenerated.editPage": {
-    "message": "Edit this page"
-  },
-  "banner.aiGenerated.label": {
-    "message": "AI-generated documentation"
-  },
-  "banner.aiGenerated.openIssue": {
-    "message": "open an issue"
-  },
-  "download.description": {
-    "message": "Download SkellyCam"
-  },
-  "download.iframe.title": {
-    "message": "SkellyCam Download"
-  },
-  "download.title": {
-    "message": "Download"
-  },
-  "features.multiProcess.description": {
-    "message": "Each camera runs in its own process with shared-memory ring buffers for zero-copy frame transfer. The CameraOrchestrator gates each camera's grab cycle based on relative frame counts, maintaining lock-step progression across the entire group."
-  },
-  "features.multiProcess.title": {
-    "message": "Multi-Process Capture"
-  },
-  "features.streaming.description": {
-    "message": "A compact binary WebSocket protocol streams JPEG-compressed multi-camera frames to the React/Electron frontend with built-in backpressure management and adaptive resolution scaling."
-  },
-  "features.streaming.title": {
-    "message": "Real-Time Streaming"
-  },
-  "features.sync.description": {
-    "message": "A frame-count-gated capture protocol ensures no camera ever gets more than one frame ahead of the others. The OpenCV grab/retrieve split minimizes inter-camera timing spread. All recorded videos have identical frame counts — no drift, no dropped frames."
-  },
-  "features.sync.title": {
-    "message": "Frame-Perfect Sync"
-  },
-  "feedback.leaveComment": {
-    "message": "💬 Leave a comment"
-  },
-  "feedback.no": {
-    "message": "👎 No"
-  },
-  "feedback.no.ariaLabel": {
-    "message": "No, this page was not helpful"
-  },
-  "feedback.question": {
-    "message": "Was this page helpful?"
-  },
-  "feedback.reportIssue": {
-    "message": "🐛 Report an issue"
-  },
-  "feedback.thankYou": {
-    "message": "Thanks for your feedback!"
-  },
-  "feedback.yes": {
-    "message": "👍 Yes"
-  },
-  "feedback.yes.ariaLabel": {
-    "message": "Yes, this page was helpful"
-  },
-  "guarantees.frameLocked": {
-    "message": "Playback is {strong} — all videos always display the same frame number"
-  },
-  "guarantees.frameLocked.emphasis": {
-    "message": "hard frame-locked"
-  },
-  "guarantees.oneImagePerCamera": {
-    "message": "Each payload contains {strong} per frame event"
-  },
-  "guarantees.oneImagePerCamera.emphasis": {
-    "message": "exactly one image per camera"
-  },
-  "guarantees.sameFrameCount": {
-    "message": "All recorded videos have {strong}"
-  },
-  "guarantees.sameFrameCount.emphasis": {
-    "message": "the same frame count"
-  },
-  "guarantees.title": {
-    "message": "The guarantees"
-  },
-  "hero.cta.download": {
-    "message": "Download"
-  },
-  "hero.cta.getStarted": {
-    "message": "Get Started"
-  },
-  "hero.description": {
-    "message": "The camera backend for {freemocapLink}. Cheap webcams, perfectly synchronized video."
-  },
-  "hero.logo.alt": {
-    "message": "SkellyCam"
-  },
-  "hero.tagline": {
-    "message": "Frame-perfect multi-camera synchronization for USB webcams"
-  },
-  "home.description": {
-    "message": "Frame-perfect multi-camera synchronization for USB webcams"
-  },
-  "home.title": {
-    "message": "Home"
-  },
   "theme.ErrorPageContent.title": {
     "message": "هذه الصفحة لا تستجيب.",
     "description": "The title of the fallback page when the page crashed"
   },
   "theme.BackToTopButton.buttonAriaLabel": {
-    "message": "إنتقل للأعلى",
+    "message": "العودة إلى الأعلى",
     "description": "The ARIA label for the back to top button"
   },
   "theme.blog.archive.title": {
@@ -125,11 +20,11 @@
     "description": "The ARIA label for the blog pagination"
   },
   "theme.blog.paginator.newerEntries": {
-    "message": "أحدث الإدخالات",
+    "message": "إدخالات أحدث",
     "description": "The label used to navigate to the newer blog posts page (previous page)"
   },
   "theme.blog.paginator.olderEntries": {
-    "message": "أقدم الإدخالات",
+    "message": "إدخالات أقدم",
     "description": "The label used to navigate to the older blog posts page (next page)"
   },
   "theme.blog.post.paginator.navAriaLabel": {
@@ -137,19 +32,19 @@
     "description": "The ARIA label for the blog posts pagination"
   },
   "theme.blog.post.paginator.newerPost": {
-    "message": "أحدث المقالات",
+    "message": "مقالة أحدث",
     "description": "The blog post button label to navigate to the newer/previous post"
   },
   "theme.blog.post.paginator.olderPost": {
-    "message": "أقدم المقالات",
+    "message": "مقالة أقدم",
     "description": "The blog post button label to navigate to the older/next post"
   },
   "theme.tags.tagsPageLink": {
-    "message": "عرض كل الوسوم",
+    "message": "عرض جميع الوسوم",
     "description": "The label of the link targeting the tag list page"
   },
   "theme.colorToggle.ariaLabel.mode.system": {
-    "message": "system mode",
+    "message": "وضع النظام",
     "description": "The name for the system color mode"
   },
   "theme.colorToggle.ariaLabel.mode.light": {
@@ -161,19 +56,19 @@
     "description": "The name for the dark color mode"
   },
   "theme.colorToggle.ariaLabel": {
-    "message": "التبديل بين الوضع الداكن والفاتح (الحالي {mode})",
+    "message": "التبديل بين الوضع الداكن والفاتح (الوضع الحالي: {mode})",
     "description": "The ARIA label for the color mode toggle"
   },
-  "theme.docs.breadcrumbs.navAriaLabel": {
-    "message": "التنقل التفصيلي",
-    "description": "The ARIA label for the breadcrumbs"
-  },
   "theme.docs.DocCard.categoryDescription.plurals": {
-    "message": "{count} مواد",
+    "message": "لا توجد عناصر|عنصر واحد|عنصران|{count} عناصر|{count} عنصرًا|{count} عنصر",
     "description": "The default description for a category card in the generated index about how many items this category includes"
   },
+  "theme.docs.breadcrumbs.navAriaLabel": {
+    "message": "مسار التنقل",
+    "description": "The ARIA label for the breadcrumbs"
+  },
   "theme.docs.paginator.navAriaLabel": {
-    "message": "صفحة التوثيق",
+    "message": "التنقل في صفحات التوثيق",
     "description": "The ARIA label for the docs pagination"
   },
   "theme.docs.paginator.previous": {
@@ -185,38 +80,38 @@
     "description": "The label used to navigate to the next doc"
   },
   "theme.docs.tagDocListPageTitle.nDocsTagged": {
-    "message": "مستند موسوم واحد|{count} مستندات موسومة",
+    "message": "لا توجد مستندات موسومة|مستند واحد موسوم|مستندان موسومان|{count} مستندات موسومة|{count} مستندًا موسومًا|{count} مستند موسوم",
     "description": "Pluralized label for \"{count} docs tagged\". Use as much plural forms (separated by \"|\") as your language support (see https://www.unicode.org/cldr/cldr-aux/charts/34/supplemental/language_plural_rules.html)"
   },
   "theme.docs.tagDocListPageTitle": {
-    "message": "{nDocsTagged} مستند موسوم بـ \"{tagName}\"",
+    "message": "{nDocsTagged} موسومة بـ \"{tagName}\"",
     "description": "The title of the page for a docs tag"
-  },
-  "theme.docs.versions.unreleasedVersionLabel": {
-    "message": "هذه الوثائق لم يتم طرحها بَعـد للإصدار {siteTitle} {versionLabel}.",
-    "description": "The label used to tell the user that he's browsing an unreleased doc version"
-  },
-  "theme.docs.versions.unmaintainedVersionLabel": {
-    "message": "هذه هي وثائق {siteTitle} {versionLabel}، التي لم تعد تتم صيانتها بشكل نشط.",
-    "description": "The label used to tell the user that he's browsing an unmaintained doc version"
-  },
-  "theme.docs.versions.latestVersionSuggestionLabel": {
-    "message": "للحصول على أحدث الوثائق، راجع {latestVersionLink} ({versionLabel}).",
-    "description": "The label used to tell the user to check the latest version"
-  },
-  "theme.docs.versions.latestVersionLinkLabel": {
-    "message": "احدث إصدار",
-    "description": "The label used for the latest version suggestion link label"
   },
   "theme.docs.versionBadge.label": {
     "message": "الإصدار: {versionLabel}"
+  },
+  "theme.docs.versions.unreleasedVersionLabel": {
+    "message": "هذه وثائق الإصدار {versionLabel} من {siteTitle} الذي لم يُصدَر بعد.",
+    "description": "The label used to tell the user that he's browsing an unreleased doc version"
+  },
+  "theme.docs.versions.unmaintainedVersionLabel": {
+    "message": "هذه وثائق الإصدار {versionLabel} من {siteTitle}، وهي لم تعد تُصان بشكل نشط.",
+    "description": "The label used to tell the user that he's browsing an unmaintained doc version"
+  },
+  "theme.docs.versions.latestVersionSuggestionLabel": {
+    "message": "للاطلاع على أحدث الوثائق، راجع {latestVersionLink} ({versionLabel}).",
+    "description": "The label used to tell the user to check the latest version"
+  },
+  "theme.docs.versions.latestVersionLinkLabel": {
+    "message": "أحدث إصدار",
+    "description": "The label used for the latest version suggestion link label"
   },
   "theme.common.editThisPage": {
     "message": "تعديل هذه الصفحة",
     "description": "The link label to edit the current page"
   },
   "theme.common.headingLinkTitle": {
-    "message": "إرتباط مُبـاشر بالعنوان {heading}",
+    "message": "رابط مباشر إلى {heading}",
     "description": "Title for link to heading"
   },
   "theme.lastUpdated.atDate": {
@@ -228,16 +123,16 @@
     "description": "The words used to describe by who the page has been last updated"
   },
   "theme.lastUpdated.lastUpdatedAtBy": {
-    "message": "آخر تحديث {atDate}{byUser}",
+    "message": "آخر تحديث{atDate}{byUser}",
     "description": "The sentence used to display when a page has been last updated, and by who"
-  },
-  "theme.NotFound.title": {
-    "message": "الصفحة غير موجودة",
-    "description": "The title of the 404 page"
   },
   "theme.navbar.mobileVersionsDropdown.label": {
     "message": "الإصدارات",
     "description": "The label for the navbar versions dropdown on mobile view"
+  },
+  "theme.NotFound.title": {
+    "message": "الصفحة غير موجودة",
+    "description": "The title of the 404 page"
   },
   "theme.tags.tagsListLabel": {
     "message": "الوسوم:",
@@ -248,7 +143,7 @@
     "description": "The ARIA label for close button of announcement bar"
   },
   "theme.admonition.caution": {
-    "message": "حذر",
+    "message": "تنبيه",
     "description": "The default label used for the Caution admonition (:::caution)"
   },
   "theme.admonition.danger": {
@@ -264,31 +159,31 @@
     "description": "The default label used for the Note admonition (:::note)"
   },
   "theme.admonition.tip": {
-    "message": "تلميح",
+    "message": "نصيحة",
     "description": "The default label used for the Tip admonition (:::tip)"
   },
   "theme.admonition.warning": {
-    "message": "warning",
+    "message": "تحذير",
     "description": "The default label used for the Warning admonition (:::warning)"
   },
   "theme.blog.sidebar.navAriaLabel": {
-    "message": "أحدث مُشـاركات المدونة",
+    "message": "التنقل في أحدث مشاركات المدونة",
     "description": "The ARIA label for recent posts in the blog sidebar"
   },
   "theme.DocSidebarItem.expandCategoryAriaLabel": {
-    "message": "Expand sidebar category '{label}'",
+    "message": "توسيع فئة الشريط الجانبي '{label}'",
     "description": "The ARIA label to expand the sidebar category"
   },
   "theme.DocSidebarItem.collapseCategoryAriaLabel": {
-    "message": "Collapse sidebar category '{label}'",
+    "message": "طي فئة الشريط الجانبي '{label}'",
     "description": "The ARIA label to collapse the sidebar category"
   },
   "theme.IconExternalLink.ariaLabel": {
-    "message": "(opens in new tab)",
+    "message": "(يُفتح في علامة تبويب جديدة)",
     "description": "The ARIA label for the external link icon"
   },
   "theme.NavBar.navAriaLabel": {
-    "message": "Main",
+    "message": "الرئيسي",
     "description": "The ARIA label for the main navigation"
   },
   "theme.NotFound.p1": {
@@ -296,15 +191,15 @@
     "description": "The first paragraph of the 404 page"
   },
   "theme.NotFound.p2": {
-    "message": "يُـرجى الإتصال بمالك الموقع الذي ربطك بعنوان URL الأصلي وإخباره بأن الارتباط الخاص به مُعطل.",
+    "message": "يرجى التواصل مع مالك الموقع الذي أحالك إلى الرابط الأصلي وإعلامه بأن الرابط معطّل.",
     "description": "The 2nd paragraph of the 404 page"
   },
   "theme.navbar.mobileLanguageDropdown.label": {
-    "message": "اللُغـات",
+    "message": "اللغات",
     "description": "The label for the mobile language switcher dropdown"
   },
   "theme.TOCCollapsible.toggleButtonLabel": {
-    "message": "مُحتويات هذه الصفحة",
+    "message": "محتويات هذه الصفحة",
     "description": "The label used by the button on the collapsible TOC component"
   },
   "theme.blog.post.readMore": {
@@ -312,12 +207,8 @@
     "description": "The label used in blog post item excerpts to link to full blog posts"
   },
   "theme.blog.post.readMoreLabel": {
-    "message": "اقرأ المزيد {title}",
+    "message": "اقرأ المزيد عن {title}",
     "description": "The ARIA label for the link to full blog posts from excerpts"
-  },
-  "theme.blog.post.readingTime.plurals": {
-    "message": "{readingTime} دقائق قراءة|{readingTime} دقائق قراءة",
-    "description": "Pluralized label for \"{readingTime} min read\". Use as much plural forms (separated by \"|\") as your language support (see https://www.unicode.org/cldr/cldr-aux/charts/34/supplemental/language_plural_rules.html)"
   },
   "theme.CodeBlock.copy": {
     "message": "نسخ",
@@ -328,16 +219,20 @@
     "description": "The copied button label on code blocks"
   },
   "theme.CodeBlock.copyButtonAriaLabel": {
-    "message": "نسخ الرمز إلى الحافظة",
+    "message": "نسخ الكود إلى الحافظة",
     "description": "The ARIA label for copy code blocks button"
+  },
+  "theme.CodeBlock.wordWrapToggle": {
+    "message": "تبديل التفاف الكلمات",
+    "description": "The title attribute for toggle word wrapping button of code block lines"
+  },
+  "theme.blog.post.readingTime.plurals": {
+    "message": "أقل من دقيقة للقراءة|دقيقة واحدة للقراءة|دقيقتان للقراءة|{readingTime} دقائق للقراءة|{readingTime} دقيقة للقراءة|{readingTime} دقيقة للقراءة",
+    "description": "Pluralized label for \"{readingTime} min read\". Use as much plural forms (separated by \"|\") as your language support (see https://www.unicode.org/cldr/cldr-aux/charts/34/supplemental/language_plural_rules.html)"
   },
   "theme.docs.breadcrumbs.home": {
     "message": "الرئيسية",
     "description": "The ARIA label for the home page in the breadcrumbs"
-  },
-  "theme.CodeBlock.wordWrapToggle": {
-    "message": "تبديل التفاف النص",
-    "description": "The title attribute for toggle word wrapping button of code block lines"
   },
   "theme.docs.sidebar.collapseButtonTitle": {
     "message": "طي الشريط الجانبي",
@@ -348,11 +243,11 @@
     "description": "The title attribute for collapse button of doc sidebar"
   },
   "theme.docs.sidebar.navAriaLabel": {
-    "message": "Docs sidebar",
+    "message": "الشريط الجانبي للتوثيق",
     "description": "The ARIA label for the sidebar navigation"
   },
   "theme.docs.sidebar.closeSidebarButtonAriaLabel": {
-    "message": "Close navigation bar",
+    "message": "إغلاق شريط التنقل",
     "description": "The ARIA label for close button of mobile sidebar"
   },
   "theme.navbar.mobileSidebarSecondaryMenu.backButtonLabel": {
@@ -360,15 +255,15 @@
     "description": "The label of the back button to return to main menu, inside the mobile navbar sidebar secondary menu (notably used to display the docs sidebar)"
   },
   "theme.docs.sidebar.toggleSidebarButtonAriaLabel": {
-    "message": "Toggle navigation bar",
+    "message": "تبديل شريط التنقل",
     "description": "The ARIA label for hamburger menu button of mobile navigation"
   },
   "theme.navbar.mobileDropdown.collapseButton.expandAriaLabel": {
-    "message": "Expand the dropdown",
+    "message": "توسيع القائمة المنسدلة",
     "description": "The ARIA label of the button to expand the mobile dropdown navbar item"
   },
   "theme.navbar.mobileDropdown.collapseButton.collapseAriaLabel": {
-    "message": "Collapse the dropdown",
+    "message": "طي القائمة المنسدلة",
     "description": "The ARIA label of the button to collapse the mobile dropdown navbar item"
   },
   "theme.docs.sidebar.expandButtonTitle": {
@@ -380,7 +275,7 @@
     "description": "The ARIA label and title attribute for expand button of doc sidebar"
   },
   "theme.blog.post.plurals": {
-    "message": "مقالة واحدة|{count} مقالات",
+    "message": "لا توجد مقالات|مقالة واحدة|مقالتان|{count} مقالات|{count} مقالة|{count} مقالة",
     "description": "Pluralized label for \"{count} posts\". Use as much plural forms (separated by \"|\") as your language support (see https://www.unicode.org/cldr/cldr-aux/charts/34/supplemental/language_plural_rules.html)"
   },
   "theme.blog.tagTitle": {
@@ -392,39 +287,39 @@
     "description": "The title of the page for a blog author"
   },
   "theme.blog.authorsList.pageTitle": {
-    "message": "Authors",
+    "message": "المؤلفون",
     "description": "The title of the authors page"
   },
   "theme.blog.authorsList.viewAll": {
-    "message": "View All Authors",
+    "message": "عرض جميع المؤلفين",
     "description": "The label of the link targeting the blog authors page"
   },
   "theme.blog.author.noPosts": {
-    "message": "This author has not written any posts yet.",
+    "message": "لم يكتب هذا المؤلف أي مقالات بعد.",
     "description": "The text for authors with 0 blog post"
   },
   "theme.contentVisibility.unlistedBanner.title": {
-    "message": "Unlisted page",
+    "message": "صفحة غير مُدرجة",
     "description": "The unlisted content banner title"
   },
   "theme.contentVisibility.unlistedBanner.message": {
-    "message": "This page is unlisted. Search engines will not index it, and only users having a direct link can access it.",
+    "message": "هذه الصفحة غير مُدرجة. لن تقوم محركات البحث بفهرستها، ويمكن فقط للمستخدمين الذين لديهم رابط مباشر الوصول إليها.",
     "description": "The unlisted content banner message"
   },
   "theme.contentVisibility.draftBanner.title": {
-    "message": "Draft page",
+    "message": "صفحة مسودة",
     "description": "The draft content banner title"
   },
   "theme.contentVisibility.draftBanner.message": {
-    "message": "This page is a draft. It will only be visible in dev and be excluded from the production build.",
+    "message": "هذه الصفحة مسودة. ستكون مرئية فقط في وضع التطوير وسيتم استبعادها من بناء الإنتاج.",
     "description": "The draft content banner message"
   },
   "theme.ErrorPageContent.tryAgain": {
-    "message": "المُحاولة مجددًا",
+    "message": "حاول مرة أخرى",
     "description": "The label of the button to try again rendering when the React error boundary captures an error"
   },
   "theme.common.skipToMainContent": {
-    "message": "إنتقل إلى المحتوى الرئيسي",
+    "message": "انتقل إلى المحتوى الرئيسي",
     "description": "The skip to content label used for accessibility, allowing to rapidly navigate to main content with keyboard tab/enter navigation"
   },
   "theme.tags.tagsPageTitle": {

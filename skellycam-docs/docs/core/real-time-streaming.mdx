@@ -4,10 +4,12 @@ title: Real-Time Streaming
 description: How SkellyCam streams synchronized multi-camera frames over WebSocket with single-camera semantics.
 ---
 
-import CoreFeatureHeader from '@site/src/components/CoreFeatureHeader';
-import {getFeatureById} from '@site/src/data/core-features';
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '../../content.config';
 
-<CoreFeatureHeader feature={getFeatureById('real-time-streaming')} />
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'real-time-streaming')} repoUrl="https://github.com/freemocap/skellycam" />
 
 ## Single-camera semantics for multi-camera systems
 
@@ -25,7 +27,7 @@ SkellyCam uses a compact binary WebSocket protocol to stream frames:
 
 The same WebSocket connection also carries JSON messages for logs, state updates, framerate statistics, and control commands.
 
-For full protocol details, see the [WebSocket Protocol](../websocket-protocol.md) reference.
+For full protocol details, see the [WebSocket Protocol](../websocket-protocol) reference.
 
 ## Frontend rendering
 

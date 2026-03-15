@@ -4,10 +4,12 @@ title: Precise Timestamps
 description: High-resolution timestamps at every stage of the capture pipeline, stored in human-readable format.
 ---
 
-import CoreFeatureHeader from '@site/src/components/CoreFeatureHeader';
-import {getFeatureById} from '@site/src/data/core-features';
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '../../content.config';
 
-<CoreFeatureHeader feature={getFeatureById('precise-timestamps')} />
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'precise-timestamps')} repoUrl="https://github.com/freemocap/skellycam" />
 
 ## Why timestamps matter
 

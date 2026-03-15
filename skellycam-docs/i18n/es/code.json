@@ -1,109 +1,4 @@
 {
-  "banner.aiGenerated": {
-    "message": "{strong} — This page was drafted by an AI assistant and may contain inaccuracies. If you spot something wrong, please {issueLink} or use the {editLink} link below to submit a fix."
-  },
-  "banner.aiGenerated.editPage": {
-    "message": "Edit this page"
-  },
-  "banner.aiGenerated.label": {
-    "message": "AI-generated documentation"
-  },
-  "banner.aiGenerated.openIssue": {
-    "message": "open an issue"
-  },
-  "download.description": {
-    "message": "Download SkellyCam"
-  },
-  "download.iframe.title": {
-    "message": "SkellyCam Download"
-  },
-  "download.title": {
-    "message": "Download"
-  },
-  "features.multiProcess.description": {
-    "message": "Each camera runs in its own process with shared-memory ring buffers for zero-copy frame transfer. The CameraOrchestrator gates each camera's grab cycle based on relative frame counts, maintaining lock-step progression across the entire group."
-  },
-  "features.multiProcess.title": {
-    "message": "Multi-Process Capture"
-  },
-  "features.streaming.description": {
-    "message": "A compact binary WebSocket protocol streams JPEG-compressed multi-camera frames to the React/Electron frontend with built-in backpressure management and adaptive resolution scaling."
-  },
-  "features.streaming.title": {
-    "message": "Real-Time Streaming"
-  },
-  "features.sync.description": {
-    "message": "A frame-count-gated capture protocol ensures no camera ever gets more than one frame ahead of the others. The OpenCV grab/retrieve split minimizes inter-camera timing spread. All recorded videos have identical frame counts — no drift, no dropped frames."
-  },
-  "features.sync.title": {
-    "message": "Frame-Perfect Sync"
-  },
-  "feedback.leaveComment": {
-    "message": "💬 Leave a comment"
-  },
-  "feedback.no": {
-    "message": "👎 No"
-  },
-  "feedback.no.ariaLabel": {
-    "message": "No, this page was not helpful"
-  },
-  "feedback.question": {
-    "message": "Was this page helpful?"
-  },
-  "feedback.reportIssue": {
-    "message": "🐛 Report an issue"
-  },
-  "feedback.thankYou": {
-    "message": "Thanks for your feedback!"
-  },
-  "feedback.yes": {
-    "message": "👍 Yes"
-  },
-  "feedback.yes.ariaLabel": {
-    "message": "Yes, this page was helpful"
-  },
-  "guarantees.frameLocked": {
-    "message": "Playback is {strong} — all videos always display the same frame number"
-  },
-  "guarantees.frameLocked.emphasis": {
-    "message": "hard frame-locked"
-  },
-  "guarantees.oneImagePerCamera": {
-    "message": "Each payload contains {strong} per frame event"
-  },
-  "guarantees.oneImagePerCamera.emphasis": {
-    "message": "exactly one image per camera"
-  },
-  "guarantees.sameFrameCount": {
-    "message": "All recorded videos have {strong}"
-  },
-  "guarantees.sameFrameCount.emphasis": {
-    "message": "the same frame count"
-  },
-  "guarantees.title": {
-    "message": "The guarantees"
-  },
-  "hero.cta.download": {
-    "message": "Download"
-  },
-  "hero.cta.getStarted": {
-    "message": "Get Started"
-  },
-  "hero.description": {
-    "message": "The camera backend for {freemocapLink}. Cheap webcams, perfectly synchronized video."
-  },
-  "hero.logo.alt": {
-    "message": "SkellyCam"
-  },
-  "hero.tagline": {
-    "message": "Frame-perfect multi-camera synchronization for USB webcams"
-  },
-  "home.description": {
-    "message": "Frame-perfect multi-camera synchronization for USB webcams"
-  },
-  "home.title": {
-    "message": "Home"
-  },
   "theme.ErrorPageContent.title": {
     "message": "Esta página ha fallado.",
     "description": "The title of the fallback page when the page crashed"
@@ -121,7 +16,7 @@
     "description": "The page & hero description of the blog archive page"
   },
   "theme.blog.paginator.navAriaLabel": {
-    "message": "Navegación por la página de la lista de blogs ",
+    "message": "Navegación por la página de la lista de blogs",
     "description": "The ARIA label for the blog pagination"
   },
   "theme.blog.paginator.newerEntries": {
@@ -145,11 +40,11 @@
     "description": "The blog post button label to navigate to the older/next post"
   },
   "theme.tags.tagsPageLink": {
-    "message": "Ver Todas las Etiquetas",
+    "message": "Ver todas las etiquetas",
     "description": "The label of the link targeting the tag list page"
   },
   "theme.colorToggle.ariaLabel.mode.system": {
-    "message": "system mode",
+    "message": "modo del sistema",
     "description": "The name for the system color mode"
   },
   "theme.colorToggle.ariaLabel.mode.light": {
@@ -193,7 +88,7 @@
     "description": "The title of the page for a docs tag"
   },
   "theme.docs.versionBadge.label": {
-    "message": "Version: {versionLabel}"
+    "message": "Versión: {versionLabel}"
   },
   "theme.docs.versions.unreleasedVersionLabel": {
     "message": "Esta es la documentación sin publicar para {siteTitle}, versión {versionLabel}.",
@@ -236,7 +131,7 @@
     "description": "The label for the navbar versions dropdown on mobile view"
   },
   "theme.NotFound.title": {
-    "message": "Página No Encontrada",
+    "message": "Página no encontrada",
     "description": "The title of the 404 page"
   },
   "theme.tags.tagsListLabel": {
@@ -256,7 +151,7 @@
     "description": "The default label used for the Danger admonition (:::danger)"
   },
   "theme.admonition.info": {
-    "message": "info",
+    "message": "información",
     "description": "The default label used for the Info admonition (:::info)"
   },
   "theme.admonition.note": {
@@ -264,7 +159,7 @@
     "description": "The default label used for the Note admonition (:::note)"
   },
   "theme.admonition.tip": {
-    "message": "tip",
+    "message": "consejo",
     "description": "The default label used for the Tip admonition (:::tip)"
   },
   "theme.admonition.warning": {
@@ -284,44 +179,40 @@
     "description": "The ARIA label to collapse the sidebar category"
   },
   "theme.IconExternalLink.ariaLabel": {
-    "message": "(opens in new tab)",
+    "message": "(se abre en una nueva pestaña)",
     "description": "The ARIA label for the external link icon"
   },
   "theme.NavBar.navAriaLabel": {
     "message": "Principal",
     "description": "The ARIA label for the main navigation"
   },
-  "theme.navbar.mobileLanguageDropdown.label": {
-    "message": "Idiomas",
-    "description": "The label for the mobile language switcher dropdown"
-  },
   "theme.NotFound.p1": {
     "message": "No pudimos encontrar lo que buscaba.",
     "description": "The first paragraph of the 404 page"
   },
   "theme.NotFound.p2": {
-    "message": "Comuníquese con el dueño del sitio que le proporcionó la URL original y hágale saber que su vínculo está roto.",
+    "message": "Comuníquese con el dueño del sitio que le proporcionó la URL original y hágale saber que su enlace está roto.",
     "description": "The 2nd paragraph of the 404 page"
+  },
+  "theme.navbar.mobileLanguageDropdown.label": {
+    "message": "Idiomas",
+    "description": "The label for the mobile language switcher dropdown"
   },
   "theme.TOCCollapsible.toggleButtonLabel": {
     "message": "En esta página",
     "description": "The label used by the button on the collapsible TOC component"
   },
-  "theme.blog.post.readingTime.plurals": {
-    "message": "Lectura de un minuto|{readingTime} min de lectura",
-    "description": "Pluralized label for \"{readingTime} min read\". Use as much plural forms (separated by \"|\") as your language support (see https://www.unicode.org/cldr/cldr-aux/charts/34/supplemental/language_plural_rules.html)"
-  },
   "theme.blog.post.readMore": {
-    "message": "Leer Más",
+    "message": "Leer más",
     "description": "The label used in blog post item excerpts to link to full blog posts"
   },
   "theme.blog.post.readMoreLabel": {
     "message": "Leer más acerca de {title}",
     "description": "The ARIA label for the link to full blog posts from excerpts"
   },
-  "theme.docs.breadcrumbs.home": {
-    "message": "Página de Inicio",
-    "description": "The ARIA label for the home page in the breadcrumbs"
+  "theme.blog.post.readingTime.plurals": {
+    "message": "Lectura de un minuto|{readingTime} min de lectura",
+    "description": "Pluralized label for \"{readingTime} min read\". Use as much plural forms (separated by \"|\") as your language support (see https://www.unicode.org/cldr/cldr-aux/charts/34/supplemental/language_plural_rules.html)"
   },
   "theme.CodeBlock.copy": {
     "message": "Copiar",
@@ -339,6 +230,10 @@
     "message": "Alternar ajuste de palabras",
     "description": "The title attribute for toggle word wrapping button of code block lines"
   },
+  "theme.docs.breadcrumbs.home": {
+    "message": "Página de inicio",
+    "description": "The ARIA label for the home page in the breadcrumbs"
+  },
   "theme.docs.sidebar.collapseButtonTitle": {
     "message": "Colapsar barra lateral",
     "description": "The title attribute for collapse button of doc sidebar"
@@ -348,11 +243,11 @@
     "description": "The title attribute for collapse button of doc sidebar"
   },
   "theme.docs.sidebar.navAriaLabel": {
-    "message": "Barra lateral de Documentos",
+    "message": "Barra lateral de documentos",
     "description": "The ARIA label for the sidebar navigation"
   },
   "theme.docs.sidebar.closeSidebarButtonAriaLabel": {
-    "message": "Cerrar barra de lateral",
+    "message": "Cerrar barra lateral",
     "description": "The ARIA label for close button of mobile sidebar"
   },
   "theme.navbar.mobileSidebarSecondaryMenu.backButtonLabel": {
@@ -364,11 +259,11 @@
     "description": "The ARIA label for hamburger menu button of mobile navigation"
   },
   "theme.navbar.mobileDropdown.collapseButton.expandAriaLabel": {
-    "message": "Expand the dropdown",
+    "message": "Expandir el menú desplegable",
     "description": "The ARIA label of the button to expand the mobile dropdown navbar item"
   },
   "theme.navbar.mobileDropdown.collapseButton.collapseAriaLabel": {
-    "message": "Collapse the dropdown",
+    "message": "Colapsar el menú desplegable",
     "description": "The ARIA label of the button to collapse the mobile dropdown navbar item"
   },
   "theme.docs.sidebar.expandButtonTitle": {
@@ -392,31 +287,31 @@
     "description": "The title of the page for a blog author"
   },
   "theme.blog.authorsList.pageTitle": {
-    "message": "Authors",
+    "message": "Autores",
     "description": "The title of the authors page"
   },
   "theme.blog.authorsList.viewAll": {
-    "message": "View All Authors",
+    "message": "Ver todos los autores",
     "description": "The label of the link targeting the blog authors page"
   },
   "theme.blog.author.noPosts": {
-    "message": "This author has not written any posts yet.",
+    "message": "Este autor aún no ha escrito ninguna publicación.",
     "description": "The text for authors with 0 blog post"
   },
   "theme.contentVisibility.unlistedBanner.title": {
-    "message": "Página sin clasificar",
+    "message": "Página no listada",
     "description": "The unlisted content banner title"
   },
   "theme.contentVisibility.unlistedBanner.message": {
-    "message": "Esta página está sin clasificar. Los motores de búsqueda no la indexaran, y solo los usuarios con el enlace directo podrán acceder a esta.",
+    "message": "Esta página no está listada. Los motores de búsqueda no la indexarán, y solo los usuarios con el enlace directo podrán acceder a ella.",
     "description": "The unlisted content banner message"
   },
   "theme.contentVisibility.draftBanner.title": {
-    "message": "Draft page",
+    "message": "Página en borrador",
     "description": "The draft content banner title"
   },
   "theme.contentVisibility.draftBanner.message": {
-    "message": "This page is a draft. It will only be visible in dev and be excluded from the production build.",
+    "message": "Esta página es un borrador. Solo será visible en desarrollo y se excluirá de la compilación de producción.",
     "description": "The draft content banner message"
   },
   "theme.ErrorPageContent.tryAgain": {
