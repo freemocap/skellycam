@@ -1,9 +1,0 @@
-release:
-  label: Release
-  description: Release announcements
-development:
-  label: Development
-  description: Development updates
-cameras:
-  label: Cameras
-  description: Camera-related updates
