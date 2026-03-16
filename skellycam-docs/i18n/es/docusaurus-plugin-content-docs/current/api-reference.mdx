@@ -1,0 +1,232 @@
+---
+sidebar_position: 4
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# Referencia de API
+
+El servidor SkellyCam expone una API REST para la gestion de camaras y un endpoint WebSocket para transmision en tiempo real. La documentacion interactiva de Swagger esta disponible en `http://localhost:53117/docs` cuando el servidor esta en ejecucion.
+
+## URL Base
+
+Todos los endpoints se sirven desde `http://localhost:53117`. Los endpoints especificos de camara tienen el prefijo `/skellycam`.
+
+## Endpoints de la Aplicacion
+
+### `GET /health`
+
+Endpoint de verificacion de salud.
+
+**Respuesta:** `"Hello"` (200 OK)
+
+### `GET /shutdown`
+
+Inicia el apagado ordenado del servidor. Establece la bandera global de terminacion, envia `SIGTERM` al proceso del servidor y retorna inmediatamente.
+
+**Respuesta:**
+```json
+{
+  "status": "shutdown_initiated",
+  "message": "Server shutting down. Goodbye!"
+}
+```
+
+## Endpoints de Camara
+
+Todos los endpoints de camara tienen el prefijo `/skellycam/camera`.
+
+### `POST /skellycam/camera/detect`
+
+Detecta los dispositivos de camara disponibles en el sistema.
+
+**Parametros de Consulta:**
+
+| Parameter | Type | Default | Descripcion |
+|-----------|------|---------|-------------|
+| `filter_virtual` | `bool` | `true` | Excluir camaras virtuales de los resultados |
+| `backend_id` | `int \| null` | `null` | ID del backend de OpenCV a usar para la deteccion |
+
+**Respuesta:**
+```json
+{
+  "cameras": [
+    {
+      "index": 0,
+      "name": "HD Webcam",
+      "vendor_id": 1234,
+      "product_id": 5678,
+      "path": "/dev/video0",
+      "backend_id": 200,
+      "backend_name": "V4L2"
+    }
+  ]
+}
+```
+
+### `GET /skellycam/camera/microphone/detect`
+
+Detecta los dispositivos de microfono disponibles en el sistema. Devuelve un mapeo del indice del dispositivo al nombre del dispositivo.
+
+**Respuesta:**
+```json
+{
+  "microphones": {
+    "0": "Built-in Microphone",
+    "1": "USB Audio Device"
+  }
+}
+```
+
+### `POST /skellycam/camera/group/apply`
+
+Crea un nuevo grupo de camaras o actualiza uno existente. Si los IDs de camara proporcionados coinciden con un grupo existente, se actualizan los ajustes del grupo; de lo contrario, se crea y se inicia un nuevo grupo.
+
+**Cuerpo de la Solicitud:**
+```json
+{
+  "camera_configs": {
+    "000": {
+      "camera_id": "000",
+      "camera_index": 0,
+      "camera_name": "Camera-000",
+      "use_this_camera": true,
+      "resolution": { "width": 1280, "height": 720 },
+      "framerate": -1,
+      "color_channels": 3,
+      "pixel_format": "RGB",
+      "exposure_mode": "MANUAL",
+      "exposure": -7,
+      "rotation": -1,
+      "capture_fourcc": "MJPG",
+      "writer_fourcc": "X264"
+    }
+  }
+}
+```
+
+**Respuesta:**
+```json
+{
+  "group_id": "group-0",
+  "camera_configs": {
+    "0": { }
+  }
+}
+```
+
+### `POST /skellycam/camera/group/all/record/start`
+
+Inicia la grabacion para todos los grupos de camaras activos.
+
+**Cuerpo de la Solicitud:**
+```json
+{
+  "recording_name": "2024-09-15T14_30_00",
+  "recording_directory": "~/skellycam_data/recordings",
+  "mic_device_index": -1
+}
+```
+
+Todos los campos tienen valores predeterminados. `mic_device_index: -1` desactiva la grabacion de audio.
+
+**Respuesta:** `true` (200 OK)
+
+### `GET /skellycam/camera/group/all/record/stop`
+
+Detiene la grabacion para todos los grupos de camaras activos. Activa el procesamiento de marcas de tiempo y la generacion de estadisticas.
+
+**Respuesta:** `true` (200 OK)
+
+### `DELETE /skellycam/camera/group/close/all`
+
+Cierra todos los grupos de camaras, liberando todos los recursos de camara y deteniendo todos los procesos worker.
+
+**Respuesta:** `true` (200 OK)
+
+### `GET /skellycam/camera/group/all/pause_unpause`
+
+Alterna pausa/reanudacion en todos los grupos de camaras. Cuando esta en pausa, las camaras dejan de capturar fotogramas pero permanecen abiertas.
+
+**Respuesta:** `true` (200 OK)
+
+## Endpoint WebSocket
+
+### `WS /skellycam/websocket/connect`
+
+Conexion WebSocket persistente para transmision de fotogramas en tiempo real, reenvio de logs y actualizaciones del estado de la aplicacion. Consulta el [Protocolo WebSocket](websocket-protocol) para la especificacion completa del protocolo.
+
+## Endpoints de Reproduccion
+
+Todos los endpoints de reproduccion tienen el prefijo `/skellycam/playback`. Sirven archivos de video pregrabados por HTTP para reproduccion nativa del navegador con `<video>` con soporte completo de busqueda mediante solicitudes de rango HTTP.
+
+### `GET /skellycam/playback/recordings`
+
+Lista los directorios de grabacion disponibles en la carpeta de grabaciones predeterminada (`~/skellycam_data/recordings/`).
+
+**Respuesta:**
+```json
+[
+  {
+    "name": "2024-09-15T14_30_00",
+    "path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
+    "video_count": 3,
+    "total_size_bytes": 157286400,
+    "created_timestamp": "2024-09-15T14:30:00",
+    "total_frames": 9000,
+    "duration_seconds": 300.0,
+    "fps": 30.0
+  }
+]
+```
+
+### `POST /skellycam/playback/load`
+
+Carga una carpeta de grabacion para reproduccion. El servidor valida la ruta, descubre archivos de video (verificando tanto la carpeta directamente como una subcarpeta `synchronized_videos/`), y los pone disponibles para transmision.
+
+**Cuerpo de la Solicitud:**
+```json
+{
+  "recording_path": "~/skellycam_data/recordings/2024-09-15T14_30_00"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "recording_path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
+  "videos": [
+    {
+      "video_id": "recording.camera0",
+      "filename": "recording.camera0.mp4",
+      "size_bytes": 52428800,
+      "stream_url": "/skellycam/playback/video/recording.camera0"
+    }
+  ]
+}
+```
+
+### `GET /skellycam/playback/video/{video_id}`
+
+Transmite un archivo de video cargado. La respuesta es un `FileResponse` estandar con el encabezado `Content-Type` correcto, y Starlette maneja automaticamente las solicitudes de rango HTTP — esto habilita la busqueda nativa del navegador, el almacenamiento en buffer y la decodificacion acelerada por hardware mediante elementos `<video>`.
+
+### `GET /skellycam/playback/timestamps/{video_id}`
+
+Devuelve metadatos sobre el CSV de marcas de tiempo para un video dado, si esta disponible. Busca en la carpeta `timestamps/camera_timestamps/` de la grabacion.
+
+## Manejo de Errores
+
+Todos los endpoints devuelven codigos de error HTTP estandar:
+
+- **200** — Exito
+- **400** — Solicitud incorrecta (parametros invalidos)
+- **500** — Error interno del servidor (con detalle del error en el cuerpo de la respuesta)
+
+Los errores se devuelven como:
+```json
+{
+  "detail": "Error description string"
+}
+```

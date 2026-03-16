@@ -1,0 +1,49 @@
+---
+sidebar_position: 1
+title: Documentacion de SkellyCam
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+SkellyCam convierte camaras web USB economicas en un sistema multicamara sincronizado con precision de fotograma. Es el backend de camaras para el proyecto de captura de movimiento [FreeMoCap](https://github.com/freemocap/freemocap).
+
+## Que Hace Diferente a SkellyCam
+
+La mayoria de las configuraciones multicamara sufren de deriva entre camaras: las camaras funcionan con relojes independientes, por lo que el fotograma N de la camara A no corresponde al fotograma N de la camara B. SkellyCam resuelve esto con un protocolo de captura controlado por conteo de fotogramas: el ciclo de captura/recuperacion de cada camara se coordina para que ninguna camara se adelante mas de un fotograma respecto a las demas, asegurando que cada evento "multi-fotograma" contenga una imagen de cada camara capturada aproximadamente en el mismo instante.
+
+**Las garantias:**
+
+- Todos los videos grabados tienen **exactamente el mismo numero de fotogramas**
+- Cada carga multi-fotograma entregada por WebSocket contiene **exactamente una imagen por camara** para ese evento de fotograma
+- La reproduccion de videos grabados esta **bloqueada por fotograma de forma rigida** — todos los videos siempre muestran el mismo numero de fotograma, sin deriva, sin tolerancia
+
+## Documentacion
+
+| Pagina | Descripcion |
+|--------|-------------|
+| [Primeros Pasos](getting-started) | Instalacion, primera ejecucion y uso basico |
+| [Arquitectura](architecture) | Protocolo de sincronizacion, modelo de procesos, flujo de datos |
+| [Referencia de API](api-reference) | Documentacion de endpoints HTTP y WebSocket |
+| [Protocolo WebSocket](websocket-protocol) | Formato binario de fotogramas, mensajes JSON, contrapresion |
+| [Configuracion](configuration) | Ajustes del servidor, configuracion de camaras, directorios de datos, telemetria |
+| [Desarrollo](development) | Pruebas, linting, CI y guias de contribucion |
+| [Contribuir](contributing) | Como reportar errores y enviar pull requests |
+| [Traducir](translating) | Ayuda a traducir la interfaz a tu idioma |
+
+## Inicio Rapido
+
+```bash
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv && source .venv/bin/activate
+uv sync
+
+python -m skellycam          # Iniciar servidor en localhost:53117
+# o simplemente: skellycam
+
+# En otra terminal:
+cd skellycam-ui
+npm install && npm run dev   # Iniciar interfaz
+```

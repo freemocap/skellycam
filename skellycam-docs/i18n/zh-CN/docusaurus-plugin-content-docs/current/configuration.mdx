@@ -1,0 +1,138 @@
+---
+sidebar_position: 6
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# 配置
+
+## 服务器设置
+
+服务器网络配置定义在 `skellycam/api/server_constants.py` 中：
+
+```python
+PROTOCOL = "http"
+HOSTNAME = "localhost"
+PORT = 53117
+APP_URL = f"{PROTOCOL}://{HOSTNAME}:{PORT}"
+```
+
+要更改服务器端口，在启动服务器前编辑 `PORT`。前端 UI 必须配置为连接到相同的主机和端口。
+
+## 摄像头配置
+
+组中的每个摄像头都有自己的 `CameraConfig`，包含以下设置：
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `camera_id` | `str` | `"000"` | 摄像头的唯一标识符 |
+| `resolution` | `object` | `{"width": 1280, "height": 720}` | 捕获分辨率（像素） |
+| `framerate` | `float` | `-1` | 目标捕获帧率（`-1` 使用摄像头默认值） |
+| `exposure` | `int` | `-7` | 摄像头曝光值（取决于硬件） |
+| `exposure_mode` | `str` | `"MANUAL"` | 曝光模式：`MANUAL`、`AUTO` 或 `RECOMMENDED` |
+| `rotation` | `int` | `-1` | 图像旋转（见下表） |
+| `capture_fourcc` | `str` | `"MJPG"` | 捕获编解码器的 FOURCC 代码 |
+| `writer_fourcc` | `str` | `"X264"` | 录制编解码器的 FOURCC 代码 |
+
+摄像头配置通过 `POST /skellycam/camera/group/apply` 端点或 UI 的摄像头配置面板应用。
+
+### 分辨率
+
+分辨率以包含 `width` 和 `height` 字段的嵌套对象指定：
+
+```json
+{
+  "resolution": { "width": 1280, "height": 720 }
+}
+```
+
+如果摄像头不支持请求的分辨率，实际分辨率可能与请求的不匹配。OpenCV 会静默回退到最接近的支持分辨率。响应中会报告实际分辨率。
+
+### 帧率
+
+将 `framerate` 设置为 `-1`（默认值）以使用摄像头的原生帧率，并以硬件允许的最快速度运行帧循环。设置正值（例如 `30`）以目标特定的捕获速率。
+
+### 曝光
+
+曝光值取决于硬件。常见的 USB 摄像头使用负整数值（例如 -5、-7、-10），其中越负表示曝光时间越短。有效范围取决于摄像头型号。
+
+### 旋转
+
+旋转在帧捕获后通过软件应用。这些值对应 OpenCV 的 `cv2.rotate()` 代码：
+
+| Value | Rotation |
+|-------|----------|
+| `-1` | 不旋转（默认） |
+| `0` | 顺时针 90 度 |
+| `1` | 180 度 |
+| `2` | 逆时针 90 度 |
+
+## 数据目录
+
+所有 SkellyCam 数据默认存储在 `~/skellycam_data/` 下。此基础目录定义在 `skellycam/system/default_paths.py` 中。
+
+### 目录结构
+
+```
+~/skellycam_data/
+├── recordings/
+│   └── 2024-09-15T14_30_00/          # 每个录制会话一个文件夹
+│       ├── 2024-09-15T14_30_00_info.json   # 录制元数据
+│       └── synchronized_videos/
+│           ├── *.camera0.mp4               # 每个摄像头一个视频文件
+│           ├── *.camera1.mp4
+│           └── timestamps/
+│               ├── *_timestamps.csv        # 多帧时间戳
+│               ├── *_stats.txt             # 可读统计信息
+│               ├── *_stats.json            # 机器可读统计信息
+│               └── camera_timestamps/
+│                   ├── *.camera0.timestamps.csv
+│                   └── *.camera1.timestamps.csv
+├── logs_info_and_settings/
+│   └── logs/
+│       └── log_*.log                       # 带时间戳的日志文件
+├── telemetry_config.json                   # 遥测启用/禁用
+└── telemetry_uid                           # 用于遥测的匿名用户 ID
+```
+
+### 录制元数据
+
+`_info.json` 文件包含录制配置，包括摄像头设置、录制名称、UUID 和开始时间戳。
+
+### 时间戳 CSV
+
+每个摄像头的时间戳文件包含每帧一行，带有每个生命周期阶段的高分辨率 `perf_counter_ns` 时间戳。多帧时间戳文件包含摄像头间同步数据。
+
+## 日志
+
+SkellyCam 使用 [skellylogs](https://github.com/freemocap/skellylogs) 进行日志记录，提供自定义日志级别和 WebSocket 日志转发。日志级别在 `skellycam/__init__.py` 中设置：
+
+```python
+LOG_LEVEL = LogLevels.TRACE  # 更改为 LogLevels.INFO 以减少详细输出
+```
+
+`TRACE` 级别及以上的日志被转发到已连接的 WebSocket 客户端，在 UI 的日志终端中显示。
+
+有关日志级别、处理器和配置选项的详细信息，请参见 [skellylogs 仓库](https://github.com/freemocap/skellylogs)。
+
+## 遥测
+
+SkellyCam 收集匿名使用遥测数据，帮助开发团队了解软件的使用方式。遥测由 [skellypings](https://github.com/freemocap/skellypings) 包管理。
+
+### 收集的内容
+
+启动时发送一个 `app_opened` 事件，包含匿名系统规格：操作系统名称和版本、CPU 架构、CPU 数量（物理和逻辑）、总 RAM 和 Python 版本。不收集摄像头数据、录制内容或个人身份信息。
+
+### 退出遥测
+
+遥测默认启用。要禁用它，编辑 `~/skellycam_data/telemetry_config.json`：
+
+```json
+{
+  "telemetry_enabled": false
+}
+```
+
+您也可以从 UI 的设置页面切换遥测。该设置在下次服务器启动时生效。

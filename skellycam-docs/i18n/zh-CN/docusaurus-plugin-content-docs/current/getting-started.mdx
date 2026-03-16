@@ -1,0 +1,103 @@
+---
+sidebar_position: 2
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# 快速入门
+
+## 前置要求
+
+- **Python 3.11+**（推荐 3.12）— [python.org/downloads](https://www.python.org/downloads/)
+- **uv** — 快速 Python 包管理器：[astral.sh/uv](https://github.com/astral-sh/uv)
+- **Node.js 18+** — React/Electron UI 所需：[nodejs.org](https://nodejs.org/)
+- **USB 摄像头或内置网络摄像头**
+
+## 安装 Python 服务器
+
+```bash
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+uv sync
+```
+
+安装开发依赖（pytest、ruff 等）：
+
+```bash
+uv sync --group dev
+```
+
+### Linux 特定依赖
+
+在 Linux 上录制音频需要额外的系统包：
+
+```bash
+sudo apt update
+sudo apt install clang portaudio19-dev
+```
+
+## 安装前端 UI
+
+```bash
+cd skellycam-ui
+npm install
+```
+
+## 运行 SkellyCam
+
+### 第 1 步：启动 Python 服务器
+
+```bash
+python -m skellycam
+```
+
+使用 `uv sync` 安装后，您也可以直接使用 `skellycam` 命令：
+
+```bash
+skellycam
+```
+
+服务器在 `http://localhost:53117` 上启动。您可以在浏览器中访问 `http://localhost:53117/health` 来验证服务器是否正在运行——您应该看到 `"Hello"`。
+
+交互式 Swagger API 文档位于 `http://localhost:53117/docs`。
+
+### 第 2 步：启动 UI（开发模式）
+
+在另一个终端中：
+
+```bash
+cd skellycam-ui
+npm run dev
+```
+
+这会启动 Vite 开发服务器。如果在 Electron 中运行，它会启动 Electron 窗口；否则，请在终端中打开显示的 URL。
+
+## 首次会话工作流
+
+1. **检测摄像头** — 通过 UI 或 `POST /skellycam/camera/detect` 调用扫描可用的 USB 摄像头。
+2. **创建摄像头组** — 通过 UI 或 `POST /skellycam/camera/group/apply` 选择摄像头并配置分辨率/帧率/曝光。
+3. **实时预览** — WebSocket 连接将帧实时传输到 UI。
+4. **录制** — 点击录制或 `POST /skellycam/camera/group/all/record/start` 开始录制。可选择麦克风与视频同时录制音频。使用停止按钮或 `GET /skellycam/camera/group/all/record/stop` 停止录制。
+5. **回顾** — 录制内容保存在 `~/skellycam_data/recordings/` 下，包含同步的视频文件和时间戳 CSV。使用回放页面查看录制内容，支持帧锁定的多视频回放——所有视频始终显示相同的帧号。
+
+## 验证安装
+
+运行测试套件以确认一切正常连接：
+
+```bash
+uv run pytest skellycam/tests/ -v
+```
+
+所有测试应该在不需要物理摄像头的情况下通过——测试套件使用模拟对象和轻量级 FastAPI 测试客户端。
+
+## 故障排除
+
+**端口 53117 已被占用** — SkellyCam 在启动时会自动终止端口 53117 上的现有进程。如果失败，请手动停止冲突的进程或在 `skellycam/api/server_constants.py` 中更改端口。
+
+**未检测到摄像头** — 检查您的 USB 摄像头是否已插入并被操作系统识别。在 Linux 上，确保您的用户有权访问 `/dev/video*` 设备（您可能需要将用户添加到 `video` 组：`sudo usermod -aG video $USER`）。
+
+**Linux 上音频不工作** — 确保您已安装系统包：`sudo apt install clang portaudio19-dev`。

@@ -1,0 +1,138 @@
+---
+sidebar_position: 6
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# Configuracion
+
+## Ajustes del Servidor
+
+La configuracion de red del servidor se define en `skellycam/api/server_constants.py`:
+
+```python
+PROTOCOL = "http"
+HOSTNAME = "localhost"
+PORT = 53117
+APP_URL = f"{PROTOCOL}://{HOSTNAME}:{PORT}"
+```
+
+Para cambiar el puerto del servidor, edita `PORT` antes de iniciar el servidor. La interfaz frontend debe configurarse para conectar al mismo host y puerto.
+
+## Configuracion de Camaras
+
+Cada camara en un grupo tiene su propio `CameraConfig` con los siguientes ajustes:
+
+| Setting | Type | Default | Descripcion |
+|---------|------|---------|-------------|
+| `camera_id` | `str` | `"000"` | Identificador unico para la camara |
+| `resolution` | `object` | `{"width": 1280, "height": 720}` | Resolucion de captura en pixeles |
+| `framerate` | `float` | `-1` | Velocidad de fotogramas objetivo (`-1` usa el valor predeterminado de la camara) |
+| `exposure` | `int` | `-7` | Valor de exposicion de la camara (depende del hardware) |
+| `exposure_mode` | `str` | `"MANUAL"` | Modo de exposicion: `MANUAL`, `AUTO` o `RECOMMENDED` |
+| `rotation` | `int` | `-1` | Rotacion de imagen (ver tabla abajo) |
+| `capture_fourcc` | `str` | `"MJPG"` | Codigo FOURCC para el codec de captura |
+| `writer_fourcc` | `str` | `"X264"` | Codigo FOURCC para el codec de grabacion |
+
+La configuracion de camara se aplica mediante el endpoint `POST /skellycam/camera/group/apply` o a traves del panel de configuracion de camaras en la interfaz.
+
+### Resolucion
+
+La resolucion se especifica como un objeto anidado con campos `width` y `height`:
+
+```json
+{
+  "resolution": { "width": 1280, "height": 720 }
+}
+```
+
+La resolucion solicitada puede no coincidir con la resolucion real si la camara no la soporta. OpenCV retrocedera silenciosamente a la resolucion soportada mas cercana. La resolucion real se reporta en la respuesta.
+
+### Velocidad de Fotogramas
+
+Establece `framerate` en `-1` (valor predeterminado) para usar la velocidad de fotogramas nativa de la camara y ejecutar el bucle de captura tan rapido como el hardware lo permita. Establece un valor positivo (por ejemplo, `30`) para apuntar a una tasa de captura especifica.
+
+### Exposicion
+
+Los valores de exposicion dependen del hardware. Las camaras web USB comunes usan valores enteros negativos (por ejemplo, -5, -7, -10) donde mas negativo significa menor tiempo de exposicion. El rango valido depende del modelo de camara.
+
+### Rotacion
+
+La rotacion se aplica por software despues de la captura del fotograma. Los valores corresponden a los codigos `cv2.rotate()` de OpenCV:
+
+| Value | Rotacion |
+|-------|----------|
+| `-1` | Sin rotacion (predeterminado) |
+| `0` | 90 grados en sentido horario |
+| `1` | 180 grados |
+| `2` | 90 grados en sentido antihorario |
+
+## Directorios de Datos
+
+Todos los datos de SkellyCam se almacenan en `~/skellycam_data/` por defecto. Este directorio base se define en `skellycam/system/default_paths.py`.
+
+### Estructura de Directorios
+
+```
+~/skellycam_data/
+├── recordings/
+│   └── 2024-09-15T14_30_00/          # Una carpeta por sesion de grabacion
+│       ├── 2024-09-15T14_30_00_info.json   # Metadatos de la grabacion
+│       └── synchronized_videos/
+│           ├── *.camera0.mp4               # Archivo de video por camara
+│           ├── *.camera1.mp4
+│           └── timestamps/
+│               ├── *_timestamps.csv        # Marcas de tiempo multi-fotograma
+│               ├── *_stats.txt             # Estadisticas legibles por humanos
+│               ├── *_stats.json            # Estadisticas legibles por maquina
+│               └── camera_timestamps/
+│                   ├── *.camera0.timestamps.csv
+│                   └── *.camera1.timestamps.csv
+├── logs_info_and_settings/
+│   └── logs/
+│       └── log_*.log                       # Archivos de log con marca de tiempo
+├── telemetry_config.json                   # Opcion de telemetria activar/desactivar
+└── telemetry_uid                           # ID de usuario anonimo para telemetria
+```
+
+### Metadatos de Grabacion
+
+El archivo `_info.json` contiene la configuracion de la grabacion incluyendo ajustes de camara, nombre de grabacion, UUID y marca de tiempo de inicio.
+
+### CSVs de Marcas de Tiempo
+
+Los archivos de marcas de tiempo por camara contienen una fila por fotograma con marcas de tiempo `perf_counter_ns` de alta resolucion en cada etapa del ciclo de vida. El archivo de marcas de tiempo multi-fotograma contiene datos de sincronizacion entre camaras.
+
+## Registro de Logs
+
+SkellyCam usa [skellylogs](https://github.com/freemocap/skellylogs) para el registro de logs, que proporciona niveles de log personalizados y reenvio de logs por WebSocket. El nivel de log se establece en `skellycam/__init__.py`:
+
+```python
+LOG_LEVEL = LogLevels.TRACE  # Change to LogLevels.INFO for less verbose output
+```
+
+Los logs de nivel `TRACE` y superiores se reenvian a los clientes WebSocket conectados para su visualizacion en el terminal de logs de la interfaz.
+
+Para detalles sobre niveles de log, manejadores y opciones de configuracion, consulta el [repositorio de skellylogs](https://github.com/freemocap/skellylogs).
+
+## Telemetria
+
+SkellyCam recopila telemetria de uso anonima para ayudar al equipo de desarrollo a comprender como se utiliza el software. La telemetria es gestionada por el paquete [skellypings](https://github.com/freemocap/skellypings).
+
+### Que Se Recopila
+
+Un evento `app_opened` se envia al inicio conteniendo especificaciones anonimas del sistema: nombre y version del SO, arquitectura de CPU, conteo de CPUs (fisicos y logicos), RAM total y version de Python. No se recopilan datos de camaras, grabaciones ni informacion de identificacion personal.
+
+### Desactivar la Telemetria
+
+La telemetria esta habilitada por defecto. Para desactivarla, edita `~/skellycam_data/telemetry_config.json`:
+
+```json
+{
+  "telemetry_enabled": false
+}
+```
+
+Tambien puedes alternar la telemetria desde la pagina de Configuracion en la interfaz. El cambio toma efecto en el siguiente inicio del servidor.

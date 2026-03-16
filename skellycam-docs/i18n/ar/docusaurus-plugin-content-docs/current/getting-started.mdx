@@ -1,0 +1,103 @@
+---
+sidebar_position: 2
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# البدء
+
+## المتطلبات الأساسية
+
+- **Python 3.11+** (يُنصح بـ 3.12) — [python.org/downloads](https://www.python.org/downloads/)
+- **uv** — مدير حزم Python سريع: [astral.sh/uv](https://github.com/astral-sh/uv)
+- **Node.js 18+** — مطلوب لواجهة المستخدم React/Electron: [nodejs.org](https://nodejs.org/)
+- **كاميرات USB أو كاميرات مدمجة**
+
+## تثبيت خادم Python
+
+```bash
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+uv sync
+```
+
+لتثبيت تبعيات التطوير (pytest، ruff، إلخ):
+
+```bash
+uv sync --group dev
+```
+
+### تبعيات خاصة بنظام Linux
+
+يتطلب تسجيل الصوت على Linux حزم نظام إضافية:
+
+```bash
+sudo apt update
+sudo apt install clang portaudio19-dev
+```
+
+## تثبيت واجهة المستخدم الأمامية
+
+```bash
+cd skellycam-ui
+npm install
+```
+
+## تشغيل SkellyCam
+
+### الخطوة 1: تشغيل خادم Python
+
+```bash
+python -m skellycam
+```
+
+بعد التثبيت باستخدام `uv sync`، يمكنك أيضًا استخدام أمر `skellycam` مباشرة:
+
+```bash
+skellycam
+```
+
+يبدأ الخادم على `http://localhost:53117`. يمكنك التحقق من تشغيله بزيارة `http://localhost:53117/health` في متصفحك — يجب أن ترى `"Hello"`.
+
+توثيق Swagger API التفاعلي متاح على `http://localhost:53117/docs`.
+
+### الخطوة 2: تشغيل واجهة المستخدم (وضع التطوير)
+
+في نافذة طرفية منفصلة:
+
+```bash
+cd skellycam-ui
+npm run dev
+```
+
+يؤدي هذا إلى تشغيل خادم تطوير Vite. إذا كنت تعمل داخل Electron، يتم فتح نافذة Electron؛ وإلا، افتح الرابط المطبوع في الطرفية.
+
+## سير عمل الجلسة الأولى
+
+1. **اكتشاف الكاميرات** — تقوم واجهة المستخدم أو استدعاء `POST /skellycam/camera/detect` بفحص كاميرات USB المتاحة.
+2. **إنشاء مجموعة كاميرات** — حدد الكاميرات وقم بتكوين الدقة/معدل الإطارات/التعريض عبر واجهة المستخدم أو `POST /skellycam/camera/group/apply`.
+3. **المعاينة المباشرة** — يقوم اتصال WebSocket ببث الإطارات إلى واجهة المستخدم في الوقت الفعلي.
+4. **التسجيل** — انقر على تسجيل أو `POST /skellycam/camera/group/all/record/start` لبدء التسجيل. يمكنك اختياريًا تحديد ميكروفون لالتقاط الصوت مع الفيديو. أوقف التسجيل بزر الإيقاف أو `GET /skellycam/camera/group/all/record/stop`.
+5. **المراجعة** — يتم حفظ التسجيلات تحت `~/skellycam_data/recordings/` مع ملفات فيديو متزامنة وملفات CSV للطوابع الزمنية. استخدم صفحة التشغيل لمراجعة التسجيلات مع تشغيل فيديو متعدد مقفل بالإطارات — جميع مقاطع الفيديو تعرض دائمًا نفس رقم الإطار.
+
+## التحقق من التثبيت
+
+قم بتشغيل مجموعة الاختبارات للتأكد من أن كل شيء يعمل بشكل صحيح:
+
+```bash
+uv run pytest skellycam/tests/ -v
+```
+
+يجب أن تنجح جميع الاختبارات دون الحاجة إلى كاميرات فعلية — تستخدم مجموعة الاختبارات بدائل وهمية وعميل اختبار FastAPI خفيف.
+
+## استكشاف الأخطاء وإصلاحها
+
+**المنفذ 53117 قيد الاستخدام بالفعل** — يقوم SkellyCam تلقائيًا بإنهاء أي عملية موجودة على المنفذ 53117 عند بدء التشغيل. إذا فشل ذلك، أوقف العملية المتعارضة يدويًا أو غيّر المنفذ في `skellycam/api/server_constants.py`.
+
+**لم يتم اكتشاف كاميرات** — تأكد من أن كاميرات USB الخاصة بك موصولة ومعترف بها من قبل نظام التشغيل. على Linux، تأكد من أن المستخدم لديه إذن الوصول إلى أجهزة `/dev/video*` (قد تحتاج إلى إضافة المستخدم إلى مجموعة `video`: `sudo usermod -aG video $USER`).
+
+**الصوت لا يعمل على Linux** — تأكد من تثبيت حزم النظام: `sudo apt install clang portaudio19-dev`.

@@ -1,0 +1,12 @@
+{
+  "label": "المفاهيم الأساسية",
+  "position": 2,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "title": "المفاهيم الأساسية",
+    "description": "مبادئ التصميم الأساسية وميزات SkellyCam.",
+    "slug": "core"
+  }
+}

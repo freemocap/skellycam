@@ -1,0 +1,47 @@
+---
+sidebar_position: 2
+title: 通用 USB 摄像头
+description: SkellyCam 适用于任何符合 UVC 标准的 USB 摄像头——无需专有硬件。
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '@site/content.config';
+
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'generic-usb-cameras')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## 设计理念
+
+SkellyCam 是 [FreeMoCap](https://freemocap.org) 生态系统的一部分，该生态系统建立在一个核心原则之上：**动作捕捉应该人人可及**。这意味着无需昂贵的专有摄像头系统，无需特殊驱动程序，无需供应商锁定。
+
+只要您有 USB 摄像头——任何 USB 摄像头——就可以进行多摄像头同步捕获。
+
+## 目前支持的设备
+
+SkellyCam 使用 OpenCV 的 `VideoCapture` 与摄像头交互。任何作为 **UVC（USB 视频类）** 设备呈现的摄像头都可以工作。UVC 是几乎所有 USB 摄像头使用的标准协议，包括：
+
+- 经济型摄像头（Logitech C270 等）
+- 中端摄像头（Logitech C920、C922）
+- 高端 USB 摄像头（Logitech Brio、Razer Kiyo）
+- 许多暴露 UVC 接口的工业 USB 摄像头
+- 大多数笔记本内置摄像头
+
+如果您的操作系统无需安装特殊驱动即可识别摄像头，它几乎肯定是 UVC 兼容的，可以与 SkellyCam 配合使用。
+
+## USB 摄像头的局限性
+
+USB 摄像头是为视频通话设计的，不是为科学测量设计的。它们有一些值得了解的实际局限性：
+
+- **无硬件同步** — 每个摄像头运行在自己的内部时钟上。SkellyCam 的软件同步协议缓解了这一问题（见[帧级精确同步](./frame-perfect-sync)），但物理捕获时刻仍有一些差异。
+- **无真实时间戳** — 大多数 USB 摄像头不提供每帧捕获时间的准确时间戳。SkellyCam 通过自己的[时间戳系统](./precise-timestamps)解决了这个问题。
+- **卷帘快门** — 大多数摄像头使用卷帘快门传感器，这意味着快速运动可能产生倾斜伪影。
+- **USB 带宽** — 每个摄像头消耗 USB 带宽。运行多个摄像头可能需要多个 USB 主控制器。
+
+这些是硬件固有的限制——SkellyCam 的工作是从您拥有的摄像头中获得最佳结果。
+
+## 多摄像头设置技巧
+
+- **使用不同的 USB 控制器** — 将摄像头插入不同 USB 主控制器的端口以避免带宽争用。在台式机上，机器不同侧面的端口通常在不同的控制器上。
+- **必要时降低分辨率** — 如果遇到带宽限制，将摄像头配置为较低分辨率。同步也会更紧密，因为较小的帧传输更快。
+- **使用相同的摄像头** — 使用相同型号的摄像头可以简化配置并产生更一致的结果，尽管混合使用不同型号也完全可以。

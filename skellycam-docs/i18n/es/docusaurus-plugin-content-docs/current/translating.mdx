@@ -1,0 +1,45 @@
+---
+sidebar_position: 9
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# Traducir SkellyCam
+
+Usamos traducciones comunitarias para hacer la captura de movimiento accesible en todo el mundo. No se requiere programacion — solo edita un archivo JSON y abre un PR.
+
+**[Explorar archivos de traduccion en GitHub](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/i18n/locales)**
+
+## Estado Actual
+
+Todas las traducciones no inglesas estan **generadas por IA y sin revisar** — casi con certeza contienen errores. Incluso corregir algunas cadenas ayuda mucho.
+
+## Archivos de Traduccion
+
+Todas las cadenas de la interfaz estan en `skellycam-ui/src/i18n/locales/`. El ingles (`en-english.json`) es la fuente de verdad. Todos los demas idiomas estan generados por IA y esperando revision comunitaria.
+
+Idiomas actualmente soportados: ingles, espanol, frances, aleman, italiano, portugues (Brasil), catalan, holandes, sueco, polaco, checo, rumano, hungaro, griego, croata, serbio, ucraniano, ruso, georgiano, turco, arabe, farsi, urdu, hindi, bengali, tamil, nepali, cingales, chino (simplificado), japones, coreano, tailandes, vietnamita, indonesio, malayo, tagalo, birmano, suajili y amharico.
+
+## Como Contribuir
+
+1. Haz clic en cualquier archivo de idioma arriba (o encuentralo en `skellycam-ui/src/i18n/locales/`)
+2. Haz clic en el icono de lapiz para editar directamente en GitHub
+3. Corrige cualquier traduccion que veas incorrecta o que suene rara
+4. Envia un pull request
+
+Las cadenas usan formato i18next — conserva las `{{variables}}` exactamente como estan y mantiene los sufijos `_one`/`_other` para plurales.
+
+Las cadenas del backend (nombres de camara, mensajes de log, codecs, rutas de archivos) no necesitan traduccion.
+
+## Agregar un Nuevo Idioma
+
+1. Copia `en-english.json` a `<locale-code>-<language-name>.json`
+2. Traduce los valores (no las claves)
+3. Establece `_meta.translationSource` a `"ai-generated"` o `"human-authored"`
+4. Abre un issue o PR — lo conectaremos a la aplicacion
+
+## Preguntas?
+
+Abre un issue en GitHub o contactanos en el [Discord de FreeMoCap](https://discord.gg/freemocap).

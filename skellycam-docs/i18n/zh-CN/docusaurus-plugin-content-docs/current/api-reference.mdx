@@ -1,0 +1,232 @@
+---
+sidebar_position: 4
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# API 参考
+
+SkellyCam 服务器提供用于摄像头管理的 REST API 和用于实时流传输的 WebSocket 端点。服务器运行时，可在 `http://localhost:53117/docs` 查看交互式 Swagger 文档。
+
+## 基础 URL
+
+所有端点从 `http://localhost:53117` 提供服务。摄像头相关端点以 `/skellycam` 为前缀。
+
+## 应用端点
+
+### `GET /health`
+
+健康检查端点。
+
+**响应：** `"Hello"` (200 OK)
+
+### `GET /shutdown`
+
+启动优雅的服务器关闭。设置全局终止标志，向服务器进程发送 `SIGTERM`，然后立即返回。
+
+**响应：**
+```json
+{
+  "status": "shutdown_initiated",
+  "message": "Server shutting down. Goodbye!"
+}
+```
+
+## 摄像头端点
+
+所有摄像头端点以 `/skellycam/camera` 为前缀。
+
+### `POST /skellycam/camera/detect`
+
+检测系统上可用的摄像头设备。
+
+**查询参数：**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `filter_virtual` | `bool` | `true` | 从结果中排除虚拟摄像头 |
+| `backend_id` | `int \| null` | `null` | 用于检测的 OpenCV 后端 ID |
+
+**响应：**
+```json
+{
+  "cameras": [
+    {
+      "index": 0,
+      "name": "HD Webcam",
+      "vendor_id": 1234,
+      "product_id": 5678,
+      "path": "/dev/video0",
+      "backend_id": 200,
+      "backend_name": "V4L2"
+    }
+  ]
+}
+```
+
+### `GET /skellycam/camera/microphone/detect`
+
+检测系统上可用的麦克风设备。返回设备索引到设备名称的映射。
+
+**响应：**
+```json
+{
+  "microphones": {
+    "0": "Built-in Microphone",
+    "1": "USB Audio Device"
+  }
+}
+```
+
+### `POST /skellycam/camera/group/apply`
+
+创建新的摄像头组或更新现有的摄像头组。如果提供的摄像头 ID 匹配现有组，则更新组的设置；否则，创建并启动新组。
+
+**请求体：**
+```json
+{
+  "camera_configs": {
+    "000": {
+      "camera_id": "000",
+      "camera_index": 0,
+      "camera_name": "Camera-000",
+      "use_this_camera": true,
+      "resolution": { "width": 1280, "height": 720 },
+      "framerate": -1,
+      "color_channels": 3,
+      "pixel_format": "RGB",
+      "exposure_mode": "MANUAL",
+      "exposure": -7,
+      "rotation": -1,
+      "capture_fourcc": "MJPG",
+      "writer_fourcc": "X264"
+    }
+  }
+}
+```
+
+**响应：**
+```json
+{
+  "group_id": "group-0",
+  "camera_configs": {
+    "0": { }
+  }
+}
+```
+
+### `POST /skellycam/camera/group/all/record/start`
+
+开始所有活动摄像头组的录制。
+
+**请求体：**
+```json
+{
+  "recording_name": "2024-09-15T14_30_00",
+  "recording_directory": "~/skellycam_data/recordings",
+  "mic_device_index": -1
+}
+```
+
+所有字段都有默认值。`mic_device_index: -1` 禁用音频录制。
+
+**响应：** `true` (200 OK)
+
+### `GET /skellycam/camera/group/all/record/stop`
+
+停止所有活动摄像头组的录制。触发时间戳处理和统计信息生成。
+
+**响应：** `true` (200 OK)
+
+### `DELETE /skellycam/camera/group/close/all`
+
+关闭所有摄像头组，释放所有摄像头资源并停止所有工作进程。
+
+**响应：** `true` (200 OK)
+
+### `GET /skellycam/camera/group/all/pause_unpause`
+
+切换所有摄像头组的暂停/恢复状态。暂停时，摄像头停止捕获帧但保持打开状态。
+
+**响应：** `true` (200 OK)
+
+## WebSocket 端点
+
+### `WS /skellycam/websocket/connect`
+
+用于实时帧流传输、日志转发和应用状态更新的持久 WebSocket 连接。完整协议规范请参见 [WebSocket 协议](websocket-protocol)。
+
+## 回放端点
+
+所有回放端点以 `/skellycam/playback` 为前缀。它们通过 HTTP 提供预录制的视频文件，支持浏览器原生 `<video>` 回放，通过 HTTP 范围请求实现完整的跳转支持。
+
+### `GET /skellycam/playback/recordings`
+
+列出默认录制文件夹（`~/skellycam_data/recordings/`）中可用的录制目录。
+
+**响应：**
+```json
+[
+  {
+    "name": "2024-09-15T14_30_00",
+    "path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
+    "video_count": 3,
+    "total_size_bytes": 157286400,
+    "created_timestamp": "2024-09-15T14:30:00",
+    "total_frames": 9000,
+    "duration_seconds": 300.0,
+    "fps": 30.0
+  }
+]
+```
+
+### `POST /skellycam/playback/load`
+
+加载录制文件夹进行回放。服务器验证路径，发现视频文件（同时检查文件夹本身和 `synchronized_videos/` 子文件夹），并使其可供流传输。
+
+**请求体：**
+```json
+{
+  "recording_path": "~/skellycam_data/recordings/2024-09-15T14_30_00"
+}
+```
+
+**响应：**
+```json
+{
+  "recording_path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
+  "videos": [
+    {
+      "video_id": "recording.camera0",
+      "filename": "recording.camera0.mp4",
+      "size_bytes": 52428800,
+      "stream_url": "/skellycam/playback/video/recording.camera0"
+    }
+  ]
+}
+```
+
+### `GET /skellycam/playback/video/{video_id}`
+
+流传输已加载的视频文件。响应是带有正确 `Content-Type` 头的标准 `FileResponse`，Starlette 自动处理 HTTP 范围请求——这使浏览器原生的跳转、缓冲和通过 `<video>` 元素的硬件加速解码成为可能。
+
+### `GET /skellycam/playback/timestamps/{video_id}`
+
+返回给定视频的时间戳 CSV 的元数据（如果可用）。在录制的 `timestamps/camera_timestamps/` 文件夹中搜索。
+
+## 错误处理
+
+所有端点返回标准 HTTP 错误码：
+
+- **200** — 成功
+- **400** — 错误请求（无效参数）
+- **500** — 内部服务器错误（响应体中包含错误详情）
+
+错误以如下格式返回：
+```json
+{
+  "detail": "Error description string"
+}
+```

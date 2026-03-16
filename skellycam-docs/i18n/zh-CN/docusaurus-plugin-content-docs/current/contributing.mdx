@@ -1,0 +1,55 @@
+---
+sidebar_position: 8
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# 为 SkellyCam 做贡献
+
+我们欢迎您的参与！我们希望让为这个项目做贡献尽可能简单和透明，无论是报告错误、讨论代码现状、提交修复、提出新功能还是成为维护者。
+
+## 使用 GitHub 进行开发
+
+我们使用 GitHub 托管代码、跟踪问题和功能请求，以及接受拉取请求。
+
+## GitHub Flow
+
+我们使用 [GitHub Flow](https://guides.github.com/introduction/flow/index.html)，因此所有代码更改都通过拉取请求进行：
+
+1. Fork 仓库并从 `development` 创建您的分支。
+2. 如果您添加了应该测试的代码，请添加测试。
+3. 如果您更改了 API，请更新文档。
+4. 确保测试套件通过。
+5. 确保您的代码通过 lint 检查（`uv run ruff check skellycam/`）。
+6. 提交拉取请求！
+
+## 许可证
+
+您的任何贡献都将在 AGPL 软件许可证下发布。当您提交代码更改时，您的提交被视为在覆盖该项目的相同 [AGPL](https://github.com/freemocap/skellycam/blob/main/LICENSE) 许可证下。
+
+## 报告错误
+
+我们使用 [GitHub Issues](https://github.com/freemocap/skellycam/issues) 跟踪错误。通过[创建新 issue](https://github.com/freemocap/skellycam/issues/new) 报告错误。
+
+**优质的错误报告**通常包含：
+
+- 简要总结和/或背景
+- 重现步骤（请具体说明！）
+- 包含产生问题的 SkellyCam 录制会话的上传 ZIP 文件
+- 您期望发生什么
+- 实际发生了什么
+- 备注（可能包括您认为可能的原因，或您尝试过但无效的方法）
+
+## 拉取请求指南
+
+- 通过 PR 提交的任何代码都应有测试覆盖
+- 这些测试必须在合并前通过 GitHub Actions 工作流
+- 任何 UI 更改都应包含一个展示更改后应用运行效果的短视频
+
+## 编码风格
+
+我们使用 [Ruff](https://docs.astral.sh/ruff/) 进行代码检查。运行 `uv run ruff check skellycam/` 检查，运行 `uv run ruff check --fix skellycam/` 自动修复。
+
+更多开发工作流的详细信息请参见[开发指南](development)。

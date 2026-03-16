@@ -1,0 +1,55 @@
+---
+sidebar_position: 8
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# Contribuir a SkellyCam
+
+Nos encanta tu participacion. Queremos que contribuir a este proyecto sea lo mas facil y transparente posible, ya sea reportando un error, discutiendo el estado actual del codigo, enviando una correccion, proponiendo nuevas funcionalidades o convirtiendote en mantenedor.
+
+## Desarrollo con GitHub
+
+Usamos GitHub para alojar codigo, rastrear issues y solicitudes de funcionalidades, y aceptar pull requests.
+
+## GitHub Flow
+
+Usamos [GitHub Flow](https://guides.github.com/introduction/flow/index.html), por lo que todos los cambios de codigo se realizan a traves de pull requests:
+
+1. Haz un fork del repositorio y crea tu rama desde `development`.
+2. Si has agregado codigo que deberia ser probado, agrega pruebas.
+3. Si has cambiado APIs, actualiza la documentacion.
+4. Asegurate de que el conjunto de pruebas pase.
+5. Asegurate de que tu codigo pase el linting (`uv run ruff check skellycam/`).
+6. Envia ese pull request.
+
+## Licencia
+
+Cualquier contribucion que hagas estara bajo la Licencia de Software AGPL. Cuando envias cambios de codigo, se entiende que tus envios estan bajo la misma [AGPL](https://github.com/freemocap/skellycam/blob/main/LICENSE) que cubre el proyecto.
+
+## Reportar Errores
+
+Usamos [GitHub Issues](https://github.com/freemocap/skellycam/issues) para rastrear errores. Reporta un error [abriendo un nuevo issue](https://github.com/freemocap/skellycam/issues/new).
+
+**Los buenos reportes de errores** tienden a tener:
+
+- Un resumen rapido y/o contexto
+- Pasos para reproducir (se especifico)
+- Incluye un ZIP subido de la sesion de grabacion de skellycam que produjo el problema
+- Lo que esperabas que ocurriera
+- Lo que realmente ocurre
+- Notas (posiblemente incluyendo por que crees que esto podria estar sucediendo, o cosas que intentaste y no funcionaron)
+
+## Directrices para Pull Requests
+
+- Cualquier codigo que llegue a traves de un PR debe estar cubierto con pruebas
+- Esas pruebas deben pasar el flujo de trabajo de GitHub Actions antes de poder fusionarse
+- Cualquier cambio en la interfaz debe incluir un video corto de la aplicacion funcionando con el cambio incluido
+
+## Estilo de Codigo
+
+Usamos [Ruff](https://docs.astral.sh/ruff/) para linting. Ejecuta `uv run ruff check skellycam/` para verificar y `uv run ruff check --fix skellycam/` para corregir automaticamente.
+
+Consulta la [guia de Desarrollo](development) para mas detalles sobre el flujo de trabajo de desarrollo.

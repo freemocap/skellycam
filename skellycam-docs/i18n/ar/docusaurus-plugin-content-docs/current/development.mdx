@@ -1,0 +1,185 @@
+---
+sidebar_position: 7
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# التطوير
+
+## إعداد بيئة التطوير
+
+```bash
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv
+source .venv/bin/activate
+uv sync --group dev
+```
+
+يقوم هذا بتثبيت تبعيات وقت التشغيل بالإضافة إلى أدوات التطوير: pytest وpytest-asyncio وruff وpoethepoet وأدوات البناء.
+
+## تشغيل الاختبارات
+
+### الواجهة الخلفية (Python)
+
+```bash
+# تشغيل جميع الاختبارات
+uv run pytest skellycam/tests/ -v
+
+# تشغيل ملف اختبار محدد
+uv run pytest skellycam/tests/test_health.py -v
+
+# تشغيل مع تتبعات مختصرة
+uv run pytest skellycam/tests/ -v --tb=short
+```
+
+تستخدم مجموعة الاختبارات `TestClient` خفيف الوزن من FastAPI مع تبعيات كاميرا محاكاة. لا حاجة لكاميرات فعلية.
+
+:::note
+تم تعيين `asyncio_mode = "auto"` في `pyproject.toml`، لذا لا تحتاج دوال الاختبار غير المتزامنة إلى مُزخرف `@pytest.mark.asyncio`.
+:::
+
+### هيكل الاختبارات
+
+```
+skellycam/tests/
+├── conftest.py                            # التجهيزات المشتركة (تطبيق محاكى، عميل، مديرين محاكين)
+├── mocks/
+│   ├── camera_mock.py                     # MockVideoCapture (يحاكي cv2.VideoCapture)
+│   └── test_camera_mock.py                # اختبارات للمحاكاة نفسها
+├── test_camera_config.py                  # منطق نموذج CameraConfig
+├── test_camera_config_extended.py         # اختبارات التكوين الموسعة
+├── test_camera_group_manager.py           # إنشاء CameraGroupManager والنمط المفرد
+├── test_camera_orchestrator.py            # اختبارات مزامنة المنسق
+├── test_camera_router.py                  # اختبارات نقاط نهاية REST للكاميرا
+├── test_frontend_payload_and_recording.py # اختبارات إنشاء الحمولة الثنائية والتسجيل
+├── test_health.py                         # اختبارات نقطة نهاية الصحة والجذر
+├── test_playback.py                       # اختبارات نقطة نهاية التشغيل
+├── test_pubsub.py                         # اختبارات النشر/الاشتراك IPC
+├── test_shared_memory.py                  # اختبارات مخزن الذاكرة المشتركة الحلقي
+├── test_shutdown.py                       # اختبارات نقطة نهاية الإيقاف
+├── test_timestamps_and_framerate.py       # اختبارات تتبع الطوابع الزمنية ومعدل الإطارات
+├── test_websocket.py                      # اختبارات اتصال وبروتوكول WebSocket
+├── test_websocket_internals.py            # اختبارات المنطق الداخلي لخادم WebSocket
+└── test_worker_lifecycle.py               # اختبارات دورة حياة عملية العامل
+```
+
+### تجهيزات الاختبار الرئيسية (conftest.py)
+
+- `mock_camera_group_manager` — محاكاة MagicMock تحل محل CameraGroupManager مع طرق AsyncMock غير متزامنة. تُصحح `get_or_create_camera_group_manager` في جميع مواقع الاستيراد.
+- `app` — تطبيق FastAPI خفيف الوزن بنفس المسارات ولكن بدون دورة حياة ثقيلة (بدون تجميع بايت كود، بدون إعداد تسجيل).
+- `client` — `TestClient` متزامن يغلف تطبيق الاختبار، مناسب لاختبارات HTTP وWebSocket.
+
+### الواجهة الأمامية (TypeScript)
+
+```bash
+cd skellycam-ui
+
+# فحص الأنواع
+npx tsc --noEmit
+
+# اختبارات شاملة (تتطلب Electron)
+npm run e2e
+```
+
+## فحص الكود
+
+يستخدم SkellyCam أداة [Ruff](https://docs.astral.sh/ruff/) لفحص الكود، مُعدة في `pyproject.toml`.
+
+```bash
+# التحقق من مشاكل الفحص
+uv run ruff check skellycam/
+
+# إصلاح مشاكل الفحص تلقائياً
+uv run ruff check --fix skellycam/
+```
+
+القاعدة الأساسية المُفعلة هي `TC` (flake8-type-checking)، التي تنقل الاستيرادات المخصصة للأنواع فقط خلف كتل `if TYPE_CHECKING:`. هذا يقلل وقت الاستيراد للعمليات الفرعية المُنشأة.
+
+### كبت الإيجابيات الكاذبة
+
+إذا حاول Ruff نقل استيراد مطلوب وقت التشغيل (مثلاً، مُستخدم في `isinstance()`، `TypeAdapter`، أو أنواع حقول Pydantic)، أضف تعليق `# noqa: TC001/TC002/TC003`:
+
+```python
+from skellycam.core.camera.config.camera_config import CameraConfig  # noqa: TC003
+```
+
+## مُشغل المهام
+
+يوفر [poethepoet](https://github.com/nat-n/poethepoet) أوامر مهام مختصرة:
+
+```bash
+uv run poe test        # تشغيل pytest
+uv run poe lint        # تشغيل ruff check
+uv run poe lint-fix    # إصلاح انتهاكات ruff تلقائياً
+uv run poe tc-check    # معاينة نقل استيرادات TYPE_CHECKING
+uv run poe tc-fix      # تطبيق نقل استيرادات TYPE_CHECKING
+uv run poe tc          # تطبيق الاستيرادات + تشغيل الاختبارات للتحقق
+```
+
+## التكامل المستمر
+
+يعمل GitHub Actions عند كل دفع وطلب سحب (`.github/workflows/test.yml`):
+
+- **اختبارات الواجهة الخلفية** — Python 3.11 و3.12 على Ubuntu وWindows وmacOS
+- **فحص الكود** — Ruff check على جميع المنصات
+- **فحص أنواع الواجهة الأمامية** — TypeScript `tsc --noEmit` على Ubuntu
+
+## اصطلاحات تنظيم الكود
+
+### Python
+
+- **تلميحات الأنواع في كل مكان** — جميع توقيعات الدوال وأنواع الإرجاع والمتغيرات يجب أن تحتوي على تعليقات أنواع.
+- **تلميحات أنواع حديثة** — استخدم `str | None` بدلاً من `Optional[str]`، `dict[str, int]` بدلاً من `Dict[str, int]`.
+- **استيرادات عامة فقط** — لا استيرادات محلية داخل الدوال أو الطرق.
+- **فشل صريح** — ارفع استثناءات عند الأخطاء بدلاً من طباعة تحذيرات أو إرجاع قيم افتراضية.
+- **نماذج Pydantic** — تُستخدم لجميع مخططات طلب/استجابة API وكائنات التكوين.
+- **التسجيل** — يستخدم [skellylogs](https://github.com/freemocap/skellylogs) مع مستويات مخصصة مثل `logger.trace()`، `logger.success()`، و`logger.api()`.
+
+### TypeScript (الواجهة الأمامية)
+
+- مكونات دالية **React 19** مع hooks
+- **Redux Toolkit** لإدارة الحالة مع hooks مُنمطة
+- **Material UI** لتنسيق المكونات
+- **عمال OffscreenCanvas** لعرض إطارات الكاميرا الحية
+- **تشغيل مقفل الإطارات** — تستخدم مقاطع الفيديو المسجلة استراتيجية مزامنة قائمة على القائد: الفيديو الأول يقود الوقت المرجعي عبر `.play()` الأصلي، حلقة `requestAnimationFrame` تقرأ `leader.currentTime` لاشتقاق رقم الإطار، ويتم تصحيح انحراف مقاطع الفيديو التابعة عندما تنحرف بأكثر من إطارين. يتم تحديث التراكبات عبر مراجع DOM مباشرة لتجنب إعادة عرض React أثناء التشغيل.
+
+## إضافة نقطة نهاية API جديدة
+
+1. أنشئ ملف موجه جديد في المجلد الفرعي المناسب من `skellycam/api/http/`.
+2. عرّف نماذج Pydantic للطلب/الاستجابة.
+3. أضف الموجه إلى `skellycam/api/routers.py`:
+   ```python
+   from skellycam.api.http.your_module.your_router import your_router
+   SKELLYCAM_ROUTERS = [..., your_router]
+   ```
+4. اكتب اختبارات في `skellycam/tests/test_your_router.py` باستخدام تجهيزة `client` من `conftest.py`.
+
+## إضافة اختبار جديد
+
+1. أنشئ ملف اختبار في `skellycam/tests/test_*.py`.
+2. استخدم تجهيزة `client` لاختبارات نقاط نهاية HTTP/WebSocket.
+3. استخدم `mock_camera_group_manager` للاختبارات التي تحتاج التفاعل مع إدارة الكاميرا.
+4. دوال الاختبار غير المتزامنة تعمل تلقائياً — لا حاجة لمُزخرف (`asyncio_mode = "auto"`).
+
+## بناء المثبتات
+
+### ملف Python التنفيذي (Nuitka)
+
+```bash
+cd skellycam-ui
+..\installers\nuitka_scripts\nuitka_installer_windows.bat
+```
+
+ينتج هذا ملفاً تنفيذياً مستقلاً (يستغرق البناء حوالي ساعة).
+
+### تطبيق Electron
+
+```bash
+cd skellycam-ui
+npm install && npm run build
+```
+
+راجع `electron-builder.json` لتكوين التغليف.

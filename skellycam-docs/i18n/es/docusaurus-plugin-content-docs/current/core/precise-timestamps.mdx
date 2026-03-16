@@ -1,0 +1,50 @@
+---
+sidebar_position: 4
+title: Marcas de Tiempo Precisas
+description: Marcas de tiempo de alta resolucion en cada etapa del pipeline de captura, almacenadas en formato legible por humanos.
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '@site/content.config';
+
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'precise-timestamps')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## Por que importan las marcas de tiempo
+
+La mayoria de las camaras USB **no** proporcionan marcas de tiempo reales. La propiedad de marca de tiempo de `cv2.VideoCapture` (`CAP_PROP_POS_MSEC`) es poco fiable entre plataformas y controladores — a veces devuelve cero, a veces la hora del reloj de pared, a veces el tiempo desde que se abrio la camara. No puedes confiar en ella para medicion cientifica.
+
+Pero si estas haciendo captura de movimiento, biomecanica o cualquier analisis sensible al tiempo, necesitas saber *cuando* se capturo cada fotograma — no solo su indice de fotograma.
+
+## Que registra SkellyCam
+
+SkellyCam captura marcas de tiempo `perf_counter_ns` de alta resolucion en multiples etapas del ciclo de vida de cada fotograma:
+
+- **Pre-grab** — Justo antes de llamar a `cv2.VideoCapture.grab()`
+- **Post-grab** — Inmediatamente despues de que `grab()` retorna
+- **Pre-retrieve** — Justo antes de llamar a `retrieve()`
+- **Post-retrieve** — Inmediatamente despues de que `retrieve()` retorna el fotograma decodificado
+- **Pre/post copia a memoria compartida** — Cuando el fotograma se escribe al buffer circular de memoria compartida
+- **Pre/post grabacion** — Cuando el fotograma se escribe al archivo de video (durante la grabacion)
+
+Estas marcas de tiempo se registran para **cada camara** en **cada fotograma**, ademas de marcas de tiempo para la carga multicamara ensamblada.
+
+## Formato de salida
+
+Cuando una grabacion se completa, el `RecordingFinalizer` procesa todas las marcas de tiempo acumuladas y las escribe como **archivos CSV** en formato legible por humanos. La salida incluye:
+
+- CSVs de marcas de tiempo por camara con todas las etapas del ciclo de vida
+- Estadisticas de sincronizacion multicamara (dispersion entre camaras por evento de fotograma)
+- Estadisticas resumidas de toda la grabacion
+
+Las marcas de tiempo usan `time.perf_counter_ns()` de Python, que proporciona temporizado monotonico con resolucion de nanosegundos. Aunque la precision *absoluta* depende del planificador del sistema operativo, la temporalizacion *relativa* entre eventos dentro de un ciclo de fotograma es altamente precisa — tipicamente sub-milisegundo.
+
+## Uso de marcas de tiempo en tu analisis
+
+Los datos de marcas de tiempo te permiten:
+
+- Medir la dispersion temporal real entre camaras dentro de cada evento de fotograma
+- Verificar que la sincronizacion esta funcionando como se espera
+- Correlacionar fotogramas con fuentes de datos externas (IMU, plataformas de fuerza, etc.) alineando marcas de tiempo monotonicas
+- Cuantificar el rendimiento del sistema (latencia de grab, latencia de retrieve, latencia de E/S)
