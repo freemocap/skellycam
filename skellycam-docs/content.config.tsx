@@ -7,7 +7,7 @@ const config: SkellyDocsConfig = {
     accentedSuffix: 'Cam',
     subtitle: 'The camera backend for FreeMoCap',
     tagline: 'Frame-perfect multi-camera synchronization for USB webcams',
-    logoSrc: '/img/skellycam-logo.svg',
+    logoSrc: '/skellycam/img/skellycam-logo.svg',
     parentProject: {
       name: 'FreeMoCap',
       url: 'https://freemocap.org',
@@ -32,10 +32,10 @@ const config: SkellyDocsConfig = {
           <strong>identical frame counts</strong> — no drift, no dropped frames.
         </>
       ),
-      todos: [
-        { label: 'Hardware synchronization (external trigger)', issueNum: 1 },
-        { label: 'Target frame rate setting', issueNum: 2 },
-        { label: 'Sub-frame synchronization', issueNum: 3 },
+      issues: [
+        { label: 'Hardware synchronization (external trigger)', url: "https://github.com/freemocap/skellydocs/issues/1" },
+        { label: 'Target frame rate setting', url: "https://github.com/freemocap/skellydocs/issues/2" },
+        { label: 'Sub-frame synchronization', url: "https://github.com/freemocap/skellydocs/issues/3" },
       ],
       docPath: 'core/frame-perfect-sync',
     },
@@ -56,10 +56,10 @@ const config: SkellyDocsConfig = {
           drivers — grab whatever cameras you have and start capturing.
         </>
       ),
-      todos: [
-        { label: 'OpenCV VideoCapture backend alternatives', issueNum: 4 },
-        { label: 'Support for non-UVC camera backends', issueNum: 5 },
-        { label: 'Camera capability auto-detection', issueNum: 6 },
+      issues: [
+        { label: 'OpenCV VideoCapture backend alternatives', url: "https://github.com/freemocap/skellydocs/issues/4" },
+        { label: 'Support for non-UVC camera backends', url: "https://github.com/freemocap/skellydocs/issues/5" },
+        { label: 'Camera capability auto-detection', url: "https://github.com/freemocap/skellydocs/issues/6" },
       ],
       docPath: 'core/generic-usb-cameras',
     },
@@ -81,11 +81,11 @@ const config: SkellyDocsConfig = {
           delivering <strong>one image per camera per frame</strong>.
         </>
       ),
-      todos: [
-        { label: 'UDP transport for high-throughput streaming', issueNum: 7 },
-        { label: 'Python client library', issueNum: 8 },
-        { label: 'Remote streaming support', issueNum: 9 },
-        { label: 'Adaptive resolution scaling', issueNum: 10 },
+      issues: [
+        { label: 'UDP transport for high-throughput streaming', url: "https://github.com/freemocap/skellydocs/issues/7"},
+        { label: 'Python client library', url: "https://github.com/freemocap/skellydocs/issues/8"},
+        { label: 'Remote streaming support', url: "https://github.com/freemocap/skellydocs/issues/9"},
+        { label: 'Adaptive resolution scaling', url: "https://github.com/freemocap/skellydocs/issues/10" },
       ],
       docPath: 'core/real-time-streaming',
     },
@@ -106,8 +106,8 @@ const config: SkellyDocsConfig = {
           pre-calculated inter-camera synchronization statistics.
         </>
       ),
-      todos: [
-        { label: 'Clean up data model to tidy format', issueNum: 11 },
+      issues: [
+        { label: 'Clean up data model to tidy format', url: "https://github.com/freemocap/skellydocs/issues/11" },
       ],
       docPath: 'core/precise-timestamps',
     },
@@ -118,8 +118,8 @@ const config: SkellyDocsConfig = {
     'Each multi-frame payload contains exactly one image per camera, recorded at the same time slice',
   ],
 
-  guaranteeTodos: [
-    { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', issueNum: 12 },
+  guaranteeIssues: [
+    { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', url: "https://github.com/freemocap/skellydocs/issues/12" },
   ],
 };
 
