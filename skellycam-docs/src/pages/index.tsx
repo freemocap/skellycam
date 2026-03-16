@@ -4,5 +4,5 @@ import config from '../../content.config';
 const REPO = 'skellycam';
 
 export default function Home() {
-  return <IndexPage config={config} repo={REPO} />;
+  return <IndexPage config={config} />;
 }
