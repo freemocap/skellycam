@@ -18,9 +18,9 @@ const config: SkellyDocsConfig = {
     {
       id: 'frame-perfect-sync',
       icon: '🔒',
-      title: 'Frame-Perfect Sync',
+      title: 'Frame-Perfect Synchronization',
       description:
-        'A frame-count-gated capture protocol ensures all cameras stay in lock-step with identical frame counts.',
+        'A frame-count-gated capture protocol ensures all cameras stay in lock-step with identical frame counts during both runtime and recording.',
       summary: (
         <>
           A{' '}
@@ -33,9 +33,9 @@ const config: SkellyDocsConfig = {
         </>
       ),
       issues: [
-        { label: 'Hardware synchronization (external trigger)', url: "https://github.com/freemocap/skellydocs/issues/1" },
-        { label: 'Target frame rate setting', url: "https://github.com/freemocap/skellydocs/issues/2" },
-        { label: 'Sub-frame synchronization', url: "https://github.com/freemocap/skellydocs/issues/3" },
+        { label: 'Hardware synchronization (external trigger)', url: "https://github.com/freemocap/skellycam/issues/89" },
+        { label: 'Target frame rate setting', url: "https://github.com/freemocap/skellycam/issues/90" },
+        { label: 'Sub-frame synchronization', url: "https://github.com/freemocap/skellycam/issues/91" },
       ],
       docPath: 'core/frame-perfect-sync',
     },
@@ -57,9 +57,9 @@ const config: SkellyDocsConfig = {
         </>
       ),
       issues: [
-        { label: 'OpenCV VideoCapture backend alternatives', url: "https://github.com/freemocap/skellydocs/issues/4" },
-        { label: 'Support for non-UVC camera backends', url: "https://github.com/freemocap/skellydocs/issues/5" },
-        { label: 'Camera capability auto-detection', url: "https://github.com/freemocap/skellydocs/issues/6" },
+        { label: 'OpenCV VideoCapture backend alternatives', url: "https://github.com/freemocap/skellycam/issues/93" },
+        { label: 'Support for non-UVC camera backends', url: "https://github.com/freemocap/skellycam/issues/92" },
+        { label: 'Camera capability auto-detection', url: "https://github.com/freemocap/skellycam/issues/94" },
       ],
       docPath: 'core/generic-usb-cameras',
     },
@@ -82,10 +82,10 @@ const config: SkellyDocsConfig = {
         </>
       ),
       issues: [
-        { label: 'UDP transport for high-throughput streaming', url: "https://github.com/freemocap/skellydocs/issues/7"},
-        { label: 'Python client library', url: "https://github.com/freemocap/skellydocs/issues/8"},
-        { label: 'Remote streaming support', url: "https://github.com/freemocap/skellydocs/issues/9"},
-        { label: 'Adaptive resolution scaling', url: "https://github.com/freemocap/skellydocs/issues/10" },
+        { label: 'Support UDP, ZeroMQ, etc streaming', url: "https://github.com/freemocap/skellycam/issues/95"},
+        { label: 'Client library SDKs', url: "https://github.com/freemocap/skellycam/issues/96"},
+        { label: 'Remote streaming support', url: "https://github.com/freemocap/skellycam/issues/97"},
+        { label: 'Adaptive resolution scaling', url: "https://github.com/freemocap/skellycam/issues/98" },
       ],
       docPath: 'core/real-time-streaming',
     },
@@ -107,7 +107,7 @@ const config: SkellyDocsConfig = {
         </>
       ),
       issues: [
-        { label: 'Clean up data model to tidy format', url: "https://github.com/freemocap/skellydocs/issues/11" },
+        { label: 'Clean up data model to tidy format', url: "https://github.com/freemocap/skellycam/issues/99" },
       ],
       docPath: 'core/precise-timestamps',
     },
@@ -119,7 +119,7 @@ const config: SkellyDocsConfig = {
   ],
 
   guaranteeIssues: [
-    { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', url: "https://github.com/freemocap/skellydocs/issues/12" },
+    { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', url: "https://github.com/freemocap/skellycam/issues/100" },
   ],
 };
 

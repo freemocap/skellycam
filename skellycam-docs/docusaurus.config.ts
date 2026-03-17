@@ -108,7 +108,7 @@ const config: Config = {
         {
           title: 'Community',
           items: [
-            { label: 'Discord', href: 'https://discord.gg/freemocap' },
+            { label: 'Discord', href: 'https://discord.gg/SgdnzbHDTG' },
             { label: 'GitHub Discussions', href: 'https://github.com/freemocap/skellycam/discussions' },
             { label: 'FreeMoCap', href: 'https://freemocap.org' },
           ],
