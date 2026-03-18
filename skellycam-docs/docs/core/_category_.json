@@ -1,8 +1,8 @@
 {
   "label": "Core Concepts",
-  "position": 2,
+  "position": 3,
   "collapsible": true,
-  "collapsed": false,
+  "collapsed": true,
   "link": {
     "type": "generated-index",
     "title": "Core Concepts",

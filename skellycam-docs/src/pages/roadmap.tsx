@@ -1,6 +1,6 @@
 import { RoadmapPage } from '@freemocap/skellydocs';
 
-const REPO = 'skellycam';
+const REPO = 'freemocap/skellycam';
 
 export default function Roadmap() {
   return <RoadmapPage repo={REPO} />;

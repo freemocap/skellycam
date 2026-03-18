@@ -1,0 +1,12 @@
+{
+  "label": "Development",
+  "position": 6,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "Development",
+    "description": "Contributing guidelines, development setup, and translation information.",
+    "slug": "development"
+  }
+}
