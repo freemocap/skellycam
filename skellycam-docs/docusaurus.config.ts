@@ -100,9 +100,9 @@ const config: Config = {
         {
           title: 'Documentation',
           items: [
-            { label: 'Getting Started', to: '/docs/getting-started' },
-            { label: 'Architecture', to: '/docs/architecture' },
-            { label: 'API Reference', to: '/docs/api-reference' },
+            { label: 'Getting Started', to: '/docs/tutorial/getting-started' },
+            { label: 'Architecture', to: '/docs/technical/architecture' },
+            { label: 'API Reference', to: '/docs/technical/api-reference' },
           ],
         },
         {

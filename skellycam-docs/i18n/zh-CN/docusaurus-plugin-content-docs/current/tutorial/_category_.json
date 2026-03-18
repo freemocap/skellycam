@@ -1,0 +1,12 @@
+{
+  "label": "Tutorial",
+  "position": 2,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "title": "Tutorial",
+    "description": "Step-by-step guides to get started with SkellyCam.",
+    "slug": "tutorial"
+  }
+}
