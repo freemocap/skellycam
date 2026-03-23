@@ -8,6 +8,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ═══════════════════════════════════════════════════════
   # BUILD — runs on all 5 platform/arch combos
