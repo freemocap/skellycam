@@ -1,7 +1,7 @@
 [project]
 name = "skellycam"
 readme = "README.md"
-version = "2.0.0.alpha0"
+version = "2.0.0a0"
 requires-python = ">=3.11"
 
 
@@ -93,16 +93,34 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 
+# ---- Version Bumping (bumpver) ----
+# Uses semver with optional pre-release tags: vMAJOR.MINOR.PATCH[-TAG.TAGNUM]
+#
+# Usage:
+#   bumpver update --tag-num          # v2.0.0-alpha.0 -> v2.0.0-alpha.1 (next alpha)
+#   bumpver update --tag=beta         # v2.0.0-alpha.X -> v2.0.0-beta.0  (promote to beta)
+#   bumpver update --tag=rc           # v2.0.0-beta.X  -> v2.0.0-rc.0    (release candidate)
+#   bumpver update --tag=final        # v2.0.0-rc.X    -> v2.0.0          (stable release)
+#   bumpver update --minor            # v2.0.0         -> v2.1.0          (next minor)
+#   bumpver update --major            # v2.0.0         -> v3.0.0          (next major)
+#   bumpver update --dry              # dry run, shows what would change
+#
+# This updates:
+#   - pyproject.toml `version` field (PEP 440 format, e.g. 2.0.0a0)
+#   - skellycam/__init__.py `__version__` (display format, e.g. v2.0.0-alpha.0)
+# Note: skellycam-ui/package.json and other JS files must be updated manually.
+
 [tool.bumpver]
-current_version = "v2024.09.1094"
-version_pattern = "vYYYY.0M.BUILD[-TAG]"
+current_version = "v2.0.0-alpha.0"
+version_pattern = "vMAJOR.MINOR.PATCH[-TAG.TAGNUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
 tag = true
 push = true
 
 [tool.bumpver.file_patterns]
-"skellycam/__init__.py" = ["{version}"]
+"pyproject.toml" = ['version = "{pep440_version}"']
+"skellycam/__init__.py" = ['__version__ = "{version}"']
 
 
 # =============================================================================

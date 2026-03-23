@@ -365,7 +365,7 @@ const SettingsPage: React.FC = () => {
               color="text.secondary"
               sx={{ fontSize: 11 }}
             >
-              {t("version")}: 2.0.0
+              {t("version")}: 2.0.0-alpha.0
             </Typography>
           </Box>
         </Paper>
