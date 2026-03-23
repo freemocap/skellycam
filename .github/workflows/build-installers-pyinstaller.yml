@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ── Windows code-signing prereqs ──
       - name: Validate code signing prerequisites
@@ -152,17 +152,17 @@ jobs:
 
       # ── Common setup ──
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: ".python-version"
 
       - name: Install uv and enable cache
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: false
 
@@ -246,7 +246,7 @@ jobs:
           echo "Server binary signed and verified successfully"
       # ── Upload server-only artifact ──
       - name: Upload server binary artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: server-${{ matrix.label }}
           path: |
@@ -312,7 +312,7 @@ jobs:
       # ── Upload final installer artifacts (uses label for human-readable names) ──
       - name: Upload installer artifacts (Windows)
         if: matrix.platform == 'windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.label }}
           path: |
@@ -321,7 +321,7 @@ jobs:
 
       - name: Upload installer artifacts (macOS)
         if: matrix.platform == 'macos'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.label }}
           path: |
@@ -331,7 +331,7 @@ jobs:
 
       - name: Upload installer artifacts (Linux)
         if: matrix.platform == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.label }}
           path: |
@@ -364,7 +364,7 @@ jobs:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
