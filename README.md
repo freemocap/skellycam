@@ -125,7 +125,8 @@ For the full architecture (process model, IPC, data flow, playback sync), see th
 | `POST`   | `/skellycam/playback/load`                  | Load a recording for playback      |
 | `GET`    | `/skellycam/playback/videos`                | List loaded videos                 |
 | `GET`    | `/skellycam/playback/video/{video_id}`      | Stream a video file                |
-| `GET`    | `/skellycam/playback/timestamps/{video_id}` | Get timestamp metadata             |
+| `GET`    | `/skellycam/playback/timestamps`            | Get timestamps for all loaded videos |
+| `GET`    | `/skellycam/playback/timestamps/{video_id}` | Get timestamp metadata for a video |
 | `WS`     | `/skellycam/websocket/connect`              | Real-time frames and logs          |
 
 Full details in the [API Reference](https://freemocap.github.io/skellycam/docs/technical/api-reference).
