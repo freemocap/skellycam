@@ -1,0 +1,72 @@
+---
+title: Beginner Tutorial
+sidebar_position: 3
+---
+
+# Beginner Tutorial
+
+This tutorial expands on the [Quick Start](quick-start) with more detail about camera selection, configuration, and recording.
+
+## Selecting Cameras
+
+When you click **Detect Cameras**, SkellyCam scans for all available USB Video Class (UVC) cameras. This includes most USB webcams (e.g. Logitech C270, C920) and built-in laptop cameras. Virtual cameras (like OBS Virtual Camera) are filtered out by default.
+
+After detection, you'll see a list of available cameras. Select the ones you want to use and click **Apply** to create a camera group. A live preview will appear for each selected camera.
+
+:::tip API
+Detect cameras: `POST /skellycam/camera/detect`
+Create or update a camera group: `POST /skellycam/camera/group/apply`
+:::
+
+## Configuring Cameras
+
+Each camera in the group can be configured independently. The configuration panel in the UI lets you adjust the following settings:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| **Resolution** | 1280 x 720 | Capture resolution in pixels. If the camera doesn't support the requested resolution, OpenCV falls back to the nearest supported one. |
+| **Framerate** | Camera default | Target capture framerate. Leave at default (`-1`) to run as fast as the hardware allows, or set a specific value (e.g. `30`). |
+| **Exposure** | `-7` | Hardware-dependent exposure value. More negative = shorter exposure time. The valid range depends on your camera model. |
+| **Exposure Mode** | `MANUAL` | Choose between `MANUAL`, `AUTO`, or `RECOMMENDED`. |
+| **Rotation** | None | Rotate the image in software after capture: 90° CW, 180°, or 90° CCW. |
+
+:::tip API
+Camera configuration is sent as part of the camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference) for the full request schema.
+:::
+
+## Recording with Audio
+
+Before starting a recording, you can optionally select a microphone to capture audio alongside video. The UI shows available audio input devices — select one to include audio in your recording.
+
+:::tip API
+Detect microphones: `GET /skellycam/camera/microphone/detect`
+:::
+
+Click **Record** to begin. All cameras capture synchronized frames while audio is recorded in parallel. Click **Stop** to finish.
+
+## Viewing Recordings
+
+Navigate to the **Recordings** page to browse your saved sessions. Each recording shows metadata:
+
+- Camera count
+- File size
+- Duration
+- FPS
+- Frame count
+
+Recordings are sorted newest-first.
+
+### Playback
+
+Select a recording to open the frame-locked playback viewer. Key features:
+
+- **Frame-locked synchronization** — all cameras always display the same frame number, with no drift
+- **Frame stepping** — step forward and backward one frame at a time
+- **Variable speed** — adjust playback speed
+- **Keyboard shortcuts** — control playback from the keyboard
+
+## Where Recordings Are Saved
+
+By default, recordings are saved to `~/skellycam_data/recordings/`. Each recording session gets its own folder with synchronized video files and timestamp data.
+
+For a detailed look at the recording folder structure and data model, see the [Advanced Tutorial](advanced-tutorial).

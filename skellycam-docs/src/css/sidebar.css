@@ -1,0 +1,14 @@
+/* ── Top-level sidebar category styling (temporary local preview) ──
+   This duplicates styles being added to @freemocap/skellydocs.
+   Remove this file once skellydocs is published with these styles. */
+
+.menu__list > .menu__list-item > .menu__link--sublist {
+  border-left: 3px solid var(--sk-accent);
+  background: rgba(110, 231, 183, 0.05);
+  font-weight: 600;
+  border-radius: 0 var(--ifm-menu-link-border-radius) var(--ifm-menu-link-border-radius) 0;
+}
+
+.menu__list > .menu__list-item > .menu__link--sublist:hover {
+  background: rgba(110, 231, 183, 0.1);
+}
