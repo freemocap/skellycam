@@ -76,6 +76,10 @@ const config: Config = {
     ],
   ],
 
+  stylesheets: [
+    'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=JetBrains+Mono:wght@400;600&display=swap',
+  ],
+
   themeConfig: {
     image: 'img/skellycam-logo.png',
     colorMode: {
