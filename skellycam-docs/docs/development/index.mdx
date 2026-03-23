@@ -9,17 +9,86 @@ import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
 # Development
 
-## Setting Up the Development Environment
+## Install from Source
+
+This section is for developers and contributors who want to run SkellyCam from the source code. If you just want to use SkellyCam, download the installer from the [Download page](/download) instead.
+
+### Prerequisites
+
+- **Python 3.11+** (3.12 recommended) — [python.org/downloads](https://www.python.org/downloads/)
+- **uv** — Fast Python package manager: [astral.sh/uv](https://github.com/astral-sh/uv)
+- **Node.js 18+** — Required for the React/Electron UI: [nodejs.org](https://nodejs.org/)
+- **USB cameras or built-in webcams**
+
+### Clone and Install
 
 ```bash
 git clone https://github.com/freemocap/skellycam
 cd skellycam
 uv venv
-source .venv/bin/activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 uv sync --group dev
 ```
 
 This installs runtime dependencies plus development tools: pytest, pytest-asyncio, ruff, poethepoet, and build tools.
+
+#### Linux Audio Dependencies
+
+Audio recording on Linux requires additional system packages:
+
+```bash
+sudo apt update
+sudo apt install clang portaudio19-dev
+```
+
+### Install the Frontend UI
+
+```bash
+cd skellycam-ui
+npm install
+```
+
+### Running in Development Mode
+
+**Start the Python server:**
+
+```bash
+python -m skellycam
+# or just: skellycam
+```
+
+The server starts on `http://localhost:53117`. Verify it's running at `http://localhost:53117/health`. Swagger API docs are at `http://localhost:53117/docs`.
+
+**Start the UI (in a separate terminal):**
+
+```bash
+cd skellycam-ui
+npm run dev
+```
+
+This launches the Vite dev server. If running inside Electron, it launches the Electron window; otherwise, open the URL printed in the terminal.
+
+### Verifying the Installation
+
+Run the test suite to confirm everything is wired up correctly:
+
+```bash
+uv run pytest skellycam/tests/ -v
+```
+
+All tests should pass without requiring physical cameras — the test suite uses mocks and a lightweight FastAPI test client.
+
+### Troubleshooting
+
+**Port 53117 already in use** — SkellyCam automatically kills any existing process on port 53117 at startup. If this fails, manually stop the conflicting process or change the port in `skellycam/api/server_constants.py`.
+
+**No cameras detected** — Check that your USB cameras are plugged in and recognized by the OS. On Linux, ensure your user has permission to access `/dev/video*` devices (you may need to add your user to the `video` group: `sudo usermod -aG video $USER`).
+
+**Audio not working on Linux** — Make sure you've installed the system packages: `sudo apt install clang portaudio19-dev`.
+
+## Setting Up the Development Environment
+
+If you've already followed the "Install from Source" steps above, your development environment is ready. The `uv sync --group dev` command installs all development tools.
 
 ## Running Tests
 
@@ -167,14 +236,13 @@ GitHub Actions runs on every push and pull request (`.github/workflows/test.yml`
 
 ## Building Installers
 
-### Python Executable (Nuitka)
+### Python Executable (PyInstaller)
 
 ```bash
-cd skellycam-ui
-..\installers\nuitka_scripts\nuitka_installer_windows.bat
+pyinstaller skellycam.spec
 ```
 
-This produces a standalone executable (build takes ~1 hour).
+The spec file at the repository root (`skellycam.spec`) defines the build configuration. This produces a standalone server executable.
 
 ### Electron App
 

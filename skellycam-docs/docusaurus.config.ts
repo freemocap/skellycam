@@ -67,7 +67,10 @@ const config: Config = {
           onUntruncatedBlogPosts: 'warn',
         },
         theme: {
-          customCss: [require.resolve('@freemocap/skellydocs/css/custom.css')],
+          customCss: [
+            require.resolve('@freemocap/skellydocs/css/custom.css'),
+            require.resolve('./src/css/sidebar.css'),
+          ],
         },
       },
     ],
@@ -100,7 +103,7 @@ const config: Config = {
         {
           title: 'Documentation',
           items: [
-            { label: 'Getting Started', to: '/docs/tutorial/getting-started' },
+            { label: 'Getting Started', to: '/docs/getting-started/quick-start' },
             { label: 'Architecture', to: '/docs/technical/architecture' },
             { label: 'API Reference', to: '/docs/technical/api-reference' },
           ],

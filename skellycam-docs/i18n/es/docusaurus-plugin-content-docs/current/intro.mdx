@@ -23,27 +23,27 @@ La mayoria de las configuraciones multicamara sufren de deriva entre camaras: la
 
 | Pagina | Descripcion |
 |--------|-------------|
-| [Primeros Pasos](tutorial/getting-started) | Instalacion, primera ejecucion y uso basico |
+| [Instalacion](getting-started/installation) | Descargar e instalar SkellyCam |
+| [Inicio Rapido](getting-started/quick-start) | Tu primera grabacion en cinco pasos |
+| [Tutorial para Principiantes](getting-started/beginner-tutorial) | Seleccion de camaras, configuracion y detalles de grabacion |
+| [Tutorial Avanzado](getting-started/advanced-tutorial) | Modelo de datos, estructura de carpetas, configuracion del servidor |
 | [Arquitectura](technical/architecture) | Protocolo de sincronizacion, modelo de procesos, flujo de datos |
 | [Referencia de API](technical/api-reference) | Documentacion de endpoints HTTP y WebSocket |
 | [Protocolo WebSocket](technical/websocket-protocol) | Formato binario de fotogramas, mensajes JSON, contrapresion |
-| [Configuracion](tutorial/configuration) | Ajustes del servidor, configuracion de camaras, directorios de datos, telemetria |
-| [Desarrollo](development/) | Pruebas, linting, CI y guias de contribucion |
+| [Desarrollo](development/) | Ejecucion desde codigo fuente, pruebas, linting, CI y contribuciones |
 | [Contribuir](development/contributing) | Como reportar errores y enviar pull requests |
 | [Traducir](development/translating) | Ayuda a traducir la interfaz a tu idioma |
 
 ## Inicio Rapido
 
-```bash
-git clone https://github.com/freemocap/skellycam
-cd skellycam
-uv venv && source .venv/bin/activate
-uv sync
+1. **Descargar** — Obtener el instalador para tu plataforma desde la [pagina de descarga](/download)
+2. **Instalar y ejecutar** — Ejecutar el instalador y abrir SkellyCam
+3. **Conectar camaras** — Conectar camaras USB y hacer clic en **Detectar Camaras**
+4. **Grabar** — Hacer clic en **Grabar**, luego en **Detener** cuando hayas terminado
+5. **Reproducir** — Abrir la pagina de **Grabaciones** y seleccionar tu grabacion para reproduccion sincronizada
 
-python -m skellycam          # Iniciar servidor en localhost:53117
-# o simplemente: skellycam
+Consulta la [guia de inicio rapido](getting-started/quick-start) para mas detalles.
 
-# En otra terminal:
-cd skellycam-ui
-npm install && npm run dev   # Iniciar interfaz
-```
+:::tip Ejecutar desde codigo fuente?
+Si eres desarrollador, consulta la seccion de [Desarrollo](development/) para instrucciones sobre como ejecutar desde el codigo fuente.
+:::

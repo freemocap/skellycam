@@ -23,27 +23,27 @@ SkellyCam 将廉价的 USB 摄像头转变为帧级精确同步的多摄像头�
 
 | 页面 | 描述 |
 |------|------|
-| [快速入门](tutorial/getting-started) | 安装、首次运行和基本用法 |
+| [安装](getting-started/installation) | 下载并安装 SkellyCam |
+| [快速入门](getting-started/quick-start) | 五步完成首次录制 |
+| [初学者教程](getting-started/beginner-tutorial) | 摄像头选择、配置和录制详情 |
+| [高级教程](getting-started/advanced-tutorial) | 数据模型、文件夹结构、服务器配置 |
 | [架构](technical/architecture) | 同步协议、进程模型、数据流 |
 | [API 参考](technical/api-reference) | HTTP 和 WebSocket 端点文档 |
 | [WebSocket 协议](technical/websocket-protocol) | 二进制帧格式、JSON 消息、背压 |
-| [配置](tutorial/configuration) | 服务器设置、摄像头配置、数据目录、遥测 |
-| [开发](development/) | 测试、代码检查、CI 和贡献指南 |
+| [开发](development/) | 从源码运行、测试、代码检查、CI 和贡献 |
 | [贡献](development/contributing) | 如何报告错误和提交拉取请求 |
 | [翻译](development/translating) | 帮助将 UI 翻译成您的语言 |
 
 ## 快速开始
 
-```bash
-git clone https://github.com/freemocap/skellycam
-cd skellycam
-uv venv && source .venv/bin/activate
-uv sync
+1. **下载** — 从[下载页面](/download)获取适合您平台的安装程序
+2. **安装并启动** — 运行安装程序并打开 SkellyCam
+3. **连接摄像头** — 插入 USB 摄像头并点击**检测摄像头**
+4. **录制** — 点击**录制**，完成后点击**停止**
+5. **回放** — 打开**录制**页面并选择您的录制进行帧锁定回放
 
-python -m skellycam          # 在 localhost:53117 上启动服务器
-# 或者直接运行: skellycam
+查看[快速入门指南](getting-started/quick-start)了解更多详情。
 
-# 在另一个终端中:
-cd skellycam-ui
-npm install && npm run dev   # 启动 UI
-```
+:::tip 从源码运行？
+如果您是开发者，请查看[开发](development/)部分了解从源码运行的说明。
+:::

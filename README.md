@@ -37,14 +37,17 @@ SkellyCam is the camera backend for the [FreeMoCap](https://github.com/freemocap
 
 ## Quick Start
 
-### Prerequisites
+### Download
 
-- [Python 3.11+](https://www.python.org/downloads/) (3.12 recommended)
-- [uv](https://github.com/astral-sh/uv) — fast Python package manager
-- [Node.js 18+](https://nodejs.org/) — for the UI
-- USB cameras or built-in webcams
+The easiest way to get started is to download the installer for your platform:
 
-### Install & Run
+**[Download SkellyCam](https://freemocap.github.io/skellycam/download)** | [GitHub Releases](https://github.com/freemocap/skellycam/releases/latest)
+
+The installer bundles everything you need — no Python or Node.js required.
+
+### Run from Source
+
+For developers who want to run from the source code:
 
 ```bash
 # Clone and install the Python server
@@ -66,6 +69,8 @@ npm run dev
 
 Server starts on `http://localhost:53117`. Swagger docs at `http://localhost:53117/docs`.
 
+See the [Development guide](https://freemocap.github.io/skellycam/docs/development/) for full setup instructions including prerequisites and troubleshooting.
+
 #### Linux Only
 
 Audio recording requires additional system packages:
@@ -85,7 +90,7 @@ Each camera runs in its own OS process to avoid the GIL. The `CameraOrchestrator
 
 The orchestrator assembles one frame from each camera into a single multi-frame payload — the atomic unit of data throughout the system. Consumers (WebSocket stream, video recorder, frontend) always see exactly one frame per camera per event.
 
-For the full architecture (process model, IPC, data flow, playback sync), see the [Architecture docs](docs/architecture.md).
+For the full architecture (process model, IPC, data flow, playback sync), see the [Architecture docs](https://freemocap.github.io/skellycam/docs/technical/architecture).
 
 ---
 
@@ -93,12 +98,13 @@ For the full architecture (process model, IPC, data flow, playback sync), see th
 
 | Page | Description |
 |------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation, first run, and basic workflow |
-| [Architecture](docs/architecture.md) | Synchronization protocol, process model, data flow |
-| [API Reference](docs/api-reference.md) | HTTP and WebSocket endpoint documentation |
-| [WebSocket Protocol](docs/websocket-protocol.md) | Binary frame format, JSON messages, backpressure |
-| [Configuration](docs/configuration.md) | Server settings, camera config, data directories, telemetry |
-| [Development](docs/development.md) | Testing, linting, CI, and contributing |
+| [Quick Start](https://freemocap.github.io/skellycam/docs/getting-started/quick-start) | Installation, first run, and basic workflow |
+| [Beginner Tutorial](https://freemocap.github.io/skellycam/docs/getting-started/beginner-tutorial) | Camera selection, configuration, and recording |
+| [Advanced Tutorial](https://freemocap.github.io/skellycam/docs/getting-started/advanced-tutorial) | Data model, folder structure, server configuration |
+| [Architecture](https://freemocap.github.io/skellycam/docs/technical/architecture) | Synchronization protocol, process model, data flow |
+| [API Reference](https://freemocap.github.io/skellycam/docs/technical/api-reference) | HTTP and WebSocket endpoint documentation |
+| [WebSocket Protocol](https://freemocap.github.io/skellycam/docs/technical/websocket-protocol) | Binary frame format, JSON messages, backpressure |
+| [Development](https://freemocap.github.io/skellycam/docs/development/) | Running from source, testing, linting, CI, and contributing |
 
 ---
 
@@ -122,7 +128,7 @@ For the full architecture (process model, IPC, data flow, playback sync), see th
 | `GET`    | `/skellycam/playback/timestamps/{video_id}` | Get timestamp metadata             |
 | `WS`     | `/skellycam/websocket/connect`              | Real-time frames and logs          |
 
-Full details in the [API Reference](docs/api-reference.md).
+Full details in the [API Reference](https://freemocap.github.io/skellycam/docs/technical/api-reference).
 
 ---
 
@@ -135,7 +141,7 @@ uv run ruff check skellycam/            # Lint
 uv run poe test                         # Via task runner
 ```
 
-See the [Development guide](docs/development.md) for the full setup.
+See the [Development guide](https://freemocap.github.io/skellycam/docs/development/) for the full setup.
 
 ---
 
