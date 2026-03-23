@@ -21,7 +21,7 @@ All endpoints are served from `http://localhost:53117`. Camera-specific endpoint
 
 Health check endpoint.
 
-**Response:** `"Hello"` (200 OK)
+**Response:** `"Hello👋"` (200 OK)
 
 ### `GET /shutdown`
 
@@ -212,6 +212,22 @@ Loads a recording folder for playback. The server validates the path, discovers 
 ### `GET /skellycam/playback/video/{video_id}`
 
 Streams a loaded video file. The response is a standard `FileResponse` with the correct `Content-Type` header, and Starlette handles HTTP range requests automatically — this enables browser-native seeking, buffering, and hardware-accelerated decoding via `<video>` elements.
+
+### `GET /skellycam/playback/timestamps`
+
+Returns frame timestamps for all currently loaded videos.
+
+**Response:**
+```json
+{
+  "timestamps": {
+    "recording.camera0": [0.0, 33.3, 66.7],
+    "recording.camera1": [0.0, 33.3, 66.7]
+  }
+}
+```
+
+Videos without discoverable timestamp CSVs are silently omitted from the response.
 
 ### `GET /skellycam/playback/timestamps/{video_id}`
 
