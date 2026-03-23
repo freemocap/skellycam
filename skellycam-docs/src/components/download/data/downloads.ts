@@ -126,23 +126,25 @@ export const OS_NOTES: OsNoteEntry[] = [
   {
     os: 'macos',
     variant: 'warning',
-    title: 'Known camera detection issues on macOS',
+    title: 'Help needed to get `skellycam-v2.*` macOS installers working',
     content:
-      'Camera detection on macOS has known potentially breaking issues in this release. ' +
-      'If you have macOS experience and want to help us fix this, we\'d love your input!',
+      'The Windows build of SkellyCan v2.* is working fairly well, but there are KNOWN BREAKING PROBLEMS with the \'nix (Mac/Linux) builds.' +
+      'Specifically, there are issues related to the camera connection, config, and control, as well as audio/video saving methods. Backends and codecs and all that. '+
+      'If you have macOS experience and want to help us fix this, we\'d love your help!',
     issues: [
-      { url: 'https://github.com/freemocap/skellycam/issues/TODO_MAC_CAMERA', label: 'Camera detection issues on macOS' },
+      { url: 'https://github.com/freemocap/skellycam/issues/105', label: 'Mac/Linux device management problems' },
     ],
   },
   {
     os: 'linux',
     variant: 'warning',
-    title: 'Known camera detection issues on Linux',
+    title: 'Help needed to get `skellycam-v2.*` Linux installers working',
     content:
-      'Camera detection on Linux has known potentially breaking issues in this release. ' +
-      'If you have Linux experience and want to help us fix this, we\'d love your input!',
+      'The Windows build of SkellyCan v2.* is working fairly well, but there are KNOWN BREAKING PROBLEMS with the \'nix (Mac/Linux) builds.' +
+      'Specifically, there are issues related to the camera connection, config, and control, as well as audio/video saving methods. Backends and codecs and all that. '+
+      'If you have Linux experience and want to help us fix this, we\'d love your help!',
     issues: [
-      { url: 'https://github.com/freemocap/skellycam/issues/TODO_LINUX_CAMERA', label: 'Camera detection issues on Linux' },
+      { url: 'https://github.com/freemocap/skellycam/issues/105', label: 'Mac/Linux device management problems' },
     ],
   },
 ];

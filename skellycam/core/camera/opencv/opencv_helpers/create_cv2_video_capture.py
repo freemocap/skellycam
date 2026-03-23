@@ -3,7 +3,7 @@ import logging
 import cv2
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera.opencv.opencv_helpers.determine_backend import determine_opencv_camera_backend
+from skellycam.core.camera.determine_backend import determine_opencv_camera_backend
 from skellycam.core.camera.opencv.opencv_helpers.opencv_apply_config import apply_camera_configuration
 from skellycam.utilities.wait_functions import wait_1s
 
