@@ -2,9 +2,9 @@
 title: Beginner Tutorial
 sidebar_position: 3
 ---
-import { AiGeneratedBanner } from '@freemocap/skellydocs';
+import { AiGeneratedBanner, LinkedIssues } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner humanCurated humanNotes="These tutorials are weak, we need to add screenshots and whatnot to actually reference the UI and define buttons and whatnot"/>
+<AiGeneratedBanner humanCurated />
 
 
 
@@ -25,7 +25,10 @@ Detect cameras: `POST /skellycam/camera/detect` — Create or update a camera gr
 
 ## Configuring Cameras
 
-[//]: # (NOTE - should reference Camera Config stuff. Should include screenshot of that part of the UI with labels and stuff)
+:::note Screenshot coming soon
+Screenshot of the Camera Config panel in the UI, showing resolution, framerate, exposure, exposure mode, and rotation settings with labels for each control.
+:::
+
 Each camera in the group can be configured independently. The configuration panel in the UI lets you adjust the following settings:
 
 | Setting | Default | Description |
@@ -36,7 +39,9 @@ Each camera in the group can be configured independently. The configuration pane
 | **Exposure Mode** | `MANUAL` | Choose between `MANUAL`, `AUTO`, or `RECOMMENDED`. |
 | **Rotation** | None | Rotate the image in software after capture: 90° CW, 180°, or 90° CCW. |
 
-[//]: # (NOTE - The 'RECOMMENDED' option cycles through exposures and picks the one that puts the mean pixel luminance at half max &#40;127.5&#41; -1 level. This puts the luminance at a the 'little too dark' level that is a good balance between bright-enough-to-see and low-exposure-to-minimize-blur. There's another place in these docs that says teh RECOMMEND thing sets a default value, but thats not true. SHould also note that the UI should remember camrea settings, hard refresh w/ ctrl-R to clear )
+:::tip How RECOMMENDED exposure works
+The `RECOMMENDED` mode does not simply set a default value. It cycles through multiple exposure settings and selects the one is one level lower than the setting puts the mean pixel luminance closest to half-maximum (approximately 127.5 out of 255). This results in an image that is slightly darker than what we would tend to pic for standard camera usage — a deliberate choice that balances visibility with low exposure times to minimize motion blur. Note: the UI remembers camera settings between sessions. Use **Ctrl+R** (hard refresh) to clear saved settings.
+:::
 
 :::info API
 Camera configuration is sent as part of the camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference#camera-endpoints) for the full request schema.
@@ -52,12 +57,11 @@ Detect microphones: `GET /skellycam/camera/microphone/detect`. See the [API Refe
 
 Click **Record** to begin. All cameras capture synchronized frames while audio is recorded in parallel. Click **Stop** to finish.
 
-### Linked Issues
+Audio recording is an active area of development:
 
-Audio recording is an active area of development. Related issues:
-
-- [Audio recording issue](https://github.com/freemocap/skellycam/issues) <!-- TODO: Replace with specific audio issue URL -->
-- [Audio synchronization](https://github.com/freemocap/skellycam/issues) <!-- TODO: Replace with specific audio sync issue URL -->
+<LinkedIssues items={[
+  { label: 'Mac/Linux device management (includes audio)', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
 
 ## Viewing Recordings
 

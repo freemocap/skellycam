@@ -7,7 +7,7 @@ description: "Works with any standard UVC-compliant USB webcam. No proprietary h
 import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
 import config from '../../content.config';
 
-<AiGeneratedBanner humanCurated humanNotes="Need to add some text around the fact that research cameras use hardware trigger sync, but skellycam is designed to provide hardware-trigger levels of sync from software controls of consumer cameras. This languate exists elsewhere in teh docs, so we must make sure we're being consistent"/>
+<AiGeneratedBanner humanCurated />
 
 
 <CoreFeatureHeader feature={config.features.find(f => f.id === 'generic-usb-cameras')} repoUrl="https://github.com/freemocap/skellycam" />
@@ -18,11 +18,11 @@ SkellyCam is part of the [FreeMoCap](https://freemocap.org) ecosystem, which is 
 
 If you have USB webcams — any USB webcams — you can do multi-camera synchronized capture.
 
+Most research-grade multi-camera systems use **hardware triggers** — an external signal that fires all camera sensors simultaneously. This provides near-perfect synchronization but requires expensive, specialized cameras. SkellyCam is designed to deliver **research-quality synchronization** using **software-side control** of inexpensive consumer-grade USB cameras — making synchronized multi-camera capture accessible without proprietary hardware.
+
 ## What works today
 
 SkellyCam uses OpenCV's `VideoCapture` to interface with cameras. Any camera that presents as a **UVC (USB Video Class)** device will work. UVC is the standard protocol used by virtually all USB webcams, including:
-
-[//]: # (TODO - Need to add a note that we did not explicitly test any of these cameras and cannot guarantee that any particular camera model will work. Cameras are weird!! Future work will try to develop a shared repository of tested camera models)
 
 - Budget webcams (Logitech C270, etc.)
 - Mid-range webcams (Logitech C920, C922)
@@ -30,11 +30,15 @@ SkellyCam uses OpenCV's `VideoCapture` to interface with cameras. Any camera tha
 - Many industrial USB cameras that expose a UVC interface
 - Most laptop built-in cameras
 
-If your operating system recognizes the camera without installing special drivers, it's almost certainly UVC-compliant and will work with SkellyCam.
+:::warning Camera models not explicitly tested
+The cameras listed above are common examples of UVC-compliant devices. We have not explicitly tested every model and cannot guarantee that any particular camera will work perfectly. Cameras are weird and hard to predict! Future work aims to develop a community-maintained repository of tested camera models. If you encounter issues with a specific camera, please [open an issue](https://github.com/freemocap/skellycam/issues/new).
+:::
+
+If your operating system recognizes the camera without installing special drivers, it's most likely UVC-compliant and will work with SkellyCam.
 
 ## Limitations of USB cameras
 
-Standard USB webcams are mostly designed for video calls, not scientific measurement. They have real limitations worth understanding:
+Standard USB webcams are mostly optimized for video streaming, not scientific measurement. They have real limitations worth understanding:
 
 - **No hardware sync** — Each camera runs on its own internal clock. SkellyCam's software synchronization protocol mitigates this (see [Frame-Perfect Sync](./frame-perfect-sync)), but the physical capture moments still have some spread.
 - **No real timestamps** — Most USB cameras do not provide accurate timestamps for when each frame was captured. SkellyCam works around this with its own [timestamp system](./precise-timestamps).

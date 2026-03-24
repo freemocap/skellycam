@@ -4,7 +4,7 @@ sidebar_position: 2
 ---
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner humanCurated humanNotes="We should flesh this out. Probably should be handled in a more centralized manner"/>
+<AiGeneratedBanner humanCurated />
 
 # Design Philosophy
 
@@ -33,6 +33,24 @@ In practice this looks like:
 ## Accessibility Over Complexity
 
 When choosing between a more "correct" technical implementation and one that is easier to understand, prefer the one that is easier to understand — unless correctness is required for safety, data integrity, or scientific accuracy.
+
+## Cameras as Scientific Instruments
+
+A camera captures light from a particular area at a particular time — it is a spatiotemporal measurement instrument. The image defines the *spatial* aspects of the data, with fidelity determined by the camera sensor, lens, environment, and settings. The timestamps define the *temporal* aspect. Within the [FreeMoCap](https://freemocap.org) pipeline, extracting quantified 2D spatial information (e.g. skeleton joint positions) is handled by [skellytracker](https://github.com/freemocap/skellytracker). SkellyCam's focus is the temporal dimension: ensuring multi-camera frames are precisely synchronized in time.
+
+Most research-grade multi-camera systems use **hardware triggers** — an external signal that fires all camera sensors simultaneously. This provides near-perfect synchronization but requires expensive, specialized cameras. SkellyCam is designed to deliver **research-quality synchronization** using **software-side control** of inexpensive consumer-grade USB cameras — making synchronized multi-camera capture accessible without proprietary hardware.
+
+This framing — cameras as empirical measurement instruments — informs every major design decision in SkellyCam, from the frame-count-gated capture protocol to the detailed timestamp pipeline.
+
+## Hot, Hard, and Soft Loops
+
+SkellyCam's architecture classifies operations into three categories that drive both technical decisions and development governance:
+
+- **Hot loops** — Time-critical operations where any delay directly degrades temporal fidelity. The camera capture loops, frame synchronization gating, and shared memory writes. These run in isolated processes with minimal dependencies.
+- **Hard loops** — Correctness-critical operations where the math must be right, but timing is flexible. Timestamp computation, recording finalization, inter-camera statistics. Performance is obviously important for general usability, but we're happy trade speed for accuracy and robustness here.
+- **Soft loops** — Best-effort operations where some squish and slop is acceptable (in the short term). UI rendering, WebSocket streaming, log forwarding are all examples of soft-loops. If the frontend lags, frames are dropped from the stream — but recordings are never affected.
+
+This classification also drives development governance: contributions touching hot/hard loops receive much higher scrutiny than those only touching soft loops. See the [Architecture](/docs/technical/architecture#hot-hard-and-soft-loops) page for the full technical treatment.
 
 ## Open Source, Open Science
 

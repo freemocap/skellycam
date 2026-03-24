@@ -5,10 +5,7 @@ sidebar_position: 1
 
 import {AiGeneratedBanner} from '@freemocap/skellydocs';
 
-<AiGeneratedBanner
-    humanCurated
-    humanNotes = "The 'guarantees' notes at the bottom here should match the Home page. Additional notes as in-line comments"
-/>
+<AiGeneratedBanner humanCurated />
 
 SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera system. It is the camera backend for the [FreeMoCap](https://github.com/freemocap/freemocap) motion capture project.
 
@@ -16,13 +13,15 @@ SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera
 
 A camera is, at its core, a device that captures light from a particular area at a particular time. It is a spatiotemporal measurement instrument — and when you use cameras for science, the *temporal* dimension becomes critical.
 
-[//]: # (Should mention that the image itself defines the spatial elements of the data, the fideltiy of which is defined by the camera sensor, lens, environment, and settings. The timestmaps define the temporal aspect of the empircal data represented by a video, which is mostly what skellycam is designed to handle. SHould also mention that most research camera systems use hardware triggers for sync, but those cameras are expensive and often technical to use. skellycam is deisgned to approximate hardware-trigger levels of syncronization with software side control)
+The image itself defines the *spatial* aspects of the data, with fidelity determined by the camera sensor, lens, environment, and settings. The timestamps define the *temporal* aspect of the empirical data represented by a video. Within the [FreeMoCap](https://freemocap.org) pipeline, extracting quantified 2D spatial information (e.g. skeleton joint positions) is handled by [skellytracker](https://github.com/freemocap/skellytracker). SkellyCam's focus is the temporal dimension: ensuring multi-camera frames are precisely synchronized in time.
+
+Most research-grade multi-camera systems use **hardware triggers** — an external signal that fires all camera sensors simultaneously. This provides near-perfect synchronization but requires expensive, specialized cameras. SkellyCam is designed to deliver **research-quality synchronization** using **software-side control** of inexpensive consumer-grade USB cameras — making synchronized multi-camera capture accessible without proprietary hardware.
 
 When using multiple cameras, each one captures its own slice of the world at its own moment. If those moments aren't aligned, the measurements from different cameras can't be meaningfully compared or combined. Multi-view triangulation, 3D reconstruction, motion capture — all of these require that "frame N" from every camera corresponds to the same instant in time.
 
 Most multi-camera setups cannot guarantee this. Each USB camera runs on its own internal clock, delivering frames at its own pace. The cameras drift apart over time, and there is no built-in mechanism to keep them synchronized. SkellyCam solves this with a frame-count-gated capture protocol that coordinates all cameras at the frame level.
 
-**SkellyCam is carefully designed to guarantee::**
+**SkellyCam is carefully designed to guarantee:**
 
 - All recorded videos have **precisely the same frame count** — corresponding frames across cameras are from the same temporal time slice
 - Each multi-frame payload contains one image per camera, **guaranteed to be captured at the same time slice**

@@ -19,8 +19,6 @@ Each payload contains exactly **one image per camera per frame event, captured a
 
 ## The WebSocket protocol
 
-[//]: # (TODO - reference the parts of the code that actuall define this protocol, both in the websocket and the numpy recarrays)
-
 SkellyCam uses a compact binary WebSocket protocol to stream frames:
 
 1. **JPEG compression** — Each camera's frame is JPEG-compressed (quality 80 by default) and optionally downscaled to match the client's display dimensions.
@@ -29,13 +27,11 @@ SkellyCam uses a compact binary WebSocket protocol to stream frames:
 
 The same WebSocket connection also carries JSON messages for logs, state updates, framerate statistics, and control commands.
 
-For full protocol details, see the [WebSocket Protocol](../technical/websocket-protocol) reference.
+For full protocol details, see the [WebSocket Protocol](../technical/websocket-protocol) reference. The server-side implementation lives in the [websocket_server.py](https://github.com/freemocap/skellycam/blob/development/skellycam/api/websocket/websocket_server.py) module.
 
 ## Frontend rendering
 
-[//]: # (TODO - reference parts of hte UI code relevant to this stuff)
-
-The React/Electron frontend processes incoming frames through a pipeline optimized for performance:
+The React/Electron frontend processes incoming frames through a pipeline optimized for performance (see the [camera view components](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/components/camera-views) and [server services](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/services/server) in the UI source):
 
 1. **Binary parse** — The binary payload is parsed to extract per-camera JPEG blobs.
 2. **ImageBitmap creation** — Each JPEG blob is decoded into an `ImageBitmap`, which can be transferred to a worker thread without copying.
@@ -43,7 +39,9 @@ The React/Electron frontend processes incoming frames through a pipeline optimiz
 
 This architecture supports many simultaneous camera feeds without frame drops in the UI.
 
-[//]: # (TODO - add a note that in practice, our frontend streaming still struggles to hit th 30-60 fps it SHOULD be capable of. We're working on it, and could use some help! link to the development page)
+:::note Work in progress
+In practice, our frontend streaming still struggles to consistently hit the 30-60 FPS it SHOULD be capable of. This is an active area of improvement, and we could use help! See the [Development](/docs/development/) section if you're interested in contributing to frontend performance.
+:::
 
 ## What's next
 

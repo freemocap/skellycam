@@ -12,6 +12,11 @@ const config: SkellyDocsConfig = {
       name: 'FreeMoCap',
       url: 'https://freemocap.org',
     },
+    ctaButtons: [
+      { label: 'Get Started', to: '/docs/getting-started/beginner-tutorial', variant: 'primary' },
+      { label: 'Download/Install', to: '/download', variant: 'secondary' },
+      { label: 'Learn More', to: '/docs/intro', variant: 'secondary' },
+    ],
   },
 
   features: [
@@ -122,6 +127,23 @@ const config: SkellyDocsConfig = {
   guaranteeIssues: [
     { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', url: "https://github.com/freemocap/skellycam/issues/100" },
   ],
+
+  guaranteesConfig: {
+    title: (
+      <>
+        Skelly<span style={{ color: 'var(--skelly-accent, #ff6b35)' }}>Cam</span> is carefully designed to{' '}
+        <span style={{ color: 'var(--skelly-accent, #ff6b35)' }}>guarantee</span>:
+      </>
+    ),
+    items: [
+      'All recorded videos have precisely the same frame count — corresponding frames across cameras are from the same temporal time slice',
+      'Each multi-frame payload contains one image per camera, guaranteed to be captured at the same time slice',
+      'Recording quality is protected from real-time streaming — variations in the live stream never cause blocking, lagging, or frame loss in the recording pipeline',
+    ],
+    issues: [
+      { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', url: "https://github.com/freemocap/skellycam/issues/100" },
+    ],
+  },
 };
 
 export default config;

@@ -5,7 +5,7 @@ sidebar_position: 2
 
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner humanCurated humanNotes="Should add something telling users to please be patient on PR's which could take a long time for us to review. Should add something that references Nadia Egbhal's Working in Public about developer attention being the main limited resource. ALso should link to the Hot/hard/soft loop section of the Architecture to clue potential contributors in on that distinction. Specifically, letting them know that contributions that touch the hot/hard loops will be given much higher scrutiny than other contributions. For first time contibutors, consider making contact in the server or citing credentials if contributing that touch the sensitive parts of the app"/>
+<AiGeneratedBanner humanCurated />
 
 
 # Contributing to SkellyCam
@@ -49,6 +49,16 @@ We use [GitHub Issues](https://github.com/freemocap/skellycam/issues) to track b
 - Any code that comes through a PR should be covered with tests
 - Those tests must pass the GitHub Actions workflow before they may be merged
 - Any UI changes should include a small video of the working application with the change included
+
+## A Note on Review Timelines
+
+We're a small team, and as Nadia Eghbal describes in [*Working in Public*](https://press.stripe.com/working-in-public), developer attention is the primary limiting resource in open-source projects. Please be patient with pull request reviews — they can take time, especially when the team is focused on core development work.
+
+A few things that affect review priority:
+
+- **Contributions touching [hot or hard loops](/docs/technical/architecture#hot-hard-and-soft-loops)** — the frame capture pipeline, synchronization gate, shared memory, and timestamp logic — receive much higher scrutiny than changes to soft loops (UI, streaming, logging). We don't meant to gatekeep, but a subtle bug in these parts of the code can silently corrupt scientific data and downstream processing pipelines.
+- **First-time contributors**: consider reaching out on the [Discord server](https://discord.gg/SgdnzbHDTG) before investing significant time. We're happy to discuss approach and scope before you write the code and let you know where your proposed work fits in to our planned development roadmap.
+- **Smaller, focused PRs** are reviewed faster than large ones. When in doubt, split your work into multiple PRs.
 
 ## Coding Style
 

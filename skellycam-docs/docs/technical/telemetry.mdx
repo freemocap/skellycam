@@ -4,15 +4,54 @@ sidebar_position: 6
 ---
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner humanCurated humanNotes="Need to add a lot more details about theis telemetry, e.g. the tension between making a free, convivial, non-extractive too like skellycam and the incontrovbertible value of these logs. WE should include a demo of the kind of pings we send, and also also link to an Issue talking about the need to create a 'gradient' consent method to give users the ability to consent to differnt levels of ping, from the 'one ping only' existence ping, to simple 'system thumbrint' to let us know what hardware they are using, to more complex UI usage and button clicks and whatnot" />
+<AiGeneratedBanner humanCurated humanNotes="SHould link 'convivial tool' reference to Ivan Illich's definition of the term. Prob also should referene the 4 Freedoms definition of Free Softwaretoo />
 
 # Telemetry
 
 SkellyCam collects anonymous usage telemetry to help the development team understand how the software is used. Telemetry is managed by the [skellypings](https://github.com/freemocap/skellypings) package.
 
+## The tension
+
+There is an inherent tension between building a free, convivial, non-extractive tool and the incontrovertible value of usage data. SkellyCam is open-source and community-driven — we have no interest in surveillance or data monetization. But as a small team, we genuinely need to know basic things like: how many people are using SkellyCam, what operating systems and hardware they're running, and whether certain features are being adopted. Without this information, we're flying blind when making development decisions.
+
+Also, seeing that people are acutally USING this tool is one of the main thing that adds gas to the emotion tank that we draw from to build it. Its hard y'all!
+
+We take this tension seriously and aim to collect the minimum data needed to make informed decisions, with full transparency about what is sent.
+
 ## What Is Collected
 
-An `app_opened` event is sent at startup containing anonymous system specifications: OS name and version, CPU architecture, CPU count, total RAM, and Python version. No camera data, recordings, or personally identifiable information is collected.
+An `app_opened` event is sent at startup containing anonymous system specifications. No camera data, recordings, or personally identifiable information is collected.
+
+### Example ping
+
+Here is a representative example of the data sent on each `app_opened` event, along with the IP address of the computer that sent it:
+
+```json
+{
+  "event": "app_opened",
+  "app_name": "skellycam",
+  "app_version": "2.1.0",
+  "system": {
+    "os": "Windows",
+    "os_version": "10.0.22631",
+    "architecture": "AMD64",
+    "cpu_count": 16,
+    "total_ram_gb": 32.0,
+    "python_version": "3.12.4"
+  }
+}
+```
+
+
+## Gradient consent (future)
+
+We recognize that different users have different comfort levels with telemetry. Future versions of SkellyCam aim to implement a **gradient consent** model, giving users fine-grained control over what they share:
+
+- **Existence ping** — One Ping Only. A single anonymous "hello, I exist" ping at startup. No system details.
+- **System fingerprint** — Basic hardware and OS information (what is currently collected). Helps us understand what platforms to prioritize and track OS-specific errors.
+- **Usage analytics** — UI interactions, button clicks, feature adoption. Helps us understand which features are used and which need improvement.
+
+Each level would be independently toggleable, with clear explanations of exactly what is sent at each tier. The goal is to respect user autonomy while making it easy for those who want to help improve the software.
 
 ## Opting Out
 
@@ -27,4 +66,4 @@ Telemetry is enabled by default. To disable it, either:
 }
 ```
 
-The setting takes effect on the next server start.
+The setting takes effect on the next server start and will be remembered as long as that `telemetery_config.json` exists on that path

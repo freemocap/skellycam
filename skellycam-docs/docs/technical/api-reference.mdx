@@ -5,7 +5,7 @@ sidebar_position: 2
 
 import {AiGeneratedBanner, LinkedIssues} from '@freemocap/skellydocs';
 
-<AiGeneratedBanner humanCurated humanNotes="Need to link to the Audio issue in the audio section. Should prob add Linked Issues to the rest of the api docs as well, when approriate. Maybe a blanket add of all the issues tagged with [API] label? "/>
+<AiGeneratedBanner humanCurated />
 
 # API Reference
 
@@ -83,9 +83,10 @@ Detects available camera devices on the system.
 
 Detects available microphone devices on the system. Returns a mapping of device index to device name.
 
-// Add linked issue for Audio problems here
+<LinkedIssues items={[
+  { label: 'Mac/Linux device management (includes audio)', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
 
-/>
 **Response:**
 ```json
 {
@@ -178,7 +179,11 @@ Persistent WebSocket connection for real-time frame streaming, log forwarding, a
 
 All playback endpoints are prefixed with `/skellycam/playback`. They serve pre-recorded video files over HTTP for browser-native `<video>` playback with full seeking support via HTTP range requests.
 
-NOTE - the playback router needs to change to put the 'recording_name' as a higher level aspect of the API path (see [Issue #102](https://github.com/freemocap/skellycam/issues/102))
+<LinkedIssues items={[
+  { label: 'Clean up /cameras and /playback APIs', url: 'https://github.com/freemocap/skellycam/issues/102' },
+  { label: 'Clean up /cameras API', url: 'https://github.com/freemocap/skellycam/issues/103' },
+  { label: 'Clean up /playback API', url: 'https://github.com/freemocap/skellycam/issues/104' }
+]} />
 
 ### `GET /skellycam/playback/recordings`
 

@@ -5,9 +5,13 @@ sidebar_position: 1
 
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner humanCurated humanNotes="Should add a note that the frontend/backend processes are independent, so e.g. if they are only working on backend code they can use the standard app installer to run the frontend and turn off 'auto-connect' and then run their backend code from source (and vice versa for frontend-only work) "/>
+<AiGeneratedBanner humanCurated />
 
 # Development
+
+:::tip Independent frontend and backend
+The frontend and backend are independent processes. If you're only working on backend code, you can use the standard app installer for the frontend and set server **auto-connect** to `false`, then run your backend from source. Vice versa for frontend-only work — just run the installed backend server in a terminal and it will connect to a UI running from source. This saves setup time and lets you focus on the part you're changing.
+:::
 
 ## Install from Source
 

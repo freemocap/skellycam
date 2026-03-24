@@ -3,7 +3,7 @@ title: Frame Synchronization
 sidebar_position: 4
 ---
 
-import { AiGeneratedBanner } from '@freemocap/skellydocs';
+import { AiGeneratedBanner, Tip } from '@freemocap/skellydocs';
 
 <AiGeneratedBanner humanCurated />
 
@@ -11,15 +11,15 @@ import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
 This page is a technical deep-dive into SkellyCam's frame-count-gated capture protocol. For a higher-level overview, see [Frame Perfect Sync](/docs/core/frame-perfect-sync).
 
-[//]: # (TODO - link the 'hot-loop' to the discussion of the hot/hard/soft loop in the other doc. Ideally that hoverover jargony thing we use elswewhere)
-
-The entire frame synchronization system is a **hot loop** — every operation in the capture cycle is time-critical, and any delay directly affects temporal fidelity.
+The entire frame synchronization system is a <Tip shortInfo="Operations where any delay directly degrades temporal fidelity." longInfo="SkellyCam classifies operations into hot loops (time-critical capture), hard loops (correctness-critical processing), and soft loops (best-effort UI/streaming)." href="/docs/technical/architecture#hot-hard-and-soft-loops">**hot loop**</Tip> — every operation in the capture cycle is time-critical, and any delay directly affects temporal fidelity.
 
 ## The capture loop
 
 Each camera runs the following loop in its own `multiprocessing.Process`. The loop runs continuously from the moment cameras are connected until they are shut down.
 
-[//]: # ( TODO - need to add an info block for what 'atomic' means in the context of the recording thing)
+:::info What "atomic" means here
+In this context, "atomic" means the recording flags are read as a single indivisible operation relative to the frame cycle. The flag values cannot change between reading them and acting on them, because the `grabbing_frame` flag is not cleared until AFTER the flags are read. This prevents race conditions at recording start/stop boundaries and off-by-one errors in frame-counts the resulting videos.
+:::
 
 ```mermaid
 flowchart TD
