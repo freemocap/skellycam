@@ -32,14 +32,7 @@ Currently supported: English, Spanish, French, German, Italian, Portuguese (Braz
 
 Strings use i18next format — preserve `{{variables}}` exactly as-is and keep `_one`/`_other` suffixes for plurals.
 
-Backend strings (camera names, log messages, codecs, file paths) don't need translation.
-
-## Adding a New Language
-
-1. Copy `en-english.json` to `<locale-code>-<language-name>.json`
-2. Translate the values (not the keys)
-3. Set `_meta.translationSource` to `"ai-generated"` or `"human-authored"`
-4. Open an issue or PR — we'll wire it into the app
+Backend strings (camera names, log messages, codecs, file paths) don't need translation - that would be too much work to handle in a way that didn't risk the functionality of the core application.
 
 ## Questions?
 

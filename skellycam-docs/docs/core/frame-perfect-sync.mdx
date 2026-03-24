@@ -7,23 +7,28 @@ description: "A frame-count-gated capture protocol ensures all cameras stay in l
 import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
 import config from '../../content.config';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated humanNotes="I say this elsewhere, but we should add something around the 'cameras as spatiotemporal measurement instruments' section mentioning that the 'sptial' aspects of the measurement are largely defined by the camera sensor, lens, and settings of the camera device itself. Should also add ome of those multi-layer info things linking to details about cameras and image coordinates (e.g. from cv2 docs or wikipedia or something). WE should also add something saying that within the context of the freemocap core process, the job of extracting quantified details of the 2d spatial info about the tracked object (i.e. human skeleton) is hanelded by https://github.com/freemocap/skellytracker "/>
 
 <CoreFeatureHeader feature={config.features.find(f => f.id === 'frame-perfect-sync')} repoUrl="https://github.com/freemocap/skellycam" />
 
 ## The problem
 
+[//]: # (TODO - needs some text-level polish. DO NOT CHANGE MEANING AT ALL)
+
 A camera captures light from a particular area at a particular time — it is a spatiotemporal measurement instrument. When you use multiple cameras together, you are making multiple simultaneous measurements of the same scene. For those measurements to be scientifically meaningful, they must be temporally aligned: "frame N" from every camera must correspond to the same instant in the real world.
 
-USB webcams have no built-in synchronization mechanism. Each camera runs on its own internal clock, grabs frames at its own pace, and has no awareness of other cameras in the system. Without active coordination, the cameras drift apart — and the further apart they drift, the less meaningful any cross-camera comparison becomes.
+USB webcams have no built-in synchronization mechanism. Each camera runs on its own internal clock, grabs frames at its own pace, and has no awareness of other cameras in the system. Without active coordination, the cameras drift apart — and the further apart they drift, the less meaningful any cross-camera comparison becomes. For applications like multi-view 3D triangulation (as used in [FreeMoCap](https://freemocap.org)), temporal misalignment directly degrades the precision of the reconstructed 3D points.
 
-This is not just a theoretical problem. For applications like multi-view 3D triangulation (as used in [FreeMoCap](https://freemocap.org)), temporal misalignment directly degrades the precision of the reconstructed 3D points.
+SkellyCam/FreeMoCap v1.* handled this problem by post-hoc synchronization of the independently recorded videos, inserting duplicate frames to handle the inherent desync. In addition to that issue, the post-hoc synchronization method makes real-time synchronized streaming of multi-camera images impossible. This technical challenge was the core driver of the development of the skellycam v2.* application
+
 
 :::info USB webcam limitation
 Even with perfect software synchronization, there is an inherent hardware limitation: the actual sensor exposure timing is not controllable via software for standard USB webcams. In practice, this means there is an unmeasurable time spread of approximately **+/- half a frame duration** across cameras. For a 30 fps camera, that's roughly +/- 16 ms. See the [sub-frame synchronization issue](https://github.com/freemocap/skellycam/issues/91) for ongoing work toward hardware-triggered synchronization.
 :::
 
 ## The Python challenge
+
+[//]: # (TODO - should add something saying "why python" e.g. If python has so many challenges, why use it? The answer is multi-fold. First, most practically, its the language the devs knew so we used it lol. Second, the REPL aspect of python means we can pause in debugger at any point in the code during runtime, which is really helpful for development AND provides a valuable window into the deep guts of the application even to less experienced people &#40;such as student-like-object or other python-only newbies&#41;. At some point, we'll probably switch to a compiled language &#40;C/C++/C#, Rust, or Go??&#41;, but probably not until skellycam 3.*!  )
 
 SkellyCam is written in Python, which adds specific engineering challenges:
 
@@ -35,9 +40,13 @@ The architecture is designed so that nothing — not disk I/O, not video encodin
 
 ## How SkellyCam solves it
 
+[//]: # (TODO - keep these vibes consistent with the general "skellycam/cameras as empical/scientific tools" )
+
 SkellyCam uses a **frame-count-gated capture protocol**. Each camera runs in its own process with its own capture loop, but a shared `CameraOrchestrator` gates when each camera is allowed to grab its next frame.
 
 The capture loop for each camera, on every iteration:
+
+[//]: # (TODO - add links to relevant sections of the docs, as appropriate. use the cool hovertip like we do elswhere, when we can)
 
 1. **Update checks** — Check for pause commands, config updates, and recording info
 2. **Pause gate** — If paused, spin-wait (1 ms) until unpaused
@@ -50,6 +59,8 @@ The capture loop for each camera, on every iteration:
 9. **Increment** — Update the camera's frame count, which may ungate other cameras waiting to proceed
 
 The key insight: no camera ever gets more than **one frame ahead** of any other. This maintains lock-step progression without requiring an explicit centralized barrier.
+
+[//]: # (TODO - do we need this diagram here? Isn't it redundant to the architecture one? We should either remove it or explicitly tag that its a simplied form of the loops diagrams at other parts of the code &#40;and link to them&#41;)
 
 ```mermaid
 sequenceDiagram

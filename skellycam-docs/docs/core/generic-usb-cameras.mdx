@@ -7,7 +7,8 @@ description: "Works with any standard UVC-compliant USB webcam. No proprietary h
 import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
 import config from '../../content.config';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated humanNotes="Need to add some text around the fact that research cameras use hardware trigger sync, but skellycam is designed to provide hardware-trigger levels of sync from software controls of consumer cameras. This languate exists elsewhere in teh docs, so we must make sure we're being consistent"/>
+
 
 <CoreFeatureHeader feature={config.features.find(f => f.id === 'generic-usb-cameras')} repoUrl="https://github.com/freemocap/skellycam" />
 
@@ -21,6 +22,8 @@ If you have USB webcams — any USB webcams — you can do multi-camera synchron
 
 SkellyCam uses OpenCV's `VideoCapture` to interface with cameras. Any camera that presents as a **UVC (USB Video Class)** device will work. UVC is the standard protocol used by virtually all USB webcams, including:
 
+[//]: # (TODO - Need to add a note that we did not explicitly test any of these cameras and cannot guarantee that any particular camera model will work. Cameras are weird!! Future work will try to develop a shared repository of tested camera models)
+
 - Budget webcams (Logitech C270, etc.)
 - Mid-range webcams (Logitech C920, C922)
 - Higher-end USB cameras (Logitech Brio, Razer Kiyo)
@@ -31,11 +34,11 @@ If your operating system recognizes the camera without installing special driver
 
 ## Limitations of USB cameras
 
-USB webcams are designed for video calls, not scientific measurement. They have real limitations worth understanding:
+Standard USB webcams are mostly designed for video calls, not scientific measurement. They have real limitations worth understanding:
 
 - **No hardware sync** — Each camera runs on its own internal clock. SkellyCam's software synchronization protocol mitigates this (see [Frame-Perfect Sync](./frame-perfect-sync)), but the physical capture moments still have some spread.
 - **No real timestamps** — Most USB cameras do not provide accurate timestamps for when each frame was captured. SkellyCam works around this with its own [timestamp system](./precise-timestamps).
-- **Rolling shutter** — Most webcams use rolling shutter sensors, which means fast motion can produce skew artifacts.
+- **Rolling shutter** — Many webcams use rolling shutter sensors, which means fast motion can produce skew artifacts.
 - **USB bandwidth** — Each camera consumes USB bandwidth. Running many cameras may require multiple USB host controllers.
 
 These are inherent to the hardware — SkellyCam's job is to get the best possible results from the cameras you have.

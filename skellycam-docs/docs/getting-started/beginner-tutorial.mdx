@@ -4,7 +4,8 @@ sidebar_position: 3
 ---
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated humanNotes="These tutorials are weak, we need to add screenshots and whatnot to actually reference the UI and define buttons and whatnot"/>
+
 
 
 # Beginner Tutorial
@@ -17,12 +18,14 @@ When you click **Detect Cameras**, SkellyCam scans for all available USB Video C
 
 After detection, you'll see a list of available cameras. Select the ones you want to use and click **Apply** to create a camera group. A live preview will appear for each selected camera.
 
+
 :::info API
 Detect cameras: `POST /skellycam/camera/detect` — Create or update a camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference#camera-endpoints) for details.
 :::
 
 ## Configuring Cameras
 
+[//]: # (NOTE - should reference Camera Config stuff. Should include screenshot of that part of the UI with labels and stuff)
 Each camera in the group can be configured independently. The configuration panel in the UI lets you adjust the following settings:
 
 | Setting | Default | Description |
@@ -32,6 +35,8 @@ Each camera in the group can be configured independently. The configuration pane
 | **Exposure** | `-7` | Hardware-dependent exposure value. More negative = shorter exposure time. The valid range depends on your camera model. |
 | **Exposure Mode** | `MANUAL` | Choose between `MANUAL`, `AUTO`, or `RECOMMENDED`. |
 | **Rotation** | None | Rotate the image in software after capture: 90° CW, 180°, or 90° CCW. |
+
+[//]: # (NOTE - The 'RECOMMENDED' option cycles through exposures and picks the one that puts the mean pixel luminance at half max &#40;127.5&#41; -1 level. This puts the luminance at a the 'little too dark' level that is a good balance between bright-enough-to-see and low-exposure-to-minimize-blur. There's another place in these docs that says teh RECOMMEND thing sets a default value, but thats not true. SHould also note that the UI should remember camrea settings, hard refresh w/ ctrl-R to clear )
 
 :::info API
 Camera configuration is sent as part of the camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference#camera-endpoints) for the full request schema.

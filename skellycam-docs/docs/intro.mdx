@@ -3,9 +3,12 @@ title: SkellyCam Documentation
 sidebar_position: 1
 ---
 
-import { AiGeneratedBanner } from '@freemocap/skellydocs';
+import {AiGeneratedBanner} from '@freemocap/skellydocs';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner
+    humanCurated
+    humanNotes = "The 'guarantees' notes at the bottom here should match the Home page. Additional notes as in-line comments"
+/>
 
 SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera system. It is the camera backend for the [FreeMoCap](https://github.com/freemocap/freemocap) motion capture project.
 
@@ -13,21 +16,32 @@ SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera
 
 A camera is, at its core, a device that captures light from a particular area at a particular time. It is a spatiotemporal measurement instrument — and when you use cameras for science, the *temporal* dimension becomes critical.
 
+[//]: # (Should mention that the image itself defines the spatial elements of the data, the fideltiy of which is defined by the camera sensor, lens, environment, and settings. The timestmaps define the temporal aspect of the empircal data represented by a video, which is mostly what skellycam is designed to handle. SHould also mention that most research camera systems use hardware triggers for sync, but those cameras are expensive and often technical to use. skellycam is deisgned to approximate hardware-trigger levels of syncronization with software side control)
+
 When using multiple cameras, each one captures its own slice of the world at its own moment. If those moments aren't aligned, the measurements from different cameras can't be meaningfully compared or combined. Multi-view triangulation, 3D reconstruction, motion capture — all of these require that "frame N" from every camera corresponds to the same instant in time.
 
 Most multi-camera setups cannot guarantee this. Each USB camera runs on its own internal clock, delivering frames at its own pace. The cameras drift apart over time, and there is no built-in mechanism to keep them synchronized. SkellyCam solves this with a frame-count-gated capture protocol that coordinates all cameras at the frame level.
 
-**The guarantees:**
+**SkellyCam is carefully designed to guarantee::**
 
 - All recorded videos have **precisely the same frame count** — corresponding frames across cameras are from the same temporal time slice
 - Each multi-frame payload contains one image per camera, **guaranteed to be captured at the same time slice**
 - Recording quality is **protected from real-time streaming** — variations in the live stream never cause blocking, lagging, or frame loss in the recording pipeline
 
-## Community
 
-- **[Discord](https://discord.gg/SgdnzbHDTG)** — Conversations, support, and community discussions
-- **[GitHub Discussions](https://github.com/freemocap/skellycam/discussions)** — Longer-form questions and ideas
-- **[Community page](/docs/community)** — Roadmap links and more ways to get involved
+## Quick Start
+
+1. **Download** — Get the installer for your platform from the [Download page](/download)
+2. **Install and launch** — Run the installer and open SkellyCam
+3. **Connect cameras** — Plug in USB cameras and click **Detect Cameras**
+4. **Record** — Click **Record**, then **Stop** when done
+5. **Play back** — Open the **Recordings** page and select your recording for frame-locked playback
+
+See the [Quick Start guide](getting-started/quick-start) for more detail.
+
+:::tip Run from source?
+If you're a developer, see the [Development](development/) section for instructions on running from source code.
+:::
 
 ## Documentation
 
@@ -49,16 +63,8 @@ Most multi-camera setups cannot guarantee this. Each USB camera runs on its own 
 | [Translating](development/translating) | Help translate the UI into your language |
 | [Community](community) | Discord, GitHub Discussions, project roadmap |
 
-## Quick Start
+## Community
 
-1. **Download** — Get the installer for your platform from the [Download page](/download)
-2. **Install and launch** — Run the installer and open SkellyCam
-3. **Connect cameras** — Plug in USB cameras and click **Detect Cameras**
-4. **Record** — Click **Record**, then **Stop** when done
-5. **Play back** — Open the **Recordings** page and select your recording for frame-locked playback
-
-See the [Quick Start guide](getting-started/quick-start) for more detail.
-
-:::tip Run from source?
-If you're a developer, see the [Development](development/) section for instructions on running from source code.
-:::
+- **[Discord](https://discord.gg/SgdnzbHDTG)** — Conversations, support, and community discussions
+- **[GitHub Discussions](https://github.com/freemocap/skellycam/discussions)** — Longer-form questions and ideas
+- **[Community page](/docs/community)** — Roadmap links and more ways to get involved

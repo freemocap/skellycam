@@ -5,11 +5,13 @@ sidebar_position: 4
 
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated />
 
 # Frame Synchronization Method
 
 This page is a technical deep-dive into SkellyCam's frame-count-gated capture protocol. For a higher-level overview, see [Frame Perfect Sync](/docs/core/frame-perfect-sync).
+
+[//]: # (TODO - link the 'hot-loop' to the discussion of the hot/hard/soft loop in the other doc. Ideally that hoverover jargony thing we use elswewhere)
 
 The entire frame synchronization system is a **hot loop** — every operation in the capture cycle is time-critical, and any delay directly affects temporal fidelity.
 
@@ -17,12 +19,14 @@ The entire frame synchronization system is a **hot loop** — every operation in
 
 Each camera runs the following loop in its own `multiprocessing.Process`. The loop runs continuously from the moment cameras are connected until they are shut down.
 
+[//]: # ( TODO - need to add an info block for what 'atomic' means in the context of the recording thing)
+
 ```mermaid
 flowchart TD
     Start([Loop iteration]) --> UpdateChecks["Update checks\n(pause, config, recording info)"]
     UpdateChecks --> PauseCheck{Paused?}
     PauseCheck -- Yes --> Wait1ms["wait 1 ms"] --> PauseCheck
-    PauseCheck -- No --> SyncGate{"should_grab_by_id()?\n(frame count ≤ all others)"}
+    PauseCheck -- No --> SyncGate{"should_grab_by_id(camera_id)?\n(frame count ≤ all others)"}
     SyncGate -- "No (other cameras behind)" --> Wait10us["wait 10 μs"] --> SyncGate
     SyncGate -- Yes --> Grab["grab()\nLatch sensor image"]
     Grab --> Retrieve["retrieve()\nDecode to numpy array"]

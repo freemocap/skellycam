@@ -4,7 +4,7 @@ sidebar_position: 4
 ---
 import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated humanNotes="These tutorials are weak, we need to add screenshots and whatnot to actually reference the UI and define buttons and whatnot"/>
 
 # Advanced Tutorial
 
@@ -12,9 +12,12 @@ This guide covers the data model, recording folder structure, server configurati
 
 ## Recording Folder Structure
 
-All SkellyCam data is stored under `~/skellycam_data/` by default.
+[//]: # (TODO - add a note saying "set to `~/freemocap_data/recording_session` in order to save skellycam recordings directly to the directory where freemocap v1 will see them automatically)
+All SkellyCam data is stored under `~/skellycam_data/recordings/` by default.
 
 ### Naming convention
+
+[//]: # ( TODO - lets make the ISO8601 thing link to somethng explaining what it is. A lot of folks have their own personal fav timestamp format but they SHOULD just follow the ISO8601 standard lol)
 
 The **recording name** is an ISO 8601 timestamp (seconds precision, filename-safe) with an optional tag appended after an underscore. This name is used as both the folder name and the prefix for all files inside the recording. The format is produced by `default_recording_name()` in `skellycam/system/default_paths.py`:
 
@@ -47,7 +50,7 @@ Video files use the pattern `{recording_name}.camera.id{camera_id}.idx{camera_in
 
 ### Example
 
-A two-camera recording with the tag `calibration`:
+A two-camera recording with the tag `calibration` (`recording_name = '2025-03-24T14_30_45_gmt-5_calibration'`):
 
 ```
 ~/skellycam_data/recordings/
@@ -69,9 +72,11 @@ A two-camera recording with the tag `calibration`:
 
 ### Recording Metadata
 
-The `_info.json` file contains the recording configuration: camera settings, recording name, UUID, and start timestamp. This file is written when a recording begins and can be used to reconstruct the camera setup.
+The `{recording_name}_info.json` file contains the recording configuration: camera settings, recording name, UUID, and start timestamp. This file is written when a recording begins and can be used to reconstruct the camera setup.
 
 ### Timestamp CSVs
+
+[//]: # (TODO - include a link to something explainig why perf_counter_ns is preferred for high precision applications. Maybe a brief thing to say that we shouldnt trust the ns scale values, but this format helps us avoid floating point error)
 
 Per-camera timestamp files contain one row per frame with high-resolution `perf_counter_ns` timestamps at each lifecycle stage (grab, retrieve, write, etc.). The multi-frame timestamp file contains inter-camera synchronization data, useful for post-hoc analysis of synchronization quality.
 
@@ -101,6 +106,8 @@ See the [API Reference](/docs/technical/api-reference) for the full list of endp
 ## Advanced Camera Settings
 
 ### FOURCC Codecs
+
+[//]: # (TODO - Note the use of FOURCC codes is pretty basic atm. link to the issue #105 - https://github.com/freemocap/skellycam/issues/105)
 
 SkellyCam uses two FOURCC codes for video handling:
 

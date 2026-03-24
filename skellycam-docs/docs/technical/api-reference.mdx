@@ -3,9 +3,9 @@ title: API Reference
 sidebar_position: 2
 ---
 
-import { AiGeneratedBanner } from '@freemocap/skellydocs';
+import {AiGeneratedBanner, LinkedIssues} from '@freemocap/skellydocs';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated humanNotes="Need to link to the Audio issue in the audio section. Should prob add Linked Issues to the rest of the api docs as well, when approriate. Maybe a blanket add of all the issues tagged with [API] label? "/>
 
 # API Reference
 
@@ -69,10 +69,10 @@ Detects available camera devices on the system.
     {
       "index": 0,
       "name": "HD Webcam",
-      "vendor_id": 1234,
-      "product_id": 5678,
-      "path": "/dev/video0",
-      "backend_id": 200,
+      "vendor_id": 1234, // Who made this camera? May not be accurate in some cameras
+      "product_id": 5678, // Product id for this camera? May not be accurate in some cameras
+      "path": "/dev/video0", //Note - this varies by OS, hence the challenges in Issue #[Mac/Linux Issue]
+      "backend_id": 200, // Add a link to a cv2 page matching int's to backend. Note it should match the backend_name
       "backend_name": "V4L2"
     }
   ]
@@ -83,6 +83,9 @@ Detects available camera devices on the system.
 
 Detects available microphone devices on the system. Returns a mapping of device index to device name.
 
+// Add linked issue for Audio problems here
+
+/>
 **Response:**
 ```json
 {
@@ -123,7 +126,7 @@ Creates a new camera group or updates an existing one. If the provided camera ID
 **Response:**
 ```json
 {
-  "group_id": "group-0",
+  "group_id": "group-0", // in practice, this number is the last 6 digits of a UUID
   "camera_configs": {
     "0": { }
   }
@@ -137,13 +140,13 @@ Starts recording for all active camera groups.
 **Request Body:**
 ```json
 {
-  "recording_name": "2024-09-15T14_30_00",
+  "recording_name": "2024-09-15T14_30_00", // Default is ISO860 file-name safe datetime string with optional _tag. Must be unique within recording directory
   "recording_directory": "~/skellycam_data/recordings",
   "mic_device_index": -1
 }
 ```
 
-All fields have defaults. `mic_device_index: -1` disables audio recording.
+All fields have defaults. `mic_device_index: -1` disables audio recording. `mic_device_index: 0` uses default microphone.
 
 **Response:** `true` (200 OK)
 
@@ -174,6 +177,8 @@ Persistent WebSocket connection for real-time frame streaming, log forwarding, a
 ## Playback Endpoints
 
 All playback endpoints are prefixed with `/skellycam/playback`. They serve pre-recorded video files over HTTP for browser-native `<video>` playback with full seeking support via HTTP range requests.
+
+NOTE - the playback router needs to change to put the 'recording_name' as a higher level aspect of the API path (see [Issue #102](https://github.com/freemocap/skellycam/issues/102))
 
 ### `GET /skellycam/playback/recordings`
 
@@ -212,10 +217,10 @@ Loads a recording folder for playback. The server validates the path, discovers 
   "recording_path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
   "videos": [
     {
-      "video_id": "recording.camera0",
-      "filename": "recording.camera0.mp4",
+      "video_id": "recording.camera.id0.idx0",
+      "filename": "recording.camera.id0.idx0.mp4",
       "size_bytes": 52428800,
-      "stream_url": "/skellycam/playback/video/recording.camera0"
+      "stream_url": "/skellycam/playback/video/recording.id0.idx0"
     }
   ]
 }

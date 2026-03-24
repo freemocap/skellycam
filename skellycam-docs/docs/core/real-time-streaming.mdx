@@ -7,7 +7,7 @@ description: "WebSocket protocol streams multi-camera frames to the frontend. Th
 import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
 import config from '../../content.config';
 
-<AiGeneratedBanner />
+<AiGeneratedBanner humanCurated />
 
 <CoreFeatureHeader feature={config.features.find(f => f.id === 'real-time-streaming')} repoUrl="https://github.com/freemocap/skellycam" />
 
@@ -15,9 +15,11 @@ import config from '../../content.config';
 
 A key design goal of SkellyCam's API is that **a multi-camera group behaves like a single camera**. Instead of managing N independent camera streams with independent frame rates and connection lifecycles, you connect to one WebSocket endpoint and receive a single stream of synchronized multi-frame payloads.
 
-Each payload contains exactly **one image per camera per frame event**, delivered at a consistent frame rate. Your application code doesn't need to correlate frames across cameras, handle drift, or manage per-camera connections. You just process each payload knowing it represents a single synchronized moment across all cameras.
+Each payload contains exactly **one image per camera per frame event, captured at the same realworld timeslice**, delivered at a consistent frame rate. Your application code doesn't need to correlate frames across cameras, handle drift, or manage per-camera connections. You just process each payload knowing it represents a single synchronized moment across all cameras.
 
 ## The WebSocket protocol
+
+[//]: # (TODO - reference the parts of the code that actuall define this protocol, both in the websocket and the numpy recarrays)
 
 SkellyCam uses a compact binary WebSocket protocol to stream frames:
 
@@ -31,6 +33,8 @@ For full protocol details, see the [WebSocket Protocol](../technical/websocket-p
 
 ## Frontend rendering
 
+[//]: # (TODO - reference parts of hte UI code relevant to this stuff)
+
 The React/Electron frontend processes incoming frames through a pipeline optimized for performance:
 
 1. **Binary parse** — The binary payload is parsed to extract per-camera JPEG blobs.
@@ -38,6 +42,8 @@ The React/Electron frontend processes incoming frames through a pipeline optimiz
 3. **OffscreenCanvas rendering** — Each camera's feed is rendered on an `OffscreenCanvas` in a dedicated Web Worker, keeping the main thread free for UI interactions.
 
 This architecture supports many simultaneous camera feeds without frame drops in the UI.
+
+[//]: # (TODO - add a note that in practice, our frontend streaming still struggles to hit th 30-60 fps it SHOULD be capable of. We're working on it, and could use some help! link to the development page)
 
 ## What's next
 

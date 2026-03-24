@@ -26,6 +26,8 @@ Learn more: [Client-server model (Wikipedia)](https://en.wikipedia.org/wiki/Clie
 
 ### UI Layer
 
+[//]: # (HUman NOTE - This diagramis ugly but functional)
+
 ```mermaid
 graph TB
     subgraph UI ["React / Electron UI"]
@@ -49,6 +51,7 @@ graph TB
 
 ### Server Layer
 
+[//]: # (Human NOte - The camera layer should be INSIDE the server block, the USB Cameras should OUTSIDE the server blovk )
 ```mermaid
 graph TB
     subgraph Server ["FastAPI Server (Python)"]
@@ -97,13 +100,19 @@ The entire [frame synchronization system](/docs/technical/frame-synchronization)
 
 ### Hard loops — correctness-critical
 
-Operations where the math must be internally correct, but timing is flexible. Timestamp computation, recording boundary decisions, and post-recording finalization fall here. A few milliseconds of delay is fine, but an off-by-one error in frame counting is not.
+Operations where the math must be internally correct, but timing is flexible. Post-hoc processing task such as timestamp computation and post-recording finalization fall here. A bit of delay is fine, but an off-by-one error in frame counting is not. Processing speed is a 'nice-to-have' for hard-loops, its important for User happiness but we'll happily trade time for accuracy when necessary.
 
 ### Soft loops — best-effort
 
 Operations where a few milliseconds of jitter or delay is acceptable. The UI rendering pipeline, WebSocket streaming to the frontend, and log forwarding are all soft loops. If the frontend lags behind, frames are dropped from the stream — but the recording and capture pipelines are never affected.
 
+Playback is also a soft-loop, specifically following a 'eventual consistency' approach to the rule that we should always display the same frame number for each camera. In some cases (i.e.  users aggressively moving the playback slider) could cause desync in frame view, but we can catch this up once the UI settles.
+
+---
+
 This classification drives key architectural decisions: each camera runs in its own process (protecting hot loops from the GIL and from each other), shared memory ring buffers use overwrite semantics (soft loop consumers can't block hot loop producers), and recording happens synchronously within the camera process (keeping it in the hot loop rather than adding IPC latency).
+
+These concepts also drive development governance - we must be very protective of contributions that touch the hot/hard loops, less so of stuff that only touches soft-loops
 
 ## Process Model
 
@@ -113,6 +122,8 @@ SkellyCam uses Python's `multiprocessing` module to run each camera in its own p
 <summary>What is the GIL?</summary>
 
 The Global Interpreter Lock (GIL) is a mechanism in CPython that allows only one thread to execute Python bytecode at a time. This means Python threads cannot achieve true parallelism for CPU-bound work. By using separate processes instead of threads, each camera gets its own Python interpreter and its own GIL, enabling true parallel execution.
+
+Recent update to Python since version 3.13 have loosened the the GIL constraint. Python 3.14 introduces the 'SubInterpretter' class, which purports to offer `multiprocessing.Process`-levels of parrallelization with `threading.Thread` level start-up time and resource draw.   These Features are too new to incorporate into SkellyCam (and FreeMoCap), but when they mature they may lead to significant overhaul (and improvement) of the SkellyCam architecture!
 
 Learn more: [GIL (Python Wiki)](https://wiki.python.org/moin/GlobalInterpreterLock)
 </details>
@@ -166,6 +177,8 @@ When recording is active:
 
 ### Shared Memory Ring Buffers
 
+[//]: # (NOTE - Should Move this to its own page and add more detail about the implementation. Specifically noting the use of numpy.recarrays and dto create/recreate methodsto handle the shared memory. Using built in Python shared memory stuff still touches the pickle layer sometimes, so we made this whole thing to encure max performance. Note that we might move the SHM stuff to its own utility repo called 'skellyshm' like skellydocs, skellylogs, etc )
+
 Frame data is transferred between processes using `multiprocessing.shared_memory.SharedMemory`. Ring buffers allow the producer (camera worker) and consumer (main process) to operate independently. Critically, the ring buffer supports **overwrite semantics**: if the consumer (streaming to the frontend) falls behind, old frames are silently overwritten rather than blocking the producer (camera capture). This is what protects the hot loop from soft loop latency.
 
 <details>
@@ -177,6 +190,8 @@ Learn more: [Shared memory (Wikipedia)](https://en.wikipedia.org/wiki/Shared_mem
 </details>
 
 ### PubSub
+
+[//]: # (Similarly, we should move the pubsub to its own section and add more detail. We should specifically note that we lifted the structure straight from ROS2 &#40;and link to their concept docs, make sure its the latest docs&#41;. We should also note that we might move this pubsub system to its own utility repo someday &#40;skellypubsub or something&#41;)
 
 A lightweight publish/subscribe system built on `multiprocessing.Queue` is used for non-frame data like framerate updates, recording info, and camera setting changes.
 
