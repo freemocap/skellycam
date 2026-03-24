@@ -1,0 +1,36 @@
+---
+title: Design Philosophy
+sidebar_position: 2
+---
+
+# Design Philosophy
+
+These principles are shared with the broader [FreeMoCap](https://freemocap.org) project's philosophy — the idea that research-grade tools should be freely available and accessible to everyone.
+
+## Universal Design
+
+SkellyCam should be simultaneously usable by a 13-year-old with no technical background and by a researcher running a multi-camera motion capture lab. The same tool, the same interface, the same documentation — just different levels of depth.
+
+This means:
+
+- **Big friendly buttons** for the common path: detect cameras, record, play back. No prior knowledge required.
+- **Fine-grained controls** for experts: codec selection, exposure tuning, custom recording directories, direct API access.
+- No feature should *require* technical expertise to use at a basic level, but it should *reward* expertise with additional capability.
+
+## Progressive Disclosure
+
+Information and complexity are revealed in layers, not all at once. The default experience is simple and approachable. Details are available on demand for those who want them.
+
+In practice this looks like:
+
+- **In the UI** — The main controls are always visible. Advanced settings are behind expandable panels. Technical details are behind collapsible sections.
+- **In the documentation** — Each page leads with the practical "how to use it" content. Technical depth is available in collapsible `<details>` blocks. The bottom of each disclosure tree links to external resources (Wikipedia, tutorials, etc.) so users who want to keep learning have a path forward.
+- **In the API** — Sensible defaults for everything. You can start a recording with a single POST request. Custom configuration is available but never required.
+
+## Accessibility Over Complexity
+
+When choosing between a more "correct" technical implementation and one that is easier to understand, prefer the one that is easier to understand — unless correctness is required for safety, data integrity, or scientific accuracy.
+
+## Open Source, Open Science
+
+SkellyCam is free and open-source software, developed in the open as part of the FreeMoCap Foundation's mission to make research-grade motion capture accessible to everyone. Contributions, questions, and feedback are always welcome.

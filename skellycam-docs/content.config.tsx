@@ -114,8 +114,9 @@ const config: SkellyDocsConfig = {
   ],
 
   guarantees: [
-    'All recorded videos have precisely the same frame count',
-    'Each multi-frame payload contains exactly one image per camera, recorded at the same time slice',
+    'All recorded videos have precisely the same frame count — corresponding frames across cameras are from the same temporal time slice',
+    'Each multi-frame payload contains one image per camera, guaranteed to be captured at the same time slice',
+    'Recording quality is protected from real-time streaming — variations in the live stream never cause blocking, lagging, or frame loss in the recording pipeline',
   ],
 
   guaranteeIssues: [

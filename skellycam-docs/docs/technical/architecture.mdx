@@ -16,38 +16,106 @@ SkellyCam is a client-server application with two main components:
 1. **Python Server** (`skellycam/`) — A FastAPI/Uvicorn server that manages cameras, captures frames, records video, and streams data over WebSocket.
 2. **React/Electron UI** (`skellycam-ui/`) — A frontend that displays live camera feeds, provides configuration controls, and manages recordings.
 
+<details>
+<summary>What is a client-server application?</summary>
+
+A client-server application splits work between two programs: a **server** that does the heavy lifting (in this case, controlling cameras and processing video) and a **client** that provides the user interface. They communicate over a network protocol — here, HTTP for commands and WebSocket for streaming data. This separation means you could replace the UI with your own, or run the server on a different machine entirely.
+
+Learn more: [Client-server model (Wikipedia)](https://en.wikipedia.org/wiki/Client%E2%80%93server_model)
+</details>
+
+### UI Layer
+
 ```mermaid
 graph TB
     subgraph UI ["React / Electron UI"]
-        Redux["Redux Store"]
-        WS_Client["WebSocket Connection"]
-        Canvas["OffscreenCanvas Workers<br/>(per camera)"]
-    end
-
-    WS_Client -- "WebSocket (binary frames + JSON)" --> WS_Server
-    WS_Client -- "HTTP REST (camera control)" --> HTTP
-
-    subgraph Server ["FastAPI Server"]
-        HTTP["HTTP Router<br/>(cameras, health, shutdown)"]
-        WS_Server["WebSocket Server<br/>(frames, logs, state)"]
-        CGM["CameraGroupManager<br/>(singleton)"]
-
-        subgraph CG ["CameraGroup"]
-            CW1["CameraWorker<br/>(Process 1)"]
-            CW2["CameraWorker<br/>(Process 2)"]
-            Orch["CameraOrchestrator<br/>(sync logic)"]
-            SHM["SharedMemory Ring Buffers<br/>(zero-copy frame transfer)"]
-            CW1 --> SHM
-            CW2 --> SHM
+        subgraph Rendering ["Rendering"]
+            Canvas["OffscreenCanvas Workers\n(per camera)"]
+            Views["Camera Views\n& Playback"]
         end
 
+        subgraph State ["State Management"]
+            Redux["Redux Store\n(cameras, recording, settings)"]
+            SCP["ServerContextProvider\n(WebSocket, real-time frames)"]
+            FP["FrameProcessor\n(Web Worker — JPEG decode)"]
+        end
+    end
+
+    Redux -- "HTTP REST\n(Redux thunks)" --> HTTP_target["→ FastAPI HTTP Router"]
+    SCP -- "WebSocket\n(binary frames + JSON)" --> WS_target["→ WebSocket Server"]
+    SCP --> FP
+    FP -- "ImageBitmap" --> Canvas
+```
+
+### Server Layer
+
+```mermaid
+graph TB
+    subgraph Server ["FastAPI Server (Python)"]
+        HTTP["HTTP Router\n(cameras, health, shutdown)"]
+        WS_Server["WebSocket Server\n(frames, logs, state)"]
+        CGM["CameraGroupManager\n(singleton)"]
+        HTTP --> CGM
+    end
+
+    subgraph Cameras ["Camera Layer"]
+        subgraph CG ["CameraGroup"]
+            Orch["CameraOrchestrator\n(sync logic)"]
+            CW1["CameraWorker Process 1\n+ VideoRecorder"]
+            CW2["CameraWorker Process 2\n+ VideoRecorder"]
+            SHM["SharedMemory\nRing Buffers"]
+            USB1["USB Camera 0"] --> CW1
+            USB2["USB Camera 1"] --> CW2
+            CW1 --> SHM
+            CW2 --> SHM
+            Orch -. "gates frame grabs" .-> CW1
+            Orch -. "gates frame grabs" .-> CW2
+        end
         CGM --> CG
     end
+
+    SHM --> WS_Server
 ```
+
+<details>
+<summary>What is FastAPI?</summary>
+
+[FastAPI](https://fastapi.tiangolo.com/) is a modern Python web framework for building APIs. It runs on [Uvicorn](https://www.uvicorn.org/), an ASGI server. SkellyCam uses FastAPI for its HTTP endpoints (camera control, health checks) and WebSocket connections (live frame streaming).
+
+Learn more: [FastAPI documentation](https://fastapi.tiangolo.com/)
+</details>
+
+## Hot, Hard, and Soft Loops
+
+SkellyCam's architecture is organized around a core principle: **protect the time-critical camera operations from everything else**. We classify operations into three categories:
+
+### Hot loops — time-critical
+
+Operations where any delay directly degrades temporal fidelity. These are the camera capture loops: reading from the camera sensor, frame synchronization gating, and shared memory writes. Hot loops run in isolated processes with minimal dependencies. Nothing is allowed to block them.
+
+The entire [frame synchronization system](/docs/technical/frame-synchronization) is a hot loop.
+
+### Hard loops — correctness-critical
+
+Operations where the math must be internally correct, but timing is flexible. Timestamp computation, recording boundary decisions, and post-recording finalization fall here. A few milliseconds of delay is fine, but an off-by-one error in frame counting is not.
+
+### Soft loops — best-effort
+
+Operations where a few milliseconds of jitter or delay is acceptable. The UI rendering pipeline, WebSocket streaming to the frontend, and log forwarding are all soft loops. If the frontend lags behind, frames are dropped from the stream — but the recording and capture pipelines are never affected.
+
+This classification drives key architectural decisions: each camera runs in its own process (protecting hot loops from the GIL and from each other), shared memory ring buffers use overwrite semantics (soft loop consumers can't block hot loop producers), and recording happens synchronously within the camera process (keeping it in the hot loop rather than adding IPC latency).
 
 ## Process Model
 
-SkellyCam uses Python's `multiprocessing` module to run each camera in its own process. This avoids the GIL and ensures that slow cameras do not block fast ones. Frame-perfect synchronization is the system's primary design goal — every architectural decision serves it.
+SkellyCam uses Python's `multiprocessing` module to run each camera in its own process. This avoids the GIL and ensures that slow cameras do not block fast ones.
+
+<details>
+<summary>What is the GIL?</summary>
+
+The Global Interpreter Lock (GIL) is a mechanism in CPython that allows only one thread to execute Python bytecode at a time. This means Python threads cannot achieve true parallelism for CPU-bound work. By using separate processes instead of threads, each camera gets its own Python interpreter and its own GIL, enabling true parallel execution.
+
+Learn more: [GIL (Python Wiki)](https://wiki.python.org/moin/GlobalInterpreterLock)
+</details>
 
 ### Main Process
 
@@ -55,73 +123,36 @@ The main process runs the FastAPI/Uvicorn server and manages:
 
 - **WorkerRegistry** — Tracks all spawned worker processes and provides a heartbeat mechanism for health monitoring.
 - **CameraGroupManager** — Singleton that creates/destroys camera groups and routes API calls to the correct group.
-- **WebSocket Server** — Sends synchronized multi-frame binary payloads (one image per camera per frame event) and JSON messages (logs, state, framerate updates) to connected clients.
+- **WebSocket Server** — Reads synchronized multi-frame data from shared memory, JPEG-compresses each camera's image, and sends binary payloads to connected clients. Also sends JSON messages for logs, state updates, and framerate statistics.
 
 ### Camera Worker Processes
 
 Each camera gets its own `CameraWorker` running in a separate `multiprocessing.Process`:
 
-1. **OpenCV Capture Loop** — Calls `cv2.VideoCapture.grab()` and `.retrieve()` in a coordinated two-phase protocol, grabbing frames as fast as the camera allows.
-2. **Frame Metadata** — Each frame is annotated with high-resolution `perf_counter_ns` timestamps at multiple lifecycle stages (pre-grab, post-grab, pre-retrieve, post-retrieve, pre/post copy to shared memory, pre/post record).
+1. **OpenCV Capture Loop** — Calls `cv2.VideoCapture.grab()` and `.retrieve()` in a coordinated two-phase protocol, with synchronization gating between cameras.
+2. **Frame Metadata** — Each frame is annotated with high-resolution `perf_counter_ns` timestamps at multiple lifecycle stages (pre-grab, post-grab, pre-retrieve, post-retrieve, pre/post shared memory copy, pre/post record).
 3. **Shared Memory Write** — The raw frame data is written to a shared memory ring buffer, making it available to the main process without copying.
+4. **Video Recording** — When recording is active, frames are written to `cv2.VideoWriter` directly in the camera process, gated by the orchestrator's recording frame boundaries.
 
-### Frame Synchronization — The Core Protocol
-
-The `CameraOrchestrator` enforces frame-perfect synchronization through a **frame-count-gated capture** protocol. Each camera runs its own independent capture loop, but the orchestrator gates when each camera is allowed to grab its next frame:
-
-1. **Gate check** — Before each grab, a camera calls `should_grab_by_id()` on the orchestrator. This returns `True` only when the camera's frame count is the lowest (or tied for lowest) among all cameras in the group. If any other camera is behind, the requesting camera busy-waits (polling every 10us) until the lagging camera catches up.
-2. **Grab** — Once gated, the camera calls `cv2.VideoCapture.grab()`, which latches the sensor image in the driver's buffer without transferring pixel data. Because `grab()` is fast, and all cameras are gated to proceed at roughly the same frame count, the temporal spread across cameras is minimal.
-3. **Retrieve** — The camera calls `cv2.VideoCapture.retrieve()` to decode the latched frame into a numpy array written into a pre-allocated recarray.
-4. **Write to shared memory** — The frame data is written to the camera's shared memory ring buffer.
-5. **Increment frame count** — The camera's status frame count is updated, which may ungate other cameras waiting to proceed.
-
-This distributed gating ensures no camera ever gets more than one frame ahead of the others, maintaining lock-step progression without requiring an explicit centralized barrier.
-
-```mermaid
-sequenceDiagram
-    participant Cam0 as Camera 0
-    participant Orch as Orchestrator
-    participant Cam1 as Camera 1
-
-    Note over Cam0,Cam1: Frame N
-
-    Cam0->>Orch: should_grab_by_id("0")?
-    Orch-->>Cam0: (frame count <= all others)
-    Cam0->>Cam0: grab() + retrieve()
-    Cam0->>Cam0: write to SharedMemory
-    Cam0->>Orch: frame_count = N+1
-
-    Cam1->>Orch: should_grab_by_id("1")?
-    Orch-->>Cam1: (frame count <= all others)
-    Cam1->>Cam1: grab() + retrieve()
-    Cam1->>Cam1: write to SharedMemory
-    Cam1->>Orch: frame_count = N+1
-
-    Note over Cam0,Cam1: Frame N+1 (both cameras now at N+1, cycle repeats)
-```
-
-The result: consumers (WebSocket stream, video recorder, frontend) always see exactly one frame per camera per event, and all frames within an event share the same frame number. Recorded videos are guaranteed to have the same frame count.
-
-**During recording**, each camera's `cv2.VideoWriter` runs in the camera's own process, writing frames in the order they are captured. The orchestrator tracks `first_recording_frame_number` and `last_recording_frame_number` as shared `multiprocessing.Value` integers. Each camera checks these against its current frame number to decide whether to record or finalize. Because all cameras progress in lock-step, recording starts and stops at the same frame boundary, and the output videos are guaranteed to have identical frame counts.
-
-**During playback**, the frontend uses a leader-based synchronization strategy. The first video element is elected as the "leader" and plays via the browser's native `.play()` for smooth hardware-decoded rendering. A `requestAnimationFrame` loop reads `leader.currentTime` to derive the authoritative frame number (time x fps). Follower videos are drift-corrected only when they diverge beyond a 2-frame tolerance, avoiding unnecessary seeks that cause stutter. When paused or frame-stepping, all `<video>` elements have their `currentTime` set directly and simultaneously. Frame overlays are updated via direct DOM refs to avoid React re-renders during playback.
+For the full capture loop internals, see the [Frame Synchronization](/docs/technical/frame-synchronization) reference.
 
 ## Data Flow: Capture to Display
 
 ```mermaid
-graph LR
-    A["Camera Sensor"] --> B["CameraWorker<br/>grab() + retrieve()"]
-    B --> C["Per-Camera<br/>SharedMemory<br/>Ring Buffer"]
-    C --> D["CameraGroup<br/>Multi-Frame Assembly"]
-    D --> E["WebSocket Server<br/>JPEG compress + pack"]
-    E --> F["Frontend<br/>Binary parse -> ImageBitmap"]
-    F --> G["OffscreenCanvas<br/>Web Workers"]
+graph TB
+    A["USB Camera Sensor"] --> B["CameraWorker\ngrab() + retrieve()"]
+    B --> C["Per-Camera SharedMemory\nRing Buffer"]
+    C --> D["CameraGroup\nMulti-Frame Assembly"]
+    D --> E["WebSocket Server\nJPEG compress + pack"]
+    E --> F["Frontend\nBinary parse"]
+    F --> G["FrameProcessor\nWeb Worker → ImageBitmap"]
+    G --> H["OffscreenCanvas\nWeb Workers"]
 ```
 
-1. **Camera -> SharedMemory** — Each camera worker writes its frame into a per-camera shared memory ring buffer.
-2. **SharedMemory -> MultiFrame buffer** — The camera group reads frames from all cameras and writes a synchronized multi-frame to a second shared memory buffer.
-3. **MultiFrame -> WebSocket** — The WebSocket server reads the latest multi-frame, JPEG-compresses each camera's image (quality 80, resized to match client display dimensions or 50% of native resolution), and packs them into a binary payload.
-4. **WebSocket -> Frontend** — The binary payload is sent over WebSocket. The frontend parses the binary protocol, creates `ImageBitmap` objects, and renders to `OffscreenCanvas` via Web Workers.
+1. **Camera → SharedMemory** — Each camera worker writes its frame into a per-camera shared memory ring buffer.
+2. **SharedMemory → MultiFrame buffer** — The camera group reads frames from all cameras and writes a synchronized multi-frame to a second shared memory buffer.
+3. **MultiFrame → WebSocket** — The WebSocket server reads the latest multi-frame, JPEG-compresses each camera's image (quality 80, resized to match client display dimensions or 50% of native resolution), and packs them into a binary payload.
+4. **WebSocket → Frontend** — The binary payload is sent over WebSocket. The frontend's `FrameProcessor` Web Worker parses the binary protocol and creates `ImageBitmap` objects. These are transferred to per-camera `OffscreenCanvas` workers for GPU-accelerated rendering.
 
 ## Data Flow: Recording
 
@@ -135,7 +166,15 @@ When recording is active:
 
 ### Shared Memory Ring Buffers
 
-Frame data is transferred between processes using `multiprocessing.shared_memory.SharedMemory`. Ring buffers allow the producer (camera worker) and consumer (main process) to operate independently without blocking.
+Frame data is transferred between processes using `multiprocessing.shared_memory.SharedMemory`. Ring buffers allow the producer (camera worker) and consumer (main process) to operate independently. Critically, the ring buffer supports **overwrite semantics**: if the consumer (streaming to the frontend) falls behind, old frames are silently overwritten rather than blocking the producer (camera capture). This is what protects the hot loop from soft loop latency.
+
+<details>
+<summary>What is shared memory?</summary>
+
+Shared memory is a region of memory that multiple processes can access directly, without copying data between them. This is much faster than sending data through pipes or queues. In SkellyCam, camera frames (which can be several megabytes each) are written to shared memory by the camera process and read by the main process for streaming — all without any data copying.
+
+Learn more: [Shared memory (Wikipedia)](https://en.wikipedia.org/wiki/Shared_memory)
+</details>
 
 ### PubSub
 
@@ -147,12 +186,12 @@ A `multiprocessing.Value("b", False)` shared across all processes. When set to `
 
 ## Frontend Architecture
 
-The React UI uses:
+The React UI separates real-time streaming data from user-driven state:
 
-- **Redux Toolkit** — Global state management for cameras, recording, framerate data, logs, and theme.
-- **WebSocket Connection** — Persistent connection to the server with automatic reconnection and heartbeat.
-- **FrameProcessor** — Parses the binary multi-frame protocol and creates `ImageBitmap` objects.
+- **Redux Toolkit** — Manages user-driven state: camera configurations, recording status, settings, and theme. HTTP API calls to the server are dispatched as Redux async thunks.
+- **ServerContextProvider** (React Context) — Manages the WebSocket connection and real-time frame data. This is deliberately kept outside Redux to avoid triggering React renders on every frame.
+- **FrameProcessor** (Web Worker) — Parses the binary multi-frame protocol and decodes JPEG blobs into `ImageBitmap` objects, all off the main thread.
 - **CanvasManager** — Manages `OffscreenCanvas` + `Worker` pairs for each camera, enabling GPU-accelerated rendering without blocking the main thread.
-- **Leader-Based Frame-Locked Playback** — The playback page elects the first video as the "leader" whose native `.play()` drives canonical time. A `requestAnimationFrame` loop reads `leader.currentTime` and derives the frame number. Follower videos are drift-corrected only when they diverge beyond 2 frames. When paused or frame-stepping, `video.currentTime` is set directly on all elements simultaneously. Frame overlays are updated via direct DOM refs to avoid React re-renders during playback.
+- **Non-Redux stores** — `FramerateStore` and `LogStore` are ref-based mutable stores for high-frequency data that doesn't need to trigger React renders.
 - **Material UI** — Component library for the control panels, tree views, and layout.
 - **i18next** — Internationalization with community-maintained translation files.

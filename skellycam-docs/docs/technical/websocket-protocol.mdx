@@ -9,6 +9,14 @@ import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
 # WebSocket Protocol
 
+<details>
+<summary>What is a WebSocket?</summary>
+
+A WebSocket is a persistent, two-way connection between a client (like a web browser) and a server. Unlike regular HTTP requests (which are one-shot: you ask, you get a response, the connection closes), a WebSocket stays open so the server can push data to the client continuously — perfect for streaming live camera frames. SkellyCam uses WebSocket for real-time video streaming and also for sending log messages and status updates.
+
+Learn more: [WebSocket (Wikipedia)](https://en.wikipedia.org/wiki/WebSocket)
+</details>
+
 The WebSocket endpoint at `/skellycam/websocket/connect` carries three types of traffic:
 
 1. **Binary frame payloads** (server -> client) — Multi-camera JPEG frames

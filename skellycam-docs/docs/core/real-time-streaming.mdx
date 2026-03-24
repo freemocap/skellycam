@@ -41,4 +41,4 @@ This architecture supports many simultaneous camera feeds without frame drops in
 
 ## What's next
 
-The current implementation uses WebSocket over TCP, which is reliable but adds latency from TCP's ordering guarantees. For high-throughput local-network scenarios, UDP transport would reduce latency by allowing frame drops at the transport level rather than the application level. See the roadmap items above for planned transport and client improvements.
+The current implementation uses WebSocket over TCP, which works well for most use cases. Future plans include introducing additional streaming methods beyond WebSocket — including UDP and potentially memory-based approaches (such as shared memory or memory-mapped files) that could achieve higher frame rates by bypassing the network card entirely. These alternative transports would be especially useful for local, same-machine consumers that need maximum throughput. See the roadmap items above for planned transport and client improvements.

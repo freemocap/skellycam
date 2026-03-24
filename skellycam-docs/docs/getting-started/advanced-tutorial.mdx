@@ -14,27 +14,57 @@ This guide covers the data model, recording folder structure, server configurati
 
 All SkellyCam data is stored under `~/skellycam_data/` by default.
 
+### Naming convention
+
+The **recording name** is an ISO 8601 timestamp (seconds precision, filename-safe) with an optional tag appended after an underscore. This name is used as both the folder name and the prefix for all files inside the recording. The format is produced by `default_recording_name()` in `skellycam/system/default_paths.py`:
+
 ```
-~/skellycam_data/
-├── recordings/
-│   └── 2024-09-15T14_30_00/                  # One folder per recording session
-│       ├── 2024-09-15T14_30_00_info.json      # Recording metadata
-│       └── synchronized_videos/
-│           ├── *.camera0.mp4                  # Video file per camera
-│           ├── *.camera1.mp4
-│           ├── *.audio.wav                    # Microphone audio (if recorded)
-│           └── timestamps/
-│               ├── *_timestamps.csv           # Multi-frame synchronization timestamps
-│               ├── *_stats.txt                # Human-readable sync statistics
-│               ├── *_stats.json               # Machine-readable statistics
-│               └── camera_timestamps/
-│                   ├── *.camera0.timestamps.csv
-│                   └── *.camera1.timestamps.csv
-├── logs_info_and_settings/
-│   └── logs/
-│       └── log_*.log                          # Timestamped log files
-├── telemetry_config.json                      # Telemetry opt-in/opt-out
-└── telemetry_uid                              # Anonymous user ID for telemetry
+{YYYY}-{MM}-{DD}T{HH}_{MM}_{SS}_gmt{offset}[_{tag}]
+```
+
+For example: `2025-03-24T14_30_45_gmt-5` or `2025-03-24T14_30_45_gmt-5_calibration`.
+
+### Template
+
+```
+~/skellycam_data/recordings/
+└── {recording_name}/
+    ├── {recording_name}_info.json
+    └── synchronized_videos/
+        ├── {recording_name}.camera.id{camera_id}.idx{camera_index}.mp4
+        ├── {recording_name}.audio.wav                    # If audio was recorded
+        ├── {recording_name}.audio_timestamps.json
+        └── timestamps/
+            ├── {recording_name}_timestamps.csv           # Multi-frame sync timestamps
+            ├── {recording_name}_stats.txt                # Human-readable statistics
+            ├── {recording_name}_stats.json               # Machine-readable statistics
+            └── camera_timestamps/
+                ├── {recording_name}.camera0.timestamps.csv
+                └── {recording_name}.camera1.timestamps.csv
+```
+
+Video files use the pattern `{recording_name}.camera.id{camera_id}.idx{camera_index}.{ext}`, where `camera_id` is the camera's string identifier and `camera_index` is its numeric index in the group.
+
+### Example
+
+A two-camera recording with the tag `calibration`:
+
+```
+~/skellycam_data/recordings/
+└── 2025-03-24T14_30_45_gmt-5_calibration/
+    ├── 2025-03-24T14_30_45_gmt-5_calibration_info.json
+    └── synchronized_videos/
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id0.idx0.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id1.idx1.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio.wav
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio_timestamps.json
+        └── timestamps/
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_timestamps.csv
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.txt
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.json
+            └── camera_timestamps/
+                ├── 2025-03-24T14_30_45_gmt-5_calibration.camera0.timestamps.csv
+                └── 2025-03-24T14_30_45_gmt-5_calibration.camera1.timestamps.csv
 ```
 
 ### Recording Metadata
@@ -87,37 +117,7 @@ These can be changed via the camera configuration if your cameras or workflow re
 - **AUTO** — Camera adjusts exposure automatically. Convenient but can cause brightness flickering in recordings.
 - **RECOMMENDED** — Uses a preset value that works well for most USB webcams.
 
-## Logging
+## See Also
 
-SkellyCam uses [skellylogs](https://github.com/freemocap/skellylogs) for logging, which provides custom log levels and WebSocket log forwarding. The log level is set in `skellycam/__init__.py`:
-
-```python
-LOG_LEVEL = LogLevels.TRACE  # Change to LogLevels.INFO for less verbose output
-```
-
-Logs at `TRACE` level and above are forwarded to connected WebSocket clients for display in the UI's log terminal.
-
-Log files are saved to `~/skellycam_data/logs_info_and_settings/logs/`.
-
-## Telemetry
-
-SkellyCam collects anonymous usage telemetry to help the development team understand how the software is used. Telemetry is managed by the [skellypings](https://github.com/freemocap/skellypings) package.
-
-### What Is Collected
-
-An `app_opened` event is sent at startup containing anonymous system specifications: OS name and version, CPU architecture, CPU count, total RAM, and Python version. No camera data, recordings, or personally identifiable information is collected.
-
-### Opting Out
-
-Telemetry is enabled by default. To disable it, either:
-
-- Toggle telemetry off in the **Settings** page in the UI, or
-- Edit `~/skellycam_data/telemetry_config.json`:
-
-```json
-{
-  "telemetry_enabled": false
-}
-```
-
-The setting takes effect on the next server start.
+- [Logging](/docs/technical/logging) — Log levels, WebSocket log forwarding, log file locations
+- [Telemetry](/docs/technical/telemetry) — What is collected, how to opt out

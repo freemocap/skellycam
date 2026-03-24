@@ -9,11 +9,23 @@ import { AiGeneratedBanner } from '@freemocap/skellydocs';
 
 # API Reference
 
-The SkellyCam server exposes a REST API for camera management and a WebSocket endpoint for real-time streaming. Interactive Swagger documentation is available at `http://localhost:53117/docs` when the server is running.
+The SkellyCam server exposes a REST API for camera management and a WebSocket endpoint for real-time streaming. Interactive Swagger documentation is available at [`http://localhost:53117/docs`](http://localhost:53117/docs) when the server is running.
+
+:::info
+The `localhost` links on this page will only work if the SkellyCam server is running — either through the desktop app or as a [standalone server](/docs/getting-started/advanced-tutorial#running-the-server-standalone).
+:::
+
+<details>
+<summary>What is a REST API?</summary>
+
+A REST API (Representational State Transfer Application Programming Interface) is a way for programs to communicate over HTTP — the same protocol your browser uses. Instead of clicking buttons in a UI, you send HTTP requests (like `GET`, `POST`, `DELETE`) to specific URLs, and the server responds with data (usually JSON). This is how the SkellyCam frontend communicates with the Python server, and it's also how you can build your own tools on top of SkellyCam.
+
+Learn more: [REST API (Wikipedia)](https://en.wikipedia.org/wiki/REST)
+</details>
 
 ## Base URL
 
-All endpoints are served from `http://localhost:53117`. Camera-specific endpoints are prefixed with `/skellycam`.
+All endpoints are served from [`http://localhost:53117`](http://localhost:53117). Camera-specific endpoints are prefixed with `/skellycam`.
 
 ## App Endpoints
 

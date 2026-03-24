@@ -1,0 +1,27 @@
+---
+title: Telemetry
+sidebar_position: 6
+---
+
+# Telemetry
+
+SkellyCam collects anonymous usage telemetry to help the development team understand how the software is used. Telemetry is managed by the [skellypings](https://github.com/freemocap/skellypings) package.
+
+## What Is Collected
+
+An `app_opened` event is sent at startup containing anonymous system specifications: OS name and version, CPU architecture, CPU count, total RAM, and Python version. No camera data, recordings, or personally identifiable information is collected.
+
+## Opting Out
+
+Telemetry is enabled by default. To disable it, either:
+
+- Toggle telemetry off in the **Settings** page in the UI, or
+- Edit `~/skellycam_data/telemetry_config.json`:
+
+```json
+{
+  "telemetry_enabled": false
+}
+```
+
+The setting takes effect on the next server start.

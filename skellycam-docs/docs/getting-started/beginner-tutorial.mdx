@@ -17,9 +17,8 @@ When you click **Detect Cameras**, SkellyCam scans for all available USB Video C
 
 After detection, you'll see a list of available cameras. Select the ones you want to use and click **Apply** to create a camera group. A live preview will appear for each selected camera.
 
-:::tip API
-Detect cameras: `POST /skellycam/camera/detect`
-Create or update a camera group: `POST /skellycam/camera/group/apply`
+:::info API
+Detect cameras: `POST /skellycam/camera/detect` — Create or update a camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference#camera-endpoints) for details.
 :::
 
 ## Configuring Cameras
@@ -34,19 +33,26 @@ Each camera in the group can be configured independently. The configuration pane
 | **Exposure Mode** | `MANUAL` | Choose between `MANUAL`, `AUTO`, or `RECOMMENDED`. |
 | **Rotation** | None | Rotate the image in software after capture: 90° CW, 180°, or 90° CCW. |
 
-:::tip API
-Camera configuration is sent as part of the camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference) for the full request schema.
+:::info API
+Camera configuration is sent as part of the camera group: `POST /skellycam/camera/group/apply`. See the [API Reference](/docs/technical/api-reference#camera-endpoints) for the full request schema.
 :::
 
 ## Recording with Audio
 
 Before starting a recording, you can optionally select a microphone to capture audio alongside video. The UI shows available audio input devices — select one to include audio in your recording.
 
-:::tip API
-Detect microphones: `GET /skellycam/camera/microphone/detect`
+:::info API
+Detect microphones: `GET /skellycam/camera/microphone/detect`. See the [API Reference](/docs/technical/api-reference#camera-endpoints) for details.
 :::
 
 Click **Record** to begin. All cameras capture synchronized frames while audio is recorded in parallel. Click **Stop** to finish.
+
+### Linked Issues
+
+Audio recording is an active area of development. Related issues:
+
+- [Audio recording issue](https://github.com/freemocap/skellycam/issues) <!-- TODO: Replace with specific audio issue URL -->
+- [Audio synchronization](https://github.com/freemocap/skellycam/issues) <!-- TODO: Replace with specific audio sync issue URL -->
 
 ## Viewing Recordings
 

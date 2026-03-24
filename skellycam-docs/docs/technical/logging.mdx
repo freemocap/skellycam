@@ -1,0 +1,16 @@
+---
+title: Logging
+sidebar_position: 5
+---
+
+# Logging
+
+SkellyCam uses [skellylogs](https://github.com/freemocap/skellylogs) for logging, which provides custom log levels and WebSocket log forwarding. The log level is set in `skellycam/__init__.py`:
+
+```python
+LOG_LEVEL = LogLevels.TRACE  # Change to LogLevels.INFO for less verbose output
+```
+
+Logs at `TRACE` level and above are forwarded to connected WebSocket clients for display in the UI's log terminal.
+
+Log files are saved to `~/skellycam_data/logs_info_and_settings/logs/`.
