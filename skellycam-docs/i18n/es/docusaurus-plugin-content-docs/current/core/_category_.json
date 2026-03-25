@@ -1,12 +1,12 @@
 {
-  "label": "Core Concepts",
+  "label": "Conceptos Fundamentales",
   "position": 3,
   "collapsible": true,
   "collapsed": true,
   "link": {
     "type": "generated-index",
-    "title": "Core Concepts",
-    "description": "The foundational design principles and features of SkellyCam.",
+    "title": "Conceptos Fundamentales",
+    "description": "Los principios de diseno fundamentales y las caracteristicas de SkellyCam.",
     "slug": "core"
   }
 }

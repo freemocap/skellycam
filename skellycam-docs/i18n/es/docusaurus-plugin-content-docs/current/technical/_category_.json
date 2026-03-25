@@ -1,12 +1,12 @@
 {
-  "label": "Technical",
+  "label": "Tecnico",
   "position": 5,
   "collapsible": true,
   "collapsed": true,
   "link": {
     "type": "generated-index",
-    "title": "Technical Documentation",
-    "description": "Architecture, API reference, and protocol specifications for developers.",
+    "title": "Documentacion Tecnica",
+    "description": "Arquitectura, referencia de API y especificaciones de protocolos para desarrolladores.",
     "slug": "technical"
   }
 }
