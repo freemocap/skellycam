@@ -1,0 +1,66 @@
+---
+title: Inicio Rapido
+sidebar_position: 2
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# Inicio Rapido
+
+Esta guia te lleva paso a paso por tu primera sesion de grabacion multicamara sincronizada en cinco pasos.
+
+:::note Captura de pantalla proximamente
+Captura de pantalla de la ventana de la aplicacion SkellyCam en el primer inicio, mostrando la interfaz principal con deteccion de camaras y controles de grabacion.
+:::
+
+## 1. Instalar SkellyCam
+
+Descarga e instala SkellyCam desde la [pagina de Descargas](/download). Ejecuta el instalador para tu plataforma — no se necesitan dependencias adicionales.
+
+:::tip Ya eres desarrollador?
+Tambien puedes [ejecutar desde el codigo fuente](/docs/development/).
+:::
+
+## 2. Iniciar la aplicacion
+
+Abre SkellyCam despues de la instalacion. El servidor se inicia automaticamente en segundo plano y la interfaz se abre en la ventana de la aplicacion.
+
+## 3. Conectar y detectar camaras
+
+Conecta tus camaras USB (o usa una camara web integrada). En la interfaz, haz clic en **Detectar Camaras** para buscar dispositivos disponibles. SkellyCam listara todas las camaras detectadas.
+
+Selecciona las camaras que quieras usar y haz clic en **Aplicar** para crear un grupo de camaras. Veras una vista previa en vivo de cada camara.
+
+:::tip API
+La deteccion de camaras tambien esta disponible via `POST /skellycam/camera/detect`. Consulta la [Referencia de API](/docs/technical/api-reference) para mas detalles.
+:::
+
+## 4. Grabar
+
+Haz clic en **Grabar** para comenzar la grabacion. Todas las camaras capturaran video sincronizado — cada camara produce exactamente el mismo numero de fotogramas.
+
+Opcionalmente, selecciona un microfono para capturar audio junto con el video.
+
+Haz clic en **Detener** cuando hayas terminado.
+
+:::tip API
+Iniciar grabacion: [`POST /skellycam/camera/group/all/record/start`](/docs/technical/api-reference#post-skellycamcameragroupallrecordstart)
+Detener grabacion: [`GET /skellycam/camera/group/all/record/stop`](/docs/technical/api-reference#get-skellycamcameragroupallrecordstop)
+:::
+
+## 5. Ver tu grabacion
+
+Navega a la pagina de **Grabaciones** en la interfaz. Tu grabacion aparece en la lista con metadatos (cantidad de camaras, duracion, FPS, cantidad de fotogramas).
+
+Selecciona una grabacion para abrir el visor de **Reproduccion**. Todos los videos se reproducen sincronizados por fotograma — cada camara siempre muestra el mismo numero de fotograma, sin desfase.
+
+:::tip API
+Listar grabaciones: `GET /skellycam/playback/recordings`
+Cargar una grabacion: `POST /skellycam/playback/load`
+:::
+
+## Proximos pasos
+
+- [Tutorial para principiantes](beginner-tutorial) — Aprende mas sobre seleccion de camaras, opciones de configuracion y grabacion con audio
+- [Tutorial avanzado](advanced-tutorial) — Explora el modelo de datos, la estructura de carpetas de grabacion y la configuracion del servidor

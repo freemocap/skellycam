@@ -1,0 +1,39 @@
+---
+title: Logging
+sidebar_position: 5
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# Logging
+
+## La observabilidad es clave!
+
+SkellyCam es un sistema multiproceso complejo — cada camara se ejecuta en su propio proceso, comunicandose a traves de memoria compartida y canales IPC. Cuando algo sale mal (o cuando simplemente quieres entender que esta pasando internamente), un buen logging es esencial. La observabilidad es clave para entender el comportamiento de un sistema que no puedes inspeccionar facilmente con un depurador.
+
+## Configuracion
+
+SkellyCam usa [skellylogs](https://github.com/freemocap/skellylogs) para logging, que proporciona niveles de log personalizados y reenvio de logs por WebSocket. El nivel de log se configura en `skellycam/__init__.py`:
+
+```python
+LOG_LEVEL = LogLevels.TRACE  # Change to LogLevels.INFO for less verbose output
+```
+
+Los logs de nivel `TRACE` y superiores se reenvian a los clientes WebSocket conectados para mostrarse en la terminal de logs de la interfaz.
+
+Los archivos de log se guardan en `~/skellycam_data/logs_info_and_settings/logs/`.
+
+## Visor de logs en la interfaz
+
+La interfaz de SkellyCam incluye una terminal de logs que refleja los logs del servidor backend en tiempo real. Sin embargo, esto solo funciona cuando el servidor esta en un estado saludable y la conexion WebSocket esta activa — lo cual frecuentemente no es la situacion cuando mas necesitas ver los logs.
+
+:::tip Maxima observabilidad
+Para maxima observabilidad, configura **auto-connect** a `false` en los ajustes de la interfaz y ejecuta el servidor de SkellyCam en su propia ventana de terminal. De esta forma puedes ver los logs sin procesar del servidor incluso si la interfaz no puede conectarse o si el servidor falla antes de enviar los logs relevantes a la interfaz.
+:::
+
+## Compartir logs
+
+La terminal de logs de la interfaz incluye botones de **copiar al portapapeles** y **guardar en disco**. Estos son utiles cuando pides ayuda en el [servidor de Discord](https://discord.gg/SgdnzbHDTG) o cuando creas [issues en GitHub](https://github.com/freemocap/skellycam/issues). Incluir tus logs hace MUCHO mas facil que otros diagnostiquen el problema.
+
+Consulta la pagina de [Comunidad](/docs/community) para mas formas de involucrarte y obtener ayuda.

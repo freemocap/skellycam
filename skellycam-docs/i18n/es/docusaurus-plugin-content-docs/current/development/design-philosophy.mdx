@@ -1,0 +1,57 @@
+---
+title: Filosofia de Diseno
+sidebar_position: 2
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# Filosofia de Diseno
+
+Estos principios se comparten con la filosofia del proyecto mas amplio de [FreeMoCap](https://freemocap.org) — la idea de que las herramientas de grado de investigacion deben estar disponibles y accesibles para todos de forma gratuita.
+
+## Diseno Universal
+
+SkellyCam deberia ser simultaneamente usable por un adolescente de 13 anos sin formacion tecnica y por un investigador operando un laboratorio de captura de movimiento multicamara. La misma herramienta, la misma interfaz, la misma documentacion — solo diferentes niveles de profundidad.
+
+Esto significa:
+
+- **Botones grandes y amigables** para el camino comun: detectar camaras, grabar, reproducir. No se requiere conocimiento previo.
+- **Controles de granularidad fina** para expertos: seleccion de codec, ajuste de exposicion, directorios de grabacion personalizados, acceso directo a la API.
+- Ninguna funcionalidad deberia *requerir* experiencia tecnica para usarla a nivel basico, pero deberia *recompensar* la experiencia con capacidad adicional.
+
+## Revelacion Progresiva
+
+La informacion y la complejidad se revelan en capas, no todo a la vez. La experiencia por defecto es simple y accesible. Los detalles estan disponibles bajo demanda para quienes los quieran.
+
+En la practica esto se ve asi:
+
+- **En la interfaz** — Los controles principales siempre son visibles. Los ajustes avanzados estan detras de paneles expandibles. Los detalles tecnicos estan detras de secciones colapsables.
+- **En la documentacion** — Cada pagina comienza con el contenido practico de "como usarlo". La profundidad tecnica esta disponible en bloques colapsables `<details>`. La parte inferior de cada arbol de revelacion enlaza a recursos externos (Wikipedia, tutoriales, etc.) para que los usuarios que quieran seguir aprendiendo tengan un camino hacia adelante.
+- **En la API** — Valores por defecto sensatos para todo. Puedes iniciar una grabacion con una sola solicitud POST. La configuracion personalizada esta disponible pero nunca es requerida.
+
+## Accesibilidad sobre Complejidad
+
+Al elegir entre una implementacion tecnica mas "correcta" y una que sea mas facil de entender, preferir la que sea mas facil de entender — a menos que la correccion sea necesaria para la seguridad, la integridad de los datos o la precision cientifica.
+
+## Camaras como Instrumentos Cientificos
+
+Una camara captura luz de un area particular en un momento particular — es un instrumento de medicion espaciotemporal. La imagen define los aspectos *espaciales* de los datos, con fidelidad determinada por el sensor de la camara, el lente, el entorno y los ajustes. Las marcas de tiempo definen el aspecto *temporal*. Dentro del pipeline de [FreeMoCap](https://freemocap.org), la extraccion de informacion espacial 2D cuantificada (por ejemplo, posiciones de articulaciones del esqueleto) es manejada por [skellytracker](https://github.com/freemocap/skellytracker). El enfoque de SkellyCam es la dimension temporal: asegurar que los fotogramas multicamara esten sincronizados con precision en el tiempo.
+
+La mayoria de los sistemas multicamara de grado de investigacion usan **disparadores de hardware** — una senal externa que activa todos los sensores de camara simultaneamente. Esto proporciona sincronizacion casi perfecta pero requiere camaras costosas y especializadas. SkellyCam esta disenado para ofrecer **sincronizacion de calidad de investigacion** usando **control por software** de camaras USB de consumo economicas — haciendo accesible la captura multicamara sincronizada sin hardware propietario.
+
+Este enfoque — camaras como instrumentos de medicion empirica — informa cada decision de diseno importante en SkellyCam, desde el protocolo de captura controlado por conteo de fotogramas hasta el pipeline detallado de marcas de tiempo.
+
+## Bucles Calientes, Duros y Suaves
+
+La arquitectura de SkellyCam clasifica las operaciones en tres categorias que impulsan tanto las decisiones tecnicas como la gobernanza del desarrollo:
+
+- **Bucles calientes** — Operaciones criticas en tiempo donde cualquier retraso degrada directamente la fidelidad temporal. Los bucles de captura de camara, la compuerta de sincronizacion de fotogramas y las escrituras a memoria compartida. Estos se ejecutan en procesos aislados con dependencias minimas.
+- **Bucles duros** — Operaciones criticas en correccion donde las matematicas deben ser correctas, pero el tiempo es flexible. Calculo de marcas de tiempo, finalizacion de grabacion, estadisticas entre camaras. El rendimiento es obviamente importante para la usabilidad general, pero estamos contentos de sacrificar velocidad por precision y robustez aqui.
+- **Bucles suaves** — Operaciones de mejor esfuerzo donde algo de holgura y deslizamiento es aceptable (a corto plazo). Renderizado de interfaz, streaming por WebSocket, reenvio de logs son todos ejemplos de bucles suaves. Si el frontend se retrasa, se descartan fotogramas del stream — pero las grabaciones nunca se ven afectadas.
+
+Esta clasificacion tambien impulsa la gobernanza del desarrollo: las contribuciones que tocan bucles calientes/duros reciben mucho mayor escrutinio que aquellas que solo tocan bucles suaves. Consulta la pagina de [Arquitectura](/docs/technical/architecture#hot-hard-and-soft-loops) para el tratamiento tecnico completo.
+
+## Codigo Abierto, Ciencia Abierta
+
+SkellyCam es software libre y de codigo abierto, desarrollado de forma abierta como parte de la mision de la FreeMoCap Foundation de hacer accesible la captura de movimiento de grado de investigacion para todos. Las contribuciones, preguntas y comentarios siempre son bienvenidos.

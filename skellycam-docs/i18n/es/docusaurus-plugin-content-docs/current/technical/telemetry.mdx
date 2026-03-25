@@ -1,0 +1,68 @@
+---
+title: Telemetria
+sidebar_position: 6
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated humanNotes="Should link 'convivial tool' reference to Ivan Illich's definition of the term. Prob also should reference the 4 Freedoms definition of Free Software too." />
+# Telemetria
+
+SkellyCam recopila telemetria de uso anonima para ayudar al equipo de desarrollo a entender como se utiliza el software. La telemetria es gestionada por el paquete [skellypings](https://github.com/freemocap/skellypings).
+
+## La tension
+
+Existe una tension inherente entre construir una herramienta libre, convivial y no extractiva y el valor incontrovertible de los datos de uso. SkellyCam es de codigo abierto y esta impulsado por la comunidad — no tenemos interes en la vigilancia ni en la monetizacion de datos. Pero como equipo pequeno, genuinamente necesitamos saber cosas basicas como: cuantas personas estan usando SkellyCam, que sistemas operativos y hardware tienen, y si ciertas funcionalidades estan siendo adoptadas. Sin esta informacion, estamos a ciegas al tomar decisiones de desarrollo.
+
+Ademas, ver que la gente realmente USA esta herramienta es una de las principales cosas que alimenta el tanque emocional del que sacamos energia para construirla. Es dificil!
+
+Nos tomamos esta tension en serio y buscamos recopilar el minimo de datos necesarios para tomar decisiones informadas, con total transparencia sobre lo que se envia.
+
+## Que se recopila
+
+Un evento `app_opened` se envia al inicio conteniendo especificaciones anonimas del sistema. No se recopilan datos de camaras, grabaciones ni informacion de identificacion personal.
+
+### Ejemplo de ping
+
+Aqui hay un ejemplo representativo de los datos enviados en cada evento `app_opened`, junto con la direccion IP de la computadora que lo envio:
+
+```json
+{
+  "event": "app_opened",
+  "app_name": "skellycam",
+  "app_version": "2.1.0",
+  "system": {
+    "os": "Windows",
+    "os_version": "10.0.22631",
+    "architecture": "AMD64",
+    "cpu_count": 16,
+    "total_ram_gb": 32.0,
+    "python_version": "3.12.4"
+  }
+}
+```
+
+
+## Consentimiento gradual (futuro)
+
+Reconocemos que diferentes usuarios tienen diferentes niveles de comodidad con la telemetria. Las versiones futuras de SkellyCam buscan implementar un modelo de **consentimiento gradual**, dando a los usuarios control detallado sobre lo que comparten:
+
+- **Ping de existencia** — Un Solo Ping. Un unico ping anonimo de "hola, existo" al inicio. Sin detalles del sistema.
+- **Huella del sistema** — Informacion basica de hardware y sistema operativo (lo que se recopila actualmente). Nos ayuda a entender que plataformas priorizar y rastrear errores especificos de cada sistema operativo.
+- **Analiticas de uso** — Interacciones con la interfaz, clics en botones, adopcion de funcionalidades. Nos ayuda a entender que funcionalidades se usan y cuales necesitan mejoras.
+
+Cada nivel seria activable/desactivable de forma independiente, con explicaciones claras de exactamente que se envia en cada nivel. El objetivo es respetar la autonomia del usuario mientras se facilita que quienes quieran ayudar a mejorar el software puedan hacerlo.
+
+## Como desactivarla
+
+La telemetria esta habilitada por defecto. Para desactivarla, puedes:
+
+- Desactivar la telemetria en la pagina de **Configuracion** de la interfaz, o
+- Editar `~/skellycam_data/telemetry_config.json`:
+
+```json
+{
+  "telemetry_enabled": false
+}
+```
+
+El ajuste surte efecto en el siguiente inicio del servidor y se recordara mientras ese archivo `telemetery_config.json` exista en esa ruta.

@@ -1,0 +1,29 @@
+---
+title: 安装
+sidebar_position: 1
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated humanNotes="Maybe some screenshots or something? more info about the installer and the difference between the app and the server_only stuff"/>
+
+# 安装
+
+## 下载 SkellyCam
+
+最简单的入门方式是从[下载页面](/download)下载适用于您操作系统的预构建安装程序。
+
+可用平台：
+- **Windows** — `.exe` 安装程序
+- **macOS** — `.dmg`（Intel 和 Apple Silicon）
+- **Linux** — `.AppImage` 或 `.deb`
+
+安装程序是独立的——它捆绑了 SkellyCam 服务器和用户界面，因此您无需安装 Python、Node.js 或任何其他依赖项。
+
+### Linux 注意事项
+
+- `.AppImage` 可能需要设置为可执行文件：`chmod +x SkellyCam-*.AppImage`
+- 音频录制需要 PortAudio：`sudo apt install portaudio19-dev`
+
+## 从源码安装
+
+如果您是开发者或贡献者，希望从源代码运行，请参阅[开发](/docs/development/)部分获取完整的设置说明。

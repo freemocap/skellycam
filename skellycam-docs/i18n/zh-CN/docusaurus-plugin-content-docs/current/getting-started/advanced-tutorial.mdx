@@ -1,0 +1,131 @@
+---
+title: 进阶教程
+sidebar_position: 4
+---
+import { AiGeneratedBanner, LinkedIssues } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# 进阶教程
+
+本指南涵盖数据模型、录制文件夹结构、服务器配置及其他进阶主题。
+
+## 录制文件夹结构
+
+默认情况下，所有 SkellyCam 数据存储在 `~/skellycam_data/recordings/` 下。
+
+:::tip FreeMoCap 集成
+将录制目录设置为 `~/freemocap_data/recording_sessions/`，可以将 SkellyCam 录制直接保存到 FreeMoCap v1 预期的位置，实现自动发现。
+:::
+
+### 命名规则
+
+**录制名称**是一个 [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) 时间戳（秒精度，文件名安全格式），可选在下划线后附加标签。此名称同时用作文件夹名和录制内所有文件的前缀。该格式由 `skellycam/system/default_paths.py` 中的 `default_recording_name()` 生成：
+
+```
+{YYYY}-{MM}-{DD}T{HH}_{MM}_{SS}_gmt{offset}[_{tag}]
+```
+
+例如：`2025-03-24T14_30_45_gmt-5` 或 `2025-03-24T14_30_45_gmt-5_calibration`。
+
+### 模板
+
+```
+~/skellycam_data/recordings/
+└── {recording_name}/
+    ├── {recording_name}_info.json
+    └── synchronized_videos/
+        ├── {recording_name}.camera.id{camera_id}.idx{camera_index}.mp4
+        ├── {recording_name}.audio.wav                    # If audio was recorded
+        ├── {recording_name}.audio_timestamps.json
+        └── timestamps/
+            ├── {recording_name}_timestamps.csv           # Multi-frame sync timestamps
+            ├── {recording_name}_stats.txt                # Human-readable statistics
+            ├── {recording_name}_stats.json               # Machine-readable statistics
+            └── camera_timestamps/
+                ├── {recording_name}.camera0.timestamps.csv
+                └── {recording_name}.camera1.timestamps.csv
+```
+
+视频文件使用 `{recording_name}.camera.id{camera_id}.idx{camera_index}.{ext}` 模式，其中 `camera_id` 是摄像头的字符串标识符，`camera_index` 是其在组中的数字索引。
+
+### 示例
+
+一个带有标签 `calibration` 的双摄像头录制（`recording_name = '2025-03-24T14_30_45_gmt-5_calibration'`）：
+
+```
+~/skellycam_data/recordings/
+└── 2025-03-24T14_30_45_gmt-5_calibration/
+    ├── 2025-03-24T14_30_45_gmt-5_calibration_info.json
+    └── synchronized_videos/
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id0.idx0.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id1.idx1.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio.wav
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio_timestamps.json
+        └── timestamps/
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_timestamps.csv
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.txt
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.json
+            └── camera_timestamps/
+                ├── 2025-03-24T14_30_45_gmt-5_calibration.camera0.timestamps.csv
+                └── 2025-03-24T14_30_45_gmt-5_calibration.camera1.timestamps.csv
+```
+
+### 录制元数据
+
+`{recording_name}_info.json` 文件包含录制配置：摄像头设置、录制名称、UUID 和开始时间戳。此文件在录制开始时写入，可用于重建摄像头设置。
+
+### 时间戳 CSV
+
+每个摄像头的时间戳文件每帧包含一行，记录各生命周期阶段（抓取、检索、写入等）的高精度 [`perf_counter_ns`](https://docs.python.org/3/library/time.html#time.perf_counter_ns) 时间戳。多帧时间戳文件包含跨摄像头同步数据，可用于事后分析同步质量。
+
+## 服务器配置
+
+SkellyCam 服务器默认运行在 `http://localhost:53117`。使用桌面应用时，服务器会自动启动。如需更改端口或主机名，这些定义在 `skellycam/api/server_constants.py` 中：
+
+```python
+PROTOCOL = "http"
+HOSTNAME = "localhost"
+PORT = 53117
+APP_URL = f"{PROTOCOL}://{HOSTNAME}:{PORT}"
+```
+
+### 独立运行服务器
+
+服务器可以独立于 Electron 界面运行。这对于无头设置、远程访问或使用自定义前端非常有用。
+
+运行独立服务器可执行文件时（从[下载页面](/download)下载"仅后端服务器"选项），直接启动即可，它将在 `localhost:53117` 上开始监听。
+
+- **健康检查：** `http://localhost:53117/health`
+- **Swagger API 文档：** `http://localhost:53117/docs`
+- **WebSocket：** `ws://localhost:53117/skellycam/websocket/connect`
+
+完整端点列表请参阅 [API 参考](/docs/technical/api-reference)。
+
+## 进阶摄像头设置
+
+### FOURCC 编解码器
+
+SkellyCam 使用两个 FOURCC 代码进行视频处理：
+
+<LinkedIssues items={[
+  { label: '改进 FOURCC 编解码器处理', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
+
+| 设置 | 默认值 | 描述 |
+|------|--------|------|
+| `capture_fourcc` | `MJPG` | 用于从摄像头捕获帧的编解码器。MJPEG 被广泛支持，且对 USB 带宽利用效率高。 |
+| `writer_fourcc` | `X264` | 用于写入录制视频文件的编解码器。H.264 提供良好的存储压缩率。 |
+
+如果您的摄像头或工作流程需要不同的编解码器，可以通过摄像头配置进行更改。
+
+### 曝光模式
+
+- **MANUAL** — 固定曝光值。帧间亮度一致，但需要手动调节。
+- **AUTO** — 摄像头自动调整曝光。使用方便，但可能导致录制中出现亮度闪烁。
+- **RECOMMENDED** — 循环测试多个曝光设置，选择比将平均像素亮度最接近半最大值（约 127.5/255）的设置低一级的选项。这会产生稍暗的图像，在可见性和低曝光时间之间取得平衡，以最大限度减少运动模糊。
+
+## 另请参阅
+
+- [日志记录](/docs/technical/logging) — 日志级别、WebSocket 日志转发、日志文件位置
+- [遥测](/docs/technical/telemetry) — 收集的内容、如何退出

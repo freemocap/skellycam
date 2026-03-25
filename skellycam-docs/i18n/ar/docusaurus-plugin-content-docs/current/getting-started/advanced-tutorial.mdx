@@ -1,0 +1,131 @@
+---
+title: الدليل المتقدم
+sidebar_position: 4
+---
+import { AiGeneratedBanner, LinkedIssues } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# الدليل المتقدم
+
+هالدليل بيغطي نموذج البيانات، بنية مجلد التسجيل، إعدادات السيرفر، ومواضيع متقدمة تانية.
+
+## بنية مجلد التسجيل
+
+كل بيانات SkellyCam بتتخزن تحت `~/skellycam_data/recordings/` افتراضياً.
+
+:::tip تكامل مع FreeMoCap
+حط مجلد التسجيل على `~/freemocap_data/recording_sessions/` لحفظ تسجيلات SkellyCam مباشرة وين FreeMoCap v1 بيتوقعها، مما بيمكّن الاكتشاف التلقائي.
+:::
+
+### اصطلاح التسمية
+
+**اسم التسجيل** هو طابع زمني بمعيار [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) (بدقة الثواني، آمن لأسماء الملفات) مع وسم اختياري مضاف بعد شرطة سفلية. هالاسم بيُستخدم كاسم المجلد وبادئة لكل الملفات جواه. الصيغة بتنتج من `default_recording_name()` بـ `skellycam/system/default_paths.py`:
+
+```
+{YYYY}-{MM}-{DD}T{HH}_{MM}_{SS}_gmt{offset}[_{tag}]
+```
+
+مثلاً: `2025-03-24T14_30_45_gmt-5` أو `2025-03-24T14_30_45_gmt-5_calibration`.
+
+### القالب
+
+```
+~/skellycam_data/recordings/
+└── {recording_name}/
+    ├── {recording_name}_info.json
+    └── synchronized_videos/
+        ├── {recording_name}.camera.id{camera_id}.idx{camera_index}.mp4
+        ├── {recording_name}.audio.wav                    # If audio was recorded
+        ├── {recording_name}.audio_timestamps.json
+        └── timestamps/
+            ├── {recording_name}_timestamps.csv           # Multi-frame sync timestamps
+            ├── {recording_name}_stats.txt                # Human-readable statistics
+            ├── {recording_name}_stats.json               # Machine-readable statistics
+            └── camera_timestamps/
+                ├── {recording_name}.camera0.timestamps.csv
+                └── {recording_name}.camera1.timestamps.csv
+```
+
+ملفات الفيديو بتستخدم النمط `{recording_name}.camera.id{camera_id}.idx{camera_index}.{ext}`، وين `camera_id` هو معرّف الكاميرا النصي و `camera_index` هو فهرسها الرقمي بالمجموعة.
+
+### مثال
+
+تسجيل بكاميرتين مع وسم `calibration` (`recording_name = '2025-03-24T14_30_45_gmt-5_calibration'`):
+
+```
+~/skellycam_data/recordings/
+└── 2025-03-24T14_30_45_gmt-5_calibration/
+    ├── 2025-03-24T14_30_45_gmt-5_calibration_info.json
+    └── synchronized_videos/
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id0.idx0.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id1.idx1.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio.wav
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio_timestamps.json
+        └── timestamps/
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_timestamps.csv
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.txt
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.json
+            └── camera_timestamps/
+                ├── 2025-03-24T14_30_45_gmt-5_calibration.camera0.timestamps.csv
+                └── 2025-03-24T14_30_45_gmt-5_calibration.camera1.timestamps.csv
+```
+
+### بيانات التسجيل الوصفية
+
+ملف `{recording_name}_info.json` بيحتوي إعدادات التسجيل: إعدادات الكاميرا، اسم التسجيل، الـ UUID، والطابع الزمني للبداية. هالملف بينكتب لما يبدأ تسجيل وفيك تستخدمه لإعادة بناء إعداد الكاميرا.
+
+### ملفات CSV للطوابع الزمنية
+
+ملفات الطوابع الزمنية لكل كاميرا بتحتوي سطر واحد لكل إطار مع طوابع زمنية عالية الدقة بـ [`perf_counter_ns`](https://docs.python.org/3/library/time.html#time.perf_counter_ns) لكل مرحلة من دورة الحياة (التقاط، استرجاع، كتابة، إلخ). ملف الطوابع الزمنية متعدد الإطارات بيحتوي بيانات تزامن بين الكاميرات، مفيد لتحليل جودة التزامن بعد التسجيل.
+
+## إعدادات السيرفر
+
+سيرفر SkellyCam بيشتغل على `http://localhost:53117` افتراضياً. لما تستخدم تطبيق سطح المكتب، السيرفر بيشتغل تلقائياً. إذا بدك تغيّر البورت أو اسم المضيف، هدول محددين بـ `skellycam/api/server_constants.py`:
+
+```python
+PROTOCOL = "http"
+HOSTNAME = "localhost"
+PORT = 53117
+APP_URL = f"{PROTOCOL}://{HOSTNAME}:{PORT}"
+```
+
+### تشغيل السيرفر لحاله
+
+السيرفر فيه يشتغل مستقل عن واجهة Electron. هاد مفيد للإعدادات بدون شاشة، الوصول عن بعد، أو استخدام واجهتك الخاصة.
+
+لما تشغّل ملف السيرفر المستقل (محمّل من [صفحة التحميل](/download) كخيار "Backend Server only")، شغّله مباشرة ورح يبدأ يستمع على `localhost:53117`.
+
+- **فحص الصحة:** `http://localhost:53117/health`
+- **توثيق Swagger API:** `http://localhost:53117/docs`
+- **WebSocket:** `ws://localhost:53117/skellycam/websocket/connect`
+
+شوف [مرجع الـ API](/docs/technical/api-reference) للقائمة الكاملة بنقاط النهاية.
+
+## إعدادات كاميرا متقدمة
+
+### ترميزات FOURCC
+
+SkellyCam بيستخدم كودين FOURCC للتعامل مع الفيديو:
+
+<LinkedIssues items={[
+  { label: 'تحسين التعامل مع ترميزات FOURCC', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
+
+| الإعداد | القيمة الافتراضية | الوصف |
+|---------|---------|-------------|
+| `capture_fourcc` | `MJPG` | الترميز المستخدم لالتقاط الإطارات من الكاميرا. MJPEG مدعوم على نطاق واسع وفعّال لعرض النطاق الترددي لـ USB. |
+| `writer_fourcc` | `X264` | الترميز المستخدم لكتابة ملفات الفيديو المسجلة. H.264 بيوفر ضغط جيد للتخزين. |
+
+فيك تغيّرهم عبر إعدادات الكاميرا إذا كاميراتك أو سير عملك بيحتاج ترميزات مختلفة.
+
+### أوضاع التعريض
+
+- **MANUAL** — قيمة تعريض ثابتة. بيعطي سطوع ثابت عبر الإطارات بس بيحتاج ضبط يدوي.
+- **AUTO** — الكاميرا بتعدّل التعريض تلقائياً. مريح بس ممكن يسبب ارتعاش بالسطوع بالتسجيلات.
+- **RECOMMENDED** — بيمرّ على عدة إعدادات تعريض وبيختار اللي مستوى واحد أقل من الإعداد اللي بيحط متوسط سطوع البكسل أقرب لنص الحد الأقصى (~127.5/255). هاد بيعطي صورة أغمق شوي بتوازن بين الرؤية وأوقات التعريض المنخفضة لتقليل ضبابية الحركة.
+
+## شوف كمان
+
+- [التسجيل](/docs/technical/logging) — مستويات التسجيل، تحويل السجلات عبر WebSocket، مواقع ملفات السجلات
+- [القياس عن بعد](/docs/technical/telemetry) — شو بينجمع، كيف توقفه
