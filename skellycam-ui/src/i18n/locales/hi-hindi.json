@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "लॉग क्लिपबोर्ड पर कॉपी करें",
   "saveLogsToFile": "लॉग फ़ाइल में सहेजें",
   "copied": "कॉपी हो गया!",
-  "timestampFromRecording": "रिकॉर्डिंग डेटा से टाइमस्टैम्प"
+  "timestampFromRecording": "रिकॉर्डिंग डेटा से टाइमस्टैम्प",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

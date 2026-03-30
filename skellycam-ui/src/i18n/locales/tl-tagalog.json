@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Kopyahin ang mga log sa clipboard",
   "saveLogsToFile": "I-save ang mga log sa file",
   "copied": "Nakopya!",
-  "timestampFromRecording": "Timestamp mula sa data ng recording"
+  "timestampFromRecording": "Timestamp mula sa data ng recording",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

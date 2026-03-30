@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Salin log ke papan klip",
   "saveLogsToFile": "Simpan log ke fail",
   "copied": "Disalin!",
-  "timestampFromRecording": "Cap masa daripada data rakaman"
+  "timestampFromRecording": "Cap masa daripada data rakaman",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

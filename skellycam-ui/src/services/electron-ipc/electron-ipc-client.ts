@@ -8,6 +8,11 @@ interface ElectronAPI {
     invoke: (path: string, input?: any) => Promise<any>;
     onMenuAction: (callback: (action: string) => void) => () => void;
     sendMenuLabels: (params: Record<string, unknown>) => void;
+    // Auto-update event listeners
+    onUpdateAvailable: (callback: (info: { version: string; currentVersion: string }) => void) => () => void;
+    onDownloadProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => () => void;
+    onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void;
+    onUpdateError: (callback: (error: { message: string }) => void) => () => void;
 }
 
 declare global {

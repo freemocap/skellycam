@@ -6,10 +6,16 @@ import superjson from 'superjson';
 // Services
 import { PythonServer } from './services/python-server';
 import { dialog, shell, app } from 'electron';
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { APP_PATHS } from './app-paths';
+
+// Configure auto-updater (user triggers download manually)
+autoUpdater.autoDownload = false;
+autoUpdater.allowDowngrade = false;
 
 // Initialize tRPC
 const t = initTRPC.create({
@@ -139,6 +145,46 @@ export const api = t.router({
             .mutation(({ input }): boolean => {
                 writeTelemetryConfig({ telemetry_enabled: input.enabled });
                 return input.enabled;
+            }),
+    }),
+
+    // App Info & Updates
+    app: t.router({
+        getVersion: t.procedure
+            .query((): string => {
+                return app.getVersion();
+            }),
+
+        checkForUpdate: t.procedure
+            .mutation(async () => {
+                if (!app.isPackaged) {
+                    return { available: false, reason: 'dev-mode' };
+                }
+                try {
+                    const result = await autoUpdater.checkForUpdates();
+                    if (result && result.updateInfo) {
+                        return {
+                            available: result.updateInfo.version !== app.getVersion(),
+                            version: result.updateInfo.version,
+                            currentVersion: app.getVersion(),
+                        };
+                    }
+                    return { available: false };
+                } catch (error) {
+                    console.error('[AutoUpdater] Check failed:', error);
+                    return { available: false, error: String(error) };
+                }
+            }),
+
+        downloadUpdate: t.procedure
+            .mutation(async () => {
+                await autoUpdater.downloadUpdate();
+                return true;
+            }),
+
+        installUpdate: t.procedure
+            .mutation(() => {
+                autoUpdater.quitAndInstall(false, true);
             }),
     }),
 

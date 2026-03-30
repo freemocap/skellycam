@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "ᏗᎧᏃᎩᏍᏗ ᎠᏂᎩᏍᏗ",
   "saveLogsToFile": "ᏗᎧᏃᎩᏍᏗ ᎠᏍᏓᏅᏅ ᎠᏍᏓᏅᏅ",
   "copied": "ᎠᏂᎩᏍᏗ!",
-  "timestampFromRecording": "ᎢᎦᏛ ᏓᏍᎪᎸᏓ ᏗᏓᎴᏂᏍᎬ ᏗᎧᏃᎩᏍᏗ"
+  "timestampFromRecording": "ᎢᎦᏛ ᏓᏍᎪᎸᏓ ᏗᏓᎴᏂᏍᎬ ᏗᎧᏃᎩᏍᏗ",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

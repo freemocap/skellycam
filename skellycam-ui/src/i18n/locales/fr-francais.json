@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Copier les journaux dans le presse-papiers",
   "saveLogsToFile": "Enregistrer les journaux dans un fichier",
   "copied": "Copié !",
-  "timestampFromRecording": "Horodatage des données d'enregistrement"
+  "timestampFromRecording": "Horodatage des données d'enregistrement",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

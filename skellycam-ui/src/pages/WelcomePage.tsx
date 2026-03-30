@@ -1,12 +1,18 @@
 import React, {useEffect, useState, useRef, useCallback} from 'react';
-import {Box, Checkbox, Container, Fade, FormControlLabel, Grow, Paper, Typography} from '@mui/material';
+import {Box, Button, Checkbox, CircularProgress, Container, Fade, FormControlLabel, Grow, Paper, Stack, Typography} from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import {Footer} from '@/components/ui-components/Footer';
 import {useElectronIPC} from "@/services";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {useTranslation} from "react-i18next";
 import {LanguageSwitcher} from "@/components/languages/LanguageSwitcher";
+import {VersionChip} from "@/components/ui-components/VersionChip";
+import {useAppDispatch} from "@/store";
+import {camerasConnectOrUpdate} from "@/store/slices/cameras/cameras-thunks";
+import {EXTERNAL_URLS} from "@/constants/external-urls";
 
 const WelcomePage: React.FC = () => {
     const {t} = useTranslation();
@@ -17,6 +23,8 @@ const WelcomePage: React.FC = () => {
     const [telemetryLoaded, setTelemetryLoaded] = useState<boolean>(false);
     const {isElectron, api} = useElectronIPC();
     const {connectedCameraIds} = useServer();
+    const dispatch = useAppDispatch();
+    const [isConnecting, setIsConnecting] = useState(false);
 
     // Track previous camera count to detect 0 -> >0 transition
     const prevCountRef = useRef(connectedCameraIds.length);
@@ -80,6 +88,17 @@ const WelcomePage: React.FC = () => {
             console.error('Failed to save telemetry preference:', error);
         }
     }, [isElectron, api]);
+
+    const handleConnectCameras = useCallback(async () => {
+        setIsConnecting(true);
+        try {
+            await dispatch(camerasConnectOrUpdate()).unwrap();
+        } catch (error) {
+            console.error('Error connecting cameras:', error);
+        } finally {
+            setIsConnecting(false);
+        }
+    }, [dispatch]);
 
     return (
         <Container maxWidth="md" sx={{
@@ -185,6 +204,51 @@ const WelcomePage: React.FC = () => {
                         {t('welcomeSubtitle')}
                     </Typography>
 
+                    {/* Connect to Cameras button */}
+                    <Button
+                        variant="contained"
+                        size="large"
+                        color="primary"
+                        startIcon={isConnecting
+                            ? <CircularProgress size={20} color="inherit" />
+                            : <VideocamIcon />
+                        }
+                        onClick={handleConnectCameras}
+                        disabled={isConnecting}
+                        sx={{
+                            mb: 3,
+                            px: 4,
+                            py: 1.5,
+                            fontSize: '1.1rem',
+                            borderRadius: 2,
+                            textTransform: 'none',
+                        }}
+                    >
+                        {t('connectToCameras')}
+                    </Button>
+
+                    {/* External links */}
+                    <Stack direction="row" spacing={2} sx={{mb: 3}}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<OpenInNewIcon sx={{fontSize: 14}} />}
+                            onClick={() => window.open(EXTERNAL_URLS.DOCS, '_blank')}
+                            sx={{textTransform: 'none'}}
+                        >
+                            {t('documentation')}
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            endIcon={<OpenInNewIcon sx={{fontSize: 14}} />}
+                            onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
+                            sx={{textTransform: 'none'}}
+                        >
+                            {t('roadmap')}
+                        </Button>
+                    </Stack>
+
                     {/* Language selector */}
                     <Box sx={{mb: 3}}>
                         <LanguageSwitcher/>
@@ -220,8 +284,9 @@ const WelcomePage: React.FC = () => {
                         </Fade>
                     )}
 
-                    <Box component="footer" sx={{p: 3}}>
+                    <Box component="footer" sx={{p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1}}>
                         <Footer/>
+                        <VersionChip variant="compact" />
                     </Box>
                 </Paper>
             </Fade>

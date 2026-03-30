@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "பதிவுகளை கிளிப்போர்டுக்கு நகலெடு",
   "saveLogsToFile": "பதிவுகளை கோப்பில் சேமி",
   "copied": "நகலெடுக்கப்பட்டது!",
-  "timestampFromRecording": "பதிவுத் தரவிலிருந்து நேர முத்திரை"
+  "timestampFromRecording": "பதிவுத் தரவிலிருந்து நேர முத்திரை",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

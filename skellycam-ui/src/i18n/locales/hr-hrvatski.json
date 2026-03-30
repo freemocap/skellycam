@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Kopiraj zapise u međuspremnik",
   "saveLogsToFile": "Spremi zapise u datoteku",
   "copied": "Kopirano!",
-  "timestampFromRecording": "Vremenska oznaka iz podataka snimke"
+  "timestampFromRecording": "Vremenska oznaka iz podataka snimke",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

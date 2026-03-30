@@ -2,6 +2,7 @@ import React from "react";
 import {Box, CircularProgress, IconButton, Stack, Tooltip, Typography, useTheme} from "@mui/material";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import YoutubeSearchedForIcon from "@mui/icons-material/YoutubeSearchedFor";
@@ -126,15 +127,27 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             sx={{color: "inherit"}}
                         >
 
-                                <VideocamIcon
-                                    sx={{
-                                        color: theme.palette.secondary.main,
-                                        border: `2px solid ${theme.palette.secondary.main}`,
-                                        borderRadius: '4px',
-                                        padding: '2px',
-                                        scale: '1.6'
-                                    }}
-                                />
+                                <Box sx={{ position: 'relative', display: 'inline-flex', scale: '1.6' }}>
+                                    <VideocamIcon
+                                        sx={{
+                                            color: theme.palette.secondary.main,
+                                            border: `2px solid ${theme.palette.secondary.main}`,
+                                            borderRadius: '4px',
+                                            padding: '2px',
+                                        }}
+                                    />
+                                    <ArrowDownwardIcon
+                                        sx={{
+                                            position: 'absolute',
+                                            top: -6,
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            fontSize: 12,
+                                            color: theme.palette.secondary.main,
+                                            fontWeight: 'bold',
+                                        }}
+                                    />
+                                </Box>
                             
                         </IconButton>
                     </span>

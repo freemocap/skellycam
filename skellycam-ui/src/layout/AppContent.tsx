@@ -6,6 +6,8 @@ import {BasePanelLayout} from "@/layout/BasePanelLayout";
 import {createExtendedTheme} from "@/layout/paperbase-theme";
 import {useAppSelector} from "@/store";
 import {BaseContentRouter} from "@/layout/BaseContentRouter";
+import {UpdateBanner} from "@/components/ui-components/UpdateBanner";
+import {AutoUpdateProvider} from "@/hooks/AutoUpdateContext";
 import {useTranslation} from "react-i18next";
 import {getLocaleDirection} from "@/i18n";
 
@@ -29,9 +31,12 @@ export const AppContent = function () {
         <ThemeProvider theme={theme}>
             <CssBaseline/>
             <HashRouter>
-                <BasePanelLayout>
-                    <BaseContentRouter/>
-                </BasePanelLayout>
+                <AutoUpdateProvider>
+                    <BasePanelLayout>
+                        <BaseContentRouter/>
+                    </BasePanelLayout>
+                    <UpdateBanner/>
+                </AutoUpdateProvider>
             </HashRouter>
         </ThemeProvider>
     );

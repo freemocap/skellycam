@@ -342,6 +342,43 @@ jobs:
             skellycam-ui/release/*/*.deb
           include-hidden-files: true
 
+      # ── Upload auto-update metadata (latest*.yml) ──
+      - name: Upload auto-update metadata (Windows)
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: update-metadata-${{ matrix.label }}
+          path: |
+            skellycam-ui/release/**/latest.yml
+          include-hidden-files: true
+
+      - name: Upload auto-update metadata (macOS)
+        if: matrix.platform == 'macos' && matrix.arch == 'x64'
+        uses: actions/upload-artifact@v7
+        with:
+          name: update-metadata-${{ matrix.label }}
+          path: |
+            skellycam-ui/release/**/latest-mac.yml
+          include-hidden-files: true
+
+      - name: Upload auto-update metadata (macOS ARM)
+        if: matrix.platform == 'macos' && matrix.arch == 'arm64'
+        uses: actions/upload-artifact@v7
+        with:
+          name: update-metadata-${{ matrix.label }}
+          path: |
+            skellycam-ui/release/**/latest-mac.yml
+          include-hidden-files: true
+
+      - name: Upload auto-update metadata (Linux)
+        if: matrix.platform == 'linux' && matrix.arch == 'x64'
+        uses: actions/upload-artifact@v7
+        with:
+          name: update-metadata-${{ matrix.label }}
+          path: |
+            skellycam-ui/release/**/latest-linux.yml
+          include-hidden-files: true
+
 
       # ── macOS keychain cleanup ──
       - name: Clean up macOS keychain
@@ -421,6 +458,53 @@ jobs:
           done
 
           echo "=== Release assets ==="
+          ls -lh release-assets/
+
+      - name: Prepare auto-update metadata
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+
+          # Copy latest.yml files from update-metadata artifacts and patch
+          # the file references to match the renamed release asset names.
+
+          # Windows: latest.yml
+          if [ -d "artifacts/update-metadata-windows-x64" ]; then
+            YML=$(find artifacts/update-metadata-windows-x64 -name 'latest.yml' | head -1)
+            if [ -n "$YML" ]; then
+              # Replace the original artifact filename with the renamed one
+              sed -i "s|skellycam_.*_installer\.exe|skellycam_${VERSION}_windows-x64.exe|g" "$YML"
+              cp "$YML" "release-assets/latest.yml"
+              echo "Copied latest.yml for Windows"
+            fi
+          fi
+
+          # macOS: latest-mac.yml (combine x64 and arm64 entries)
+          # electron-updater picks the right arch from a single latest-mac.yml
+          MAC_YML=""
+          for dir in artifacts/update-metadata-macos-*; do
+            found=$(find "$dir" -name 'latest-mac.yml' 2>/dev/null | head -1)
+            if [ -n "$found" ] && [ -z "$MAC_YML" ]; then
+              MAC_YML="$found"
+            fi
+          done
+          if [ -n "$MAC_YML" ]; then
+            # Patch filenames to match renamed assets
+            sed -i "s|skellycam_.*_installer\.zip|skellycam_${VERSION}_macos-x64-intel.zip|g" "$MAC_YML"
+            cp "$MAC_YML" "release-assets/latest-mac.yml"
+            echo "Copied latest-mac.yml for macOS"
+          fi
+
+          # Linux: latest-linux.yml
+          if [ -d "artifacts/update-metadata-linux-x64" ]; then
+            YML=$(find artifacts/update-metadata-linux-x64 -name 'latest-linux.yml' | head -1)
+            if [ -n "$YML" ]; then
+              sed -i "s|skellycam_.*\.AppImage|skellycam_${VERSION}_linux-x64.AppImage|g" "$YML"
+              cp "$YML" "release-assets/latest-linux.yml"
+              echo "Copied latest-linux.yml for Linux"
+            fi
+          fi
+
+          echo "=== Final release assets ==="
           ls -lh release-assets/
 
       - name: Create or update GitHub Release

@@ -23,6 +23,8 @@ import VerifiedIcon from "@mui/icons-material/Verified";
 import TranslateIcon from "@mui/icons-material/Translate";
 import PaletteIcon from "@mui/icons-material/Palette";
 import InfoIcon from "@mui/icons-material/Info";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import {EXTERNAL_URLS} from "@/constants/external-urls";
 import { useTranslation } from "react-i18next";
 import { Footer } from "@/components/ui-components/Footer";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -41,6 +43,7 @@ import type { SupportedLocale } from "@/i18n";
 import type { ThemeMode } from "@/store/slices/theme";
 import * as Flags from "country-flag-icons/react/3x2";
 import {CherokeeFlag} from "@/components/languages/custom-flag-icons/CherokeeFlag";
+import { VersionChip } from "@/components/ui-components/VersionChip";
 
 const FlagIcon: React.FC<{ countryCode: string }> = ({ countryCode }) => {
   if (countryCode === "CHEROKEE") return <CherokeeFlag />;
@@ -229,7 +232,7 @@ const SettingsPage: React.FC = () => {
                     variant="outlined"
                     clickable
                     component="a"
-                    href={`https://github.com/freemocap/skellycam/blob/development/skellycam-ui/src/i18n/locales`}
+                    href={EXTERNAL_URLS.TRANSLATION_LOCALES}
                     target="_blank"
                     rel="noopener noreferrer"
                     sx={{
@@ -252,7 +255,7 @@ const SettingsPage: React.FC = () => {
                 {t("aiTranslatedTooltip")}{" "}
                 <Typography
                   component="a"
-                  href="https://github.com/freemocap/skellycam/blob/development/TRANSLATING.md"
+                  href={EXTERNAL_URLS.TRANSLATING_GUIDE}
                   target="_blank"
                   rel="noopener noreferrer"
                   variant="caption"
@@ -261,9 +264,12 @@ const SettingsPage: React.FC = () => {
                     color: "primary.main",
                     textDecoration: "underline",
                     cursor: "pointer",
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.3,
                   }}
                 >
-                  {t("helpTranslate")} →
+                  {t("helpTranslate")} <OpenInNewIcon sx={{fontSize: 11}} />
                 </Typography>
               </Typography>
             )}
@@ -356,17 +362,11 @@ const SettingsPage: React.FC = () => {
             title={t("about")}
           />
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             <Typography variant="body2" sx={{ fontSize: 13 }}>
               {t("appName")} — {t("welcomeSubtitle")}
             </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ fontSize: 11 }}
-            >
-              {t("version")}: 2.0.0-alpha.0
-            </Typography>
+            <VersionChip variant="full" />
           </Box>
         </Paper>
       </Container>

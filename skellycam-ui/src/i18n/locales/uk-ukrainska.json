@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Копіювати журнали в буфер обміну",
   "saveLogsToFile": "Зберегти журнали у файл",
   "copied": "Скопійовано!",
-  "timestampFromRecording": "Мітка часу з даних запису"
+  "timestampFromRecording": "Мітка часу з даних запису",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

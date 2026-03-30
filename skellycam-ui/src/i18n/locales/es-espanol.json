@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Copiar registros al portapapeles",
   "saveLogsToFile": "Guardar registros en archivo",
   "copied": "¡Copiado!",
-  "timestampFromRecording": "Marca de tiempo de los datos de grabación"
+  "timestampFromRecording": "Marca de tiempo de los datos de grabación",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

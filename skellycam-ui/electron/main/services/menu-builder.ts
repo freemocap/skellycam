@@ -20,6 +20,7 @@ export type MenuAction =
     | 'open-recording-folder'
     | 'toggle-fullscreen'
     | 'toggle-locale'
+    | 'check-for-updates'
     | `change-locale:${string}`;
 
 export interface LocaleEntry {
@@ -48,6 +49,7 @@ export interface MenuLabels {
     menuGitHubRepository: string;
     menuReportIssue: string;
     menuAbout: string;
+    menuCheckForUpdates: string;
     menuPlayback: string;
     // Keys reused from the existing i18n
     home: string;
@@ -79,6 +81,7 @@ const DEFAULT_LABELS: MenuLabels = {
     menuGitHubRepository: 'GitHub Repository',
     menuReportIssue: 'Report an Issue…',
     menuAbout: 'About SkellyCam',
+    menuCheckForUpdates: 'Check for Updates…',
     menuPlayback: 'Playback',
     home: 'Home',
     cameras: 'Cameras',
@@ -247,7 +250,8 @@ function buildHelpMenu(t: MenuLabels): MenuItemConstructorOptions {
             {
                 label: t.menuDocumentation,
                 click: () => {
-                    shell.openExternal('https://freemocap.github.io/skellycam/');
+                    // Keep in sync with skellycam-ui/src/constants/external-urls.ts
+                    shell.openExternal('https://docs.freemocap.org/skellycam');
                 },
             },
             {
@@ -268,6 +272,11 @@ function buildHelpMenu(t: MenuLabels): MenuItemConstructorOptions {
                 click: () => {
                     shell.openExternal('https://freemocap.org');
                 },
+            },
+            { type: 'separator' },
+            {
+                label: t.menuCheckForUpdates,
+                click: () => sendMenuAction('check-for-updates'),
             },
             { type: 'separator' },
             {

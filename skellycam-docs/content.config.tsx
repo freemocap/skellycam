@@ -144,6 +144,8 @@ const config: SkellyDocsConfig = {
       { label: 'Recordings guaranteed to complete on crash (hybrid MP4 codec)', url: "https://github.com/freemocap/skellycam/issues/100" },
     ],
   },
+
+    projectBoardUrl: "https://github.com/orgs/freemocap/projects/34/views/6"
 };
 
 export default config;

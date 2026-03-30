@@ -35,6 +35,7 @@ const MENU_LABEL_KEYS = [
     'menuGitHubRepository',
     'menuReportIssue',
     'menuAbout',
+    'menuCheckForUpdates',
     'menuPlayback',
     'home',
     'cameras',
@@ -153,6 +154,11 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
                     if (isRecording) {
                         dispatch(stopRecording());
                     }
+                    break;
+
+                // Updates
+                case 'check-for-updates':
+                    window.dispatchEvent(new CustomEvent('check-for-updates'));
                     break;
 
                 // File actions

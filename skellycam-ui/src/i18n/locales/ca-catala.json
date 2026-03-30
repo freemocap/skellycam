@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "Copiar registres al porta-retalls",
   "saveLogsToFile": "Desar registres a fitxer",
   "copied": "Copiat!",
-  "timestampFromRecording": "Marca de temps de les dades de gravació"
+  "timestampFromRecording": "Marca de temps de les dades de gravació",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }

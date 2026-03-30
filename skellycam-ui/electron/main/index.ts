@@ -3,7 +3,7 @@ import { app, BrowserWindow } from 'electron';
 import { setupIPC } from './ipc';
 import { WindowManager } from './services/window-manager';
 import { PythonServer } from './services/python-server';
-// import { UpdateHandler } from './services/update-handler';
+import { UpdateHandler } from './services/update-handler';
 import { LifecycleLogger } from './services/logger';
 import { buildApplicationMenu } from './services/menu-builder';
 // import os from 'node:os'; // Uncomment if needed for platform-specific checks
@@ -49,11 +49,10 @@ if (!gotTheLock) {
         // Create window
         const mainWindow = WindowManager.createMainWindow();
 
-        //TODO: Re-enable auto-updates
-        // // Initialize auto-updater (only in production)
-        // if (!APP_ENVIRONMENT.IS_DEV) {
-        //     UpdateHandler.initialize(mainWindow);
-        // }
+        // Initialize auto-updater (only in production)
+        if (!APP_ENVIRONMENT.IS_DEV) {
+            UpdateHandler.initialize(mainWindow);
+        }
 
     });
 
@@ -72,6 +71,7 @@ if (!gotTheLock) {
     app.on('before-quit', async (event) => {
         event.preventDefault();
         console.log('App is quitting, cleaning up...');
+        UpdateHandler.shutdown();
         await PythonServer.shutdown();
         app.exit(0);
     });

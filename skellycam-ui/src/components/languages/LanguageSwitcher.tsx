@@ -13,6 +13,7 @@ import {
 import type { SelectChangeEvent } from "@mui/material/Select";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import {EXTERNAL_URLS} from "@/constants/external-urls";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   localeChanged,
@@ -159,7 +160,7 @@ export const LanguageSwitcher: React.FC = () => {
             variant="outlined"
             clickable
             component="a"
-            href={`https://github.com/freemocap/skellycam/blob/development/skellycam-ui/src/i18n/locales`}
+            href={EXTERNAL_URLS.TRANSLATION_LOCALES}
             target="_blank"
             rel="noopener noreferrer"
             sx={{

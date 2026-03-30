@@ -99,8 +99,8 @@
   },
 
   "publish": {
-    "provider": "generic",
-    "channel": "latest",
-    "url": "https://github.com/freemocap/skellycam"
+    "provider": "github",
+    "owner": "freemocap",
+    "repo": "skellycam"
   }
 }

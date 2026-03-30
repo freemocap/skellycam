@@ -245,5 +245,14 @@
   "copyLogsToClipboard": "复制日志到剪贴板",
   "saveLogsToFile": "保存日志到文件",
   "copied": "已复制！",
-  "timestampFromRecording": "来自录制数据的时间戳"
+  "timestampFromRecording": "来自录制数据的时间戳",
+  "menuCheckForUpdates": "Check for Updates…",
+  "updateAvailable": "Update available",
+  "updateAvailableMessage": "Version {{version}} is available",
+  "downloading": "Downloading…",
+  "downloadComplete": "Download complete",
+  "restartToUpdate": "Restart to update",
+  "checkForUpdates": "Check for Updates",
+  "upToDate": "You are up to date",
+  "updateError": "Update check failed"
 }
