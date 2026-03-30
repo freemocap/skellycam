@@ -16,8 +16,8 @@ import {
     detectCameras,
     pauseUnpauseCameras,
 } from "@/store/slices/cameras/cameras-thunks";
-import { savedSettingsCleared } from "@/store/slices/cameras/cameras-slice";
-import { useTranslation } from 'react-i18next';
+import {savedSettingsCleared} from "@/store/slices/cameras/cameras-slice";
+import {useTranslation} from 'react-i18next';
 
 interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
@@ -27,13 +27,13 @@ interface CameraConfigTreeViewHeaderProps {
 }
 
 export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProps> = ({
-    cameraCount,
-    isLoading,
-    isPaused,
-}) => {
+                                                                                          cameraCount,
+                                                                                          isLoading,
+                                                                                          isPaused,
+                                                                                      }) => {
     const theme = useTheme();
     const dispatch = useAppDispatch();
-    const { t } = useTranslation();
+    const {t} = useTranslation();
     const selectedCameras = useAppSelector(selectSelectedCameras);
     const hasSelected = selectedCameras.length > 0;
 
@@ -112,9 +112,9 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 color: theme.palette.primary.contrastText,
             }}
         >
-            <VideocamIcon sx={{ml: 2, mr: 1}} />
+            <VideocamIcon sx={{ml: 2, mr: 1}}/>
             <Typography variant="h6" sx={{flexGrow: 1}}>
-                {t('camerasCount', { count: cameraCount })}
+                {t('camerasCount', {count: cameraCount})}
             </Typography>
 
             <Stack direction="row" spacing={1} sx={{mr: 2}}>
@@ -127,27 +127,27 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             sx={{color: "inherit"}}
                         >
 
-                                <Box sx={{ position: 'relative', display: 'inline-flex', scale: '1.6' }}>
-                                    <VideocamIcon
-                                        sx={{
-                                            color: theme.palette.secondary.main,
-                                            border: `2px solid ${theme.palette.secondary.main}`,
-                                            borderRadius: '4px',
-                                            padding: '2px',
-                                        }}
-                                    />
-                                    <ArrowDownwardIcon
-                                        sx={{
-                                            position: 'absolute',
-                                            top: -6,
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            fontSize: 12,
-                                            color: theme.palette.secondary.main,
-                                            fontWeight: 'bold',
-                                        }}
-                                    />
-                                </Box>
+                        <Box sx={{position: 'relative', display: 'inline-flex', width: 24, height: 24}}>
+                            <VideocamIcon
+                                sx={{
+                                    color: theme.palette.secondary.main,
+                                    fontSize: 24,
+                                }}
+                            />
+                            <ArrowDownwardIcon
+                                sx={{
+                                    position: 'absolute',
+                                    top: -4,
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    fontSize: 10,
+                                    color: theme.palette.secondary.main,
+                                    strokeWidth: 2,
+                                    stroke: theme.palette.secondary.main,
+                                }}
+                            />
+                        </Box>
+
                             
                         </IconButton>
                     </span>
@@ -163,7 +163,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                 color: "inherit",
                             }}
                         >
-                            {isPaused ? <PlayArrowIcon /> : <PauseIcon />}
+                            {isPaused ? <PlayArrowIcon/> : <PauseIcon/>}
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -178,7 +178,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                                 color: "inherit",
                             }}
                         >
-                            <VideocamOffIcon />
+                            <VideocamOffIcon/>
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -192,9 +192,9 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             sx={{color: "inherit"}}
                         >
                             {isLoading || isActionInProgress ? (
-                                <CircularProgress size={20} sx={{color: "inherit"}} />
+                                <CircularProgress size={20} sx={{color: "inherit"}}/>
                             ) : (
-                                <YoutubeSearchedForIcon />
+                                <YoutubeSearchedForIcon/>
                             )}
                         </IconButton>
                     </span>
@@ -208,7 +208,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             onClick={handleClearSavedSettings}
                             sx={{color: "inherit"}}
                         >
-                            <DeleteSweepIcon />
+                            <DeleteSweepIcon/>
                         </IconButton>
                     </span>
                 </Tooltip>

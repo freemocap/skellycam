@@ -247,8 +247,21 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
                     opacity: 0.15,
                     borderRadius: "4px",
                 },
-                "& .react-resizable-handle": {
+                "& .react-grid-item > .react-resizable-handle": {
                     zIndex: 10,
+                    opacity: 0.4,
+                    transition: "opacity 0.2s ease",
+                },
+                "& .react-grid-item:hover > .react-resizable-handle": {
+                    opacity: 1,
+                },
+                "& .react-grid-item > .react-resizable-handle::after": {
+                    width: "10px",
+                    height: "10px",
+                    right: "4px",
+                    bottom: "4px",
+                    borderRight: "2px solid rgba(255, 255, 255, 0.5)",
+                    borderBottom: "2px solid rgba(255, 255, 255, 0.5)",
                 },
             }}
         >

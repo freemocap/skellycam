@@ -1,5 +1,8 @@
 import React, {useEffect, useState, useRef, useCallback} from 'react';
-import {Box, Button, Checkbox, CircularProgress, Container, Fade, FormControlLabel, Grow, Paper, Stack, Typography} from '@mui/material';
+import {
+    Box, Button, Checkbox, CircularProgress, Container,
+    darken, Divider, Fade, FormControlLabel, Grow, Paper, Stack, Typography
+} from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -130,142 +133,163 @@ const WelcomePage: React.FC = () => {
                         position: 'relative'
                     }}
                 >
-                    {/* Background accent */}
+                    {/* Gradient accent bar */}
                     <Box sx={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',
                         height: '8px',
-                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.info.main})`,
                     }}/>
 
-                    <Grow in={true} timeout={1000}>
-                        <Box
+                    {/* ── HERO SECTION ── */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+                        <Grow in={true} timeout={1000}>
+                            <Box
+                                sx={{
+                                    width: 180,
+                                    height: 180,
+                                    mb: 2,
+                                    mt: 2,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    transition: 'transform 0.3s ease-in-out',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)'
+                                    }
+                                }}
+                            >
+                                {logoDataUrl && (
+                                    <img
+                                        src={logoDataUrl}
+                                        alt="SkellyCam Logo"
+                                        style={{
+                                            maxWidth: '100%',
+                                            maxHeight: '100%',
+                                            objectFit: 'contain',
+                                            filter: theme.palette.mode === 'dark'
+                                                ? 'drop-shadow(0 0 10px rgba(255,255,255,0.2))'
+                                                : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))'
+                                        }}
+                                    />
+                                )}
+                            </Box>
+                        </Grow>
+
+                        <Typography
+                            variant="h3"
+                            component="h1"
+                            gutterBottom
                             sx={{
-                                width: 240,
-                                height: 240,
-                                mb: 4,
-                                mt: 2,
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                transition: 'transform 0.3s ease-in-out',
-                                '&:hover': {
-                                    transform: 'scale(1.05)'
-                                }
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                background: theme.palette.text.primary,
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                textFillColor: 'transparent',
+                                mb: 1
                             }}
                         >
-                            {logoDataUrl && (
-                                <img
-                                    src={logoDataUrl}
-                                    alt="SkellyCam Logo"
-                                    style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '100%',
-                                        objectFit: 'contain',
-                                        filter: theme.palette.mode === 'dark'
-                                            ? 'drop-shadow(0 0 10px rgba(255,255,255,0.2))'
-                                            : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))'
-                                    }}
-                                />
-                            )}
-                        </Box>
-                    </Grow>
+                            {t('welcomeTitle')}
+                        </Typography>
 
-                    <Typography
-                        variant="h3"
-                        component="h1"
-                        gutterBottom
-                        sx={{
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            background: theme.palette.text.primary,
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            textFillColor: 'transparent',
-                            mb: 2
-                        }}
-                    >
-                        {t('welcomeTitle')}
-                    </Typography>
+                        <Typography
+                            variant="subtitle1"
+                            color="text.secondary"
+                            sx={{
+                                mb: 1,
+                                textAlign: 'center',
+                                maxWidth: '80%',
+                                fontSize: '1.1rem'
+                            }}
+                        >
+                            {t('welcomeSubtitle')}
+                        </Typography>
+                    </Box>
 
-                    <Typography
-                        variant="subtitle1"
-                        color="text.secondary"
-                        sx={{
-                            mb: 3,
-                            textAlign: 'center',
-                            maxWidth: '80%',
-                            fontSize: '1.1rem'
-                        }}
-                    >
-                        {t('welcomeSubtitle')}
-                    </Typography>
-
-                    {/* Connect to Cameras button */}
-                    <Button
-                        variant="contained"
-                        size="large"
-                        color="primary"
-                        startIcon={isConnecting
-                            ? <CircularProgress size={20} color="inherit" />
-                            : <VideocamIcon />
-                        }
-                        onClick={handleConnectCameras}
-                        disabled={isConnecting}
-                        sx={{
-                            mb: 3,
-                            px: 4,
-                            py: 1.5,
-                            fontSize: '1.1rem',
-                            borderRadius: 2,
-                            textTransform: 'none',
-                        }}
-                    >
-                        {t('connectToCameras')}
-                    </Button>
-
-                    {/* External links */}
-                    <Stack direction="row" spacing={2} sx={{mb: 3}}>
+                    {/* ── PRIMARY CTA ── */}
+                    <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mb: 2 }}>
                         <Button
-                            variant="outlined"
+                            variant="contained"
+                            size="large"
+                            startIcon={isConnecting
+                                ? <CircularProgress size={24} color="inherit" />
+                                : <VideocamIcon sx={{ fontSize: 28 }} />
+                            }
+                            onClick={handleConnectCameras}
+                            disabled={isConnecting}
+                            sx={{
+                                '&&': {
+                                    px: 6,
+                                    py: 2,
+                                    fontSize: '1.25rem',
+                                    fontWeight: 600,
+                                    minHeight: 56,
+                                    padding: '16px 48px',
+                                },
+                                width: '100%',
+                                maxWidth: 400,
+                                borderRadius: 3,
+                                textTransform: 'none',
+                                background: darken(theme.palette.info.dark, .4),
+                                color: theme.palette.text.primary,
+                                border: `4px solid ${theme.palette.secondary.main}`,
+                                boxShadow: `0 4px 20px rgba(245, 0, 87, 0.25)`,
+                                '&:hover': {
+                                background: theme.palette.info.dark,
+                                    boxShadow: `0 6px 28px rgba(245, 0, 87, 0.4)`,
+                                    transform: 'translateY(-1px)',
+                                    border: `4px solid ${theme.palette.secondary.light}`,
+                                    color: theme.palette.text.primary,
+                                },
+                                transition: 'all 0.2s ease-in-out',
+                            }}
+                        >
+                            {t('connectToCameras')}
+                        </Button>
+                    </Box>
+
+                    {/* ── SECONDARY LINKS ── */}
+                    <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                        <Button
+                            variant="text"
                             size="small"
+                            color="inherit"
                             endIcon={<OpenInNewIcon sx={{fontSize: 14}} />}
                             onClick={() => window.open(EXTERNAL_URLS.DOCS, '_blank')}
-                            sx={{textTransform: 'none'}}
+                            sx={{
+                                textTransform: 'none',
+                                color: theme.palette.info.light,
+                                '&:hover': { color: theme.palette.info.main },
+                            }}
                         >
                             {t('documentation')}
                         </Button>
                         <Button
-                            variant="outlined"
+                            variant="text"
                             size="small"
+                            color="inherit"
                             endIcon={<OpenInNewIcon sx={{fontSize: 14}} />}
                             onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
-                            sx={{textTransform: 'none'}}
+                            sx={{
+                                textTransform: 'none',
+                                color: theme.palette.info.light,
+                                '&:hover': { color: theme.palette.info.main },
+                            }}
                         >
                             {t('roadmap')}
                         </Button>
                     </Stack>
 
-                    {/* Language selector */}
-                    <Box sx={{mb: 3}}>
+                    {/* ── SETTINGS AREA ── */}
+                    <Divider sx={{ width: '60%', my: 1.5 }} />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 2 }}>
                         <LanguageSwitcher/>
-                    </Box>
-
-                    {/* Telemetry opt-in checkbox */}
-                    {telemetryLoaded && (
-                        <Fade in={true} timeout={600}>
-                            <Box sx={{
-                                mb: 3,
-                                px: 2,
-                                py: 1,
-                                borderRadius: 2,
-                                backgroundColor: theme.palette.mode === 'dark'
-                                    ? 'rgba(255,255,255,0.03)'
-                                    : 'rgba(0,0,0,0.02)',
-                            }}>
+                        {telemetryLoaded && (
+                            <Fade in={true} timeout={600}>
                                 <FormControlLabel
                                     control={
                                         <Checkbox
@@ -275,18 +299,19 @@ const WelcomePage: React.FC = () => {
                                         />
                                     }
                                     label={
-                                        <Typography variant="body2" color="text.primary">
+                                        <Typography variant="body2" color="text.secondary">
                                             {t('sendAnonymousPings')}
                                         </Typography>
                                     }
                                 />
-                            </Box>
-                        </Fade>
-                    )}
-
-                    <Box component="footer" sx={{p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1}}>
-                        <Footer/>
+                            </Fade>
+                        )}
                         <VersionChip variant="compact" />
+                    </Box>
+
+                    {/* ── FOOTER ── */}
+                    <Box sx={{ textAlign: 'center' }}>
+                        <Footer/>
                     </Box>
                 </Paper>
             </Fade>
