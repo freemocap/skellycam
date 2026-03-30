@@ -8,6 +8,7 @@ const initialState: RecordingInfo = {
     recordingName: null,
     startedAt: null,
     duration: 0,
+    completionData: null,
 };
 
 export const recordingSlice = createSlice({
@@ -23,6 +24,9 @@ export const recordingSlice = createSlice({
         recordingDurationUpdated: (state, action: PayloadAction<number>) => {
             state.duration = action.payload;
         },
+        recordingCompletionDismissed: (state) => {
+            state.completionData = null;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -32,12 +36,14 @@ export const recordingSlice = createSlice({
                 state.recordingDirectory = action.meta.arg.recordingDirectory;
                 state.startedAt = new Date().toISOString();
                 state.duration = 0;
+                state.completionData = null;
             })
-            .addCase(stopRecording.fulfilled, (state) => {
+            .addCase(stopRecording.fulfilled, (state, action) => {
                 state.isRecording = false;
                 state.recordingName = null;
                 state.startedAt = null;
                 state.duration = 0;
+                state.completionData = action.payload ?? null;
             });
     },
 });
@@ -46,4 +52,5 @@ export const {
     recordingInfoUpdated,
     recordingDirectoryChanged,
     recordingDurationUpdated,
+    recordingCompletionDismissed,
 } = recordingSlice.actions;

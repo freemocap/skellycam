@@ -21,6 +21,7 @@ from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.recorders.recording_finalizer import RecordingFinalizer
 from skellycam.core.recorders.audio.audio_recorder import AudioRecorder
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.types.type_overloads import (
     CameraIdString,
@@ -208,7 +209,7 @@ class CameraGroup:
             f"with recording name: {recording_info.recording_name}"
         )
 
-    async def stop_recording(self) -> RecordingInfo:
+    async def stop_recording(self) -> tuple[RecordingInfo, RecordingTimestampsStats]:
         """Stop recording for the camera group."""
         logger.debug("Stopping recording for all cameras in orchestrator...")
         await self.cameras.pause(await_paused=True)
@@ -226,12 +227,12 @@ class CameraGroup:
         self.cameras.orchestrator.first_recording_frame_number.value = -1
         self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
         await self.cameras.unpause(await_unpaused=True)
-        recording_info = await finalize_recording(ipc=self.ipc, cameras=self.cameras)
+        recording_info, timestamp_stats = await finalize_recording(ipc=self.ipc, cameras=self.cameras)
         logger.info(
             f"Stopped recording for camera group ID: {self.id} "
             f"with recording name: {recording_info.recording_name}"
         )
-        return recording_info
+        return recording_info, timestamp_stats
 
     async def close(self) -> None:
         logger.debug("Closing camera group")
@@ -310,7 +311,7 @@ async def await_extracted_configs(
 async def finalize_recording(
     ipc: CameraGroupIPC,
     cameras: CameraManager,
-) -> RecordingInfo:
+) -> tuple[RecordingInfo, RecordingTimestampsStats]:
     recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {
         camera_id: None
         for camera_id in cameras.orchestrator.camera_statuses.keys()
@@ -366,5 +367,5 @@ async def finalize_recording(
             for camera_id, message in recording_finished_messages_by_camera.items()
         },
     )
-    await recording_finalizer.finalize_recording()
-    return recording_info
+    timestamp_stats = await recording_finalizer.finalize_recording()
+    return recording_info, timestamp_stats

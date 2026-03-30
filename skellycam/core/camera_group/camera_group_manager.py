@@ -12,6 +12,7 @@ from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.recorders.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.types.type_overloads import (
     CameraGroupIdString,
     CameraIdString,
@@ -103,13 +104,13 @@ class CameraGroupManager:
             await camera_group.start_recording(recording_info=recording_info)
             logger.info(f"Started recording for camera group ID: {camera_group.id}")
 
-    async def stop_recording_all_groups(self) -> list[RecordingInfo]:
+    async def stop_recording_all_groups(self) -> list[tuple["RecordingInfo", "RecordingTimestampsStats"]]:
         """Stop recording for all camera groups."""
-        recording_infos: list[RecordingInfo] = []
+        results: list[tuple[RecordingInfo, RecordingTimestampsStats]] = []
         for camera_group in self.camera_groups.values():
-            recording_infos.append(await camera_group.stop_recording())
+            results.append(await camera_group.stop_recording())
             logger.info(f"Stopped recording for camera group ID: {camera_group.id}")
-        return recording_infos
+        return results
 
     def get_latest_frontend_payloads(
         self,

@@ -63,6 +63,27 @@ class DetectedMicrophonesResponse(BaseModel):
     microphones: dict[int, str]
 
 
+class StatsSummary(BaseModel):
+    median: float
+    mean: float
+    std: float
+    min: float
+    max: float
+
+
+class StopRecordingResponse(BaseModel):
+    recording_name: str
+    recording_path: str
+    number_of_cameras: int
+    number_of_frames: int
+    total_duration_sec: float
+    mean_framerate: float
+    mean_inter_camera_sync_ms: float
+    framerate_stats: StatsSummary
+    frame_duration_stats: StatsSummary
+    inter_camera_grab_range_ms_stats: StatsSummary
+
+
 @camera_router.post("/detect", summary="Detect available camera devices")
 def cameras_detect_endpoint(
         request: Request,
@@ -129,11 +150,35 @@ async def start_recording(
 
 
 @camera_router.get("/group/all/record/stop", summary="Stop recording")
-async def stop_recording(request: Request) -> bool:
+async def stop_recording(request: Request) -> list[StopRecordingResponse]:
     try:
-        recording_infos = await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
+        results = await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
 
-        return True
+        def _stats_summary(stats_recarray:np.recarray) -> StatsSummary:
+            return StatsSummary(
+                median=float(stats_recarray.median_value),
+                mean=float(stats_recarray.mean_value),
+                std=float(stats_recarray.standard_deviation_value),
+                min=float(stats_recarray.min_value),
+                max=float(stats_recarray.max_value),
+            )
+
+        responses = []
+        for recording_info, timestamp_stats in results:
+            responses.append(StopRecordingResponse(
+                recording_name=recording_info.recording_name,
+                recording_path=recording_info.full_recording_path,
+                number_of_cameras=timestamp_stats.number_of_cameras,
+                number_of_frames=timestamp_stats.number_of_frames,
+                total_duration_sec=round(timestamp_stats.total_duration_sec, 3),
+                mean_framerate=round(float(timestamp_stats.framerate_stats.mean_value), 2),
+                mean_inter_camera_sync_ms=round(float(timestamp_stats.inter_camera_grab_range_ms.mean_value), 2),
+                framerate_stats=_stats_summary(timestamp_stats.framerate_stats),
+                frame_duration_stats=_stats_summary(timestamp_stats.frame_duration_stats),
+                inter_camera_grab_range_ms_stats=_stats_summary(timestamp_stats.inter_camera_grab_range_ms),
+            ))
+
+        return responses
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

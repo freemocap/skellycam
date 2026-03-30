@@ -52,7 +52,7 @@ class RecordingFinalizer(BaseModel):
                                    for camera_id, metadata in frame_metadatas_by_camera.items()}
                    )
 
-    async def finalize_recording(self):
+    async def finalize_recording(self) -> "RecordingTimestampsStats":
         logger.debug(f"Finalizing recording: `{self.recording_info.recording_name}`...")
         self.recording_info.save_to_file(camera_configs=self.camera_configs)
 
@@ -66,6 +66,7 @@ class RecordingFinalizer(BaseModel):
         self._save_folder_readme()
         self.validate_recording()
         logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{timestamp_stats}\n\n--------------------------------------------------------\n")
+        return timestamp_stats
 
 
     def _save_folder_readme(self):

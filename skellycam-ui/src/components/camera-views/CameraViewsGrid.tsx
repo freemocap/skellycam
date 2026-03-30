@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Box } from "@mui/material";
+import { Box, keyframes } from "@mui/material";
 import ReactGridLayout, { noCompactor } from "react-grid-layout";
 import type { Layout, LayoutItem } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -9,6 +9,12 @@ import { useServer } from "@/services/server/ServerContextProvider";
 import { useTranslation } from "react-i18next";
 import { useAppSelector } from "@/store/hooks";
 import { selectConnectedCameras } from "@/store/slices/cameras/cameras-selectors";
+
+const recordingBorderPulse = keyframes`
+    0% { border-color: #ff2020; box-shadow: 0 0 4px rgba(255, 32, 32, 0.4); }
+    50% { border-color: #aa1010; box-shadow: 0 0 8px rgba(255, 32, 32, 0.15); }
+    100% { border-color: #ff2020; box-shadow: 0 0 4px rgba(255, 32, 32, 0.4); }
+`;
 
 /** Number of abstract grid columns. More columns = finer positioning granularity. */
 const GRID_COLS = 12;
@@ -90,6 +96,7 @@ interface CameraViewsGridProps {
 export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns, resetKey }) => {
     const { connectedCameraIds } = useServer();
     const { t } = useTranslation();
+    const isRecording = useAppSelector(state => state.recording.isRecording);
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState<number>(800);
     const [containerHeight, setContainerHeight] = useState<number>(600);
@@ -283,16 +290,22 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
                 onResizeStop={handleResizeStop}
             >
                 {connectedCameraIds.map((cameraId) => (
-                    <div
+                    <Box
                         key={cameraId}
-                        style={{
+                        sx={{
                             overflow: "hidden",
                             borderRadius: "4px",
-                            border: "1px solid rgba(255,255,255,0.15)",
+                            border: isRecording
+                                ? "2px solid #ff2020"
+                                : "1px solid rgba(255,255,255,0.15)",
+                            transition: "border 0.3s ease, box-shadow 0.3s ease",
+                            ...(isRecording && {
+                                animation: `${recordingBorderPulse} 3s infinite ease-in-out`,
+                            }),
                         }}
                     >
                         <CameraView cameraId={cameraId} />
-                    </div>
+                    </Box>
                 ))}
             </ReactGridLayout>
         </Box>

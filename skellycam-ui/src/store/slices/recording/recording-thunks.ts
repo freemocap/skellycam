@@ -2,6 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { z } from 'zod';
 import { RootState } from '@/store/types';
 import {serverUrls} from "@/services";
+import { RecordingCompletionData, StopRecordingResponseSchema } from './recording-types';
 
 const RecordStartRequestSchema = z.object({
     recording_name: z.string(),
@@ -43,14 +44,12 @@ export const startRecording = createAsyncThunk<
 );
 
 export const stopRecording = createAsyncThunk<
-    void,
+    RecordingCompletionData | null,
     void,
     { state: RootState }
 >(
     'recording/stop',
-    async (_, { getState }) => {
-        const state = getState();
-
+    async () => {
         const response = await fetch(serverUrls.endpoints.stopRecording, {
             method: 'GET',
         });
@@ -58,5 +57,10 @@ export const stopRecording = createAsyncThunk<
         if (!response.ok) {
             throw new Error(`Failed to stop recording: ${response.statusText}`);
         }
+
+        const data = await response.json();
+        // Backend returns a list (one per camera group); take the first
+        const results = z.array(StopRecordingResponseSchema).parse(data);
+        return results.length > 0 ? results[0] : null;
     }
 );

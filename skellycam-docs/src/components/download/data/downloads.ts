@@ -36,7 +36,7 @@ export interface GitHubRelease {
   assets: GitHubAsset[];
 }
 
-export const DEFAULT_VERSION = '2.0.0-alpha.0';
+export const DEFAULT_VERSION = '2.0.0-alpha.1';
 export const REPO = 'freemocap/skellycam';
 
 export function getReleaseBaseUrl(version: string): string {

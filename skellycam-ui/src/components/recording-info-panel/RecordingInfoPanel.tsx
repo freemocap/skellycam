@@ -17,6 +17,7 @@ import {RecordingPathTreeItem} from "@/components/recording-info-panel/Recording
 import {electronIpc, useElectronIPC} from "@/services/electron-ipc/electron-ipc";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
+import {RecordingCompleteDialog} from "@/components/recording-info-panel/RecordingCompleteDialog";
 
 interface RecordingOperation {
     type: 'start' | 'stop';
@@ -297,6 +298,7 @@ export const RecordingInfoPanel: React.FC = () => {
                     />
                 </TreeItem>
             </SimpleTreeView>
+            <RecordingCompleteDialog />
         </Box>
     );
 };
