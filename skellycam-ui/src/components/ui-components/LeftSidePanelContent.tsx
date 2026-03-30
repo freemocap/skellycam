@@ -23,6 +23,7 @@ import {TreeItem} from "@mui/x-tree-view/TreeItem";
 import {MicrophoneSelector} from "@/components/recording-info-panel/recording-subcomponents/MicrophoneSelector";
 import {useElectronIPC} from "@/services";
 import {useState} from "react";
+import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
 
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
@@ -170,7 +171,8 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
     const dispatch = useAppDispatch();
     const {t} = useTranslation();
 
-    const isRecording = useAppSelector((state) => state.recording.isRecording);
+    const recordingInfo = useAppSelector((state) => state.recording);
+    const isRecording = recordingInfo.isRecording;
     const {connectedCameraIds} = useServer();
     const noCameras = connectedCameraIds.length === 0;
     const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
@@ -179,8 +181,13 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
         if (isRecording) {
             await dispatch(stopRecording()).unwrap();
         } else {
-            // Quick-start with defaults — expand sidebar for full control
-            onToggleCollapse();
+            // Quick-start recording with timestamp-based defaults
+            const recordingName = getTimestampString();
+            await dispatch(startRecording({
+                recordingName,
+                recordingDirectory: recordingInfo.recordingDirectory,
+                micDeviceIndex,
+            })).unwrap();
         }
     };
 
