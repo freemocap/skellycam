@@ -100,7 +100,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     const settingsOpen = Boolean(settingsAnchor);
 
     // Sync info collapse
-    const [syncInfoOpen, setSyncInfoOpen] = useState(false);
+    const [syncInfoOpen, setSyncInfoOpen] = useState(true);
 
     const updateSetting = <K extends keyof PlaybackSettings>(key: K, value: PlaybackSettings[K]) => {
         onSettingsChange({ ...settings, [key]: value });
@@ -439,16 +439,16 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                     >
                         {t("syncInfoTitle")}
                     </Typography>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            display: 'block',
-                            color: theme.palette.text.secondary,
-                            lineHeight: 1.5,
-                        }}
-                    >
-                        {t("syncInfoBody")}
-                    </Typography>
+                    {/*<Typography*/}
+                    {/*    variant="caption"*/}
+                    {/*    sx={{*/}
+                    {/*        display: 'block',*/}
+                    {/*        color: theme.palette.text.secondary,*/}
+                    {/*        lineHeight: 1.5,*/}
+                    {/*    }}*/}
+                    {/*>*/}
+                    {/*    {t("syncInfoBody")}*/}
+                    {/*</Typography>*/}
                 </Box>
             </Collapse>
         </Box>

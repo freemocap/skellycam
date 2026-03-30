@@ -73,8 +73,19 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_frame_retrieve_ns[0] = time.perf_counter_ns()
 
     if not retrieve_success:
-        logger.error(f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
+        logger.error(
+            f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
         return False, frame_rec_array
-
     frame_rec_array.frame_metadata.frame_number[0] += 1
+    frame_stamp = f"camera.id{frame_rec_array.frame_metadata.camera_config.camera_id[0]}.idx{frame_rec_array.frame_metadata.camera_config.camera_index[0]}.fr{frame_rec_array.frame_metadata.frame_number[0]}"
+    draw_doubled_text(image=frame_rec_array.image[0],
+                      text=frame_stamp,
+                      x=10,
+                      y=40)
+
     return True, frame_rec_array
+
+
+def draw_doubled_text(image, text, x, y, font_scale=.8, color=(255, 210, 210), thickness=2):
+    cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness * 4)
+    cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, thickness)
