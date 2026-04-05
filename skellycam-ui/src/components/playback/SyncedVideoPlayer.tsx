@@ -27,6 +27,10 @@ interface SyncedVideoPlayerProps {
     manualColumns: number | null;
     /** Increment to force layout reset */
     resetKey: number;
+    /** Frame to seek to once all videos are ready (default 0) */
+    initialFrame?: number;
+    /** Called when the current frame changes (throttled to ~5Hz) */
+    onFrameChange?: (frame: number) => void;
 }
 
 function formatTimecode(frame: number, fps: number): string {
@@ -69,7 +73,7 @@ function formatSeconds(frame: number, fps: number): string {
  * - Overlays update via direct DOM manipulation (zero React re-renders).
  * - React state for controls/slider updates at ~5Hz.
  */
-export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps, manualColumns, resetKey }) => {
+export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps, manualColumns, resetKey, initialFrame = 0, onFrameChange }) => {
     const theme = useTheme();
     const { t } = useTranslation();
     const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -87,6 +91,9 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const rafRef = useRef<number | null>(null);
     const settingsRef = useRef<PlaybackSettings>({ showOverlays: true, timestampFormat: 'seconds' });
     const frameTimestampsRef = useRef<Record<string, number[]> | null>(null);
+    const onFrameChangeRef = useRef(onFrameChange);
+    onFrameChangeRef.current = onFrameChange;
+    const didSeekInitialRef = useRef(false);
 
     // Leader-based sync: first video is the time authority
     const leaderIdRef = useRef<string | null>(null);
@@ -115,7 +122,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const [videosReady, setVideosReady] = useState(0);
     const [settings, setSettings] = useState<PlaybackSettings>({
         showOverlays: true,
-        timestampFormat: 'seconds',
+        timestampFormat: 'timecode',
     });
     const [isLooping, setIsLooping] = useState(false);
     const isLoopingRef = useRef(false);
@@ -311,6 +318,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
         currentFrameRef.current = clamped;
         setCurrentFrame(clamped);
+        onFrameChangeRef.current?.(clamped);
         updateOverlays(clamped);
     }, [updateOverlays]);
 
@@ -397,6 +405,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         if (timestamp - lastReactUpdateRef.current >= REACT_UPDATE_INTERVAL_MS) {
             lastReactUpdateRef.current = timestamp;
             setCurrentFrame(intFrame);
+            onFrameChangeRef.current?.(intFrame);
         }
 
         // Periodic follower drift correction — only when drift exceeds tolerance.
@@ -537,6 +546,14 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     const handleToggleLoop = useCallback(() => {
         setIsLooping((prev) => !prev);
     }, []);
+
+    // Seek to initialFrame once all videos are ready (e.g. restoring position after tab switch)
+    useEffect(() => {
+        if (allReady && !didSeekInitialRef.current && initialFrame > 0) {
+            didSeekInitialRef.current = true;
+            seekAllToFrame(initialFrame);
+        }
+    }, [allReady, initialFrame, seekAllToFrame]);
 
     // -----------------------------------------------------------------------
     // Keyboard

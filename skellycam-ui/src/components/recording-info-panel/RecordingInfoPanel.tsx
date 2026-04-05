@@ -208,7 +208,7 @@ export const RecordingInfoPanel: React.FC = () => {
         <Box
             sx={{
                 color: "text.primary",
-                backgroundColor: theme.palette.primary.main,
+                backgroundColor: theme.palette.primary.dark,
                 borderRadius: 1,
                 mx: 1,
                 my: 0.5,

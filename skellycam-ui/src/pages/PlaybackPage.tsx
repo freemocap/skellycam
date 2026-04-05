@@ -12,50 +12,83 @@ import { CamerasViewSettingsOverlay } from '@/components/camera-view-settings-ov
 import { useElectronIPC } from '@/services';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
+
+// Module-level cache so playback state survives tab switches
+let cachedPlaybackState: {
+    loadedVideos: LoadedVideo[];
+    recordingId: string | null;
+    recordingPath: string | null;
+    recordingFps: number | undefined;
+    frameTimestamps: Record<string, number[]> | null;
+    currentFrame: number;
+} = {
+    loadedVideos: [],
+    recordingId: null,
+    recordingPath: null,
+    recordingFps: undefined,
+    frameTimestamps: null,
+    currentFrame: 0,
+};
 
 const PlaybackPage: React.FC = () => {
     const theme = useTheme();
     const { t } = useTranslation();
     const { api } = useElectronIPC();
+    const location = useLocation();
     const isDark = theme.palette.mode === 'dark';
-    const [loadedVideos, setLoadedVideos] = useState<LoadedVideo[]>([]);
-    const [recordingPath, setRecordingPath] = useState<string | null>(null);
-    const [recordingFps, setRecordingFps] = useState<number | undefined>(undefined);
-    const [frameTimestamps, setFrameTimestamps] = useState<Record<string, number[]> | null>(null);
+    const locationState = location.state as { loadRecordingPath?: string } | null;
+    const initialLoadPath = locationState?.loadRecordingPath ?? null;
+
+    // If navigating here with a new recording path, clear cached state so RecordingBrowser shows and auto-loads
+    const initState = (initialLoadPath && initialLoadPath !== cachedPlaybackState.recordingPath)
+        ? { loadedVideos: [] as LoadedVideo[], recordingId: null, recordingPath: null, recordingFps: undefined, frameTimestamps: null, currentFrame: 0 }
+        : cachedPlaybackState;
+
+    const [loadedVideos, setLoadedVideos] = useState<LoadedVideo[]>(initState.loadedVideos);
+    const [recordingId, setRecordingId] = useState<string | null>(initState.recordingId);
+    const [recordingPath, setRecordingPath] = useState<string | null>(initState.recordingPath);
+    const [recordingFps, setRecordingFps] = useState<number | undefined>(initState.recordingFps);
+    const [frameTimestamps, setFrameTimestamps] = useState<Record<string, number[]> | null>(initState.frameTimestamps);
     const [manualColumns, setManualColumns] = useState<number | null>(null);
     const [resetKey, setResetKey] = useState<number>(0);
 
-    const handleRecordingLoaded = useCallback((videos: LoadedVideo[], path: string, fps?: number) => {
+    const handleRecordingLoaded = useCallback((videos: LoadedVideo[], recId: string, path: string, fps?: number) => {
         setLoadedVideos(videos);
+        setRecordingId(recId);
         setRecordingPath(path);
         setRecordingFps(fps);
         setFrameTimestamps(null);
+        cachedPlaybackState = { loadedVideos: videos, recordingId: recId, recordingPath: path, recordingFps: fps, frameTimestamps: null, currentFrame: 0 };
     }, []);
 
     // After a recording is loaded, fetch real timestamps from the server
     useEffect(() => {
-        if (loadedVideos.length === 0) return;
+        if (loadedVideos.length === 0 || !recordingId) return;
 
         const fetchTimestamps = async () => {
             try {
-                const response = await fetch(serverUrls.endpoints.playbackAllTimestamps);
+                const response = await fetch(serverUrls.endpoints.playbackAllTimestamps(recordingId));
                 if (!response.ok) return;
                 const data = await response.json();
                 if (data.timestamps && Object.keys(data.timestamps).length > 0) {
                     setFrameTimestamps(data.timestamps);
+                    cachedPlaybackState.frameTimestamps = data.timestamps;
                 }
             } catch {
                 // Timestamps not available — SyncedVideoPlayer will use approximation
             }
         };
         fetchTimestamps();
-    }, [loadedVideos]);
+    }, [loadedVideos, recordingId]);
 
     const handleBack = useCallback(() => {
         setLoadedVideos([]);
+        setRecordingId(null);
         setRecordingPath(null);
         setRecordingFps(undefined);
         setFrameTimestamps(null);
+        cachedPlaybackState = { loadedVideos: [], recordingId: null, recordingPath: null, recordingFps: undefined, frameTimestamps: null, currentFrame: 0 };
     }, []);
 
     const handleOpenFolder = useCallback(async () => {
@@ -74,6 +107,10 @@ const PlaybackPage: React.FC = () => {
 
     const handleResetLayout = useCallback(() => {
         setResetKey((v) => v + 1);
+    }, []);
+
+    const handleFrameChange = useCallback((frame: number) => {
+        cachedPlaybackState.currentFrame = frame;
     }, []);
 
     const hasVideos = loadedVideos.length > 0;
@@ -236,11 +273,13 @@ const PlaybackPage: React.FC = () => {
                                     frameTimestamps={frameTimestamps}
                                     manualColumns={manualColumns}
                                     resetKey={resetKey}
+                                    initialFrame={initState.currentFrame}
+                                    onFrameChange={handleFrameChange}
                                 />
                             </Box>
                         </Box>
                     ) : (
-                        <RecordingBrowser onRecordingLoaded={handleRecordingLoaded} />
+                        <RecordingBrowser onRecordingLoaded={handleRecordingLoaded} initialLoadPath={initialLoadPath} />
                     )}
                 </ErrorBoundary>
             </Box>

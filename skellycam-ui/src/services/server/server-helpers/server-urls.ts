@@ -57,11 +57,14 @@ class ServerUrls {
 
             // Playback endpoints
             playbackRecordings: `${baseUrl}/skellycam/playback/recordings`,
-            playbackLoad: `${baseUrl}/skellycam/playback/load`,
-            playbackVideos: `${baseUrl}/skellycam/playback/videos`,
-            playbackVideoStream: (videoId: string) => `${baseUrl}/skellycam/playback/video/${videoId}`,
-            playbackTimestamps: (videoId: string) => `${baseUrl}/skellycam/playback/timestamps/${videoId}`,
-            playbackAllTimestamps: `${baseUrl}/skellycam/playback/timestamps`,
+            playbackVideos: (recordingId: string) =>
+                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos`,
+            playbackVideoStream: (recordingId: string, videoId: string) =>
+                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}`,
+            playbackAllTimestamps: (recordingId: string) =>
+                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/timestamps`,
+            playbackVideoTimestamps: (recordingId: string, videoId: string) =>
+                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}/timestamps`,
 
             // WebSocket
             websocket: this.getWebSocketUrl(),

@@ -45,9 +45,9 @@ const getBaseTheme = (mode: PaletteMode) => ({
 const darkPalette = {
     mode: 'dark' as PaletteMode,
     primary: {
-        light: '#5e92f3',
-        main: '#163a6d',
-        dark: '#051a33',
+        light: '#90b4f8',
+        main: '#5e92f3',
+        dark: '#163a6d',
         contrastText: '#ffffff',
     },
     secondary: {

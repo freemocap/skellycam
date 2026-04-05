@@ -108,7 +108,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 display: "flex",
                 alignItems: "center",
                 py: 1,
-                backgroundColor: theme.palette.primary.main,
+                backgroundColor: theme.palette.primary.dark,
                 color: theme.palette.primary.contrastText,
             }}
         >

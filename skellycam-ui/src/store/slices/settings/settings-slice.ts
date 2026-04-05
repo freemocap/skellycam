@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { SettingsState } from "./settings-types";
 import type { SupportedLocale } from "@/i18n";
 import { FALLBACK_LOCALE, getLocaleDirection } from "@/i18n";

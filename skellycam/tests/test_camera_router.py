@@ -93,10 +93,14 @@ class TestRecording:
         assert response.json() is True
 
     def test_stop_recording(self, client, mock_camera_group_manager):
-        """GET /skellycam/camera/group/all/record/stop returns true."""
+        """GET /skellycam/camera/group/all/record/stop returns list of StopRecordingResponse."""
         response = client.get("/skellycam/camera/group/all/record/stop")
         assert response.status_code == 200
-        assert response.json() is True
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["recording_name"] == "test_recording"
+        assert data[0]["number_of_cameras"] == 1
+        assert data[0]["number_of_frames"] == 100
 
 
 class TestCameraGroupManagement:

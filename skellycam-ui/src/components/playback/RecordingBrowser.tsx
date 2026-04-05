@@ -60,7 +60,9 @@ export interface LoadedVideo {
 }
 
 interface RecordingBrowserProps {
-    onRecordingLoaded: (videos: LoadedVideo[], recordingPath: string, recordingFps?: number) => void;
+    onRecordingLoaded: (videos: LoadedVideo[], recordingId: string, recordingPath: string, recordingFps?: number) => void;
+    /** If set, automatically load this recording path on mount. */
+    initialLoadPath?: string | null;
 }
 
 type SortField = 'date' | 'name' | 'size' | 'cameras' | 'frames' | 'duration';
@@ -194,7 +196,7 @@ const SORT_OPTIONS: { value: SortField; labelKey: string }[] = [
 // Component
 // ---------------------------------------------------------------------------
 
-export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingLoaded }) => {
+export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingLoaded, initialLoadPath }) => {
     const theme = useTheme();
     const { t } = useTranslation();
     const isDark = theme.palette.mode === 'dark';
@@ -258,17 +260,25 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
     // Load a specific recording
     // -----------------------------------------------------------------------
     const loadRecording = useCallback(
-        async (recordingPath: string) => {
+        async (recording: RecordingEntry) => {
             setIsLoadingRecording(true);
-            setLoadingPath(recordingPath);
+            setLoadingPath(recording.path);
             setError(null);
 
             try {
-                const response = await fetch(serverUrls.endpoints.playbackLoad, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ recording_path: recordingPath }),
-                });
+                // If the recording has a full path, derive the parent directory
+                // to pass as recording_parent_directory query param for non-standard locations
+                let videosUrl = serverUrls.endpoints.playbackVideos(recording.name);
+                if (recording.path) {
+                    const normalized = recording.path.replace(/\\/g, '/').replace(/\/+$/, '');
+                    const lastSlash = normalized.lastIndexOf('/');
+                    if (lastSlash >= 0) {
+                        const parentDir = normalized.slice(0, lastSlash);
+                        videosUrl += `?recording_parent_directory=${encodeURIComponent(parentDir)}`;
+                    }
+                }
+
+                const response = await fetch(videosUrl);
 
                 if (!response.ok) {
                     const detail = await response
@@ -277,28 +287,23 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     throw new Error(detail.detail || response.statusText);
                 }
 
-                const data = await response.json();
-                const baseUrl = serverUrls.getHttpUrl();
+                const data: Array<{
+                    video_id: string;
+                    filename: string;
+                    stream_url: string;
+                    size_bytes: number;
+                }> = await response.json();
 
-                const videos: LoadedVideo[] = data.videos.map(
-                    (v: {
-                        video_id: string;
-                        filename: string;
-                        stream_url: string;
-                        size_bytes: number;
-                    }) => ({
-                        videoId: v.video_id,
-                        filename: v.filename,
-                        streamUrl: `${baseUrl}${v.stream_url}`,
-                        sizeBytes: v.size_bytes,
-                    }),
-                );
+                const videos: LoadedVideo[] = data.map((v) => ({
+                    videoId: v.video_id,
+                    filename: v.filename,
+                    streamUrl: serverUrls.endpoints.playbackVideoStream(recording.name, v.video_id),
+                    sizeBytes: v.size_bytes,
+                }));
 
-                // Look up recording fps from our cached list
-                const rec = recordings.find((r) => r.path === recordingPath);
-                const recFps = rec?.fps ?? undefined;
+                const recFps = recording.fps ?? undefined;
 
-                onRecordingLoaded(videos, data.recording_path, recFps);
+                onRecordingLoaded(videos, recording.name, recording.path, recFps);
             } catch (e) {
                 setError(e instanceof Error ? e.message : 'Failed to load recording');
             } finally {
@@ -306,12 +311,29 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                 setLoadingPath(null);
             }
         },
-        [onRecordingLoaded, recordings],
+        [onRecordingLoaded],
     );
 
+    // Auto-load a recording if initialLoadPath is provided
+    const [didAutoLoad, setDidAutoLoad] = useState(false);
+    useEffect(() => {
+        if (initialLoadPath && !didAutoLoad) {
+            setDidAutoLoad(true);
+            // Derive recording_id (folder name) and parent from the full path
+            const normalized = initialLoadPath.replace(/[\\/]+$/, '');
+            const lastSep = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+            const recName = lastSep >= 0 ? normalized.slice(lastSep + 1) : normalized;
+            const recPath = initialLoadPath;
+            loadRecording({ name: recName, path: recPath, video_count: 0 });
+        }
+    }, [initialLoadPath, didAutoLoad, loadRecording]);
+
     const handleLoadManualPath = useCallback(() => {
-        const trimmed = manualPath.trim();
-        if (trimmed) loadRecording(trimmed);
+        const trimmed = manualPath.trim().replace(/[\\/]+$/, '');
+        if (!trimmed) return;
+        const lastSep = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+        const recName = lastSep >= 0 ? trimmed.slice(lastSep + 1) : trimmed;
+        loadRecording({ name: recName, path: trimmed, video_count: 0 });
     }, [manualPath, loadRecording]);
 
     // -----------------------------------------------------------------------
@@ -552,7 +574,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                             isLoading={loadingPath === rec.path}
                             isAnyLoading={isLoadingRecording}
                             isDark={isDark}
-                            onClick={() => loadRecording(rec.path)}
+                            onClick={() => loadRecording(rec)}
                         />
                     ))}
                 </List>

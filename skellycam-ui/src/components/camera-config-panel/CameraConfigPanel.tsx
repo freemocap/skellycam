@@ -113,9 +113,9 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                                     color: theme.palette.primary.contrastText,
                                     border: `1px solid ${theme.palette.divider}`,
                                     '&:hover': {
-                                        backgroundColor: theme.palette.primary.main,
+                                        backgroundColor: theme.palette.primary.dark,
                                         color: theme.palette.primary.contrastText,
-                                        borderColor: theme.palette.primary.main,
+                                        borderColor: theme.palette.primary.dark,
                                     },
                                     '&:disabled': {
                                         color: theme.palette.action.disabled,

@@ -94,7 +94,7 @@
   "loopOn": "Loop is on (L to toggle)",
   "loopOff": "Loop playback (L)",
   "syncInfo": "Sync info",
-  "syncInfoTitle": "Recording playback may show slight (1-3 frames) desynchronization not present in the recorded videos.Check the frame numbers embossed in image, they represent the actual synchronization.  We are working on a fix. ",
+  "syncInfoTitle": "Recording playback may show desynchronization not present in the recorded videos. Matched frame numbers represent images from the same time slice.  We are working on a fix. ",
   "syncInfoBody": "Browser video playback does not guarantee sample-accurate synchronization across multiple streams. The player uses a leader-follower strategy and corrects drift when it exceeds a small tolerance, but minor desynchronization (1–2 frames) can occur",
   "previousFrame": "Previous frame (← / Shift+← for 10)",
   "nextFrame": "Next frame (→ / Shift+→ for 10)",
@@ -257,5 +257,6 @@
   "restartToUpdate": "Restart to update",
   "checkForUpdates": "Check for Updates",
   "upToDate": "You are up to date",
-  "updateError": "Update check failed"
+  "updateError": "Update check failed",
+  "serverNotConnected": "Connect to server to enable controls"
 }

@@ -40,7 +40,7 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                     aria-label={t("cameraRotation")}
                     sx={{
                         '& .MuiToggleButton-root.Mui-selected': {
-                            backgroundColor: theme.palette.primary.main,
+                            backgroundColor: theme.palette.primary.dark,
                             color: theme.palette.primary.contrastText,
                             border: `1px solid ${theme.palette.text.secondary}`,
                             '&:hover': {

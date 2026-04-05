@@ -48,7 +48,28 @@ def mock_camera_group_manager():
     mgr.create_or_update_camera_group = AsyncMock()
     mgr.create_and_start_camera_group = AsyncMock()
     mgr.start_recording_all_groups = AsyncMock()
-    mgr.stop_recording_all_groups = AsyncMock(return_value=[])
+    def _mock_stats_recarray(mean=30.0):
+        m = MagicMock()
+        m.median_value = mean
+        m.mean_value = mean
+        m.standard_deviation_value = 1.0
+        m.min_value = mean - 2.0
+        m.max_value = mean + 2.0
+        return m
+
+    mock_recording_info = MagicMock()
+    mock_recording_info.recording_name = "test_recording"
+    mock_recording_info.full_recording_path = "/tmp/test_recording"
+
+    mock_timestamp_stats = MagicMock()
+    mock_timestamp_stats.number_of_cameras = 1
+    mock_timestamp_stats.number_of_frames = 100
+    mock_timestamp_stats.total_duration_sec = 10.0
+    mock_timestamp_stats.framerate_stats = _mock_stats_recarray(30.0)
+    mock_timestamp_stats.frame_duration_stats = _mock_stats_recarray(33.3)
+    mock_timestamp_stats.inter_camera_grab_range_ms = _mock_stats_recarray(2.0)
+
+    mgr.stop_recording_all_groups = AsyncMock(return_value=[(mock_recording_info, mock_timestamp_stats)])
     mgr.close_all_camera_groups = AsyncMock()
     mgr.pause_unpause_all_groups = AsyncMock()
     mgr.pause_all_groups = AsyncMock()

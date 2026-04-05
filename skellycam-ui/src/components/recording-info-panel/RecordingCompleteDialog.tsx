@@ -17,8 +17,12 @@ import {
     Divider,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { recordingCompletionDismissed } from '@/store/slices/recording/recording-slice';
+import { useElectronIPC } from '@/services/electron-ipc/electron-ipc';
 import type { RecordingCompletionData, StatsSummary } from '@/store/slices/recording/recording-types';
 
 function formatStat(value: number, precision: number = 3): string {
@@ -34,7 +38,7 @@ function TimingStatsTable({ data }: { data: RecordingCompletionData }) {
     const rows: TimingRow[] = [
         { label: 'Framerate / FPS (Hz)', stats: data.framerate_stats },
         { label: 'Frame Duration (ms)', stats: data.frame_duration_stats },
-        { label: 'Inter-Camera Sync (ms)', stats: data.inter_camera_grab_range_ms_stats },
+        { label: 'Inter-Camera Frame Grab Sync (ms)', stats: data.inter_camera_grab_range_ms_stats },
     ];
 
     return (
@@ -69,6 +73,8 @@ function TimingStatsTable({ data }: { data: RecordingCompletionData }) {
 
 export const RecordingCompleteDialog: React.FC = () => {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
+    const { api } = useElectronIPC();
     const completionData = useAppSelector((state) => state.recording.completionData);
 
     if (!completionData) return null;
@@ -77,6 +83,19 @@ export const RecordingCompleteDialog: React.FC = () => {
 
     const handleCopyPath = () => {
         navigator.clipboard.writeText(completionData.recording_path);
+    };
+
+    const handleOpenFolder = async () => {
+        try {
+            await api?.fileSystem.openFolder.mutate({ path: completionData.recording_path });
+        } catch (err) {
+            console.error('Failed to open recording folder:', err);
+        }
+    };
+
+    const handleOpenInPlayback = () => {
+        dispatch(recordingCompletionDismissed());
+        navigate('/playback', { state: { loadRecordingPath: completionData.recording_path } });
     };
 
     return (
@@ -104,6 +123,9 @@ export const RecordingCompleteDialog: React.FC = () => {
                     <IconButton size="small" onClick={handleCopyPath} title="Copy path">
                         <ContentCopyIcon fontSize="small" />
                     </IconButton>
+                    <IconButton size="small" onClick={handleOpenFolder} title="Open folder">
+                        <FolderOpenIcon fontSize="small" />
+                    </IconButton>
                 </Box>
 
                 <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
@@ -125,6 +147,14 @@ export const RecordingCompleteDialog: React.FC = () => {
                 <TimingStatsTable data={completionData} />
             </DialogContent>
             <DialogActions>
+                <Button
+                    onClick={handleOpenInPlayback}
+                    variant="outlined"
+                    size="small"
+                    startIcon={<PlayArrowIcon />}
+                >
+                    Open in Playback
+                </Button>
                 <Button onClick={handleClose} variant="contained" size="small">
                     Close
                 </Button>

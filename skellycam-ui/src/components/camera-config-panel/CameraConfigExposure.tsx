@@ -103,7 +103,7 @@ export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
                                 fontSize: 11,
                             },
                             '& .MuiToggleButton-root.Mui-selected': {
-                                backgroundColor: theme.palette.primary.main,
+                                backgroundColor: theme.palette.primary.dark,
                                 border: `1px solid ${theme.palette.text.secondary}`,
                                 color: theme.palette.primary.contrastText,
                                 '&:hover': {

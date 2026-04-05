@@ -90,7 +90,7 @@ export const VideoFolderPanel: React.FC = () => {
             <Box sx={{
                 display: 'flex',
                 alignItems: 'center',
-                backgroundColor: theme.palette.primary.main,
+                backgroundColor: theme.palette.primary.dark,
                 borderTopLeftRadius: 8,
                 borderTopRightRadius: 8,
             }}>

@@ -114,7 +114,7 @@ export const CameraConfigFramerate: React.FC<CameraConfigFramerateProps> = ({
                     sx={{
                         mb: mode === 'MANUAL' ? 1 : 0,
                         '& .MuiToggleButton-root.Mui-selected': {
-                            backgroundColor: theme.palette.primary.main,
+                            backgroundColor: theme.palette.primary.dark,
                             border: `1px solid ${theme.palette.text.secondary}`,
                             color: theme.palette.primary.contrastText,
                             '&:hover': {

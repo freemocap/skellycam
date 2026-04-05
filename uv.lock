@@ -1343,7 +1343,7 @@ wheels = [
 
 [[package]]
 name = "skellycam"
-version = "2.0.0a0"
+version = "2.0.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "av" },

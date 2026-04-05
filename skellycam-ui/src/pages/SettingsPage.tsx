@@ -332,7 +332,7 @@ const SettingsPage: React.FC = () => {
                   fontSize: 12,
                 },
                 "& .MuiToggleButton-root.Mui-selected": {
-                  backgroundColor: theme.palette.primary.main,
+                  backgroundColor: theme.palette.primary.dark,
                   color: theme.palette.primary.contrastText,
                   "&:hover": {
                     backgroundColor: theme.palette.primary.light,

@@ -3,6 +3,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel, Field
+import numpy as np
+
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
 from skellycam.core.camera_group.camera_group_manager import get_or_create_camera_group_manager
 from skellycam.core.device_detection.detect_cameras_devices import CameraDeviceInfo, detect_available_cameras
@@ -118,7 +120,8 @@ async def camera_group_apply_post_endpoint(
         logger.info(f"Request to {request.url}: {raw_body.decode('utf-8')}")
 
         configs = request_body.camera_configs
-        camera_group = await get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(camera_configs=configs)
+        camera_group = await get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(
+            camera_configs=configs)
 
         return CreateCameraGroupResponse(
             group_id=camera_group.id,
@@ -141,7 +144,8 @@ async def start_recording(
             )
 
         Path(request_body.recording_directory).mkdir(parents=True, exist_ok=True)
-        await get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(RecordingInfo(**request_body.model_dump()))
+        await get_or_create_camera_group_manager(app=request.app).start_recording_all_groups(
+            RecordingInfo(**request_body.model_dump()))
 
         return True
     except Exception as e:
@@ -154,7 +158,7 @@ async def stop_recording(request: Request) -> list[StopRecordingResponse]:
     try:
         results = await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
 
-        def _stats_summary(stats_recarray:np.recarray) -> StatsSummary:
+        def _stats_summary(stats_recarray: np.recarray) -> StatsSummary:
             return StatsSummary(
                 median=float(stats_recarray.median_value),
                 mean=float(stats_recarray.mean_value),
