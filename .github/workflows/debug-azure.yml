@@ -1,0 +1,11 @@
+name: Debug secrets
+on: workflow_dispatch
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Tenant: ${{ secrets.AZURE_TENANT_ID }}" | cut -c1-12
+          echo "Client: ${{ secrets.AZURE_CLIENT_ID }}" | cut -c1-12
+          echo "Account: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}"
+          echo "Profile: ${{ secrets.CERTIFICATE_PROFILE_NAME }}"
