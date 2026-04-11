@@ -39,7 +39,7 @@ import { useTranslation } from 'react-i18next';
 // Types
 // ---------------------------------------------------------------------------
 
-/** Shape returned by GET /skellycam/playback/recordings */
+/** Shape returned by GET /recordings */
 interface RecordingEntry {
     name: string;
     path: string;
@@ -223,7 +223,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         setIsLoadingList(true);
         setError(null);
         try {
-            const response = await fetch(serverUrls.endpoints.playbackRecordings);
+            const response = await fetch(serverUrls.endpoints.recordings);
             if (!response.ok) {
                 throw new Error(`Failed to fetch recordings: ${response.statusText}`);
             }
@@ -268,7 +268,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
             try {
                 // If the recording has a full path, derive the parent directory
                 // to pass as recording_parent_directory query param for non-standard locations
-                let videosUrl = serverUrls.endpoints.playbackVideos(recording.name);
+                let videosUrl = serverUrls.endpoints.recordingVideos(recording.name);
                 if (recording.path) {
                     const normalized = recording.path.replace(/\\/g, '/').replace(/\/+$/, '');
                     const lastSlash = normalized.lastIndexOf('/');
@@ -297,7 +297,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                 const videos: LoadedVideo[] = data.map((v) => ({
                     videoId: v.video_id,
                     filename: v.filename,
-                    streamUrl: serverUrls.endpoints.playbackVideoStream(recording.name, v.video_id),
+                    streamUrl: serverUrls.endpoints.recordingVideoStream(recording.name, v.video_id),
                     sizeBytes: v.size_bytes,
                 }));
 

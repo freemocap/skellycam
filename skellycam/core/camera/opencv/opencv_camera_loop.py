@@ -11,9 +11,9 @@ from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import
 from skellycam.core.camera.opencv.opencv_helpers.handle_recording_updates import finish_recording
 from skellycam.core.camera.opencv.opencv_helpers.handle_video_recording_loop import handle_video_recording
 from skellycam.core.camera.opencv.opencv_helpers.opencv_get_frame import opencv_get_frame
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.camera_group.camera_group_helpers.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_helpers.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_group_helpers.camera_status import CameraStatus
 from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us

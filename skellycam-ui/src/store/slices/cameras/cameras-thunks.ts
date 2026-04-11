@@ -12,6 +12,7 @@ import {
     createDefaultCameraConfig,
 } from './cameras-types';
 import { selectSelectedCameraConfigs } from './cameras-selectors';
+import { selectIsPaused } from './cameras-selectors';
 import {
     loadPersistedCameraSettings,
     savePersistedCameraSettings,
@@ -28,11 +29,13 @@ export const detectCameras = createAsyncThunk<
         const state = getState();
         const existingCameras = state.cameras.cameras;
 
-        const response = await fetch(serverUrls.endpoints.detectCameras, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request),
-        });
+        const params = new URLSearchParams();
+        if (request.filterVirtual !== undefined) {
+            params.set('filter_virtual', String(request.filterVirtual));
+        }
+        const url = `${serverUrls.endpoints.detectCameras}?${params.toString()}`;
+
+        const response = await fetch(url, { method: 'GET' });
 
         if (!response.ok) {
             throw new Error(`Failed to detect cameras: ${response.statusText}`);
@@ -113,8 +116,10 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 
         const request: CamerasConnectOrUpdateRequest = { camera_configs: cameraConfigs };
 
-        const response = await fetch(serverUrls.endpoints.camerasConnectOrUpdate, {
-            method: 'POST',
+        // PUT /camera-groups/default — group_id "default" is resolved by the server
+        // based on camera config overlap; the server returns the actual group_id.
+        const response = await fetch(serverUrls.endpoints.cameraGroup('default'), {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
         });
@@ -132,11 +137,11 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/close',
     async () => {
-        const response = await fetch(serverUrls.endpoints.closeAll, {
+        const response = await fetch(serverUrls.endpoints.allCameraGroups, {
             method: 'DELETE',
         });
 
-        if (!response.ok) {
+        if (!response.ok && response.status !== 204) {
             throw new Error(`Failed to close cameras: ${response.statusText}`);
         }
     }
@@ -144,13 +149,17 @@ export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
 
 export const pauseUnpauseCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/pause',
-    async () => {
-        const response = await fetch(serverUrls.endpoints.pauseUnpauseCameras, {
-            method: 'GET',
-        });
+    async (_, { getState }) => {
+        const isPaused = selectIsPaused(getState());
+        // If currently paused, unpause; otherwise pause.
+        const url = isPaused
+            ? serverUrls.endpoints.allCameraGroupsUnpause
+            : serverUrls.endpoints.allCameraGroupsPause;
 
-        if (!response.ok) {
-            throw new Error(`Failed to pause/unpause cameras: ${response.statusText}`);
+        const response = await fetch(url, { method: 'POST' });
+
+        if (!response.ok && response.status !== 204) {
+            throw new Error(`Failed to ${isPaused ? 'unpause' : 'pause'} cameras: ${response.statusText}`);
         }
     }
 );

@@ -1,10 +1,9 @@
 """Tests for CameraOrchestrator frame synchronization and recording logic."""
-import multiprocessing
 
 import pytest
 
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.camera_group.camera_group_helpers.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_group_helpers.camera_status import CameraStatus
 
 
 def _make_orchestrator(camera_ids: list[str]) -> CameraOrchestrator:

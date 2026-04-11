@@ -24,7 +24,7 @@ const getApiUrl = (path: string) => {
 // Get WebSocket URL
 const getWebSocketUrl = () => {
     const {host, port} = defaultUrlConfig;
-    return `ws://${host}:${port}/skellycam/websocket/connect`;
+    return `ws://${host}:${port}/ws`;
 };
 
 // Get all HTTP endpoint URLs
@@ -32,13 +32,10 @@ const getHttpEndpointUrls = () => {
     return {
         health: getApiUrl('/health'),
         shutdown: getApiUrl('/shutdown'),
-        detectCameras: getApiUrl('/skellycam/camera/detect'),
-        createGroup: getApiUrl('/skellycam/camera/group/apply'),
-        closeAll: getApiUrl('/skellycam/camera/group/close/all'),
-        updateConfigs: getApiUrl('/skellycam/camera/update'),
-        startRecording: getApiUrl('/skellycam/camera/group/all/record/start'),
-        stopRecording: getApiUrl('/skellycam/camera/group/all/record/stop'),
-        pauseUnpauseCameras: getApiUrl('/skellycam/camera/group/all/pause_unpause'),
+        detectCameras: getApiUrl('/devices/cameras'),
+        detectMicrophones: getApiUrl('/devices/microphones'),
+        cameraGroup: getApiUrl('/camera-group'),
+        recordings: getApiUrl('/recordings'),
     };
 };
 

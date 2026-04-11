@@ -17,7 +17,6 @@ export const StopRecordingResponseSchema = z.object({
     number_of_frames: z.number(),
     total_duration_sec: z.number(),
     mean_framerate: z.number(),
-    mean_inter_camera_sync_ms: z.number(),
     framerate_stats: StatsSummarySchema,
     frame_duration_stats: StatsSummarySchema,
     inter_camera_grab_range_ms_stats: StatsSummarySchema,

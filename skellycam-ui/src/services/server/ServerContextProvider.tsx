@@ -38,7 +38,6 @@ function isLogRecord(data: any): data is LogRecord {
     return (
         data &&
         typeof data === 'object' &&
-        data.message_type === 'log_record' &&
         typeof data.levelname === 'string' &&
         typeof data.message === 'string'
     );
@@ -46,7 +45,7 @@ function isLogRecord(data: any): data is LogRecord {
 
 // Type for framerate update message from backend
 interface FramerateUpdateMessage {
-    message_type: 'framerate_update';
+    type: 'framerate_update';
     camera_group_id: string;
     backend_framerate: DetailedFramerate;
     frontend_framerate: DetailedFramerate;
@@ -57,7 +56,7 @@ function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
     return (
         data &&
         typeof data === 'object' &&
-        data.message_type === 'framerate_update' &&
+        (data.type === 'framerate_update' || data.message_type === 'framerate_update') &&
         typeof data.camera_group_id === 'string' &&
         data.backend_framerate &&
         typeof data.backend_framerate === 'object' &&

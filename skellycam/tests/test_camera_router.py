@@ -1,4 +1,4 @@
-"""Tests for the camera router endpoints."""
+"""Tests for the device and camera-group router endpoints."""
 from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
@@ -9,7 +9,7 @@ from skellycam.core.device_detection.detect_cameras_devices import CameraDeviceI
 
 class TestDetectCameras:
     def test_detect_cameras_returns_list(self, client):
-        """POST /skellycam/camera/detect returns detected cameras."""
+        """GET /devices/cameras returns detected cameras."""
         mock_camera = CameraDeviceInfo(
             index=0,
             name="Test Camera",
@@ -19,50 +19,56 @@ class TestDetectCameras:
             backend_id=200,
             backend_name="V4L2",
         )
-        
+
         with patch(
-            "skellycam.api.http.cameras.camera_router.detect_available_cameras",
+            "skellycam.api.http.devices.devices_router.detect_available_cameras",
             return_value=[mock_camera],
         ):
-            response = client.post("/skellycam/camera/detect")
+            response = client.get("/devices/cameras")
         assert response.status_code == 200
         data = response.json()
         assert "cameras" in data
         assert len(data["cameras"]) == 1
 
     def test_detect_cameras_empty(self, client):
-        """POST /skellycam/camera/detect returns empty list when no cameras."""
+        """GET /devices/cameras returns empty list when no cameras."""
         with patch(
-            "skellycam.api.http.cameras.camera_router.detect_available_cameras",
+            "skellycam.api.http.devices.devices_router.detect_available_cameras",
             return_value=[],
         ):
-            response = client.post("/skellycam/camera/detect")
+            response = client.get("/devices/cameras")
         assert response.status_code == 200
         data = response.json()
         assert data["cameras"] == []
 
     def test_detect_cameras_error(self, client):
-        """POST /skellycam/camera/detect returns 500 on detection error."""
+        """GET /devices/cameras returns 500 on detection error."""
         with patch(
-            "skellycam.api.http.cameras.camera_router.detect_available_cameras",
+            "skellycam.api.http.devices.devices_router.detect_available_cameras",
             side_effect=RuntimeError("Camera detection failed"),
         ):
-            response = client.post("/skellycam/camera/detect")
+            response = client.get("/devices/cameras")
         assert response.status_code == 500
 
 
 class TestCameraGroupApply:
     def test_apply_creates_group(self, client, mock_camera_group_manager):
-        """POST /skellycam/camera/group/apply creates a camera group."""
+        """PUT /camera-group creates a camera group."""
         mock_group = MagicMock()
         mock_group.id = "group-0"
         mock_group.configs = {DEFAULT_CAMERA_ID: CameraConfig()}
+        mock_state = MagicMock()
+        mock_state.id = "group-0"
+        mock_state.configs = {DEFAULT_CAMERA_ID: CameraConfig()}
+        mock_state.cameras = {}
+        mock_state.alive = True
+        mock_group.to_state.return_value = mock_state
         mock_camera_group_manager.create_or_update_camera_group = AsyncMock(
             return_value=mock_group
         )
 
-        response = client.post(
-            "/skellycam/camera/group/apply",
+        response = client.put(
+            "/camera-group",
             json={"camera_configs": {DEFAULT_CAMERA_ID: CameraConfig().model_dump()}},
         )
         assert response.status_code == 200
@@ -71,47 +77,24 @@ class TestCameraGroupApply:
         assert DEFAULT_CAMERA_ID in data["camera_configs"]
 
     def test_apply_error(self, client, mock_camera_group_manager):
-        """POST /skellycam/camera/group/apply returns 500 on error."""
+        """PUT /camera-group returns 500 on error."""
         mock_camera_group_manager.create_or_update_camera_group = AsyncMock(
             side_effect=RuntimeError("Something went wrong")
         )
-        response = client.post(
-            "/skellycam/camera/group/apply",
+        response = client.put(
+            "/camera-group",
             json={"camera_configs": {DEFAULT_CAMERA_ID: CameraConfig().model_dump()}},
         )
         assert response.status_code == 500
 
 
-class TestRecording:
-    def test_start_recording(self, client, mock_camera_group_manager):
-        """POST /skellycam/camera/group/all/record/start returns true."""
-        response = client.post(
-            "/skellycam/camera/group/all/record/start",
-            json={},
-        )
-        assert response.status_code == 200
-        assert response.json() is True
-
-    def test_stop_recording(self, client, mock_camera_group_manager):
-        """GET /skellycam/camera/group/all/record/stop returns list of StopRecordingResponse."""
-        response = client.get("/skellycam/camera/group/all/record/stop")
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["recording_name"] == "test_recording"
-        assert data[0]["number_of_cameras"] == 1
-        assert data[0]["number_of_frames"] == 100
-
-
 class TestCameraGroupManagement:
-    def test_close_all(self, client, mock_camera_group_manager):
-        """DELETE /skellycam/camera/group/close/all returns true."""
-        response = client.request("DELETE", "/skellycam/camera/group/close/all")
+    def test_get_camera_group(self, client, mock_camera_group_manager):
+        """GET /camera-group returns current state."""
+        response = client.get("/camera-group")
         assert response.status_code == 200
-        assert response.json() is True
 
-    def test_pause_unpause(self, client, mock_camera_group_manager):
-        """GET /skellycam/camera/group/all/pause_unpause returns true."""
-        response = client.get("/skellycam/camera/group/all/pause_unpause")
-        assert response.status_code == 200
-        assert response.json() is True
+    def test_delete_camera_group(self, client, mock_camera_group_manager):
+        """DELETE /camera-group tears down camera group."""
+        response = client.request("DELETE", "/camera-group")
+        assert response.status_code == 204

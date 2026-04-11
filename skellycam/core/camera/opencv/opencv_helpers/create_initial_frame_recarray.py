@@ -1,7 +1,7 @@
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_helpers.camera_group_ipc import CameraGroupIPC
 from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
 
 

@@ -4,9 +4,10 @@ from dataclasses import dataclass, field
 
 from fastapi import FastAPI
 
-from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
+from skellycam.core.camera_group.camera_group_helpers.cg_performance_data import extract_performance_data_from_frames
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
+from skellycam.core.camera_group.camera_group_state_machine import CameraGroupStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
@@ -202,6 +203,13 @@ class CameraGroupManager:
             if all(camera_id in camera_group.camera_ids for camera_id in camera_ids):
                 return camera_group
         return None
+
+    def any_group_streaming(self) -> bool:
+        """Return True if any camera group is currently streaming or recording."""
+        return any(
+            g.state_machine.phase in (CameraGroupStatus.STREAMING, CameraGroupStatus.RECORDING)
+            for g in self.camera_groups.values()
+        )
 
     def to_state_dict(self) -> dict[CameraGroupIdString, dict]:
         """Convert the CameraGroupManager to a serializable state dictionary."""

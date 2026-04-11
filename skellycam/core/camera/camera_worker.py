@@ -5,9 +5,8 @@ from pydantic import BaseModel
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_camera_worker_method import opencv_camera_worker_method
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.camera_group.camera_group_helpers.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_helpers.camera_orchestrator import CameraOrchestrator
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.process_management.managed_worker import ManagedWorker
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry

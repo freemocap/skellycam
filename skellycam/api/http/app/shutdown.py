@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 shutdown_router = APIRouter(tags=["App"])
 
 
-@shutdown_router.get(
+@shutdown_router.post(
     "/shutdown",
     summary="Gracefully shutdown the server",
     response_model=dict[str, str]

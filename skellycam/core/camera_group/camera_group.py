@@ -8,7 +8,8 @@ from pydantic import BaseModel, ConfigDict
 from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.camera_worker import CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_helpers.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_state_machine import CameraGroupStateMachine
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import (
     DeviceExtractedConfigMessage,
@@ -30,7 +31,6 @@ from skellycam.core.types.type_overloads import (
     MultiframeTimestampFloat,
 )
 from skellycam.utilities.wait_functions import await_100ms, await_10ms
-from skellycam.core.camera_group.camera_status import CameraStatus
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,11 @@ class CameraGroup:
     shm: CameraGroupSharedMemory | None = None
     started: bool = False
     _audio_recorder: AudioRecorder | None = None
+    state_machine: CameraGroupStateMachine = None
+
+    def __post_init__(self):
+        if self.state_machine is None:
+            self.state_machine = CameraGroupStateMachine()
 
     @property
     def id(self) -> CameraGroupIdString:

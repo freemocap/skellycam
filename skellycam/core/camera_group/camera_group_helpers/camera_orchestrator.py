@@ -3,9 +3,9 @@ import multiprocessing
 from dataclasses import dataclass
 from copy import deepcopy
 
-from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.camera_group.camera_group_helpers.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, await_10ms
+from skellycam.utilities.wait_functions import wait_100ms, await_10ms
 
 logger = logging.getLogger(__name__)
 

@@ -102,11 +102,10 @@ def _register_routes(app: FastAPI) -> None:
         for route in router.routes:
             logger.api(f"Registered: {route.path}")
 
-    prefix = f"/{skellycam.__package_name__}"
     for router in SKELLYCAM_ROUTERS:
-        app.include_router(router, prefix=prefix)
+        app.include_router(router)
         for route in router.routes:
-            logger.api(f"Registered: {prefix}{route.path}")
+            logger.api(f"Registered: {route.path}")
 
 
 def _customize_openapi(app: FastAPI) -> None:

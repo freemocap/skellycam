@@ -1,6 +1,6 @@
 export const DEFAULT_HOST = 'localhost';
 export const DEFAULT_PORT = 53117;
-export const WS_PATH = '/skellycam/websocket/connect';
+export const WS_PATH = '/ws';
 
 class ServerUrls {
     private host: string = DEFAULT_HOST;
@@ -22,52 +22,72 @@ class ServerUrls {
         this.port = port;
     }
 
-    /**
-     * Get HTTP base URL
-     */
     getHttpUrl(): string {
         return `http://${this.host}:${this.port}`;
     }
 
-    /**
-     * Get WebSocket base URL
-     */
     getWebSocketUrl(): string {
         return `ws://${this.host}:${this.port}${WS_PATH}`;
     }
+
     get endpoints() {
         const baseUrl = this.getHttpUrl();
+        const cameraGroupsBase = `${baseUrl}/camera-groups`;
 
         return {
             // Server management
             health: `${baseUrl}/health`,
             shutdown: `${baseUrl}/shutdown`,
 
-            // Camera endpoints
-            detectCameras: `${baseUrl}/skellycam/camera/detect`,
-            camerasConnectOrUpdate: `${baseUrl}/skellycam/camera/group/apply`,
-            closeAll: `${baseUrl}/skellycam/camera/group/close/all`,
-            updateConfigs: `${baseUrl}/skellycam/camera/update`,
-            pauseUnpauseCameras: `${baseUrl}/skellycam/camera/group/all/pause_unpause`,
-            detectMicrophones: `${baseUrl}/skellycam/camera/microphone/detect`,
+            // Device discovery
+            detectCameras: `${baseUrl}/devices/cameras`,
+            detectMicrophones: `${baseUrl}/devices/microphones`,
 
-            // Recording endpoints
-            startRecording: `${baseUrl}/skellycam/camera/group/all/record/start`,
-            stopRecording: `${baseUrl}/skellycam/camera/group/all/record/stop`,
+            // Camera groups — per-group
+            cameraGroups: cameraGroupsBase,
+            cameraGroup: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}`,
+            cameraGroupRecording: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}/recording`,
+            cameraGroupPause: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}/pause`,
+            cameraGroupUnpause: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}/unpause`,
 
-            // Playback endpoints
-            playbackRecordings: `${baseUrl}/skellycam/playback/recordings`,
-            playbackVideos: (recordingId: string) =>
-                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos`,
-            playbackVideoStream: (recordingId: string, videoId: string) =>
-                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}`,
-            playbackAllTimestamps: (recordingId: string) =>
-                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/timestamps`,
-            playbackVideoTimestamps: (recordingId: string, videoId: string) =>
-                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}/timestamps`,
+            // Camera groups — bulk /all/ shortcuts
+            allCameraGroups: `${cameraGroupsBase}/all`,
+            allCameraGroupsRecording: `${cameraGroupsBase}/all/recording`,
+            allCameraGroupsPause: `${cameraGroupsBase}/all/pause`,
+            allCameraGroupsUnpause: `${cameraGroupsBase}/all/unpause`,
+
+            // Recordings (file browsing / playback)
+            recordings: `${baseUrl}/recordings`,
+            recording: (recordingId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}`,
+            recordingVideos: (recordingId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/videos`,
+            recordingVideoStream: (recordingId: string, videoId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}`,
+            recordingAllTimestamps: (recordingId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/timestamps`,
+            recordingVideoTimestamps: (recordingId: string, videoId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}/timestamps`,
 
             // WebSocket
             websocket: this.getWebSocketUrl(),
+
+            // --- Legacy aliases ---
+            /** @deprecated Use cameraGroup(id) */
+            camerasConnectOrUpdate: `${cameraGroupsBase}/default`,
+            /** @deprecated Use allCameraGroups (DELETE) */
+            closeAll: `${cameraGroupsBase}/all`,
+            /** @deprecated Use recordings */
+            playbackRecordings: `${baseUrl}/recordings`,
+            /** @deprecated Use recordingVideos() */
+            playbackVideos: (recordingId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/videos`,
+            /** @deprecated Use recordingVideoStream() */
+            playbackVideoStream: (recordingId: string, videoId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}`,
+            /** @deprecated Use recordingAllTimestamps() */
+            playbackAllTimestamps: (recordingId: string) =>
+                `${baseUrl}/recordings/${encodeURIComponent(recordingId)}/timestamps`,
         };
     }
 }

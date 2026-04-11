@@ -11,7 +11,6 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import skellycam
 from skellycam.api.http.app.health import health_router
 from skellycam.api.http.app.shutdown import shutdown_router
 from skellycam.api.routers import SKELLYCAM_ROUTERS
@@ -96,26 +95,25 @@ def app(mock_global_kill_flag, mock_worker_registry, mock_camera_group_manager):
     so all endpoints use the mock.
     """
     with patch(
-        "skellycam.api.http.cameras.camera_router.get_or_create_camera_group_manager",
+        "skellycam.api.http.camera_group.camera_group_router.get_or_create_camera_group_manager",
         return_value=mock_camera_group_manager,
     ), patch(
-        "skellycam.api.websocket.websocket_server.get_or_create_camera_group_manager",
+        "skellycam.api.websocket.ws_server.get_or_create_camera_group_manager",
         return_value=mock_camera_group_manager,
     ), patch(
-        "skellycam.api.websocket.websocket_server.WebsocketServer._logs_relay",
+        "skellycam.api.websocket.ws_server.WebsocketServer._logs_relay",
         new_callable=AsyncMock,
     ):
         test_app = FastAPI()
         test_app.state.global_kill_flag = mock_global_kill_flag
         test_app.state.worker_registry = mock_worker_registry
 
-        # Register the same routes as the real app
+        # Register the same routes as the real app (no prefix)
         for router in [health_router, shutdown_router]:
             test_app.include_router(router)
 
-        prefix = f"/{skellycam.__package_name__}"
         for router in SKELLYCAM_ROUTERS:
-            test_app.include_router(router, prefix=prefix)
+            test_app.include_router(router)
 
         yield test_app
 

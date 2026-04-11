@@ -3,14 +3,14 @@ import logging
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_camera_loop import run_opencv_camera_loop
 from skellycam.core.camera.opencv.opencv_helpers.setup_opencv_camera_loop import setup_opencv_camera_loop
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_group_helpers.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_helpers.camera_orchestrator import CameraOrchestrator
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
-    from skellycam.core.camera_group.camera_status import CameraStatus
+    from skellycam.core.camera_group.camera_group_helpers.camera_status import CameraStatus
 
 logger = logging.getLogger(__name__)
 

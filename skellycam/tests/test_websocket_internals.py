@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from skellycam.api.websocket.websocket_server import ServerFramerateCalculator
-from skellycam.api.websocket.performance_data import (
+from skellycam.core.camera_group.camera_group_helpers.cg_performance_data import (
     extract_performance_data_from_frames,
     _ns_to_ms,
     _safe_duration_ms,

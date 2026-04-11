@@ -68,7 +68,7 @@ const PlaybackPage: React.FC = () => {
 
         const fetchTimestamps = async () => {
             try {
-                const response = await fetch(serverUrls.endpoints.playbackAllTimestamps(recordingId));
+                const response = await fetch(serverUrls.endpoints.recordingAllTimestamps(recordingId));
                 if (!response.ok) return;
                 const data = await response.json();
                 if (data.timestamps && Object.keys(data.timestamps).length > 0) {

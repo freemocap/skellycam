@@ -4,9 +4,9 @@ import time
 from dataclasses import dataclass
 from skellycam.core.camera.camera_worker import CameraWorker, CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
-from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.camera_status import CameraStatus
+from skellycam.core.camera_group.camera_group_helpers.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_group_helpers.camera_orchestrator import CameraOrchestrator
+from skellycam.core.camera_group.camera_group_helpers.camera_status import CameraStatus
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.types.type_overloads import CameraIdString
