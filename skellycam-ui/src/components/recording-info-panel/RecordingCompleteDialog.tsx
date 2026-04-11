@@ -31,7 +31,7 @@ function formatStat(value: number, precision: number = 3): string {
 
 interface TimingRow {
     label: string;
-    stats: StatsSummary|undefined;
+    stats: StatsSummary;
 }
 
 function TimingStatsTable({ data }: { data: RecordingCompletionData }) {

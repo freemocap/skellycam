@@ -118,8 +118,8 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 
         // PUT /camera-groups/default — group_id "default" is resolved by the server
         // based on camera config overlap; the server returns the actual group_id.
-        const response = await fetch(serverUrls.endpoints.cameraGroup('default'), {
-            method: 'PUT',
+        const response = await fetch(serverUrls.endpoints.cameraGroup, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
         });
@@ -149,17 +149,13 @@ export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
 
 export const pauseUnpauseCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/pause',
-    async (_, { getState }) => {
-        const isPaused = selectIsPaused(getState());
-        // If currently paused, unpause; otherwise pause.
-        const url = isPaused
-            ? serverUrls.endpoints.allCameraGroupsUnpause
-            : serverUrls.endpoints.allCameraGroupsPause;
+    async () => {
+        const response = await fetch(serverUrls.endpoints.cameraGroupPauseUnpause, {
+            method: 'GET',
+        });
 
-        const response = await fetch(url, { method: 'POST' });
-
-        if (!response.ok && response.status !== 204) {
-            throw new Error(`Failed to ${isPaused ? 'unpause' : 'pause'} cameras: ${response.statusText}`);
+        if (!response.ok) {
+            throw new Error(`Failed to pause/unpause cameras: ${response.statusText}`);
         }
     }
 );

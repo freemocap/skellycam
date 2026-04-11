@@ -62,6 +62,10 @@ class CameraGroup:
             self.state_machine = CameraGroupStateMachine()
 
     @property
+    def status(self) -> str:
+        return self.state_machine.phase
+
+    @property
     def id(self) -> CameraGroupIdString:
         return self.ipc.group_id
 

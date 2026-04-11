@@ -48,6 +48,8 @@ class CameraGroupManager:
         )
         self.camera_groups[camera_group.id] = camera_group
         await self.camera_groups[camera_group.id].start()
+        camera_group.state_machine.transition(CameraGroupStatus.CONNECTED)
+        camera_group.state_machine.transition(CameraGroupStatus.STREAMING)
 
         logger.info(
             f"Creating camera group with ID: {camera_group.id} "
@@ -177,11 +179,6 @@ class CameraGroupManager:
                 logger.debug(f"Error extracting performance data for group {camera_group.id}: {e}")
         return result
 
-    def pause_all_groups(self, await_paused: bool = True) -> None:
-        """Pause all camera groups."""
-        for camera_group in self.camera_groups.values():
-            camera_group.pause(await_paused=await_paused)
-            logger.info(f"Paused camera group ID: {camera_group.id}")
 
     async def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
         """Pause/Unpause all camera groups."""
@@ -189,11 +186,6 @@ class CameraGroupManager:
             await camera_group.pause_unpause(await_state_change=await_state_change)
             logger.info(f"Paused camera group ID: {camera_group.id}")
 
-    def unpause_all_groups(self, await_unpaused: bool = True) -> None:
-        """Unpause all camera groups."""
-        for camera_group in self.camera_groups.values():
-            camera_group.unpause(await_unpaused=await_unpaused)
-            logger.info(f"Unpaused camera group ID: {camera_group.id}")
 
     def find_camera_group_by_camera_ids(
         self, camera_ids: list[CameraIdString]

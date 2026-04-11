@@ -45,10 +45,9 @@ class ServerUrls {
 
             // Camera groups — per-group
             cameraGroups: cameraGroupsBase,
-            cameraGroup: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}`,
-            cameraGroupRecording: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}/recording`,
-            cameraGroupPause: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}/pause`,
-            cameraGroupUnpause: (groupId: string) => `${cameraGroupsBase}/${encodeURIComponent(groupId)}/unpause`,
+            cameraGroup:`${cameraGroupsBase}/apply`,
+            cameraGroupRecording:`${cameraGroupsBase}/all/recording`,
+            cameraGroupPauseUnpause:`${cameraGroupsBase}/all/pause_unpause`,
 
             // Camera groups — bulk /all/ shortcuts
             allCameraGroups: `${cameraGroupsBase}/all`,

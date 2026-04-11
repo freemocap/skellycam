@@ -1,15 +1,6 @@
 """
 Camera group resources — HTTP control plane.
 
-Per-group:
-  GET    /camera-groups                        → list all groups + statuses
-  PUT    /camera-groups/{group_id}             → create/update group → 200
-  DELETE /camera-groups/{group_id}             → disconnect group → 204
-  POST   /camera-groups/{group_id}/recording   → start recording → 201
-  DELETE /camera-groups/{group_id}/recording   → stop recording → 200
-  POST   /camera-groups/{group_id}/pause       → pause → 204
-  POST   /camera-groups/{group_id}/unpause     → unpause → 204
-
 All-groups shortcuts (registered before /{group_id} to avoid "all" being matched as an id):
   DELETE /camera-groups/all                    → close all → 204
   POST   /camera-groups/all/recording          → start recording on all → 201
@@ -19,7 +10,6 @@ All-groups shortcuts (registered before /{group_id} to avoid "all" being matched
 """
 import logging
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from fastapi import APIRouter, Body, HTTPException, Request, Response
@@ -151,6 +141,29 @@ def _build_stop_response(results) -> StopRecordingResponse:
 def list_camera_groups(request: Request) -> dict:
     return _get_cgm(request).to_state_dict()
 
+@camera_group_router.post("/apply", summary="Create/update camera group")
+async def camera_group_apply_post_endpoint(
+        request: Request,
+        request_body: CameraGroupCreateRequest = Body(..., examples=[CameraGroupCreateRequest.example()])
+) -> CameraGroupResponse:
+    try:
+        raw_body = await request.body()
+        logger.info(f"Request to {request.url}: {raw_body.decode('utf-8')}")
+
+        configs = request_body.camera_configs
+        camera_group = await get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(
+            camera_configs=configs)
+
+        return CameraGroupResponse(
+            group_id=camera_group.id,
+            camera_configs=camera_group.configs,
+            status =camera_group.status
+        )
+    except Exception as e:
+        logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @camera_group_router.delete(
     "/all",
@@ -218,167 +231,11 @@ async def stop_recording_all(request: Request) -> StopRecordingResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@camera_group_router.post("/all/pause", summary="Pause all camera groups", status_code=204)
-def pause_all(request: Request) -> Response:
+@camera_group_router.get("/all/pause_unpause", summary="Pause all camera groups", status_code=204)
+async def pause_all(request: Request) -> Response:
     try:
-        _get_cgm(request).pause_all_groups()
+        await _get_cgm(request).pause_unpause_all_groups()
         return Response(status_code=204)
     except Exception as e:
         logger.error(f"Error pausing all groups: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@camera_group_router.post("/all/unpause", summary="Unpause all camera groups", status_code=204)
-def unpause_all(request: Request) -> Response:
-    try:
-        _get_cgm(request).unpause_all_groups()
-        return Response(status_code=204)
-    except Exception as e:
-        logger.error(f"Error unpausing all groups: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ---------------------------------------------------------------------------
-# Per-group routes
-# ---------------------------------------------------------------------------
-
-@camera_group_router.put(
-    "/{group_id}",
-    summary="Create or update a camera group",
-    response_model=CameraGroupResponse,
-)
-async def put_camera_group(
-    group_id: CameraGroupIdString,
-    request: Request,
-    body: CameraGroupCreateRequest = Body(..., examples=[CameraGroupCreateRequest.example()]),
-) -> CameraGroupResponse:
-    try:
-        cgm = _get_cgm(request)
-        camera_group = await cgm.create_or_update_camera_group(camera_configs=body.camera_configs)
-        try:
-            camera_group.state_machine.transition(CameraGroupStatus.CONNECTED)
-            camera_group.state_machine.transition(CameraGroupStatus.STREAMING)
-        except InvalidTransitionError as e:
-            _handle_invalid_transition(e)
-        return CameraGroupResponse(
-            group_id=camera_group.id,
-            camera_configs=camera_group.configs,
-            status=camera_group.state_machine.phase.value,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error creating/updating camera group '{group_id}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@camera_group_router.delete(
-    "/{group_id}",
-    summary="Disconnect and close a camera group",
-    status_code=204,
-)
-async def delete_camera_group(group_id: CameraGroupIdString, request: Request) -> Response:
-    try:
-        cgm = _get_cgm(request)
-        if group_id not in cgm.camera_groups:
-            raise HTTPException(status_code=404, detail=f"Camera group '{group_id}' not found")
-        cgm.camera_groups[group_id].state_machine.force_disconnect()
-        await cgm.close_all_camera_groups()
-        return Response(status_code=204)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error closing camera group '{group_id}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@camera_group_router.post(
-    "/{group_id}/recording",
-    summary="Start recording for a camera group",
-    status_code=201,
-    response_model=StartRecordingResponse,
-)
-async def start_recording(
-    group_id: CameraGroupIdString,
-    request: Request,
-    body: StartRecordingRequest = Body(default_factory=StartRecordingRequest),
-) -> StartRecordingResponse:
-    try:
-        cgm = _get_cgm(request)
-        if group_id not in cgm.camera_groups:
-            raise HTTPException(status_code=404, detail=f"Camera group '{group_id}' not found")
-        group = cgm.camera_groups[group_id]
-        try:
-            group.state_machine.transition(CameraGroupStatus.RECORDING)
-        except InvalidTransitionError as e:
-            _handle_invalid_transition(e)
-        recording_info = _build_recording_info(body)
-        await group.start_recording(recording_info=recording_info)
-        return StartRecordingResponse(recording_id=recording_info.recording_uuid)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error starting recording for group '{group_id}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@camera_group_router.delete(
-    "/{group_id}/recording",
-    summary="Stop recording for a camera group",
-    response_model=StopRecordingResponse,
-)
-async def stop_recording(group_id: CameraGroupIdString, request: Request) -> StopRecordingResponse:
-    try:
-        cgm = _get_cgm(request)
-        if group_id not in cgm.camera_groups:
-            raise HTTPException(status_code=404, detail=f"Camera group '{group_id}' not found")
-        group = cgm.camera_groups[group_id]
-        recording_info, timestamp_stats = await group.stop_recording()
-        try:
-            group.state_machine.transition(CameraGroupStatus.STREAMING)
-        except InvalidTransitionError as e:
-            _handle_invalid_transition(e)
-        return _build_stop_response([(recording_info, timestamp_stats)])
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error stopping recording for group '{group_id}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@camera_group_router.post(
-    "/{group_id}/pause",
-    summary="Pause a camera group",
-    status_code=204,
-)
-def pause_camera_group(group_id: CameraGroupIdString, request: Request) -> Response:
-    try:
-        cgm = _get_cgm(request)
-        if group_id not in cgm.camera_groups:
-            raise HTTPException(status_code=404, detail=f"Camera group '{group_id}' not found")
-        cgm.camera_groups[group_id].pause()
-        return Response(status_code=204)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error pausing group '{group_id}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@camera_group_router.post(
-    "/{group_id}/unpause",
-    summary="Unpause a camera group",
-    status_code=204,
-)
-def unpause_camera_group(group_id: CameraGroupIdString, request: Request) -> Response:
-    try:
-        cgm = _get_cgm(request)
-        if group_id not in cgm.camera_groups:
-            raise HTTPException(status_code=404, detail=f"Camera group '{group_id}' not found")
-        cgm.camera_groups[group_id].unpause()
-        return Response(status_code=204)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error unpausing group '{group_id}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
