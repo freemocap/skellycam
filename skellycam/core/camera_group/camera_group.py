@@ -146,7 +146,7 @@ class CameraGroup:
         self,
         frame_number: FrameNumberInt,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> bytes | None:
+    ) -> tuple[bytes, MultiframeTimestampFloat] | None:
         if not self.cameras.all_ready:
             return None
         if frame_number > self.shm.latest_multiframe_number:
@@ -154,13 +154,13 @@ class CameraGroup:
         latest_frames = self.shm.get_images_by_frame_number(frame_number=frame_number)
         if not latest_frames:
             return None
-        frame_number_out, _, frames_bytearray = create_frontend_payload(
+        frame_number_out, mf_timestamp, frames_bytearray = create_frontend_payload(
             latest_frames=latest_frames,
             display_image_sizes=display_image_sizes,
         )
         if frame_number_out != frame_number:
             logger.warning(f"Requested frame number {frame_number} but got {frame_number_out}")
-        return frames_bytearray
+        return frames_bytearray, float(mf_timestamp)
 
     async def pause_unpause(self, await_state_change: bool = True) -> None:
         await self.cameras.pause_unpause(await_state_change)
