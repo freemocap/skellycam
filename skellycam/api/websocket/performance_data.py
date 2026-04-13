@@ -15,7 +15,7 @@ from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
 
-
+# TODO - this prob should live somewhere else, but its working fine enough here
 def _ns_to_ms(ns: int | float) -> float:
     return float(ns) / 1e6
 
