@@ -1,8 +1,7 @@
 import logging
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from multiprocessing.process import parent_process
-
-from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core.ipc.pubsub.pubsub_abcs import PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_topics import LogsTopic, UpdateCamerasSettingsTopic, DeviceExtractedConfigTopic, \
@@ -22,8 +21,8 @@ class TopicTypes(Enum):
     LOGS = auto()
 
 
-class PubSubTopicManager(BaseModel):
-    topics: dict[TopicTypes, PubSubTopicABC] = Field(default_factory=lambda: {
+def _default_topics() -> dict[TopicTypes, PubSubTopicABC]:
+    return {
         TopicTypes.UPDATE_CAMERA_SETTINGS: UpdateCamerasSettingsTopic(),
         TopicTypes.EXTRACTED_CONFIG: DeviceExtractedConfigTopic(),
         TopicTypes.SHM_UPDATES: SetShmTopic(),
@@ -31,10 +30,12 @@ class PubSubTopicManager(BaseModel):
         TopicTypes.RECORDING_FINISHED: RecordingFinishedTopic(),
         TopicTypes.FRAMERATE: FramerateTopic(),
         TopicTypes.LOGS: LogsTopic(),
-    })
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
+    }
+
+
+@dataclass
+class PubSubTopicManager:
+    topics: dict[TopicTypes, PubSubTopicABC] = field(default_factory=_default_topics)
 
     def get_subscription(self, topic_type: TopicTypes) -> TopicSubscriptionQueue:
         """

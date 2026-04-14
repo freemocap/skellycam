@@ -65,3 +65,17 @@ A few things that affect review priority:
 We use [Ruff](https://docs.astral.sh/ruff/) for linting. Run `uv run ruff check skellycam/` to check and `uv run ruff check --fix skellycam/` to auto-fix.
 
 See the [Development guide](./) for more details on the development workflow.
+
+## Type System Conventions
+
+SkellyCam uses [beartype](https://beartype.readthedocs.io/) for runtime type checking across the entire package. This means **type annotations are enforced at runtime** — if you pass the wrong type to an annotated function, you'll get a `BeartypeCallHintParamViolation` immediately at the call site. This is intentional and should not be suppressed. If beartype catches a violation, fix the type, not the check.
+
+When adding new code, use the right type system for the layer:
+
+- **Pydantic `BaseModel`** — Only for types that face untrusted input from the frontend (HTTP request/response bodies, API models). These benefit from Pydantic's validation, coercion, and OpenAPI schema generation.
+- **`@dataclass`** — For internal containers, IPC infrastructure, and anything that holds multiprocessing primitives or numpy arrays. No serialization overhead, no `arbitrary_types_allowed` workarounds needed.
+- **`msgspec.Struct`** — For types that are serialized at high frequency over the WebSocket. Fast JSON encoding without the overhead of Pydantic's `model_dump()`.
+
+As a rule of thumb: if the type never leaves the Python backend as JSON, it should be a dataclass. If it's serialized to JSON more than once per second, it should be a `msgspec.Struct`. If it validates user input from the API, it should be Pydantic.
+
+All WebSocket JSON message types are defined in `skellycam/api/websocket/websocket_message_types.py` as a `WebsocketMessageType(str, enum.Enum)`. When adding new message types, add them to this enum — do not use raw strings.

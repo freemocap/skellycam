@@ -227,7 +227,7 @@ class CameraGroup:
         self.cameras.orchestrator.first_recording_frame_number.value = -1
         self.cameras.orchestrator.last_recording_frame_number.value = frame_count + 3
         await self.cameras.unpause(await_unpaused=True)
-        recording_info, timestamp_stats = await finalize_recording(ipc=self.ipc, cameras=self.cameras)
+        recording_info, timestamp_stats = await finalize_recording(ipc=self.ipc, cameras=self.cameras, camera_configs=self.configs)
         logger.info(
             f"Stopped recording for camera group ID: {self.id} "
             f"with recording name: {recording_info.recording_name}"
@@ -311,6 +311,7 @@ async def await_extracted_configs(
 async def finalize_recording(
     ipc: CameraGroupIPC,
     cameras: CameraManager,
+    camera_configs: CameraConfigs,
 ) -> tuple[RecordingInfo, RecordingTimestampsStats]:
     recording_finished_messages_by_camera: dict[CameraIdString, RecordingFinishedMessage | None] = {
         camera_id: None
@@ -362,6 +363,7 @@ async def finalize_recording(
 
     recording_finalizer = RecordingFinalizer.create(
         recording_info=recording_info,
+        camera_configs=camera_configs,
         frame_metadatas_by_camera={
             camera_id: message.frame_metadatas
             for camera_id, message in recording_finished_messages_by_camera.items()

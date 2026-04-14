@@ -1,30 +1,27 @@
 import logging
 from abc import ABC
+from dataclasses import dataclass, field
 from multiprocessing.process import parent_process
 from typing import Type
-
-from pydantic import BaseModel, Field, ConfigDict
 
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_100ms
 
 logger = logging.getLogger(__name__)
 
-class TopicMessageABC(BaseModel, ABC):
+@dataclass
+class TopicMessageABC(ABC):
     """
     Base class for messages sent through the PubSub system.
     All messages should inherit from this class.
     """
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    pass
 
 
-class PubSubTopicABC(BaseModel, ABC):
-    subscriptions: list[TopicSubscriptionQueue] = Field(default_factory=list)
-    message_type: Type[TopicMessageABC] = Field(default_factory=TopicMessageABC)
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
+@dataclass
+class PubSubTopicABC(ABC):
+    subscriptions: list[TopicSubscriptionQueue] = field(default_factory=list)
+    message_type: Type[TopicMessageABC] = TopicMessageABC
 
 
     def get_subscription(self) -> TopicSubscriptionQueue:

@@ -1,9 +1,9 @@
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
 import numpy as np
-from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
@@ -35,21 +35,21 @@ Each video in this folder should have precisely the same number of frames, each 
 logger = logging.getLogger(__name__)
 
 
-class RecordingFinalizer(BaseModel):
+@dataclass
+class RecordingFinalizer:
     recording_info: RecordingInfo
     camera_configs: CameraConfigs
     frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]]
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
+               camera_configs: CameraConfigs,
                frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
                ):
         return cls(recording_info=recording_info,
                    frame_metadatas_by_camera=frame_metadatas_by_camera,
-                   camera_configs={camera_id: CameraConfig.from_numpy_record_array(metadata[0].camera_config)
-                                   for camera_id, metadata in frame_metadatas_by_camera.items()}
+                   camera_configs=camera_configs,
                    )
 
     async def finalize_recording(self) -> "RecordingTimestampsStats":

@@ -2,14 +2,14 @@
 from collections import deque
 from dataclasses import dataclass
 
+import msgspec
 import numpy as np
-from pydantic import BaseModel
 
 MAX_FRAMERATE_TRACKER_WINDOW = 1000
 FRAMERATE_UPDATE_INTERVAL = 1.0
 
 
-class CurrentFramerate(BaseModel):
+class CurrentFramerate(msgspec.Struct):
     mean_frame_duration_ms: float
     mean_frames_per_second: float
     frame_duration_max: float
@@ -42,20 +42,6 @@ class CurrentFramerate(BaseModel):
             calculation_window_size=len(durations_ms),
             framerate_source=framerate_source,
         )
-
-    def to_dict(self) -> dict:
-        return {
-            "mean_frame_duration_ms": self.mean_frame_duration_ms,
-            "mean_frames_per_second": self.mean_frames_per_second,
-            "frame_duration_max": self.frame_duration_max,
-            "frame_duration_min": self.frame_duration_min,
-            "frame_duration_mean": self.frame_duration_mean,
-            "frame_duration_stddev": self.frame_duration_stddev,
-            "frame_duration_median": self.frame_duration_median,
-            "frame_duration_coefficient_of_variation": self.frame_duration_coefficient_of_variation,
-            "calculation_window_size": self.calculation_window_size,
-            "framerate_source": self.framerate_source
-        }
 
 
 @dataclass

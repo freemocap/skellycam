@@ -1,8 +1,8 @@
 import time
+from dataclasses import dataclass, field
 from datetime import datetime
 
 import numpy as np
-from pydantic import BaseModel, Field
 from tzlocal import get_localzone
 
 from skellycam.core.types.numpy_record_dtypes import TIMEBASE_MAPPING_DTYPE
@@ -13,15 +13,15 @@ def get_utc_offset() -> int:
     return int(datetime.now(get_localzone()).utcoffset().total_seconds())
 
 
-class TimebaseMapping(BaseModel):
+@dataclass
+class TimebaseMapping:
     """
     A mapping of `time.time_ns()` to `time.perf_counter_ns()`
     to allow conversion of `time.perf_counter_ns()`'s arbitrary time base to unix time
     """
-    utc_time_ns: int = Field(default_factory=time.time_ns, description="UTC time in nanoseconds from `time.time_ns()`")
-    perf_counter_ns: int = Field(default_factory=time.perf_counter_ns,
-                                 description="Time in nanoseconds from `time.perf_counter_ns()` (arbirtary time base)")
-    local_time_utc_offset: int = Field(default_factory=get_utc_offset, description="Local time GMT offset in seconds")
+    utc_time_ns: int = field(default_factory=time.time_ns)
+    perf_counter_ns: int = field(default_factory=time.perf_counter_ns)
+    local_time_utc_offset: int = field(default_factory=get_utc_offset)
 
     def convert_perf_counter_ns_to_unix_ns(self, perf_counter_ns: int|float, local_time: bool) -> int:
         """

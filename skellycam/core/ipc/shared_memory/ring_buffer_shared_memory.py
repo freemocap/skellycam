@@ -1,7 +1,7 @@
 from copy import copy
+from dataclasses import dataclass
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field
 
 from skellycam.core.ipc.shared_memory.shared_memory_element import SharedMemoryElement, SharedMemoryElementDTO
 from skellycam.core.ipc.shared_memory.shared_memory_number import SharedMemoryNumber
@@ -15,26 +15,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class SharedMemoryRingBufferDTO(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+@dataclass
+class SharedMemoryRingBufferDTO:
     ring_shm_dto: SharedMemoryElementDTO
     last_written_index_shm_dto: SharedMemoryElementDTO
     last_read_index_shm_dto: SharedMemoryElementDTO
     dtype: np.dtype
 
 
-class SharedMemoryRingBuffer(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+@dataclass
+class SharedMemoryRingBuffer:
     ring_shm: SharedMemoryElement
     dtype: np.dtype
-    last_written_index: SharedMemoryNumber = Field(
-        ...,
-        description="Allows writing new data in 'put_data' - Represents APPARENT index of last written element from the User's perspective; internally handles wrapping around the array"
-    )
-    last_read_index: SharedMemoryNumber = Field(
-        ...,
-        description="Allows incrementing 'read' index in 'read_next` - Represents APPARENT index of last read element from the User's perspective; internally handles wrapping around the array"
-    )
+    last_written_index: SharedMemoryNumber
+    last_read_index: SharedMemoryNumber
     read_only: bool
 
     @classmethod

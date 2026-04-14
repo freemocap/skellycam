@@ -21,7 +21,16 @@ CAMERA_CONFIG_DTYPE = np.dtype([
     ('rotation', '<i4'),
     ('capture_fourcc', 'S4'),
     ('writer_fourcc', 'S4'),
-], align=True)  # Total: ~269 bytes
+], align=True)  # Total: ~269 bytes — only used for CSV export, NOT embedded per-frame
+
+# Slim per-frame camera identification — only fields accessed in the hot loop.
+# The full CameraConfig lives in the CameraGroup's config dict.
+FRAME_CAMERA_INFO_DTYPE = np.dtype([
+    ('camera_id', 'U128'),
+    ('camera_index', '<i4'),
+    ('rotation', '<i4'),
+    ('color_channels', '<i4'),
+], align=True)
 
 TIMEBASE_MAPPING_DTYPE = np.dtype([
     ('utc_time_ns', np.int64),
@@ -229,7 +238,7 @@ STATS_DTYPE = np.dtype([
 ])
 
 FRAME_METADATA_DTYPE = np.dtype([
-    ('camera_config', CAMERA_CONFIG_DTYPE),
+    ('camera_info', FRAME_CAMERA_INFO_DTYPE),
     ('frame_number', np.int64),
     ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
     ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)

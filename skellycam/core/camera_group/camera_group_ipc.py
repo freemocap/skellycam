@@ -1,7 +1,6 @@
 import logging
 import multiprocessing
-
-from pydantic import BaseModel, ConfigDict, Field, SkipValidation
+from dataclasses import dataclass, field
 
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.ipc.pubsub.pubsub_manager import create_camera_group_pubsub_manager, TopicTypes, PubSubTopicManager
@@ -13,23 +12,17 @@ from skellycam.utilities.create_camera_group_id import create_camera_group_id
 logger = logging.getLogger(__name__)
 
 
-class CameraGroupIPC(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-    )
+@dataclass
+class CameraGroupIPC:
     group_id: CameraGroupIdString
     pubsub: PubSubTopicManager
-    timebase_mapping: TimebaseMapping = Field(default_factory=TimebaseMapping)
     extracted_config_subscription: TopicSubscriptionQueue
     recording_finished_subscription: TopicSubscriptionQueue
-
-    should_pause: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-    shutdown_camera_group_flag: SkipValidation[multiprocessing.Value] = Field(
-        default_factory=lambda: multiprocessing.Value("b", False))
-
-    global_kill_flag: SkipValidation[multiprocessing.Value]
-    heartbeat_timestamp: SkipValidation[multiprocessing.Value]
+    global_kill_flag: multiprocessing.Value
+    heartbeat_timestamp: multiprocessing.Value
+    timebase_mapping: TimebaseMapping = field(default_factory=TimebaseMapping)
+    should_pause: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    shutdown_camera_group_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
 
     @classmethod
     def create(cls,

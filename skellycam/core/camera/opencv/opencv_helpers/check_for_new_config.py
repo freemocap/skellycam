@@ -20,21 +20,21 @@ def check_for_new_config(current_config: CameraConfig,
                          update_camera_settings_subscription) -> tuple[np.recarray, CameraConfig]:
     if not update_camera_settings_subscription.empty():
         logger.debug(
-            f"Camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]} received update_camera_settings_subscription message")
+            f"Camera {current_config.camera_id} received update_camera_settings_subscription message")
         update_message = update_camera_settings_subscription.get()
         if not isinstance(update_message, UpdateCamerasSettingsMessage):
             raise RuntimeError(
-                f"Expected UpdateCamerasSettingsMessage for camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}, "
+                f"Expected UpdateCamerasSettingsMessage for camera {current_config.camera_id}, "
                 f"but received {type(update_message)}"
             )
-        if frame_rec_array.frame_metadata.camera_config.camera_id[0] in update_message.requested_configs:
+        if current_config.camera_id in update_message.requested_configs:
             self_status.updating.value = True
-            new_config = update_message.requested_configs[frame_rec_array.frame_metadata.camera_config.camera_id[0]]
+            new_config = update_message.requested_configs[current_config.camera_id]
             extracted_config = apply_camera_configuration(cv2_vid_capture=cv2_video_capture,
-                                                          prior_config=CameraConfig.from_numpy_record_array(
-                                                              frame_rec_array.frame_metadata.camera_config),
+                                                          prior_config=current_config,
                                                           config=new_config, )
-            frame_rec_array.frame_metadata.camera_config[0] = extracted_config.to_numpy_record_array()
+            # Update the slim per-frame camera info in the recarray
+            frame_rec_array.frame_metadata.camera_info[0] = extracted_config.to_frame_camera_info()
             ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(
                 DeviceExtractedConfigMessage(extracted_config=extracted_config))
             self_status.updating.value = False

@@ -9,9 +9,8 @@ def create_initial_frame_rec_array(config: CameraConfig, ipc: CameraGroupIPC) ->
     # Create initial frame record array
     frame_dtype = create_frame_dtype(config)
     frame_rec_array = np.recarray(1, dtype=frame_dtype)
-    # Initialize the frame metadata
-
-    frame_rec_array.frame_metadata.camera_config[0] = config.to_numpy_record_array()
+    # Initialize the per-frame camera identification
+    frame_rec_array.frame_metadata.camera_info[0] = config.to_frame_camera_info()
     frame_rec_array.frame_metadata.frame_number[0] = -1
     frame_rec_array.frame_metadata.timebase_mapping[0] = ipc.timebase_mapping.to_numpy_record_array()
     # Initialize the image with zeros

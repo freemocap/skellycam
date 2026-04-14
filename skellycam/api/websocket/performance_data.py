@@ -11,6 +11,7 @@ import time
 
 import numpy as np
 
+from skellycam.api.websocket.websocket_message_types import WebsocketMessageType
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def extract_performance_data_from_frames(
     frame_number = frame_numbers[0] if len(unique_frame_numbers) == 1 else max(frame_numbers)
 
     return {
-        "message_type": "performance_data",
+        "message_type": WebsocketMessageType.PERFORMANCE_DATA,
         "frame_number": frame_number,
         "timestamp_ms": round(timestamp_ms, 3),
         "camera_lifecycle_rows": per_camera_rows,

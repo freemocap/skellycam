@@ -1,16 +1,17 @@
 import logging
 import sys
+from dataclasses import dataclass
 from platform import platform
 
 import cv2
 from cv2.videoio_registry import getBackendName
 from cv2_enumerate_cameras import supported_backends
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class OpenCVBackend(BaseModel):
+@dataclass
+class OpenCVBackend:
     id: int
     name: str
 

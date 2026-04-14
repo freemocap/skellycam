@@ -107,7 +107,7 @@ class TestExtractPerformanceData:
         )
         frame_dtype = create_frame_dtype(config)
         frame = np.recarray(1, dtype=frame_dtype)
-        frame.frame_metadata.camera_config[0] = config.to_numpy_record_array()
+        frame.frame_metadata.camera_info[0] = config.to_frame_camera_info()
         frame.frame_metadata.frame_number[0] = frame_number
 
         ts = frame.frame_metadata.timestamps

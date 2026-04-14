@@ -28,7 +28,7 @@ class CameraSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         dummy_frame = np.recarray(1, dtype=frame_dtype)
 
         # Initialize the frame metadata
-        dummy_frame.frame_metadata.camera_config = camera_config.to_numpy_record_array()[0]
+        dummy_frame.frame_metadata.camera_info = camera_config.to_frame_camera_info()[0]
         dummy_frame.frame_metadata.frame_number = -99
         dummy_frame.frame_metadata.timebase_mapping = timebase_mapping.to_numpy_record_array()[0]
 

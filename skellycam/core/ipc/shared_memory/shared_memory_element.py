@@ -1,17 +1,15 @@
+from dataclasses import dataclass
 from multiprocessing import shared_memory
 from typing import Any
 
 import numpy as np
 from numpydantic import NDArray, Shape
-from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.types.type_overloads import SharedMemoryName
 
 
-class SharedMemoryElementDTO(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+@dataclass
+class SharedMemoryElementDTO:
     shm_name: str
     shm_valid_name: str
     first_written_shm_name: str
@@ -19,10 +17,8 @@ class SharedMemoryElementDTO(BaseModel):
     buffer_shape: tuple[int, ...]
 
 
-class SharedMemoryElement(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+@dataclass
+class SharedMemoryElement:
     buffer: np.recarray
     buffer_shape: tuple[int, ...]
     dtype: np.dtype

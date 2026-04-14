@@ -59,13 +59,15 @@ class TestSettableParameters:
 
 
 class TestNumpySerialization:
-    def test_numpy_record_array_roundtrip(self):
-        """Serialize to numpy record array and deserialize back."""
-        original = CameraConfig()
-        arr = original.to_numpy_record_array()
-        assert isinstance(arr, np.recarray)
-        restored = CameraConfig.from_numpy_record_array(arr)
-        assert original == restored
+    def test_to_frame_camera_info(self):
+        """to_frame_camera_info produces a recarray with the expected fields."""
+        config = CameraConfig()
+        info = config.to_frame_camera_info()
+        assert isinstance(info, np.recarray)
+        assert str(info.camera_id[0]) == config.camera_id
+        assert int(info.camera_index[0]) == config.camera_index
+        assert int(info.rotation[0]) == config.rotation.value
+        assert int(info.color_channels[0]) == config.color_channels
 
 
 class TestCameraConfigStr:
