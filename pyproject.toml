@@ -51,8 +51,8 @@ keywords = [
 ]
 
 dependencies = [
-    "numpy==1.26.2",
-    "opencv-contrib-python==4.10.*",
+    "numpy",#==1.26.2",
+    "opencv-contrib-python",#==4.10.*",
     "pydantic==2.*",
     "Pillow",
     "psutil==5.9.6",

@@ -218,7 +218,7 @@ class WebsocketServer:
                             f"Last sent frame: {self.last_sent_frame_number}, "
                             f"last received confirmation: {self.last_received_frontend_confirmation}")
 
-                # Send framerate updates from our local trackers (throttled to ~1Hz)
+                # Send framerate updates from our local trackers (throttled to ~4Hz)
                 now = time.monotonic()
                 if now - self._last_framerate_send_time >= 0.25:
                     for camera_group_id, server_calc in self._server_framerate_calculators.items():
