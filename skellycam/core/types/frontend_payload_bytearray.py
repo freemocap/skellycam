@@ -42,7 +42,7 @@ def create_frontend_payload(
         latest_frames: dict[str, np.recarray],
         display_image_sizes: dict[str, dict[str, float]] | None = None,
         jpeg_encoding_parameters: list[int] | None = None
-) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]:
+) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]:
     """
     Convert a multi-frame record array into bytes for websocket transmission.
 

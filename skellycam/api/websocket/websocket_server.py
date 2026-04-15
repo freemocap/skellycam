@@ -18,8 +18,7 @@ from skellycam.core.recorders.framerate_tracker import FramerateTracker, Current
 from skellycam.utilities.wait_functions import await_10ms
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
+from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ class ServerFramerateCalculator:
         self._observations: deque[tuple[int, float]] = deque(maxlen=max_observations)
         self._per_frame_durations_ms: deque[float] = deque(maxlen=1000)
 
-    def update(self, frame_number: int, capture_timestamp_ns: float) -> None:
+    def update(self, frame_number: int|np.integer, capture_timestamp_ns: float) -> None:
         if self._observations:
             prev_fn, prev_ts = self._observations[-1]
             frame_delta = frame_number - prev_fn
@@ -140,7 +139,7 @@ class WebsocketServer:
             if self.websocket.client_state == WebSocketState.CONNECTED:
                 await self.websocket.send_json(data)
 
-    async def _send_bytes(self, data: bytes) -> None:
+    async def _send_bytes(self, data: bytes|bytearray) -> None:
         """Send bytes through the websocket, serialized by the send lock."""
         async with self._send_lock:
             if self.websocket.client_state == WebSocketState.CONNECTED:
@@ -186,7 +185,7 @@ class WebsocketServer:
     def check_frame_acknowledgment_status(self) -> bool:
         if self.last_sent_frame_number == -1:
             return True
-        return self.last_received_frontend_confirmation >= self.last_sent_frame_number
+        return bool(self.last_received_frontend_confirmation >= self.last_sent_frame_number)
 
     async def _frontend_image_relay(self):
         """
@@ -211,7 +210,7 @@ class WebsocketServer:
                                               multiframe_timestamp,
                                               payload_bytes) in new_frontend_payloads.items():
                             await self._send_bytes(payload_bytes)
-                            self.last_sent_frame_number = frame_number
+                            self.last_sent_frame_number = int(frame_number)
 
                             # Server framerate: computed from frame_number + capture timestamp.
                             # frame_number increments by 1 per actual camera capture,

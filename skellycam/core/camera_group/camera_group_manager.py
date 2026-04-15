@@ -3,6 +3,7 @@ import multiprocessing
 from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass, field
 
+import numpy as np
 from fastapi import FastAPI
 
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
@@ -117,11 +118,11 @@ class CameraGroupManager:
         self,
         if_newer_than: int,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
+    ) -> dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]]:
         if self.closing:
             return {}
         fe_payloads: dict[
-            CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]
+            CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]
         ] = {}
         for camera_group in self.camera_groups.values():
             fe_return = camera_group.get_latest_frontend_payload(

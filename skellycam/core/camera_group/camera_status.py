@@ -5,19 +5,19 @@ from dataclasses import dataclass, field
 # TODO - We should rebuild the camera as a state machine with finite defined states and defined legal transitions from one state to the other.
 @dataclass
 class CameraStatus:
-    connected: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    grabbing_frame: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    closing: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    closed: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    recording_in_progress: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    is_recording_frame: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    should_pause: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    should_close: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    is_paused: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    updating: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    error: Synchronized = field(default_factory=lambda: Synchronized("b", False))
+    connected: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    grabbing_frame: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    closing: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    closed: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    recording_in_progress: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    is_recording_frame: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_pause: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_close: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    is_paused: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    updating: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    error: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
 
-    frame_count: Synchronized = field(default_factory=lambda: Synchronized("q", -1))
+    frame_count: Synchronized = field(default_factory=lambda: multiprocessing.Value("q", -1))
 
     @property
     def ready(self) -> bool:

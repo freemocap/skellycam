@@ -1,8 +1,10 @@
 import logging
 import multiprocessing
-from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass
 from copy import deepcopy
+from multiprocessing.sharedctypes import Synchronized
+
+import numpy as np
 
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
@@ -75,7 +77,7 @@ class CameraOrchestrator:
                 await await_10ms()
             logger.trace("All cameras unpaused.")
 
-    def should_record_frame_number(self, frame_number: int) -> tuple[bool, bool]:
+    def should_record_frame_number(self, frame_number: int | np.integer) -> tuple[bool, bool]:
 
         should_record_frame = False
         should_finish_recording = False

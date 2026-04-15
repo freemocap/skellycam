@@ -22,8 +22,8 @@ class CameraGroupIPC:
     global_kill_flag: Synchronized
     heartbeat_timestamp: Synchronized
     timebase_mapping: TimebaseMapping = field(default_factory=TimebaseMapping)
-    should_pause: Synchronized = field(default_factory=lambda: Synchronized("b", False))
-    shutdown_camera_group_flag: Synchronized = field(default_factory=lambda: Synchronized("b", False))
+    should_pause: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    shutdown_camera_group_flag: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
 
     @classmethod
     def create(cls,

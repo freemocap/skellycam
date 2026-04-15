@@ -64,7 +64,7 @@ class FramerateTracker:
             _last_timestamp_ns=None,
         )
 
-    def update(self, timestamp_ns: float) -> None:
+    def update(self, timestamp_ns: int) -> None:
         if self._last_timestamp_ns is not None:
             self.frame_durations_ns.append(timestamp_ns - self._last_timestamp_ns)
         self._last_timestamp_ns = timestamp_ns

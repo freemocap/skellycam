@@ -50,9 +50,9 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.success(
         f"SkellyCam API v{skellycam.__version__} started successfully 💀📸✨\n"
-        f"--------------------------------------------------------------------------------------\n"
-        f"||\t\tServer API Swagger docs: {APP_URL}/docs\t\t||\n"
-        f"\n--------------------------------------------------------------------------------------\n"
+        f"||\n"
+        f"||\tServer API Swagger docs: {APP_URL}/docs\n"
+        f"||\n"
     )
 
     yield

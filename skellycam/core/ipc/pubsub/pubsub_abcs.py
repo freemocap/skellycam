@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 from abc import ABC
 from dataclasses import dataclass, field
 from multiprocessing.process import parent_process
@@ -30,7 +31,7 @@ class PubSubTopicABC(ABC):
         """
         if parent_process() is not None:
             raise RuntimeError("Subscriptions must be created in the main process and passed to children")
-        sub = TopicSubscriptionQueue()
+        sub =  multiprocessing.Queue()
         self.subscriptions.append(sub)
         return sub
 

@@ -132,7 +132,7 @@ class CameraGroup:
         self,
         if_newer_than: int,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytes] | None:
+    ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray] | None:
         if not self.cameras.all_ready:
             return None
         latest_frames = self.get_latest_frames()
