@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator, field_serializer
 
 from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera.config.image_rotation_types import RotationTypes
-from skellycam.core.types.numpy_record_dtypes import CAMERA_CONFIG_DTYPE
+from skellycam.core.types.numpy_record_dtypes import FRAME_CAMERA_INFO_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
 from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
@@ -260,50 +260,14 @@ class CameraConfig(BaseModel):
 
         return diffs
 
-    def to_numpy_record_array(self) -> np.recarray:
-        rec_arr = np.recarray((1,), dtype=CAMERA_CONFIG_DTYPE)
-
+    def to_frame_camera_info(self) -> np.recarray:
+        """Write the slim per-frame camera identification fields."""
+        rec_arr = np.recarray((1,), dtype=FRAME_CAMERA_INFO_DTYPE)
         rec_arr.camera_id[0] = self.camera_id
         rec_arr.camera_index[0] = self.camera_index
-        rec_arr.camera_name[0] = self.camera_name
-        rec_arr.use_this_camera[0] = self.use_this_camera
-        rec_arr.resolution_height[0] = self.resolution.height
-        rec_arr.resolution_width[0] = self.resolution.width
-        rec_arr.color_channels[0] = self.color_channels
-        rec_arr.pixel_format[0] = self.pixel_format
-        rec_arr.exposure_mode[0] = self.exposure_mode
-        rec_arr.exposure[0] = self.exposure
-        rec_arr.framerate[0] = round(self.framerate,4)
         rec_arr.rotation[0] = self.rotation.value
-        rec_arr.capture_fourcc[0] = self.capture_fourcc
-        rec_arr.writer_fourcc[0] = self.writer_fourcc
-
+        rec_arr.color_channels[0] = self.color_channels
         return rec_arr
-
-    @classmethod
-    def from_numpy_record_array(cls, array: np.recarray):
-        if array.dtype != CAMERA_CONFIG_DTYPE:
-            raise ValueError(f"Metadata array shape mismatch - "
-                             f"Expected: {CAMERA_CONFIG_DTYPE}, "
-                             f"Actual: {array.dtype}")
-        return cls(
-            camera_id=array.camera_id[0],
-            camera_index=array.camera_index[0],
-            camera_name=array.camera_name[0],
-            use_this_camera=bool(array.use_this_camera[0]),
-            resolution=ImageResolution(
-                height=array.resolution_height[0],
-                width=array.resolution_width[0]
-            ),
-            color_channels=array.color_channels[0],
-            pixel_format=array.pixel_format[0],
-            exposure_mode=array.exposure_mode[0],
-            exposure=array.exposure[0],
-            framerate=array.framerate[0],
-            rotation=RotationTypes(array.rotation[0]),
-            capture_fourcc=array.capture_fourcc[0],
-            writer_fourcc=array.writer_fourcc[0]
-        )
 
     def __eq__(self, other: "CameraConfig") -> bool:
         """

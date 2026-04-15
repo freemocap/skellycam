@@ -42,7 +42,7 @@ def create_frontend_payload(
         latest_frames: dict[str, np.recarray],
         display_image_sizes: dict[str, dict[str, float]] | None = None,
         jpeg_encoding_parameters: list[int] | None = None
-) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]:
+) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]:
     """
     Convert a multi-frame record array into bytes for websocket transmission.
 
@@ -105,10 +105,10 @@ def create_frontend_payload(
         )
 
         # Handle image rotation
-        if frame_recarray.frame_metadata.camera_config.rotation != -1:
+        if frame_recarray.frame_metadata.camera_info.rotation != -1:
             rotated_image = cv2.rotate(
                 src=frame_recarray.image[0],
-                rotateCode=frame_recarray.frame_metadata.camera_config.rotation[0]
+                rotateCode=frame_recarray.frame_metadata.camera_info.rotation[0]
             )
         else:
             rotated_image = frame_recarray.image[0]
@@ -140,8 +140,8 @@ def create_frontend_payload(
         frame_header.message_type = MessageType.FRAME_HEADER
         frame_header.frame_number = frame_number
         frame_header.camera_id = camera_id.encode('utf-8')[:16]  # Truncate if necessary
-        frame_header.camera_index = frame_recarray.frame_metadata.camera_config.camera_index[0]
-        frame_header.color_channels = frame_recarray.frame_metadata.camera_config.color_channels[0]
+        frame_header.camera_index = frame_recarray.frame_metadata.camera_info.camera_index[0]
+        frame_header.color_channels = frame_recarray.frame_metadata.camera_info.color_channels[0]
         frame_header.image_width = resize_image_width
         frame_header.image_height = resize_image_height
         frame_header.jpeg_string_length = jpeg_string_length

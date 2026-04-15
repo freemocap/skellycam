@@ -5,7 +5,7 @@ import numpy as np
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import SharedMemoryRingBuffer
-from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
+from skellycam.core.types.frame_dtype_factories import create_frame_dtype
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class CameraSharedMemoryRingBuffer(SharedMemoryRingBuffer):
         dummy_frame = np.recarray(1, dtype=frame_dtype)
 
         # Initialize the frame metadata
-        dummy_frame.frame_metadata.camera_config = camera_config.to_numpy_record_array()[0]
+        dummy_frame.frame_metadata.camera_info = camera_config.to_frame_camera_info()[0]
         dummy_frame.frame_metadata.frame_number = -99
         dummy_frame.frame_metadata.timebase_mapping = timebase_mapping.to_numpy_record_array()[0]
 

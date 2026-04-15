@@ -4,6 +4,7 @@ import logging
 import time
 from collections import deque
 
+import msgspec
 import numpy as np
 from starlette.websockets import WebSocket, WebSocketState, WebSocketDisconnect
 from fastapi import FastAPI
@@ -11,17 +12,27 @@ from fastapi import FastAPI
 from skellylogs import LogRecordModel, LogLevels
 from skellylogs.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
+from skellycam.api.websocket.websocket_message_types import WebsocketMessageType
 from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, get_or_create_camera_group_manager
 from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
 from skellycam.utilities.wait_functions import await_10ms
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
+from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 
 logger = logging.getLogger(__name__)
 
 BACKPRESSURE_WARNING_THRESHOLD: int = 1000  # Number of frames before we warn about backpressure
+
+# Reusable msgspec JSON encoder for all websocket JSON messages
+_ws_json_encoder = msgspec.json.Encoder()
+
+
+class FramerateUpdateMessage(msgspec.Struct):
+    message_type: WebsocketMessageType = WebsocketMessageType.FRAMERATE_UPDATE
+    camera_group_id: str = ""
+    backend_framerate: CurrentFramerate | None = None
+    frontend_framerate: CurrentFramerate | None = None
 
 
 class ServerFramerateCalculator:
@@ -38,7 +49,7 @@ class ServerFramerateCalculator:
         self._observations: deque[tuple[int, float]] = deque(maxlen=max_observations)
         self._per_frame_durations_ms: deque[float] = deque(maxlen=1000)
 
-    def update(self, frame_number: int, capture_timestamp_ns: float) -> None:
+    def update(self, frame_number: int|np.integer, capture_timestamp_ns: float) -> None:
         if self._observations:
             prev_fn, prev_ts = self._observations[-1]
             frame_delta = frame_number - prev_fn
@@ -128,7 +139,7 @@ class WebsocketServer:
             if self.websocket.client_state == WebSocketState.CONNECTED:
                 await self.websocket.send_json(data)
 
-    async def _send_bytes(self, data: bytes) -> None:
+    async def _send_bytes(self, data: bytes|bytearray) -> None:
         """Send bytes through the websocket, serialized by the send lock."""
         async with self._send_lock:
             if self.websocket.client_state == WebSocketState.CONNECTED:
@@ -139,6 +150,16 @@ class WebsocketServer:
         async with self._send_lock:
             if self.websocket.client_state == WebSocketState.CONNECTED:
                 await self.websocket.send_text(data)
+
+    async def _send_msgspec_json(self, data: object) -> None:
+        """Encode any msgspec-compatible object to JSON and send as text.
+
+        Works with msgspec.Struct instances, dicts, lists, and basic types.
+        Faster than send_json (which uses stdlib json.dumps internally).
+        """
+        async with self._send_lock:
+            if self.websocket.client_state == WebSocketState.CONNECTED:
+                await self.websocket.send_text(_ws_json_encoder.encode(data).decode("utf-8"))
 
     async def run(self):
         logger.info("Starting websocket runner...")
@@ -164,7 +185,7 @@ class WebsocketServer:
     def check_frame_acknowledgment_status(self) -> bool:
         if self.last_sent_frame_number == -1:
             return True
-        return self.last_received_frontend_confirmation >= self.last_sent_frame_number
+        return bool(self.last_received_frontend_confirmation >= self.last_sent_frame_number)
 
     async def _frontend_image_relay(self):
         """
@@ -189,7 +210,7 @@ class WebsocketServer:
                                               multiframe_timestamp,
                                               payload_bytes) in new_frontend_payloads.items():
                             await self._send_bytes(payload_bytes)
-                            self.last_sent_frame_number = frame_number
+                            self.last_sent_frame_number = int(frame_number)
 
                             # Server framerate: computed from frame_number + capture timestamp.
                             # frame_number increments by 1 per actual camera capture,
@@ -227,13 +248,12 @@ class WebsocketServer:
                         server_framerate = server_calc.current_framerate
                         display_tracker = self._display_framerate_trackers[camera_group_id]
                         if server_framerate and display_tracker.has_data:
-                            framerate_message = {
-                                "message_type": "framerate_update",
-                                "camera_group_id": camera_group_id,
-                                "backend_framerate": server_framerate.model_dump(),
-                                "frontend_framerate": display_tracker.current_framerate.model_dump()
-                            }
-                            await self._send_json(framerate_message)
+                            framerate_message = FramerateUpdateMessage(
+                                camera_group_id=camera_group_id,
+                                backend_framerate=server_framerate,
+                                frontend_framerate=display_tracker.current_framerate,
+                            )
+                            await self._send_msgspec_json(framerate_message)
                             # Reset both trackers so the next report reflects only
                             # the interval since this report.
                             server_calc.clear()
@@ -266,7 +286,7 @@ class WebsocketServer:
                     if log_record.levelno < ws_log_level:
                         continue
                     log_data = log_record.model_dump()
-                    await self._send_json(log_data)
+                    await self._send_msgspec_json(log_data)
                 else:
                     await await_10ms()
         except asyncio.CancelledError:
@@ -296,10 +316,10 @@ class WebsocketServer:
                 state_dict = self._cgm.to_state_dict()
                 if previous_state is None or state_dict != previous_state:
                     state_message = {
-                        "message_type": "app_state",
+                        "message_type": WebsocketMessageType.APP_STATE,
                         "state": state_dict
                     }
-                    await self._send_json(state_message)
+                    await self._send_msgspec_json(state_message)
                 await asyncio.sleep(1.0)
                 previous_state = state_dict
         except asyncio.CancelledError:

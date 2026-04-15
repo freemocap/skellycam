@@ -52,6 +52,20 @@ SkellyCam's architecture classifies operations into three categories that drive 
 
 This classification also drives development governance: contributions touching hot/hard loops receive much higher scrutiny than those only touching soft loops. See the [Architecture](/docs/technical/architecture#hot-hard-and-soft-loops) page for the full technical treatment.
 
+## Type Safety
+
+SkellyCam treats type annotations as contracts, not comments. If a function says it takes a `CameraConfig`, passing a `dict` should fail immediately — not silently propagate until something breaks three process boundaries away.
+
+[beartype](https://beartype.readthedocs.io/) enforces type hints at runtime across the entire package with near-zero overhead. Every annotated function and method is automatically checked at the call site. This is especially important in a multi-process architecture where bugs that cross shared memory boundaries are difficult to trace.
+
+The codebase uses three type systems, each chosen for its layer:
+
+- **[Pydantic](https://docs.pydantic.dev/)** — For API-facing models that receive untrusted input from the frontend (HTTP request/response bodies, camera configuration). These benefit from Pydantic's validation, coercion, and JSON schema generation.
+- **[dataclasses](https://docs.python.org/3/library/dataclasses.html)** — For internal containers that hold multiprocessing primitives, numpy arrays, or shared memory objects. These are never serialized to JSON and don't need validation overhead.
+- **[msgspec](https://jcristharif.com/msgspec/)** — For types that are serialized at high frequency over the WebSocket (framerate updates, application state). msgspec provides fast JSON encoding with struct-based type definitions.
+
+This layered approach means each type pays only for what it needs: API models get full validation, internal machinery gets zero overhead, and high-frequency serialization gets maximum throughput.
+
 ## Open Source, Open Science
 
 SkellyCam is free and open-source software, developed in the open as part of the FreeMoCap Foundation's mission to make research-grade motion capture accessible to everyone. Contributions, questions, and feedback are always welcome.

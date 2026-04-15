@@ -55,7 +55,7 @@ def opencv_get_frame(cap: cv2.VideoCapture,
     frame_rec_array.frame_metadata.timestamps.post_frame_grab_ns[0] = time.perf_counter_ns()
 
     if not grab_success:
-        logger.error(f"Failed to grab frame from camera{frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
+        logger.error(f"Failed to grab frame from camera{frame_rec_array.frame_metadata.camera_info.camera_id[0]}")
         return False, frame_rec_array
 
     # Decode the raw frame data (typically MJPEG) into a BGR pixel array.
@@ -74,10 +74,10 @@ def opencv_get_frame(cap: cv2.VideoCapture,
 
     if not retrieve_success:
         logger.error(
-            f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_config.camera_id[0]}")
+            f"Failed to retrieve frame from camera {frame_rec_array.frame_metadata.camera_info.camera_id[0]}")
         return False, frame_rec_array
     frame_rec_array.frame_metadata.frame_number[0] += 1
-    frame_stamp = f"camera.id{frame_rec_array.frame_metadata.camera_config.camera_id[0]}.idx{frame_rec_array.frame_metadata.camera_config.camera_index[0]}.fr{frame_rec_array.frame_metadata.frame_number[0]}"
+    frame_stamp = f"camera.id{frame_rec_array.frame_metadata.camera_info.camera_id[0]}.idx{frame_rec_array.frame_metadata.camera_info.camera_index[0]}.fr{frame_rec_array.frame_metadata.frame_number[0]}"
     draw_doubled_text(image=frame_rec_array.image[0],
                       text=frame_stamp,
                       x=10,

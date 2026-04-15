@@ -71,6 +71,8 @@ dependencies = [
     "cv2-enumerate-cameras>=1.2.2",
     "skellylogs",
     "skellypings",
+    "beartype>=0.19",
+    "msgspec>=0.19",
 ]
 [tool.uv.sources]
 skellylogs = { git = "https://github.com/freemocap/skellylogs" }

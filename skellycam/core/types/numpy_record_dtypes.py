@@ -1,27 +1,18 @@
 import logging
 
-import cv2
 import numpy as np
 from numpy import typing as npt
 
 logger = logging.getLogger(__name__)
 
-CAMERA_CONFIG_DTYPE = np.dtype([
+# Slim per-frame camera identification — only fields accessed in the hot loop.
+# The full CameraConfig lives in the CameraGroup's config dict.
+FRAME_CAMERA_INFO_DTYPE = np.dtype([
     ('camera_id', 'U128'),
     ('camera_index', '<i4'),
-    ('camera_name', 'U128'),
-    ('use_this_camera', '?'),
-    ('resolution_height', '<i4'),
-    ('resolution_width', '<i4'),
-    ('color_channels', '<i4'),
-    ('pixel_format', 'S8'),
-    ('exposure_mode', 'S32'),
-    ('exposure', '<i4'),
-    ('framerate', '<f4'),
     ('rotation', '<i4'),
-    ('capture_fourcc', 'S4'),
-    ('writer_fourcc', 'S4'),
-], align=True)  # Total: ~269 bytes
+    ('color_channels', '<i4'),
+], align=True)
 
 TIMEBASE_MAPPING_DTYPE = np.dtype([
     ('utc_time_ns', np.int64),
@@ -229,7 +220,7 @@ STATS_DTYPE = np.dtype([
 ])
 
 FRAME_METADATA_DTYPE = np.dtype([
-    ('camera_config', CAMERA_CONFIG_DTYPE),
+    ('camera_info', FRAME_CAMERA_INFO_DTYPE),
     ('frame_number', np.int64),
     ('timebase_mapping', TIMEBASE_MAPPING_DTYPE),
     ('timestamps', FRAME_LIFECYCLE_TIMESTAMPS_DTYPE)
@@ -240,46 +231,19 @@ FRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera confi
 MULTIFRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera configs
 
 
-def create_frame_dtype(config: 'CameraConfig') -> FRAME_DTYPE:
-    """
-    Create a numpy dtype for the frame metadata based on the camera configuration.
-    """
-    return np.dtype([
-        ('frame_metadata', FRAME_METADATA_DTYPE),
-        ('image', np.uint8, (config.resolution.height, config.resolution.width, config.color_channels)),
-    ], align=True)
-
-
-def create_multiframe_dtype(camera_configs: dict[str, 'CameraConfig']) -> MULTIFRAME_DTYPE:
-    """
-    Create a numpy dtype for multiple frames based on a dictionary of camera configurations.
-    Each camera gets its own field in the dtype.
-
-    Args:
-        camera_configs: Dictionary mapping camera IDs to their configurations
-
-    Returns:
-        A numpy dtype that can store frames from multiple cameras
-    """
-    fields = []
-    for camera_id, config in camera_configs.items():
-        # Create a field for each camera using its ID as the field name
-        # Each field contains a frame with the camera-specific dtype
-        fields.append((camera_id, create_frame_dtype(config)))
-    return np.dtype(fields, align=True)
 
 
 
 
 
-FrameMetadataArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype
-AllTimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, shape (num_cameras, num_frames)
+FrameMetadataArray = np.recarray  # Arrays with frame metadata record dtype
+AllTimestampsArray = np.recarray  # Arrays with timestamp record dtype, shape (num_cameras, num_frames)
 
-AllDurationsArray = npt.NDArray[np.recarray]  # Arrays with durations record dtype, shape (num_cameras, num_frames)
+AllDurationsArray = np.recarray  # Arrays with durations record dtype, shape (num_cameras, num_frames)
 AllFrameGrabTimestampsArray = npt.NDArray[np.int64]     # Arrays with int64 dtype, shape (num_cameras, num_frames), midpoints between pre_frame_grab_ns and post_frame_grab_ns
-TimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, (for a single camera/frame)
-DurationArray = npt.NDArray[np.recarray]   # Arrays with duration record dtype
-StatsArray = npt.NDArray[np.recarray]      # Arrays with statistics record dtype
+TimestampsArray = np.recarray  # Arrays with timestamp record dtype, (for a single camera/frame)
+DurationArray = np.recarray   # Arrays with duration record dtype
+StatsArray = np.recarray      # Arrays with statistics record dtype
 FloatArray = npt.NDArray[np.float64]       # Arrays of float64 values
 IntArray = npt.NDArray[np.int64]           # Arrays of int64 values
 BoolArray = npt.NDArray[np.bool_]          # Arrays of boolean values

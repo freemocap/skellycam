@@ -134,14 +134,14 @@ The main process runs the FastAPI/Uvicorn server and manages:
 
 - **WorkerRegistry** — Tracks all spawned worker processes and provides a heartbeat mechanism for health monitoring.
 - **CameraGroupManager** — Singleton that creates/destroys camera groups and routes API calls to the correct group.
-- **WebSocket Server** — Reads synchronized multi-frame data from shared memory, JPEG-compresses each camera's image, and sends binary payloads to connected clients. Also sends JSON messages for logs, state updates, and framerate statistics.
+- **WebSocket Server** — Reads synchronized multi-frame data from shared memory, JPEG-compresses each camera's image, and sends binary payloads to connected clients. JSON messages (logs, state updates, framerate statistics) are encoded with [msgspec](https://jcristharif.com/msgspec/) for fast serialization.
 
 ### Camera Worker Processes
 
 Each camera gets its own `CameraWorker` running in a separate `multiprocessing.Process`:
 
 1. **OpenCV Capture Loop** — Calls `cv2.VideoCapture.grab()` and `.retrieve()` in a coordinated two-phase protocol, with synchronization gating between cameras.
-2. **Frame Metadata** — Each frame is annotated with high-resolution `perf_counter_ns` timestamps at multiple lifecycle stages (pre-grab, post-grab, pre-retrieve, post-retrieve, pre/post shared memory copy, pre/post record).
+2. **Frame Metadata** — Each frame is annotated with slim camera identification (camera ID, index, rotation, color channels) and high-resolution `perf_counter_ns` timestamps at multiple lifecycle stages (pre-grab, post-grab, pre-retrieve, post-retrieve, pre/post shared memory copy, pre/post record). The full camera configuration lives in the `CameraGroup`'s config dictionary — only the fields needed per-frame are embedded in the metadata to minimize shared memory footprint.
 3. **Shared Memory Write** — The raw frame data is written to a shared memory ring buffer, making it available to the main process without copying.
 4. **Video Recording** — When recording is active, frames are written to `cv2.VideoWriter` directly in the camera process, gated by the orchestrator's recording frame boundaries.
 
@@ -181,6 +181,8 @@ When recording is active:
 
 Frame data is transferred between processes using `multiprocessing.shared_memory.SharedMemory`. Ring buffers allow the producer (camera worker) and consumer (main process) to operate independently. Critically, the ring buffer supports **overwrite semantics**: if the consumer (streaming to the frontend) falls behind, old frames are silently overwritten rather than blocking the producer (camera capture). This is what protects the hot loop from soft loop latency.
 
+The shared memory infrastructure (`SharedMemoryElement`, `SharedMemoryRingBuffer`, and their DTOs) is implemented using Python dataclasses for minimal construction overhead — these objects hold numpy recarrays and multiprocessing primitives, so Pydantic validation would add cost with no benefit. Cross-process reconstruction is handled via lightweight DTO dataclasses that carry shared memory names and dtype information.
+
 <details>
 <summary>What is shared memory?</summary>
 
@@ -193,11 +195,27 @@ Learn more: [Shared memory (Wikipedia)](https://en.wikipedia.org/wiki/Shared_mem
 
 [//]: # (Similarly, we should move the pubsub to its own section and add more detail. We should specifically note that we lifted the structure straight from ROS2 &#40;and link to their concept docs, make sure its the latest docs&#41;. We should also note that we might move this pubsub system to its own utility repo someday &#40;skellypubsub or something&#41;)
 
-A lightweight publish/subscribe system built on `multiprocessing.Queue` is used for non-frame data like framerate updates, recording info, and camera setting changes.
+A lightweight publish/subscribe system built on `multiprocessing.Queue` is used for non-frame data like framerate updates, recording info, and camera setting changes. Topic messages and topic managers are implemented as dataclasses for the same reasons as the shared memory layer — they carry multiprocessing primitives and are never serialized to JSON.
 
 ### Global Kill Flag
 
 A `multiprocessing.Value("b", False)` shared across all processes. When set to `True`, all camera workers and the server begin graceful shutdown.
+
+### Runtime Type Safety
+
+[beartype](https://beartype.readthedocs.io/) provides O(1) runtime type checking across the entire `skellycam` package. Every annotated function and method is automatically wrapped at import time — when a type violation occurs, beartype raises an exception immediately at the call site rather than allowing silent corruption to propagate.
+
+This is especially valuable in a multi-process architecture where bugs can be difficult to trace across process boundaries. Type annotations in SkellyCam are contracts, not just documentation.
+
+<details>
+<summary>What is runtime type checking?</summary>
+
+Python's type hints (like `def foo(x: int) -> str`) are normally ignored at runtime — they're just documentation for tools like mypy. Runtime type checkers like beartype actually enforce these hints while the code runs: if you call `foo("not_an_int")`, beartype raises an error immediately instead of letting the wrong type propagate through your program until something eventually breaks in a confusing way.
+
+beartype achieves this with near-zero overhead by generating optimized checking code at decoration time and by spot-checking container contents (e.g., randomly sampling elements of a large list) rather than exhaustively validating every element.
+
+Learn more: [beartype documentation](https://beartype.readthedocs.io/)
+</details>
 
 ## Frontend Architecture
 

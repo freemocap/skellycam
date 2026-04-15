@@ -1,6 +1,7 @@
 """Tests for framerate tracking, timebase mapping, and timestamp utilities."""
 import time
 
+import msgspec
 import numpy as np
 import pytest
 
@@ -56,7 +57,7 @@ class TestCurrentFramerate:
     def test_to_dict(self) -> None:
         durations = np.array([33.0, 34.0])
         fr = CurrentFramerate.from_durations_ms(durations_ms=durations, framerate_source="dict")
-        d = fr.to_dict()
+        d = msgspec.structs.asdict(fr)
         assert isinstance(d, dict)
         assert "mean_frames_per_second" in d
         assert d["framerate_source"] == "dict"

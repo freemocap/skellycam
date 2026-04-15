@@ -19,7 +19,7 @@ from skellycam.core.types.numpy_record_dtypes import (
     create_frame_dtype,
     create_multiframe_dtype,
     FRAME_METADATA_DTYPE,
-    CAMERA_CONFIG_DTYPE,
+    FRAME_CAMERA_INFO_DTYPE,
 )
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
@@ -44,7 +44,7 @@ class TestFrontendPayloadProtocol:
             )
             frame_dtype = create_frame_dtype(config)
             frame = np.recarray(1, dtype=frame_dtype)
-            frame.frame_metadata.camera_config[0] = config.to_numpy_record_array()
+            frame.frame_metadata.camera_info[0] = config.to_frame_camera_info()
             frame.frame_metadata.frame_number[0] = frame_number
             frame.frame_metadata.timestamps.pre_frame_grab_ns[0] = 1_000_000_000
             frame.frame_metadata.timestamps.post_frame_grab_ns[0] = 1_001_000_000
@@ -126,7 +126,7 @@ class TestNumpyDtypes:
         assert "cam1" in dtype.names
 
     def test_frame_metadata_dtype_has_expected_fields(self) -> None:
-        assert "camera_config" in FRAME_METADATA_DTYPE.names
+        assert "camera_info" in FRAME_METADATA_DTYPE.names
         assert "frame_number" in FRAME_METADATA_DTYPE.names
         assert "timebase_mapping" in FRAME_METADATA_DTYPE.names
         assert "timestamps" in FRAME_METADATA_DTYPE.names

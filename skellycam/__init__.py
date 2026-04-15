@@ -13,6 +13,9 @@ __pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
 __package_root__ = str(__import__("pathlib").Path(__file__).parent)
 
+from beartype.claw import beartype_this_package
+beartype_this_package()
+
 import multiprocessing
 
 

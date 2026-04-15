@@ -1,17 +1,14 @@
+from dataclasses import dataclass
 from multiprocessing import shared_memory
 from typing import Any
 
 import numpy as np
-from numpydantic import NDArray, Shape
-from pydantic import BaseModel, ConfigDict
-
+from numpy import typing as npt
 from skellycam.core.types.type_overloads import SharedMemoryName
 
 
-class SharedMemoryElementDTO(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+@dataclass
+class SharedMemoryElementDTO:
     shm_name: str
     shm_valid_name: str
     first_written_shm_name: str
@@ -19,20 +16,18 @@ class SharedMemoryElementDTO(BaseModel):
     buffer_shape: tuple[int, ...]
 
 
-class SharedMemoryElement(BaseModel):
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+@dataclass
+class SharedMemoryElement:
     buffer: np.recarray
     buffer_shape: tuple[int, ...]
     dtype: np.dtype
     shm: shared_memory.SharedMemory
 
     valid_flag_shm: shared_memory.SharedMemory
-    valid_flag_buffer: NDArray[Shape["1"], np.bool_]
+    valid_flag_buffer: npt.NDArray[np.bool_]
 
     first_data_written_shm: shared_memory.SharedMemory
-    first_data_written_buffer: NDArray[Shape["1"], np.bool_]
+    first_data_written_buffer: npt.NDArray[np.bool_]
     read_only: bool
     original: bool = False
 
@@ -138,7 +133,7 @@ class SharedMemoryElement(BaseModel):
         np.copyto(dst=self.buffer, src=data)
         self.first_data_written = True
 
-    def retrieve_data(self, rec_array: np.recarray | None = None) -> np.recarray | None:
+    def retrieve_data(self, rec_array: np.recarray | None = None) -> np.recarray | np.record | None:
         if not self.valid:
             raise ValueError("Cannot retrieve data from an invalid SharedMemoryElement.")
         if not self.first_data_written:

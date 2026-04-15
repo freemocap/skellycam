@@ -117,7 +117,7 @@ To parse a binary payload:
 
 ### Implementation References
 
-- **Python (server):** `skellycam/core/types/frontend_payload_bytearray.py` — `create_frontend_payload()` builds the binary payload using numpy structured arrays.
+- **Python (server):** `skellycam/core/types/frontend_payload_bytearray.py` — `create_frontend_payload()` builds the binary payload using numpy structured arrays. `skellycam/api/websocket/websocket_message_types.py` — `WebsocketMessageType` enum defining all JSON message type strings.
 - **TypeScript (client):** `skellycam-ui/src/services/server/server-helpers/frame-processor/binary-protocol.ts` — struct definitions and field offsets. `binary-frame-parser.ts` — `parseMultiFramePayload()` parses the binary data and creates `ImageBitmap` objects.
 
 ### Image Processing Notes
@@ -125,6 +125,8 @@ To parse a binary payload:
 The server resizes each camera frame before JPEG encoding. If the client has sent `displayImageSizes` in a frame acknowledgment, the server resizes to match the client's display dimensions. Otherwise, images are scaled to 50% of their native resolution. JPEG encoding uses quality level 80 by default.
 
 ## JSON Messages (Server -> Client)
+
+All JSON messages are encoded server-side using [msgspec](https://jcristharif.com/msgspec/) for fast serialization. The `message_type` field in each message corresponds to a value in the `WebsocketMessageType` enum (`skellycam/api/websocket/websocket_message_types.py`), which serves as the single source of truth for all message type strings. The wire format is standard JSON text — the encoding library is an internal optimization that does not affect the protocol.
 
 ### Log Records
 

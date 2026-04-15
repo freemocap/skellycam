@@ -1,7 +1,9 @@
 import logging
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass, field
 
+import numpy as np
 from fastapi import FastAPI
 
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CameraGroupManager:
-    global_kill_flag: multiprocessing.Value
+    global_kill_flag: Synchronized
     worker_registry: WorkerRegistry
     closing: bool = False
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
@@ -116,11 +118,11 @@ class CameraGroupManager:
         self,
         if_newer_than: int,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]]:
+    ) -> dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]]:
         if self.closing:
             return {}
         fe_payloads: dict[
-            CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytes]
+            CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]
         ] = {}
         for camera_group in self.camera_groups.values():
             fe_return = camera_group.get_latest_frontend_payload(

@@ -188,10 +188,10 @@ class VideoRecorder:
             raise RuntimeError("VideoWriter not open (before adding frame)!")
 
         self._validate_frame_number(frame)
-        if frame.frame_metadata.camera_config.rotation != -1:
+        if frame.frame_metadata.camera_info.rotation != -1:
             image = cv2.rotate(
                 frame.image[0],
-                frame.frame_metadata.camera_config.rotation[0],
+                frame.frame_metadata.camera_info.rotation[0],
             )
         else:
             image = frame.image[0]

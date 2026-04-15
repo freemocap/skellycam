@@ -109,39 +109,32 @@ class TestCameraConfigOrientation:
 # Numpy Record Array Roundtrip — Edge Cases
 # ---------------------------------------------------------------------------
 
-class TestNumpyRoundtripEdgeCases:
-    def test_roundtrip_with_rotation(self) -> None:
+class TestFrameCameraInfo:
+    def test_camera_info_with_rotation(self) -> None:
         config = CameraConfig(
             camera_id="rotated",
             camera_index=2,
             rotation=RotationTypes.COUNTERCLOCKWISE_90,
         )
-        arr = config.to_numpy_record_array()
-        restored = CameraConfig.from_numpy_record_array(arr)
-        assert restored.rotation == RotationTypes.COUNTERCLOCKWISE_90
-        assert restored.camera_id == "rotated"
+        info = config.to_frame_camera_info()
+        assert str(info.camera_id[0]) == "rotated"
+        assert int(info.camera_index[0]) == 2
+        assert int(info.rotation[0]) == RotationTypes.COUNTERCLOCKWISE_90.value
 
-    def test_roundtrip_with_custom_resolution(self) -> None:
+    def test_camera_info_with_mono(self) -> None:
         config = CameraConfig(
-            camera_id="hires",
+            camera_id="mono",
             camera_index=0,
-            resolution=ImageResolution(height=1080, width=1920),
+            color_channels=1,
         )
-        arr = config.to_numpy_record_array()
-        restored = CameraConfig.from_numpy_record_array(arr)
-        assert restored.resolution.width == 1920
-        assert restored.resolution.height == 1080
+        info = config.to_frame_camera_info()
+        assert int(info.color_channels[0]) == 1
 
-    def test_wrong_dtype_raises(self) -> None:
-        bad_arr = np.recarray((1,), dtype=np.dtype([("garbage", np.int32)]))
-        with pytest.raises(ValueError, match="mismatch"):
-            CameraConfig.from_numpy_record_array(bad_arr)
-
-    def test_roundtrip_preserves_framerate(self) -> None:
-        config = CameraConfig(camera_id="fps_test", camera_index=0, framerate=29.97)
-        arr = config.to_numpy_record_array()
-        restored = CameraConfig.from_numpy_record_array(arr)
-        assert abs(restored.framerate - 29.97) < 0.01
+    def test_camera_info_preserves_defaults(self) -> None:
+        config = CameraConfig()
+        info = config.to_frame_camera_info()
+        assert int(info.color_channels[0]) == config.color_channels
+        assert int(info.rotation[0]) == config.rotation.value
 
 
 # ---------------------------------------------------------------------------
