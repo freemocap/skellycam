@@ -1,5 +1,6 @@
 """Tests for ManagedWorker and WorkerRegistry process/thread lifecycle management."""
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 import time
 
 import pytest
@@ -29,7 +30,7 @@ def _worker_that_raises(**kwargs: object) -> None:
 
 
 def _worker_that_respects_kill_flag(
-    global_kill_flag: multiprocessing.Value,
+    global_kill_flag: Synchronized,
     **kwargs: object,
 ) -> None:
     """A worker that checks the kill flag in a loop."""

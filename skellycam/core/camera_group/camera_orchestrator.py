@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass
 from copy import deepcopy
 
@@ -13,8 +14,8 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CameraOrchestrator:
     camera_statuses: dict[CameraIdString, CameraStatus]
-    first_recording_frame_number: multiprocessing.Value
-    last_recording_frame_number: multiprocessing.Value
+    first_recording_frame_number: Synchronized
+    last_recording_frame_number: Synchronized
 
     @property
     def camera_ids(self) -> list[CameraIdString]:

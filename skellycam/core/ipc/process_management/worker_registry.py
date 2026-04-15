@@ -1,6 +1,8 @@
 import atexit
 import logging
 import multiprocessing
+import multiprocessing.queues
+from multiprocessing.sharedctypes import Synchronized
 import os
 import signal
 import threading
@@ -29,7 +31,7 @@ class WorkerRegistry:
     def __init__(
         self,
         *,
-        global_kill_flag: multiprocessing.Value,
+        global_kill_flag: Synchronized,
         worker_mode: WorkerMode,
     ) -> None:
         self._global_kill_flag = global_kill_flag
@@ -47,7 +49,7 @@ class WorkerRegistry:
         return self._worker_mode
 
     @property
-    def heartbeat_timestamp(self) -> multiprocessing.Value:
+    def heartbeat_timestamp(self) -> Synchronized:
         """The shared heartbeat value. Pass to CameraGroupIPC so children can monitor parent liveness."""
         return self._heartbeat_timestamp
 
@@ -117,7 +119,7 @@ class WorkerRegistry:
         *,
         target: Callable[..., None],
         name: str,
-        log_queue: Optional[multiprocessing.Queue] = None,
+        log_queue: multiprocessing.queues.Queue | None = None,
         daemon: bool = True,
         kwargs: dict | None = None,
     ) -> ManagedWorker:

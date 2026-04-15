@@ -3,7 +3,7 @@ from multiprocessing import shared_memory
 from typing import Any
 
 import numpy as np
-from numpydantic import NDArray, Shape
+
 
 from skellycam.core.types.type_overloads import SharedMemoryName
 
@@ -25,10 +25,10 @@ class SharedMemoryElement:
     shm: shared_memory.SharedMemory
 
     valid_flag_shm: shared_memory.SharedMemory
-    valid_flag_buffer: NDArray[Shape["1"], np.bool_]
+    valid_flag_buffer: np.ndarray
 
     first_data_written_shm: shared_memory.SharedMemory
-    first_data_written_buffer: NDArray[Shape["1"], np.bool_]
+    first_data_written_buffer: np.ndarray
     read_only: bool
     original: bool = False
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     # Create test data
     test_data = np.rec.array((2, 3, 4), dtype=test_dtype)
 
-    print(f"Original data:\n{test_data}")
+    print(f"Original data:{test_data}")
 
     # Put data into shared memory
     original.put_data(test_data)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
 
     # Get data from the copy
     retrieved_data = copy.retrieve_data()
-    print(f"Retrieved data:\n{retrieved_data}")
+    print(f"Retrieved data:{retrieved_data}")
 
     # Verify data is the same
     is_equal = np.array_equal(test_data, retrieved_data)

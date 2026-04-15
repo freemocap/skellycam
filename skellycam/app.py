@@ -3,6 +3,7 @@ Consolidated FastAPI app factory with proper lifecycle management.
 """
 import logging
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
@@ -49,7 +50,9 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.success(
         f"SkellyCam API v{skellycam.__version__} started successfully 💀📸✨\n"
-        f"Swagger API docs: {APP_URL}/docs"
+        f"--------------------------------------------------------------------------------------\n"
+        f"||\t\tServer API Swagger docs: {APP_URL}/docs\t\t||\n"
+        f"\n--------------------------------------------------------------------------------------\n"
     )
 
     yield
@@ -67,7 +70,7 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_fastapi_app(
         *,
-        global_kill_flag: multiprocessing.Value,
+        global_kill_flag: Synchronized,
         worker_registry: WorkerRegistry,
 ) -> FastAPI:
     """

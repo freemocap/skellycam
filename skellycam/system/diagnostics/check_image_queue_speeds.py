@@ -1,4 +1,5 @@
 import multiprocessing
+import multiprocessing.queues
 import time
 from typing import Tuple
 
@@ -11,7 +12,7 @@ def create_fake_image() -> np.ndarray:
     return np.random.randint(0, 256, (1080, 1920, 3), dtype=np.uint8)
 
 
-def sender(queue: multiprocessing.Queue,
+def sender(queue: multiprocessing.queues.Queue,
            pipe: multiprocessing.Pipe,
            bytes_pipe: multiprocessing.Pipe,
            iterations: int) -> None:
@@ -44,7 +45,7 @@ def sender(queue: multiprocessing.Queue,
     print(f"Average time to send_bytes 1080p image down a pipe: {sum(durations) / len(durations) / 1e6} ms")
 
 
-def receiver(queue: multiprocessing.Queue,
+def receiver(queue: multiprocessing.queues.Queue,
              pipe: multiprocessing.Pipe,
              bytes_pipe: multiprocessing.Pipe,
              iterations: int) -> None:
@@ -57,7 +58,7 @@ def receiver(queue: multiprocessing.Queue,
             tok = time.perf_counter_ns()
             durations.append(tok - tik)
         time.sleep(0.01)
-    print(f"Average time to recv 1080p image from a queue: {sum(durations) / len(durations) / 1e6} ms\n\n")
+    print(f"Average time to recv 1080p image from a queue: {sum(durations) / len(durations) / 1e6} ms")
 
     durations = []
     should_continue = True
@@ -69,7 +70,7 @@ def receiver(queue: multiprocessing.Queue,
             durations.append(tok - tik)
         time.sleep(0.01)
 
-    print(f"Average time to recv 1080p image from a pipe: {sum(durations) / len(durations) / 1e6} ms\n\n")
+    print(f"Average time to recv 1080p image from a pipe: {sum(durations) / len(durations) / 1e6} ms")
 
     durations = []
     should_continue = True

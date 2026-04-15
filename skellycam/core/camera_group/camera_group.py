@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass
 
 import numpy as np
@@ -71,8 +72,8 @@ class CameraGroup:
         cls,
         *,
         camera_configs: CameraConfigs,
-        heartbeat_timestamp: multiprocessing.Value,
-        global_kill_flag: multiprocessing.Value,
+        heartbeat_timestamp: Synchronized,
+        global_kill_flag: Synchronized,
         worker_registry: WorkerRegistry,
     ) -> "CameraGroup":
         try:

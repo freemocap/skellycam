@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass, field
 
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
@@ -18,16 +19,16 @@ class CameraGroupIPC:
     pubsub: PubSubTopicManager
     extracted_config_subscription: TopicSubscriptionQueue
     recording_finished_subscription: TopicSubscriptionQueue
-    global_kill_flag: multiprocessing.Value
-    heartbeat_timestamp: multiprocessing.Value
+    global_kill_flag: Synchronized
+    heartbeat_timestamp: Synchronized
     timebase_mapping: TimebaseMapping = field(default_factory=TimebaseMapping)
-    should_pause: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
-    shutdown_camera_group_flag: multiprocessing.Value = field(default_factory=lambda: multiprocessing.Value("b", False))
+    should_pause: Synchronized = field(default_factory=lambda: Synchronized("b", False))
+    shutdown_camera_group_flag: Synchronized = field(default_factory=lambda: Synchronized("b", False))
 
     @classmethod
     def create(cls,
-               global_kill_flag: multiprocessing.Value,
-               heartbeat_timestamp: multiprocessing.Value,
+               global_kill_flag: Synchronized,
+               heartbeat_timestamp: Synchronized,
                group_id: CameraGroupIdString | None = None) -> 'CameraGroupIPC':
         if group_id is None:
             group_id = create_camera_group_id()

@@ -6,23 +6,6 @@ from numpy import typing as npt
 
 logger = logging.getLogger(__name__)
 
-CAMERA_CONFIG_DTYPE = np.dtype([
-    ('camera_id', 'U128'),
-    ('camera_index', '<i4'),
-    ('camera_name', 'U128'),
-    ('use_this_camera', '?'),
-    ('resolution_height', '<i4'),
-    ('resolution_width', '<i4'),
-    ('color_channels', '<i4'),
-    ('pixel_format', 'S8'),
-    ('exposure_mode', 'S32'),
-    ('exposure', '<i4'),
-    ('framerate', '<f4'),
-    ('rotation', '<i4'),
-    ('capture_fourcc', 'S4'),
-    ('writer_fourcc', 'S4'),
-], align=True)  # Total: ~269 bytes — only used for CSV export, NOT embedded per-frame
-
 # Slim per-frame camera identification — only fields accessed in the hot loop.
 # The full CameraConfig lives in the CameraGroup's config dict.
 FRAME_CAMERA_INFO_DTYPE = np.dtype([

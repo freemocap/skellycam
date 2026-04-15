@@ -22,6 +22,8 @@ import abc
 import atexit
 import logging
 import multiprocessing
+import multiprocessing.queues
+from multiprocessing.sharedctypes import Synchronized
 import os
 import signal
 import threading
@@ -49,7 +51,7 @@ class ManagedWorker(abc.ABC):
         self,
         *,
         name: str,
-        global_kill_flag: multiprocessing.Value,
+        global_kill_flag: Synchronized,
     ) -> None:
         self._name = name
         self._global_kill_flag = global_kill_flag
@@ -156,8 +158,8 @@ def _process_entry_point(
     *,
     target_fn: Callable[..., None],
     name: str,
-    global_kill_flag: multiprocessing.Value,
-    log_queue: Optional[multiprocessing.Queue],
+    global_kill_flag: Synchronized,
+    log_queue: multiprocessing.queues.Queue | None,
     worker_kwargs: dict,
 ) -> None:
     """
@@ -227,8 +229,8 @@ class ManagedProcess(ManagedWorker):
         *,
         target: Callable[..., None],
         name: str,
-        global_kill_flag: multiprocessing.Value,
-        log_queue: Optional[multiprocessing.Queue],
+        global_kill_flag: Synchronized,
+        log_queue: multiprocessing.queues.Queue | None,
         daemon: bool = True,
         kwargs: dict | None = None,
     ) -> None:
@@ -291,8 +293,8 @@ class ManagedThread(ManagedWorker):
         *,
         target: Callable[..., None],
         name: str,
-        global_kill_flag: multiprocessing.Value,
-        log_queue: Optional[multiprocessing.Queue],
+        global_kill_flag: Synchronized,
+        log_queue: multiprocessing.queues.Queue | None,
         daemon: bool = True,
         kwargs: dict | None = None,
     ) -> None:

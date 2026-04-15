@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass, field
 
 from fastapi import FastAPI
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CameraGroupManager:
-    global_kill_flag: multiprocessing.Value
+    global_kill_flag: Synchronized
     worker_registry: WorkerRegistry
     closing: bool = False
     camera_groups: dict[CameraGroupIdString, CameraGroup] = field(default_factory=dict)
