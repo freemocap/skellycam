@@ -45,7 +45,7 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
         if len(frame_number) != 1:
             raise ValueError(f"Inconsistent frame numbers found across cameras: {frame_number}. "
                              f"Expected all cameras to have the same frame numbers.")
-        frame_numbers.append(frame_number.pop())
+        frame_numbers.append(int(frame_number.pop()))
 
     # Verify camera_id in frame metadata matches the expected camera_id
     for camera_id, metadata in frame_metadatas_by_camera.items():
@@ -79,9 +79,9 @@ async def process_and_save_recording_timestamps(
 
     # Find the earliest timestamp as recording start time
     first_timestamps = {camera_id: md[0].timestamps[0] for camera_id, md in frame_metadatas_by_camera.items()}
-    recording_start_time_ns = min(
+    recording_start_time_ns: int = int(min(
         np.min(ts.pre_frame_grab_ns) for ts in first_timestamps.values()
-    )
+    ))
     tik_cams = time.perf_counter()
     # Process timestamps
     (all_timestamps,

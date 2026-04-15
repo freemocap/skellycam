@@ -236,14 +236,14 @@ MULTIFRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera 
 
 
 
-FrameMetadataArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype
-AllTimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, shape (num_cameras, num_frames)
+FrameMetadataArray = np.recarray  # Arrays with frame metadata record dtype
+AllTimestampsArray = np.recarray  # Arrays with timestamp record dtype, shape (num_cameras, num_frames)
 
-AllDurationsArray = npt.NDArray[np.recarray]  # Arrays with durations record dtype, shape (num_cameras, num_frames)
+AllDurationsArray = np.recarray  # Arrays with durations record dtype, shape (num_cameras, num_frames)
 AllFrameGrabTimestampsArray = npt.NDArray[np.int64]     # Arrays with int64 dtype, shape (num_cameras, num_frames), midpoints between pre_frame_grab_ns and post_frame_grab_ns
-TimestampsArray = npt.NDArray[np.recarray]  # Arrays with timestamp record dtype, (for a single camera/frame)
-DurationArray = npt.NDArray[np.recarray]   # Arrays with duration record dtype
-StatsArray = npt.NDArray[np.recarray]      # Arrays with statistics record dtype
+TimestampsArray = np.recarray  # Arrays with timestamp record dtype, (for a single camera/frame)
+DurationArray = np.recarray   # Arrays with duration record dtype
+StatsArray = np.recarray      # Arrays with statistics record dtype
 FloatArray = npt.NDArray[np.float64]       # Arrays of float64 values
 IntArray = npt.NDArray[np.int64]           # Arrays of int64 values
 BoolArray = npt.NDArray[np.bool_]          # Arrays of boolean values

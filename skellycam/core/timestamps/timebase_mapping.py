@@ -23,15 +23,15 @@ class TimebaseMapping:
     perf_counter_ns: int = field(default_factory=time.perf_counter_ns)
     local_time_utc_offset: int = field(default_factory=get_utc_offset)
 
-    def convert_perf_counter_ns_to_unix_ns(self, perf_counter_ns: int|float, local_time: bool) -> int:
+    def convert_perf_counter_ns_to_unix_ns(self, perf_counter_ns: int | np.integer, local_time: bool) -> int:
         """
         Convert a `time.perf_counter_ns()` timestamp to a unix timestamp
         """
         if local_time:
             return int(self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns) + (self.local_time_utc_offset * 1e9))
-        return self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns)
+        return int(self.utc_time_ns + (perf_counter_ns - self.perf_counter_ns))
 
-    def convert_perf_counter_ns_to_local_iso8601(self, perf_counter_ns: int|float) -> str:
+    def convert_perf_counter_ns_to_local_iso8601(self, perf_counter_ns: int | np.integer) -> str:
         """
         Convert a `time.perf_counter_ns()` timestamp to a local ISO 8601 formatted string
         with nanosecond precision.
@@ -61,13 +61,16 @@ class TimebaseMapping:
         return result
 
     @classmethod
-    def from_numpy_record_array(cls, rec_array: np.recarray):
+    def from_numpy_record_array(cls, rec_array: np.recarray | np.record) -> "TimebaseMapping":
+        # np.record is produced when indexing a single row out of a recarray (e.g. arr[0]);
+        # both np.recarray and np.record support dict-style field access, so we use that
+        # uniformly here instead of attribute access to avoid shape-dependent differences.
         if rec_array.dtype != TIMEBASE_MAPPING_DTYPE:
             raise ValueError(f"Expected rec_array to have dtype {TIMEBASE_MAPPING_DTYPE}, but got {rec_array.dtype}")
         return cls(
-            utc_time_ns=int(rec_array.utc_time_ns.copy()),
-            perf_counter_ns=int(rec_array.perf_counter_ns.copy()),
-            local_time_utc_offset=int(rec_array.local_time_utc_offset.copy())
+            utc_time_ns=int(rec_array["utc_time_ns"]),
+            perf_counter_ns=int(rec_array["perf_counter_ns"]),
+            local_time_utc_offset=int(rec_array["local_time_utc_offset"]),
         )
 
     def __eq__(self, other):

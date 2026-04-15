@@ -1,24 +1,23 @@
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 
-from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
-from skellycam.core.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
-    process_and_save_recording_timestamps
+from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.recorders.video_audio_remuxer import (
     remux_video_with_audio_and_timestamps,
     load_frame_timestamps_from_csv,
     load_audio_start_time,
 )
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
+from skellycam.core.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
+    process_and_save_recording_timestamps
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.types.type_overloads import CameraIdString
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from skellycam.core.timestamps import RecordingTimestampsStats
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder
 
