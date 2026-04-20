@@ -48,7 +48,7 @@ def get_video_file_type(fourcc_code: int) -> str:
 
     Examples
     --------
-    >>> get_video_file_type(cv2.VideoWriter_fourcc(*'mp4v'))
+    >>> get_video_file_type(cv2.VideoWriter.fourcc(*'mp4v'))
     '.mp4'
     """
     fourcc_to_extension = {
@@ -208,7 +208,7 @@ class CameraConfig(BaseModel):
 
     @property
     def video_file_extension(self) -> str:
-        return get_video_file_type(cv2.VideoWriter_fourcc(*self.writer_fourcc))
+        return get_video_file_type(cv2.VideoWriter.fourcc(*self.writer_fourcc))
 
     def to_settable_parameters(self) -> SettableCameraParameters:
         """

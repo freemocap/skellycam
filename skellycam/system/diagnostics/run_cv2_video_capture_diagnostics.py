@@ -24,7 +24,7 @@ def check_resolution(video_capture: cv2.VideoCapture, width: int, height: int) -
 
 
 def check_fourcc(video_capture: cv2.VideoCapture, fourcc: str) -> bool:
-    return cv2.VideoWriter_fourcc(*fourcc) == int(video_capture.get(cv2.CAP_PROP_FOURCC))
+    return cv2.VideoWriter.fourcc(*fourcc) == int(video_capture.get(cv2.CAP_PROP_FOURCC))
 
 
 def measure_latency(video_capture: cv2.VideoCapture, max_frame_count: int = 30) -> Dict[str, float]:
@@ -72,7 +72,7 @@ def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: Lis
                     video_capture = cv2.VideoCapture(0, backend.value)
                     outcome = "init-outcome"
                     try:
-                        fourcc = cv2.VideoWriter_fourcc(*code)
+                        fourcc = cv2.VideoWriter.fourcc(*code)
                         video_capture.set(cv2.CAP_PROP_FOURCC, fourcc)
 
                         video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, size[0])

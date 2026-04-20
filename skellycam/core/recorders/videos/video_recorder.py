@@ -64,7 +64,7 @@ def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
     try:
         writer = cv2.VideoWriter(
             tmp_path,
-            cv2.VideoWriter_fourcc(*fourcc_str),
+            cv2.VideoWriter.fourcc(*fourcc_str),
             30.0,
             frame_size,
         )
@@ -215,7 +215,7 @@ class VideoRecorder:
     def _initialize_video_writer(self) -> None:
         self.video_writer = cv2.VideoWriter(
             self.video_file_path,
-            cv2.VideoWriter_fourcc(*self.writer_fourcc),
+            cv2.VideoWriter.fourcc(*self.writer_fourcc),
             self.framerate,
             self.video_image_shape,
         )
