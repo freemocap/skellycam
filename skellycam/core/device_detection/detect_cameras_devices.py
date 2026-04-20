@@ -1,5 +1,5 @@
 import logging
-from platform import platform
+import platform
 
 import cv2
 from cv2.videoio_registry import getBackendName
@@ -86,7 +86,7 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
         device = CameraDeviceInfo.from_camera_info(camera_info)
         if filter_virtual and 'virtual' in camera_info.name.lower():
             continue
-        if 'darwin' not in platform().lower():
+        if 'darwin' not in platform.system().lower():
             # On Windows/Linux, VID/PID is reliably provided - skip cameras without it.
             # On macOS (AVFoundation), VID/PID are often unavailable even for real USB cameras.
             if camera_info.vid is None or camera_info.pid is None:
@@ -96,7 +96,7 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
     return cameras
 
 if __name__ == "__main__":
-    print(f"Platform: {platform()}")
+    print(f"Platform: {platform.system()}")
     print(f"OpenCV Version: {cv2.__version__}")
     print(f"Supported Backends: {[getBackendName(b) for b in supported_backends]}")
     _cameras = detect_available_cameras()
