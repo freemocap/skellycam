@@ -57,9 +57,13 @@ def determine_opencv_camera_backend() -> OpenCVBackend:
         backend = OpenCVBackend.from_backend_id(cv2.CAP_V4L2)
     else:
         # macOS / other — use the first available backend, or CAP_ANY as fallback.
-        backend = OpenCVBackend.from_backend_id(
-            supported_backends[0] if len(supported_backends) > 0 else cv2.CAP_ANY
-        )
+        # TODO: Check that this works on intel macs as well
+        if cv2.CAP_AVFOUNDATION in supported_backends:
+            logger.debug("AVFoundation backend is supported. Using AVFoundation for camera capture on macOS.")
+            backend = OpenCVBackend.from_backend_id(cv2.CAP_AVFOUNDATION)
+        else:
+            logger.warning("AVFoundation backend is not supported. Defaulting to CAP_ANY on macOS, which may result in suboptimal performance.")
+            backend = OpenCVBackend.from_backend_id(cv2.CAP_ANY)
     logger.debug(f"Determined OpenCV backend: {backend.name} (ID: {backend.id})")
     return backend
 

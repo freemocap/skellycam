@@ -236,3 +236,4 @@ pyapp-v*
 .claude/*
 !.claude/skills/
 !.claude/settings.json
+CLAUDE.md
