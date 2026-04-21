@@ -21,10 +21,7 @@ from skellycam.core.types.type_overloads import (
     MultiframeTimestampFloat,
     TopicSubscriptionQueue,
 )
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 
 logger = logging.getLogger(__name__)
 
