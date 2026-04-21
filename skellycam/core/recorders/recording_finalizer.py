@@ -15,8 +15,10 @@ from skellycam.core.recorders.video_audio_remuxer import (
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
     process_and_save_recording_timestamps
-from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.types.type_overloads import CameraIdString
+
+if TYPE_CHECKING:
+    from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder

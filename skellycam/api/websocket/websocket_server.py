@@ -18,7 +18,9 @@ from skellycam.core.recorders.framerate_tracker import FramerateTracker, Current
 from skellycam.utilities.wait_functions import await_10ms
 from typing import TYPE_CHECKING
 
-from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
+
+if TYPE_CHECKING:
+    from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 
 logger = logging.getLogger(__name__)
 

@@ -19,7 +19,9 @@ from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
 from typing import TYPE_CHECKING
 
-from skellycam.core.recorders.videos.video_recorder import VideoRecorder
+
+if TYPE_CHECKING:
+    from skellycam.core.recorders.videos.video_recorder import VideoRecorder
 
 logger = logging.getLogger(__name__) 
 

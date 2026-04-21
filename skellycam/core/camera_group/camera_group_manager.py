@@ -14,7 +14,6 @@ from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
 from skellycam.core.recorders.framerate_tracker import CurrentFramerate
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
-from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 from skellycam.core.types.type_overloads import (
     CameraGroupIdString,
     CameraIdString,
@@ -22,6 +21,10 @@ from skellycam.core.types.type_overloads import (
     MultiframeTimestampFloat,
     TopicSubscriptionQueue,
 )
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
 
 logger = logging.getLogger(__name__)
 
