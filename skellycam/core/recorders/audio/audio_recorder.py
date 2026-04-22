@@ -53,6 +53,12 @@ class AudioRecorder:
 
     def start(self) -> None:
         """Start recording audio in a callback-driven InputStream."""
+        device_info = sd.query_devices(self.mic_device_index)
+        max_channels = int(device_info["max_input_channels"])
+        if max_channels < 1:
+            raise RuntimeError(f"Device {self.mic_device_index} ({device_info['name']!r}) has no input channels")
+        self.channels = min(self.channels, max_channels)
+
         logger.info(f"Starting audio recording: device={self.mic_device_index}, "
                     f"rate={self.sample_rate}, channels={self.channels}")
 
@@ -95,7 +101,7 @@ class AudioRecorder:
         self,
         indata: np.ndarray,
         frames: int,
-        time_info: dict,
+        time_info: object,  # CFFI CData from PortAudio — no public Python type
         status: sd.CallbackFlags,
     ) -> None:
         """Called by PortAudio's audio thread for each buffer of samples."""
