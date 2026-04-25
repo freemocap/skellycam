@@ -29,6 +29,7 @@ export default function VersionSelector({
           <option key={r.tag_name} value={r.tag_name}>
             {r.tag_name}
             {r === releases[0] ? ' (latest)' : ''}
+            {r.prerelease ? ' · pre-release' : ''}
           </option>
         ))}
       </select>

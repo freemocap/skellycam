@@ -34,6 +34,7 @@ export interface GitHubRelease {
   name: string;
   published_at: string;
   assets: GitHubAsset[];
+  prerelease: boolean;
 }
 
 export const DEFAULT_VERSION = '2.0.0-alpha.3';

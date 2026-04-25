@@ -519,10 +519,10 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           else
-            echo "Creating new draft release for $TAG"
+            echo "Creating new pre-release for $TAG"
             gh release create "$TAG" release-assets/* \
               --repo "$GITHUB_REPOSITORY" \
-              --draft \
+              --prerelease \
               --generate-notes \
               --title "$TAG"
           fi
