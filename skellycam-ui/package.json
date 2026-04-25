@@ -1,6 +1,6 @@
 {
   "name": "skellycam",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "main": "dist-electron/main/index.js",
   "description": "SkellyCam - the camera backend for the FreeMoCap software.",
   "author": "Skelly FreeMocap <info@freemocap.org>",
