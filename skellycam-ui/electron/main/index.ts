@@ -1,5 +1,5 @@
 // electron/main/index.ts
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, systemPreferences } from 'electron';
 import { setupIPC } from './ipc';
 import { WindowManager } from './services/window-manager';
 import { PythonServer } from './services/python-server';
@@ -39,6 +39,14 @@ if (!gotTheLock) {
     app.whenReady().then(async () => {
         LifecycleLogger.logProcessInfo();
         console.log('App is ready');
+
+        // Request camera and microphone permissions on macOS up front.
+        // AVFoundation triggers the camera dialog itself, but CoreAudio silently
+        // returns zeros for mic without an explicit request — so we ask for both here.
+        if (process.platform === 'darwin') {
+            await systemPreferences.askForMediaAccess('camera');
+            await systemPreferences.askForMediaAccess('microphone');
+        }
 
         // Setup IPC
         setupIPC();
