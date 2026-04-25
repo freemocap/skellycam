@@ -37,7 +37,7 @@ export interface GitHubRelease {
   prerelease: boolean;
 }
 
-export const DEFAULT_VERSION = '2.0.0-alpha.3';
+export const DEFAULT_VERSION = '2.0.0-alpha.4';
 export const REPO = 'freemocap/skellycam';
 
 export function getReleaseBaseUrl(version: string): string {
