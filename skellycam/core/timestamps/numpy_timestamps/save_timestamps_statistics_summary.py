@@ -19,7 +19,7 @@ def save_timestamp_statistics_summary(
     stats_json_path = recording_info.timestamp_stats_json_file_path
 
     with open(stats_json_path, 'w', encoding='utf-8') as f:
-        f.write(stats.to_json())
+        f.write(stats.to_json(indent=4))
     # logger.debug(f"Saved timestamp statistics to {stats_json_path}")
 
     stats_text_path = recording_info.timestamp_stats_text_file_path

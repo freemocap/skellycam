@@ -11,26 +11,22 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig, FOURCC_TO_EXTENSION
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
 
 logger = logging.getLogger(__name__)
 
 # Codecs to try (in order) when the requested codec is unavailable.
-# X264/H264 produce compact H.264 mp4 files but require libx264, which is
-# typically bundled on Windows but NOT on Linux pip-installed OpenCV.
-# XVID produces AVI files and is widely available across platforms.
-# MJPG is universally supported as a last resort.
-_FALLBACK_CODECS = ["X264", "H264", "XVID", "MJPG"]
-
-_FOURCC_TO_EXTENSION: dict[str, str] = {
-    "X264": "mp4",
-    "H264": "mp4",
-    "XVID": "avi",
-    "MJPG": "avi",
-    "MP4V": "mp4",
-}
+# Ordered to prefer MP4 containers across platforms before falling back to AVI:
+#   X264/H264 — compact H.264 mp4. Bundled on Windows OpenCV; usually NOT on
+#               pip-installed OpenCV for Linux/macOS (no libx264).
+#   avc1      — H.264 via Apple VideoToolbox. Mac-native MP4 path.
+#   mp4v      — MPEG-4 Part 2 in mp4. Less efficient than H.264 but very
+#               widely available, including on macOS and Linux.
+#   XVID      — AVI container. Widely available cross-platform.
+#   MJPG      — Universally supported AVI fallback of last resort (large files).
+_FALLBACK_CODECS = ["X264", "H264", "avc1", "mp4v", "XVID", "MJPG"]
 
 _CODEC_PROBE_TIMEOUT_SECONDS = 5
 
@@ -47,7 +43,7 @@ def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
     _CODEC_PROBE_TIMEOUT_SECONDS to avoid hanging on broken codec backends.
     """
     logger.debug(f"Probing video codec '{fourcc_str}' with frame size {frame_size}...")
-    ext = _FOURCC_TO_EXTENSION.get(fourcc_str, "avi")
+    ext = FOURCC_TO_EXTENSION.get(fourcc_str, "avi")
     fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}", prefix="_skellycam_codec_probe_")
     os.close(fd)
     test_frame = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
@@ -64,7 +60,7 @@ def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
     try:
         writer = cv2.VideoWriter(
             tmp_path,
-            cv2.VideoWriter_fourcc(*fourcc_str),
+            cv2.VideoWriter.fourcc(*fourcc_str),
             30.0,
             frame_size,
         )
@@ -160,7 +156,7 @@ class VideoRecorder:
         )
 
         # Build the video file path using the working codec's extension
-        ext = _FOURCC_TO_EXTENSION.get(working_fourcc, "avi")
+        ext = FOURCC_TO_EXTENSION.get(working_fourcc, "avi")
         video_file_path = str(
             Path(recording_info.videos_folder)
             / f"{recording_info.recording_name}.camera.id{config.camera_id}.idx{config.camera_index}.{ext}"
@@ -215,7 +211,7 @@ class VideoRecorder:
     def _initialize_video_writer(self) -> None:
         self.video_writer = cv2.VideoWriter(
             self.video_file_path,
-            cv2.VideoWriter_fourcc(*self.writer_fourcc),
+            cv2.VideoWriter.fourcc(*self.writer_fourcc),
             self.framerate,
             self.video_image_shape,
         )

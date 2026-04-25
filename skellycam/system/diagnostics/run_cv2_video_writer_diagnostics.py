@@ -39,7 +39,7 @@ def measure_write_time(image_size: Tuple[int, int],
         filename = f'temp_video-{fourcc}-random.{file_extension}'
     else:
         filename = f'temp_video-{fourcc}-fixed.{file_extension}'
-    video_writer = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*fourcc), 30, (width, height))
+    video_writer = cv2.VideoWriter(filename, cv2.VideoWriter.fourcc(*fourcc), 30, (width, height))
 
     frame = (255 * np.random.rand(height, width, 3)).astype('uint8')
     times = []

@@ -81,7 +81,7 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
 
         if should_apply_capture_fourcc:
             cv2_vid_capture.set(
-                cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc)
+                cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc)
             )
 
         extracted_config = extract_config_from_cv2_capture(cv2_capture=cv2_vid_capture,

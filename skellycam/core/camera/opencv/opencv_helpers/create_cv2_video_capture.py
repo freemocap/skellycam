@@ -51,7 +51,7 @@ def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tupl
         # (e.g. 15fps instead of 30fps) or a format the camera cannot deliver, causing
         # select() timeouts or degraded performance.
         if config.capture_fourcc:
-            capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*config.capture_fourcc))
+            capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc))
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
         if config.framerate > 0:

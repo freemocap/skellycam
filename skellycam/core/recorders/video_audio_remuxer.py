@@ -4,7 +4,6 @@ import shutil
 from fractions import Fraction
 from pathlib import Path
 
-import av
 import numpy as np
 import pandas as pd
 
@@ -53,6 +52,7 @@ def _do_remux(
     audio_start_perf_ns: int | None,
     metadata_json: dict,
 ) -> None:
+    import av  # lazy import: keeps av out of the main process until remuxing actually runs (potentially causing problems with opencv on macos)
     video_in = av.open(video_path)
     audio_in = None
     output = av.open(output_path, mode="w")

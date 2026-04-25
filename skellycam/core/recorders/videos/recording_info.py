@@ -87,9 +87,13 @@ class RecordingInfo(BaseModel):
             f.write(json.dumps(recording_info_dict, indent=4))
 
     def video_file_path_from_camera_config(self, config) -> str:
-        return str(
-            Path(
-                self.videos_folder) / f"{self.recording_name}.camera.id{config.camera_id}.idx{config.camera_index}.{config.video_file_extension}")
+
+        prefix = f"{self.recording_name}.camera.id{config.camera_id}.idx{config.camera_index}"
+        videos_dir = Path(self.videos_folder)
+        existing = sorted(videos_dir.glob(f"{prefix}.*"))
+        if existing:
+            return str(existing[0])
+        return str(videos_dir / f"{prefix}.{config.video_file_extension}")
 
     def camera_timestamps_file_path_from_camera_id(self, camera_id: str) -> str:
         return str(Path(self.camera_timestamps_folder) / f"{self.recording_name}.camera{camera_id}.timestamps.csv")
