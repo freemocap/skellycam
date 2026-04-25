@@ -96,25 +96,26 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 
 # ---- Version Bumping (bumpver) ----
-# Uses semver with optional pre-release tags: vMAJOR.MINOR.PATCH[-TAG.TAGNUM]
+# Run with: uv run bumpver update <flag>
 #
-# Usage:
-#   bumpver update --tag-num          # v2.0.0-alpha.1 -> v2.0.0-alpha.1 (next alpha)
-#   bumpver update --tag=beta         # v2.0.0-alpha.X -> v2.0.0-beta.0  (promote to beta)
-#   bumpver update --tag=rc           # v2.0.0-beta.X  -> v2.0.0-rc.0    (release candidate)
-#   bumpver update --tag=final        # v2.0.0-rc.X    -> v2.0.0          (stable release)
-#   bumpver update --minor            # v2.0.0         -> v2.1.0          (next minor)
-#   bumpver update --major            # v2.0.0         -> v3.0.0          (next major)
-#   bumpver update --dry              # dry run, shows what would change
+# The canonical version is `current_version` below (e.g. v2.0.0-alpha.1).
+# bumpver writes it to three files in the format each ecosystem requires:
+#   - pyproject.toml `version`        PEP 440,  e.g. 2.0.0a1        (required by pip/uv)
+#   - skellycam/__init__.py           display,  e.g. v2.0.0-alpha.1
+#   - skellycam-ui/package.json       npm semver, e.g. 2.0.0-alpha.1 (required by Electron)
 #
-# This updates:
-#   - pyproject.toml `version` field (PEP 440 format, e.g. 2.0.0a0)
-#   - skellycam/__init__.py `__version__` (display format, e.g. v2.0.0-alpha.1)
-# Note: skellycam-ui/package.json and other JS files must be updated manually.
+# Common commands (--ignore-vcs-tag bypasses old CalVer git tags from before the v2 rewrite):
+#   bumpver update --tag=alpha --tag-num --ignore-vcs-tag   # v2.0.0-alpha.1 -> v2.0.0-alpha.2
+#   bumpver update --tag=beta            --ignore-vcs-tag   # v2.0.0-alpha.X -> v2.0.0-beta.0
+#   bumpver update --tag=rc              --ignore-vcs-tag   # v2.0.0-beta.X  -> v2.0.0-rc.0
+#   bumpver update --tag=final           --ignore-vcs-tag   # v2.0.0-rc.X    -> v2.0.0
+#   bumpver update --minor --tag=alpha   --ignore-vcs-tag   # v2.0.0         -> v2.1.0-alpha.0
+#   bumpver update --major --tag=alpha   --ignore-vcs-tag   # v2.0.0         -> v3.0.0-alpha.0
+#   add --dry to any command to preview changes without writing them
 
 [tool.bumpver]
 current_version = "v2.0.0-alpha.1"
-version_pattern = "vMAJOR.MINOR.PATCH[-TAG.TAGNUM]"
+version_pattern = "vMAJOR.MINOR.PATCH[-TAG.NUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
 tag = true
@@ -123,6 +124,7 @@ push = true
 [tool.bumpver.file_patterns]
 "pyproject.toml" = ['version = "{pep440_version}"']
 "skellycam/__init__.py" = ['__version__ = "{version}"']
+"skellycam-ui/package.json" = ['"version": "MAJOR.MINOR.PATCH[-TAG.NUM]"']
 
 
 # =============================================================================
