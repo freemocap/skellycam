@@ -403,6 +403,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
@@ -478,20 +481,17 @@ jobs:
             fi
           fi
 
-          # macOS: latest-mac.yml (combine x64 and arm64 entries)
-          # electron-updater picks the right arch from a single latest-mac.yml
-          MAC_YML=""
-          for dir in artifacts/update-metadata-macos-*; do
-            found=$(find "$dir" -name 'latest-mac.yml' 2>/dev/null | head -1)
-            if [ -n "$found" ] && [ -z "$MAC_YML" ]; then
-              MAC_YML="$found"
-            fi
-          done
-          if [ -n "$MAC_YML" ]; then
-            # Patch filenames to match renamed assets
-            sed -i "s|skellycam_.*_installer\.zip|skellycam_${VERSION}_macos-x64-intel.zip|g" "$MAC_YML"
-            cp "$MAC_YML" "release-assets/latest-mac.yml"
-            echo "Copied latest-mac.yml for macOS"
+          # macOS: merge x64 and arm64 latest-mac.yml into one combined file so
+          # electron-updater can find the right binary per architecture.
+          X64_YML=$(find artifacts/update-metadata-macos-x64-intel          -name 'latest-mac.yml' 2>/dev/null | head -1)
+          ARM64_YML=$(find artifacts/update-metadata-macos-arm64-apple-silicon -name 'latest-mac.yml' 2>/dev/null | head -1)
+
+          if [ -n "$X64_YML" ] && [ -n "$ARM64_YML" ]; then
+            python3 .github/scripts/merge-mac-yml.py \
+              "$VERSION" "$X64_YML" "$ARM64_YML" "release-assets/latest-mac.yml"
+          else
+            echo "::error::Missing macOS yml(s) — x64: ${X64_YML:-MISSING}, arm64: ${ARM64_YML:-MISSING}"
+            exit 1
           fi
 
           # Linux: latest-linux.yml

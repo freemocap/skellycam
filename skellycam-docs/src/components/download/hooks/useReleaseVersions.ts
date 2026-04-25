@@ -55,7 +55,7 @@ export function useReleaseVersions(): UseReleaseVersionsResult {
 
     let cancelled = false;
 
-    fetch(`https://api.github.com/repos/${REPO}/releases`, {
+    fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, {
       headers: { Accept: 'application/vnd.github.v3+json' },
     })
       .then(res => {
