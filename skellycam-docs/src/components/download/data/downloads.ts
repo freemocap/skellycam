@@ -125,18 +125,6 @@ export function stripVersionPrefix(tag: string): string {
 
 export const OS_NOTES: OsNoteEntry[] = [
   {
-    os: 'macos',
-    variant: 'warning',
-    title: 'Help needed to get `skellycam-v2.*` macOS installers working',
-    content:
-      'The Windows build of SkellyCan v2.* is working fairly well, but there are KNOWN BREAKING PROBLEMS with the \'nix (Mac/Linux) builds.' +
-      'Specifically, there are issues related to the camera connection, config, and control, as well as audio/video saving methods. Backends and codecs and all that. '+
-      'If you have macOS experience and want to help us fix this, we\'d love your help!',
-    issues: [
-      { url: 'https://github.com/freemocap/skellycam/issues/105', label: 'Mac/Linux device management problems' },
-    ],
-  },
-  {
     os: 'linux',
     variant: 'warning',
     title: 'Help needed to get `skellycam-v2.*` Linux installers working',
