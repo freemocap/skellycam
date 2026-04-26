@@ -51,7 +51,9 @@ export const CameraConfigTreeView: React.FC = () => {
     const isPaused = useAppSelector(selectIsPaused);
 
     // Group cameras by status
-    const availableCameras = cameras.filter((cam: Camera) => cam.connectionStatus !== "connected");
+    const availableCameras = cameras
+        .filter((cam: Camera) => cam.connectionStatus !== "connected")
+        .sort((a, b) => a.index - b.index);
     const isConnectedToCameras = connectedCameras.length > 0;
     const hasSelectedCameras = selectedCameras.length > 0;
 

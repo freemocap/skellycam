@@ -22,7 +22,9 @@ export const selectSelectedCameras = createSelector(
 
 export const selectConnectedCameras = createSelector(
     [selectCameras],
-    (cameras) => cameras.filter(cam => cam.connectionStatus === 'connected')
+    (cameras) => cameras
+        .filter(cam => cam.connectionStatus === 'connected')
+        .sort((a, b) => a.index - b.index)
 );
 
 // Get desired configs for selected cameras (for API calls)

@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import platform
 
@@ -5,12 +6,12 @@ import cv2
 from cv2.videoio_registry import getBackendName
 from cv2_enumerate_cameras import supported_backends, enumerate_cameras
 from cv2_enumerate_cameras.camera_info import CameraInfo
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from tabulate import tabulate
 
 from skellycam.core.camera.determine_backend import determine_opencv_camera_backend, OpenCVBackend
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
-    CameraProductIdInt, CameraDevicePathString, CameraBackendNameString
+    CameraProductIdInt, CameraDevicePathString, CameraBackendNameString, CameraIdString
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,18 @@ class CameraDeviceInfo(BaseModel):
     path: CameraDevicePathString | None = None
     backend_id: CameraBackendInt | None = None
     backend_name: CameraBackendNameString | None = None
+
+    @computed_field
+    @property
+    def camera_id(self) -> CameraIdString:
+        if self.path:
+            raw = self.path
+        elif self.vendor_id is not None and self.product_id is not None:
+            raw = f"{self.vendor_id:04x}_{self.product_id:04x}_{self.index}"
+        else:
+            return format(self.index, '04x')
+        digest = hashlib.sha256(raw.encode()).digest()
+        return format(int.from_bytes(digest[:2], 'big'), '04x')
 
     @classmethod
     def from_camera_info(cls, camera_info: CameraInfo) -> 'CameraDeviceInfo':

@@ -129,6 +129,13 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
             .join("|");
     }, [connectedCameras]);
 
+    // IDs ordered by hardware index (from the Redux-sorted selector), restricted to
+    // cameras that are actively streaming (connectedCameraIds from the websocket).
+    const sortedConnectedCameraIds = useMemo(() => {
+        const activeSet = new Set(connectedCameraIds);
+        return connectedCameras.filter(c => activeSet.has(c.id)).map(c => c.id);
+    }, [connectedCameraIds, connectedCameras]);
+
     // Compute tiling: manual column count overrides auto-optimal.
     // Stabilized with a ref to prevent flip-flop.
     const prevTilingRef = useRef<Tiling>({ cols: 1, rows: 1 });
@@ -145,13 +152,13 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
     }, [connectedCameraIds.length, containerWidth, containerHeight, manualColumns]);
 
     const [layout, setLayout] = useState<LayoutItem[]>(() =>
-        buildLayout(connectedCameraIds, tiling),
+        buildLayout(sortedConnectedCameraIds, tiling),
     );
 
     // Re-tile when cameras, tiling, config, or reset changes
     useEffect(() => {
-        setLayout(buildLayout(connectedCameraIds, tiling));
-    }, [connectedCameraIds, tiling, resetKey, configFingerprint]);
+        setLayout(buildLayout(sortedConnectedCameraIds, tiling));
+    }, [sortedConnectedCameraIds, tiling, resetKey, configFingerprint]);
 
     // Snapshot layout before drag for swap detection
     const layoutBeforeDragRef = useRef<LayoutItem[]>(layout);
@@ -289,7 +296,7 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
                 onDragStop={handleDragStop}
                 onResizeStop={handleResizeStop}
             >
-                {connectedCameraIds.map((cameraId) => (
+                {sortedConnectedCameraIds.map((cameraId) => (
                     <Box
                         key={cameraId}
                         sx={{

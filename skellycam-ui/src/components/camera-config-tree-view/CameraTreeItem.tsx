@@ -135,7 +135,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({camera, isExpande
                         >
                             <span style={{fontSize: '0.75rem'}}>
 
-                            Camera {camera.index}
+                            Camera #{camera.index}
                             </span>
                             <br/>
                             <span style={{fontSize: '0.6rem'}}>

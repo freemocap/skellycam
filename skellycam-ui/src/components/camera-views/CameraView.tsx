@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useMemo, memo } from 'react';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { frontendColor, backendColor } from '@/components/framerate-viewer/FrameRateViewer';
+import { useAppSelector } from '@/store/hooks';
+import { selectCameraById } from '@/store/slices/cameras/cameras-selectors';
 
 interface CameraViewProps {
     cameraId: string;
@@ -22,6 +24,7 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId, scale, ma
     const displayFpsRef = useRef<HTMLSpanElement>(null);
     const serverFpsRef = useRef<HTMLSpanElement>(null);
     const { setCanvasForCamera, getFps, getServerFps } = useServer();
+    const cameraIndex = useAppSelector(state => selectCameraById(state, cameraId))?.index;
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -94,7 +97,7 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId, scale, ma
                     lineHeight: 1.4,
                 }}
             >
-                <div>{cameraId}</div>
+                <div>#{cameraIndex ?? '?'} · {cameraId}</div>
                 <div style={{ fontSize: '10px', marginTop: '2px', display: 'flex', gap: '6px' }}>
                     <span style={{ color: frontendColor }}>
                         D:<span ref={displayFpsRef}>--</span>
