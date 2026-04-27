@@ -10,7 +10,8 @@ from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.types.numpy_record_dtypes import FRAME_CAMERA_INFO_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
-from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
+from skellycam.core.camera.opencv.opencv_helpers.recommend_camera_exposure_setting import ExposureModes
+from skellycam.core.recorders.videos.fourcc_codec_helpers import FOURCC_TO_EXTENSION
 
 DEFAULT_IMAGE_HEIGHT: int = 720
 DEFAULT_IMAGE_WIDTH: int = 1280
@@ -33,37 +34,6 @@ class OrientationTypes(enum.Enum):
     SQUARE = enum.auto()
 
 
-# Canonical fourcc → container-extension map. Single source of truth used by
-# both the recorder (when writing) and RecordingInfo (when resolving paths).
-#
-# A "fourcc" is a 4-character codec identifier OpenCV passes to its underlying
-# video backend (FFmpeg on Linux/Mac, Media Foundation on Windows). The same
-# codec sometimes has multiple fourccs depending on which backend implements
-# it, which is why several entries below map to the same container.
-FOURCC_TO_EXTENSION: dict[str, str] = {
-    # --- MP4 (H.264) — best compression, best compatibility ---
-    'X264': 'mp4',  # H.264 via libx264 (FFmpeg). Bundled with OpenCV on Windows;
-                    # typically NOT in pip-installed OpenCV on Linux/macOS.
-    'H264': 'mp4',  # Generic H.264 fourcc. Backend picks an implementation
-                    # (libx264, OS-native, hardware). Works where X264 does, and
-                    # sometimes elsewhere when the backend has a non-libx264 H.264.
-    'avc1': 'mp4',  # H.264 via Apple VideoToolbox — Mac-native MP4 path,
-                    # hardware-accelerated, no libx264 needed.
-
-    # --- MP4 (MPEG-4 Part 2) — older codec, very widely available ---
-    'mp4v': 'mp4',  # MPEG-4 Part 2 (ISO/IEC 14496-2). Predecessor to H.264;
-                    # less efficient but ships with virtually every FFmpeg
-                    # build, so it's a reliable MP4 fallback when H.264 isn't.
-    'MP4V': 'mp4',  # Same codec as 'mp4v'; uppercase variant some backends emit.
-
-    # --- AVI (older Microsoft container) — fallback when MP4 is unavailable ---
-    'XVID': 'avi',  # XviD / MPEG-4 ASP in AVI. Open-source, cross-platform,
-                    # and one of the most reliable AVI codecs.
-    'DIVX': 'avi',  # DivX MPEG-4. Closely related to XviD; legacy support.
-    'MJPG': 'avi',  # Motion JPEG — every frame is a standalone JPEG. Universally
-                    # supported (last-resort fallback) but produces very large
-                    # files since there is no inter-frame compression.
-}
 
 
 def get_video_file_type(fourcc_code: int) -> str:

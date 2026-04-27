@@ -4,9 +4,10 @@ from pathlib import Path
 
 DEFAULT_SKELLYCAM_BASE_FOLDER_NAME = "skellycam_data"
 SYNCHRONIZED_VIDEOS_FOLDER_NAME = "synchronized_videos"
+TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps"
+CAMERA_TIMESTAMPS_FOLDER_NAME = "synchronized_videos/timestamps/camera_timestamps"
 LOGS_INFO_AND_SETTINGS_FOLDER_NAME = "logs_info_and_settings"
 LOG_FILE_FOLDER_NAME = "logs"
-TIMESTAMPS_FOLDER_NAME = "timestamps"
 
 # Emoji strings
 RED_X_EMOJI_STRING = "\U0000274C"

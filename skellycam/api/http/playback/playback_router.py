@@ -22,6 +22,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from skellycam.core.recorders.videos.parse_video_filename import ParsedVideoFilename
 from skellycam.system.default_paths import get_default_skellycam_recordings_path
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,9 @@ class VideoInfo(BaseModel):
     filename: str
     size_bytes: int
     stream_url: str
+    camera_id: Optional[str] = None
+    camera_index: Optional[int] = None
+    recording_name: Optional[str] = None
 
 
 class RecordingListEntry(BaseModel):
@@ -332,15 +336,23 @@ def list_videos(
         raise HTTPException(status_code=404, detail=f"No video files found in {video_folder}")
 
     logger.info(f"Discovered {len(videos)} videos in recording '{recording_id}'")
-    return [
-        VideoInfo(
+    result = []
+    for vid_id, path in videos.items():
+        try:
+            parsed = ParsedVideoFilename.from_path(path)
+            cam_id, cam_index, rec_name = parsed.camera_id, parsed.camera_index, parsed.recording_name
+        except ValueError:
+            cam_id, cam_index, rec_name = None, None, None
+        result.append(VideoInfo(
             video_id=vid_id,
             filename=path.name,
             size_bytes=path.stat().st_size,
             stream_url=f"/skellycam/playback/{recording_id}/videos/{vid_id}",
-        )
-        for vid_id, path in videos.items()
-    ]
+            camera_id=cam_id,
+            camera_index=cam_index,
+            recording_name=rec_name,
+        ))
+    return result
 
 
 @playback_router.get(

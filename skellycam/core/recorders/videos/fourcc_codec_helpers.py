@@ -1,0 +1,140 @@
+import logging
+import os
+import signal
+import sys
+import tempfile
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+logger = logging.getLogger(__name__)
+# Codecs to try (in order) when the requested codec is unavailable.
+# Ordered to prefer MP4 containers across platforms before falling back to AVI:
+#   X264/H264 — compact H.264 mp4. Bundled on Windows OpenCV; usually NOT on
+#               pip-installed OpenCV for Linux/macOS (no libx264).
+#   avc1      — H.264 via Apple VideoToolbox. Mac-native MP4 path.
+#   mp4v      — MPEG-4 Part 2 in mp4. Less efficient than H.264 but very
+#               widely available, including on macOS and Linux.
+#   XVID      — AVI container. Widely available cross-platform.
+#   MJPG      — Universally supported AVI fallback of last resort (large files).
+_FALLBACK_CODECS = ["X264", "H264", "avc1", "mp4v", "XVID", "MJPG"]
+
+_CODEC_PROBE_TIMEOUT_SECONDS = 5
+
+# Canonical fourcc → container-extension map. Single source of truth used by
+# both the recorder (when writing) and RecordingInfo (when resolving paths).
+#
+# A "fourcc" is a 4-character codec identifier OpenCV passes to its underlying
+# video backend (FFmpeg on Linux/Mac, Media Foundation on Windows). The same
+# codec sometimes has multiple fourccs depending on which backend implements
+# it, which is why several entries below map to the same container.
+FOURCC_TO_EXTENSION: dict[str, str] = {
+    # --- MP4 (H.264) — best compression, best compatibility ---
+    'X264': 'mp4',  # H.264 via libx264 (FFmpeg). Bundled with OpenCV on Windows;
+                    # typically NOT in pip-installed OpenCV on Linux/macOS.
+    'H264': 'mp4',  # Generic H.264 fourcc. Backend picks an implementation
+                    # (libx264, OS-native, hardware). Works where X264 does, and
+                    # sometimes elsewhere when the backend has a non-libx264 H.264.
+    'avc1': 'mp4',  # H.264 via Apple VideoToolbox — Mac-native MP4 path,
+                    # hardware-accelerated, no libx264 needed.
+
+    # --- MP4 (MPEG-4 Part 2) — older codec, very widely available ---
+    'mp4v': 'mp4',  # MPEG-4 Part 2 (ISO/IEC 14496-2). Predecessor to H.264;
+                    # less efficient but ships with virtually every FFmpeg
+                    # build, so it's a reliable MP4 fallback when H.264 isn't.
+    'MP4V': 'mp4',  # Same codec as 'mp4v'; uppercase variant some backends emit.
+
+    # --- AVI (older Microsoft container) — fallback when MP4 is unavailable ---
+    'XVID': 'avi',  # XviD / MPEG-4 ASP in AVI. Open-source, cross-platform,
+                    # and one of the most reliable AVI codecs.
+    'DIVX': 'avi',  # DivX MPEG-4. Closely related to XviD; legacy support.
+    'MJPG': 'avi',  # Motion JPEG — every frame is a standalone JPEG. Universally
+                    # supported (last-resort fallback) but produces very large
+                    # files since there is no inter-frame compression.
+}
+
+class _CodecProbeTimeout(Exception):
+    pass
+
+
+def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
+    """Return True if cv2.VideoWriter can write a frame with this codec.
+
+    Uses a unique temp file per call to avoid race conditions when multiple
+    camera worker processes probe codecs simultaneously.  Times out after
+    _CODEC_PROBE_TIMEOUT_SECONDS to avoid hanging on broken codec backends.
+    """
+    logger.debug(f"Probing video codec '{fourcc_str}' with frame size {frame_size}...")
+    ext = FOURCC_TO_EXTENSION.get(fourcc_str, "avi")
+    fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}", prefix="_skellycam_codec_probe_")
+    os.close(fd)
+    test_frame = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
+    writer: cv2.VideoWriter | None = None
+
+    def _timeout_handler(signum: int, frame: object) -> None:
+        raise _CodecProbeTimeout(f"Codec probe for '{fourcc_str}' timed out after {_CODEC_PROBE_TIMEOUT_SECONDS}s")
+
+    old_handler = None
+    if sys.platform != "win32":
+        old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(_CODEC_PROBE_TIMEOUT_SECONDS)
+
+    try:
+        writer = cv2.VideoWriter(
+            tmp_path,
+            cv2.VideoWriter.fourcc(*fourcc_str),
+            30.0,
+            frame_size,
+        )
+        if not writer.isOpened():
+            logger.debug(f"Codec '{fourcc_str}' failed: writer did not open")
+            return False
+        writer.write(test_frame)
+        writer.release()
+        writer = None
+        # Verify the file has actual content (some backends open but write nothing)
+        ok = Path(tmp_path).stat().st_size >= 100
+        logger.debug(f"Codec '{fourcc_str}' probe {'succeeded' if ok else 'failed (empty file)'}")
+        return ok
+    except _CodecProbeTimeout:
+        logger.warning(f"Codec '{fourcc_str}' probe timed out — skipping")
+        return False
+    except Exception as e:
+        logger.debug(f"Codec '{fourcc_str}' probe failed with {type(e).__name__}: {e}")
+        return False
+    finally:
+        if sys.platform != "win32":
+            signal.alarm(0)
+            if old_handler is not None:
+                signal.signal(signal.SIGALRM, old_handler)
+        if writer is not None:
+            writer.release()
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) -> str:
+    """Return a working fourcc string, trying the requested one first then fallbacks.
+
+    Raises RuntimeError if no codec works at all.
+    """
+    # Try the requested codec first
+    if _probe_codec(fourcc_str=requested_fourcc, frame_size=frame_size):
+        return requested_fourcc
+
+    logger.warning(
+        f"Requested video codec '{requested_fourcc}' is not available on this system. "
+        f"Probing fallback codecs: {_FALLBACK_CODECS}"
+    )
+
+    for fourcc_str in _FALLBACK_CODECS:
+        if fourcc_str == requested_fourcc:
+            continue  # Already tried
+        if _probe_codec(fourcc_str=fourcc_str, frame_size=frame_size):
+            logger.info(f"Using fallback video codec: {fourcc_str}")
+            return fourcc_str
+
+    raise RuntimeError(
+        f"No usable video writer codec found (tried '{requested_fourcc}' and {_FALLBACK_CODECS}). "
+        f"Ensure OpenCV is built with FFMPEG support or install codec libraries."
+    )

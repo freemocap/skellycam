@@ -7,7 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.image_resolution import ImageResolution
 from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.types.type_overloads import CameraIndexInt
-from skellycam.system.diagnostics.recommend_camera_exposure_setting import ExposureModes
+from skellycam.core.camera.opencv.opencv_helpers.recommend_camera_exposure_setting import ExposureModes
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import cv2
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.opencv_extract_config import extract_config_from_cv2_capture
-from skellycam.system.diagnostics.recommend_camera_exposure_setting import get_recommended_cv2_cap_exposure, \
+from skellycam.core.camera.opencv.opencv_helpers.recommend_camera_exposure_setting import get_recommended_cv2_cap_exposure, \
     ExposureModes
 
 logger = logging.getLogger(__name__)
