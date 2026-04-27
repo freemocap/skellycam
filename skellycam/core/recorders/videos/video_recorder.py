@@ -12,8 +12,10 @@ import cv2
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.recorders.videos.fourcc_codec_helpers import FOURCC_TO_EXTENSION, resolve_writer_fourcc
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
+
 
 logger = logging.getLogger(__name__)
 
