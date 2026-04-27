@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.system.default_paths import get_default_recording_folder_path
 from skellycam.core.camera.config.image_rotation_types import rotation_int_to_name
@@ -75,6 +75,12 @@ class RecordingInfo(BaseModel):
     def timestamp_stats_json_file_path(self) -> str:
         return f"{self.timestamps_folder}/{self.recording_name}_stats.json"
 
+    def video_path_from_camera_config(self, camera_config: CameraConfig, extension: str = "mp4") -> str:
+        videos_dir = Path(self.videos_folder)
+        video_name = f"{self.recording_name}.camera.id-{camera_config.camera_id}.idx-{camera_config.camera_index}.{extension}"
+        video_path = videos_dir / video_name
+        return str(video_path)
+
     def save_to_file(self, camera_configs: CameraConfigs):
         logger.debug(f"Saving recording info to [{self.recording_info_path}]")
         recording_info_dict = self.model_dump()
@@ -86,14 +92,22 @@ class RecordingInfo(BaseModel):
         with open(self.recording_info_path, "w") as f:
             f.write(json.dumps(recording_info_dict, indent=4))
 
-    def video_file_path_from_camera_config(self, config) -> str:
+    def video_file_path_from_camera_config(self, config:CameraConfig,extension:str|None=None) -> str:
 
-        prefix = f"{self.recording_name}.camera.id{config.camera_id}.idx{config.camera_index}"
+        video_name = f"{self.recording_name}.id-{config.camera_id}.idx-{config.camera_index}"
         videos_dir = Path(self.videos_folder)
-        existing = sorted(videos_dir.glob(f"{prefix}.*"))
-        if existing:
-            return str(existing[0])
-        return str(videos_dir / f"{prefix}.{config.video_file_extension}")
+        existing_video = sorted(videos_dir.glob(f"{video_name}.*"))
+        if existing_video:
+            if extension and Path(existing_video[-1]).suffix != extension:
+                logger.warning(f"Existing video file [{existing_video[-1]}] has different extension than expected [{extension}]")
+            return str(existing_video[0])
+
+        if extension:
+            if not extension.startswith("."):
+                extension = "." + extension
+            return str(videos_dir / f"{video_name}.{extension}")
+        else:
+            return str(videos_dir / f"{video_name}.{config.video_file_extension}")
 
     def camera_timestamps_file_path_from_camera_id(self, camera_id: str) -> str:
         return str(Path(self.camera_timestamps_folder) / f"{self.recording_name}.camera{camera_id}.timestamps.csv")

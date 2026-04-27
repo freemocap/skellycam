@@ -89,6 +89,7 @@ def _probe_codec(fourcc_str: str, frame_size: tuple[int, int]) -> bool:
             writer.release()
         Path(tmp_path).unlink(missing_ok=True)
 
+
 def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) -> str:
     """Return a working fourcc string, trying the requested one first then fallbacks.
 
@@ -135,10 +136,10 @@ class VideoRecorder:
 
     @classmethod
     def create(
-        cls,
-        recording_info: RecordingInfo | None,
-        config: CameraConfig,
-        framerate: float | None = None,
+            cls,
+            recording_info: RecordingInfo | None,
+            config: CameraConfig,
+            framerate: float | None = None,
     ) -> "VideoRecorder":
         if recording_info is None:
             recording_info = RecordingInfo.create_temp()
@@ -157,10 +158,10 @@ class VideoRecorder:
 
         # Build the video file path using the working codec's extension
         ext = FOURCC_TO_EXTENSION.get(working_fourcc, "avi")
-        video_file_path = str(
-            Path(recording_info.videos_folder)
-            / f"{recording_info.recording_name}.camera.id{config.camera_id}.idx{config.camera_index}.{ext}"
-        )
+        if not ext == config.video_file_extension:
+            logger.warning(f"Resolved codec ({working_fourcc} and extension ({ext})) do not match config defined codec ({config.writer_fourcc} and {config.video_file_extension}) — using resolved codec and extension")
+
+        video_file_path = recording_info.video_file_path_from_camera_config(config=config, extension=ext)
         Path(video_file_path).parent.mkdir(parents=True, exist_ok=True)
 
         logger.debug(
