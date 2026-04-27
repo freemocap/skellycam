@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 import numpy as np
 from numpy import typing as npt
@@ -228,25 +227,8 @@ FRAME_METADATA_DTYPE = np.dtype([
 ],
     align=True)
 
-FRAME_DTYPE = np.dtype  # type alias — actual dtype created dynamically via create_frame_dtype
-MULTIFRAME_DTYPE = np.dtype  # type alias — actual dtype created dynamically via create_multiframe_dtype
-
-
-def create_frame_dtype(config: Any) -> FRAME_DTYPE:
-    return np.dtype(
-        [
-            ("frame_metadata", FRAME_METADATA_DTYPE),
-            ("image", np.uint8, config.image_shape),
-        ],
-        align=True,
-    )
-
-
-def create_multiframe_dtype(configs: dict) -> MULTIFRAME_DTYPE:
-    return np.dtype(
-        [(camera_id, create_frame_dtype(config)) for camera_id, config in configs.items()],
-        align=True,
-    )
+FRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera config
+MULTIFRAME_DTYPE = np.dtype  # actual dtype created dynamically based on camera configs
 
 
 

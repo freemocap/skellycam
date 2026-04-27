@@ -10,7 +10,7 @@ from skellycam.api.websocket.performance_data import (
 )
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.image_resolution import ImageResolution
-from skellycam.core.types.numpy_record_dtypes import create_frame_dtype
+from skellycam.core.types.frame_dtype_factories import create_frame_dtype
 
 
 # ---------------------------------------------------------------------------

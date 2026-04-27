@@ -15,12 +15,8 @@ from skellycam.core.types.frontend_payload_bytearray import (
     MessageType,
     create_frontend_payload,
 )
-from skellycam.core.types.numpy_record_dtypes import (
-    create_frame_dtype,
-    create_multiframe_dtype,
-    FRAME_METADATA_DTYPE,
-    FRAME_CAMERA_INFO_DTYPE,
-)
+from skellycam.core.types.frame_dtype_factories import create_frame_dtype, create_multiframe_dtype
+from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE, FRAME_CAMERA_INFO_DTYPE
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 
