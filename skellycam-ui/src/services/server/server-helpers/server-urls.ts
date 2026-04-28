@@ -23,9 +23,15 @@ class ServerUrls {
     }
 
     /**
-     * Get HTTP base URL
+     * Get HTTP base URL.
+     * In dev mode, the Vite dev server proxies /skellycam, /health, and /shutdown
+     * to the real backend, so we use relative URLs (same origin) to avoid stale
+     * cross-origin keep-alive connections and CORS preflights on Linux.
      */
     getHttpUrl(): string {
+        if (import.meta.env.DEV) {
+            return '';
+        }
         return `http://${this.host}:${this.port}`;
     }
 
