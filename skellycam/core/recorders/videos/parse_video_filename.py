@@ -35,7 +35,7 @@ _CAM_PREFIX_RE = re.compile(
 _TRAILING_INT_RE = re.compile(r"(?:^|[_.\- ])(\d{1,2})(?:[_.\- ]|$)")
 
 
-def _try_extract_camera_info(stem: str) -> tuple[str | None, int | None, str]:
+def try_extract_camera_info(stem: str) -> tuple[str | None, int | None, str]:
     """Try to extract camera_id and camera_index from a non-canonical filename stem.
 
     Returns (camera_id, camera_index, source_label).
@@ -55,6 +55,8 @@ def _try_extract_camera_info(stem: str) -> tuple[str | None, int | None, str]:
             return str(idx), idx, "trailing-int"
 
     return None, None, "opaque"
+
+
 
 
 @dataclass
@@ -110,7 +112,7 @@ class ParsedVideoFilename:
             )
 
         # Non-canonical — apply heuristics
-        cam_id, cam_index, source = _try_extract_camera_info(p.stem)
+        cam_id, cam_index, source = try_extract_camera_info(p.stem)
 
         if cam_id is None:
             cam_id = p.stem
@@ -167,7 +169,7 @@ def parse_video_folder(
         if VIDEO_FILENAME_RE.match(p.stem):
             parse_sources.append("canonical")
         else:
-            _, _, src = _try_extract_camera_info(p.stem)
+            _, _, src = try_extract_camera_info(p.stem)
             parse_sources.append(src)
         results.append(ParsedVideoFilename.from_path(p))
 
