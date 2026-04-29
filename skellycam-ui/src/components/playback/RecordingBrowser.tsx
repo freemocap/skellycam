@@ -33,6 +33,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
+import { backendFetch } from '@/services/server/backend-fetch';
 import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
@@ -223,7 +224,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         setIsLoadingList(true);
         setError(null);
         try {
-            const response = await fetch(serverUrls.endpoints.playbackRecordings);
+            const response = await backendFetch(serverUrls.endpoints.playbackRecordings);
             if (!response.ok) {
                 throw new Error(`Failed to fetch recordings: ${response.statusText}`);
             }
@@ -278,7 +279,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     }
                 }
 
-                const response = await fetch(videosUrl);
+                const response = await backendFetch(videosUrl);
 
                 if (!response.ok) {
                     const detail = await response

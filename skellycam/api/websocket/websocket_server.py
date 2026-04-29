@@ -198,11 +198,20 @@ class WebsocketServer:
                     if skipped_previous:  # skip an extra frame if there was backpressure from frontend
                         skipped_previous = False
                     else:
+                        # Run CPU-bound work (cv2.resize + cv2.imencode per camera) in a
+                        # thread pool so the event loop remains free to handle HTTP requests.
+                        _last_sent = self.last_sent_frame_number
+                        _display_sizes = self._display_image_sizes
+                        loop = asyncio.get_event_loop()
                         new_frontend_payloads: dict[
                             CameraGroupIdString, tuple[
-                                FrameNumberInt, MultiframeTimestampFloat, bytes]] = self._cgm.get_latest_frontend_payloads(
-                            if_newer_than=self.last_sent_frame_number,
-                            display_image_sizes=self._display_image_sizes)
+                                FrameNumberInt, MultiframeTimestampFloat, bytes]] = await loop.run_in_executor(
+                            None,
+                            lambda: self._cgm.get_latest_frontend_payloads(
+                                if_newer_than=_last_sent,
+                                display_image_sizes=_display_sizes,
+                            ),
+                        )
 
                         for camera_group_id, (frame_number,
                                               multiframe_timestamp,

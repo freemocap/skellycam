@@ -2,6 +2,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { RootState } from '../../types';
 import { serverUrls } from '@/services';
+import { backendFetch } from '@/services/server/backend-fetch';
 import {
     Camera,
     CameraConfig,
@@ -28,7 +29,7 @@ export const detectCameras = createAsyncThunk<
         const state = getState();
         const existingCameras = state.cameras.cameras;
 
-        const response = await fetch(serverUrls.endpoints.detectCameras, {
+        const response = await backendFetch(serverUrls.endpoints.detectCameras, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
@@ -113,7 +114,7 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 
         const request: CamerasConnectOrUpdateRequest = { camera_configs: cameraConfigs };
 
-        const response = await fetch(serverUrls.endpoints.camerasConnectOrUpdate, {
+        const response = await backendFetch(serverUrls.endpoints.camerasConnectOrUpdate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request),
@@ -132,7 +133,7 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/close',
     async () => {
-        const response = await fetch(serverUrls.endpoints.closeAll, {
+        const response = await backendFetch(serverUrls.endpoints.closeAll, {
             method: 'DELETE',
         });
 
@@ -145,7 +146,7 @@ export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
 export const pauseUnpauseCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/pause',
     async () => {
-        const response = await fetch(serverUrls.endpoints.pauseUnpauseCameras, {
+        const response = await backendFetch(serverUrls.endpoints.pauseUnpauseCameras, {
             method: 'GET',
         });
 

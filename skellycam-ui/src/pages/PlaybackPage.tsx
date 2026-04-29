@@ -11,6 +11,7 @@ import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
 import { CamerasViewSettingsOverlay } from '@/components/camera-view-settings-overlay/CamerasViewSettingsOverlay';
 import { useElectronIPC } from '@/services';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
+import { backendFetch } from '@/services/server/backend-fetch';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
@@ -68,7 +69,7 @@ const PlaybackPage: React.FC = () => {
 
         const fetchTimestamps = async () => {
             try {
-                const response = await fetch(serverUrls.endpoints.playbackAllTimestamps(recordingId));
+                const response = await backendFetch(serverUrls.endpoints.playbackAllTimestamps(recordingId));
                 if (!response.ok) return;
                 const data = await response.json();
                 if (data.timestamps && Object.keys(data.timestamps).length > 0) {

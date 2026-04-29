@@ -2,6 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { z } from 'zod';
 import { RootState } from '@/store/types';
 import {serverUrls} from "@/services";
+import { backendFetch } from '@/services/server/backend-fetch';
 import { RecordingCompletionData, StopRecordingResponseSchema } from './recording-types';
 
 const RecordStartRequestSchema = z.object({
@@ -31,9 +32,9 @@ export const startRecording = createAsyncThunk<
             mic_device_index: micDeviceIndex,
         });
 
-        const response = await fetch(serverUrls.endpoints.startRecording, {
+        const response = await backendFetch(serverUrls.endpoints.startRecording, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Connection': 'close' },
             body: JSON.stringify(payload),
         });
 
@@ -50,7 +51,7 @@ export const stopRecording = createAsyncThunk<
 >(
     'recording/stop',
     async () => {
-        const response = await fetch(serverUrls.endpoints.stopRecording, {
+        const response = await backendFetch(serverUrls.endpoints.stopRecording, {
             method: 'GET',
         });
 

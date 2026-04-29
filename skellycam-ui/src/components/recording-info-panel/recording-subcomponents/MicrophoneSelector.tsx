@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import {Mic, MicOff, Refresh} from "@mui/icons-material";
 import {serverUrls} from "@/services";
+import { backendFetch } from '@/services/server/backend-fetch';
 
 type MicrophoneSelectorProps = {
     selectedMicIndex: number;
@@ -34,7 +35,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(serverUrls.endpoints.detectMicrophones);
+            const response = await backendFetch(serverUrls.endpoints.detectMicrophones);
             if (!response.ok) {
                 throw new Error(`Failed to detect microphones: ${response.statusText}`);
             }
