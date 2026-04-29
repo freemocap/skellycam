@@ -1,7 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { z } from 'zod';
 import { RootState } from '@/store/types';
-import {serverUrls} from "@/services";
+import { serverUrls } from "@/services";
+import { fetchWithTimeout, FETCH_TIMEOUTS } from '@/services/server/fetch-with-timeout';
 import { RecordingCompletionData, StopRecordingResponseSchema } from './recording-types';
 
 const RecordStartRequestSchema = z.object({
@@ -31,11 +32,15 @@ export const startRecording = createAsyncThunk<
             mic_device_index: micDeviceIndex,
         });
 
-        const response = await fetch(serverUrls.endpoints.startRecording, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+        const response = await fetchWithTimeout(
+            serverUrls.endpoints.startRecording,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            },
+            FETCH_TIMEOUTS.RECORD_START,
+        );
 
         if (!response.ok) {
             throw new Error(`Failed to start recording: ${response.statusText}`);
@@ -50,9 +55,11 @@ export const stopRecording = createAsyncThunk<
 >(
     'recording/stop',
     async () => {
-        const response = await fetch(serverUrls.endpoints.stopRecording, {
-            method: 'GET',
-        });
+        const response = await fetchWithTimeout(
+            serverUrls.endpoints.stopRecording,
+            { method: 'GET' },
+            FETCH_TIMEOUTS.RECORD_STOP,
+        );
 
         if (!response.ok) {
             throw new Error(`Failed to stop recording: ${response.statusText}`);

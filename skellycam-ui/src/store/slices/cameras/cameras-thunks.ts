@@ -2,6 +2,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { RootState } from '../../types';
 import { serverUrls } from '@/services';
+import { fetchWithTimeout, FETCH_TIMEOUTS } from '@/services/server/fetch-with-timeout';
 import {
     Camera,
     CameraConfig,
@@ -28,11 +29,15 @@ export const detectCameras = createAsyncThunk<
         const state = getState();
         const existingCameras = state.cameras.cameras;
 
-        const response = await fetch(serverUrls.endpoints.detectCameras, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request),
-        });
+        const response = await fetchWithTimeout(
+            serverUrls.endpoints.detectCameras,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request),
+            },
+            FETCH_TIMEOUTS.CAMERA_DETECT,
+        );
 
         if (!response.ok) {
             throw new Error(`Failed to detect cameras: ${response.statusText}`);
@@ -113,11 +118,15 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 
         const request: CamerasConnectOrUpdateRequest = { camera_configs: cameraConfigs };
 
-        const response = await fetch(serverUrls.endpoints.camerasConnectOrUpdate, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request),
-        });
+        const response = await fetchWithTimeout(
+            serverUrls.endpoints.camerasConnectOrUpdate,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request),
+            },
+            FETCH_TIMEOUTS.CAMERA_CONNECT,
+        );
 
         if (!response.ok) {
             const error = await response.json();
@@ -132,9 +141,11 @@ export const camerasConnectOrUpdate = createAsyncThunk<
 export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/close',
     async () => {
-        const response = await fetch(serverUrls.endpoints.closeAll, {
-            method: 'DELETE',
-        });
+        const response = await fetchWithTimeout(
+            serverUrls.endpoints.closeAll,
+            { method: 'DELETE' },
+            FETCH_TIMEOUTS.CAMERA_CLOSE,
+        );
 
         if (!response.ok) {
             throw new Error(`Failed to close cameras: ${response.statusText}`);
@@ -145,9 +156,11 @@ export const closeCameras = createAsyncThunk<void, void, { state: RootState }>(
 export const pauseUnpauseCameras = createAsyncThunk<void, void, { state: RootState }>(
     'cameras/pause',
     async () => {
-        const response = await fetch(serverUrls.endpoints.pauseUnpauseCameras, {
-            method: 'GET',
-        });
+        const response = await fetchWithTimeout(
+            serverUrls.endpoints.pauseUnpauseCameras,
+            { method: 'GET' },
+            FETCH_TIMEOUTS.CAMERA_PAUSE,
+        );
 
         if (!response.ok) {
             throw new Error(`Failed to pause/unpause cameras: ${response.statusText}`);

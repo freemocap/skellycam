@@ -10,7 +10,8 @@ import {
     Typography,
 } from "@mui/material";
 import {Mic, MicOff, Refresh} from "@mui/icons-material";
-import {serverUrls} from "@/services";
+import { serverUrls } from "@/services";
+import { fetchWithTimeout, FETCH_TIMEOUTS } from '@/services/server/fetch-with-timeout';
 
 type MicrophoneSelectorProps = {
     selectedMicIndex: number;
@@ -34,7 +35,11 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(serverUrls.endpoints.detectMicrophones);
+            const response = await fetchWithTimeout(
+                serverUrls.endpoints.detectMicrophones,
+                undefined,
+                FETCH_TIMEOUTS.MIC_DETECT,
+            );
             if (!response.ok) {
                 throw new Error(`Failed to detect microphones: ${response.statusText}`);
             }
