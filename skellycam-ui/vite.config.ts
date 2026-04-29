@@ -65,37 +65,17 @@ export default defineConfig(({command}) => {
             }),
         ],
         optimizeDeps: {},
-        server: {
-            // When debugging via VS Code, pin host/port to the launch URL
-            ...(process.env.VSCODE_DEBUG ? (() => {
-                const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL)
-                return {
-                    host: url.hostname,
-                    port: +url.port,
-                    headers: {
-                        "Cross-Origin-Opener-Policy": "same-origin",
-                        "Cross-Origin-Embedder-Policy": "require-corp",
-                    },
-                }
-            })() : {}),
-            // Proxy all backend HTTP traffic through the Vite dev server so
-            // renderer fetch() calls are same-origin. This eliminates cross-origin
-            // stale keep-alive connection issues on Linux and CORS preflights.
-            proxy: {
-                '/skellycam': {
-                    target: 'http://localhost:53117',
-                    changeOrigin: true,
+        server: process.env.VSCODE_DEBUG && (() => {
+            const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL)
+            return {
+                host: url.hostname,
+                port: +url.port,
+                headers: {
+                    "Cross-Origin-Opener-Policy": "same-origin",
+                    "Cross-Origin-Embedder-Policy": "require-corp",
                 },
-                '/health': {
-                    target: 'http://localhost:53117',
-                    changeOrigin: true,
-                },
-                '/shutdown': {
-                    target: 'http://localhost:53117',
-                    changeOrigin: true,
-                },
-            },
-        },
+            }
+        })(),
         clearScreen: false,
     }
 })
