@@ -30,6 +30,18 @@ NON_WEB_CODECS = ["mp4v", "XVID", "MJPG"]
 
 WEB_COMPATIBLE_AV_CODEC_NAMES = ['h264', 'hevc', 'vp8', 'vp9', 'av1']
 
+# Fourcc codes as reported by cv2.VideoCapture when *reading* web-compatible
+# files.  cv2's read-back fourcc can differ from the writer fourcc (e.g. a file
+# written with 'X264' is typically read back as 'avc1').  Stored lowercase so
+# the comparison in is_web_compatible_file() can be case-insensitive.
+_WEB_COMPATIBLE_READ_FOURCCS_LOWER = [
+    'avc1', 'h264', 'x264',   # H.264 variants
+    'hvc1', 'hev1', 'hevc',   # HEVC variants
+    'vp80',                    # VP8
+    'vp90', 'vp09',            # VP9 variants
+    'av01',                    # AV1
+]
+
 _CODEC_PROBE_TIMEOUT_SECONDS = 5
 
 # Canonical fourcc → container-extension map. Single source of truth used by
@@ -182,3 +194,17 @@ def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) ->
         f"{WEB_COMPATIBLE_CODECS} and {NON_WEB_CODECS}). "
         f"Ensure OpenCV is built with FFmpeg support or install codec libraries."
     )
+
+def is_web_compatible_file(video_path: Path) -> bool:
+    """Return True if the video at *video_path* uses a Chromium-playable codec.
+
+    Probes via cv2.VideoCapture — no av import required.
+    Returns False on any read error so the caller can fall back gracefully.
+    """
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        return False
+    fourcc_int = int(cap.get(cv2.CAP_PROP_FOURCC))
+    cap.release()
+    fourcc_str = ''.join(chr((fourcc_int >> 8 * i) & 0xFF) for i in range(4)).rstrip('\x00')
+    return fourcc_str.lower() in _WEB_COMPATIBLE_READ_FOURCCS_LOWER
