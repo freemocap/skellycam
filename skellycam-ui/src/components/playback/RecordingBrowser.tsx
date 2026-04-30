@@ -33,7 +33,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
-import { backendFetch } from '@/services/server/backend-fetch';
+import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------

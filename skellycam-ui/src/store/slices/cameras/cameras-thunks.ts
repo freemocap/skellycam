@@ -2,7 +2,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { RootState } from '../../types';
 import { serverUrls } from '@/services';
-import { backendFetch } from '@/services/server/backend-fetch';
+import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import {
     Camera,
     CameraConfig,
