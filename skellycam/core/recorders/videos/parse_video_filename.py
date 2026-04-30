@@ -6,6 +6,7 @@ from pathlib import Path
 from tabulate import tabulate
 
 from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.types.type_overloads import CameraIdString, CameraIndexInt
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,8 @@ def try_extract_camera_info(stem: str) -> tuple[str | None, int | None, str]:
 @dataclass
 class ParsedVideoFilename:
     recording_name: str
-    camera_id: str
-    camera_index: int
+    camera_id: CameraIdString
+    camera_index: CameraIndexInt
     extension: str  # without leading dot, e.g. "mp4"
 
     @property
