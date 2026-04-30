@@ -11,6 +11,8 @@ from skellycam.core.recorders.video_audio_remuxer import (
     load_frame_timestamps_from_csv,
     load_audio_start_time,
 )
+from skellycam.core.recorders.videos.fourcc_codec_helpers import WEB_COMPATIBLE_CODECS
+from skellycam.utilities.transcode_to_h264 import transcode_to_h264
 from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
     process_and_save_recording_timestamps
@@ -38,16 +40,19 @@ class RecordingFinalizer:
     recording_info: RecordingInfo
     camera_configs: CameraConfigs
     frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]]
+    resolved_fourccs_by_camera: dict[CameraIdString, str]
 
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
                camera_configs: CameraConfigs,
                frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
+               resolved_fourccs_by_camera: dict[CameraIdString, str],
                ):
         return cls(recording_info=recording_info,
                    frame_metadatas_by_camera=frame_metadatas_by_camera,
                    camera_configs=camera_configs,
+                   resolved_fourccs_by_camera=resolved_fourccs_by_camera,
                    )
 
     async def finalize_recording(self) -> "RecordingTimestampsStats":
@@ -60,12 +65,38 @@ class RecordingFinalizer:
             frame_metadatas_by_camera=self.frame_metadatas_by_camera,
         )
 
+        self._transcode_for_web_playback()
         # self._remux_videos_with_audio_and_timestamps()
         self._save_folder_readme()
         self.validate_recording()
         logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{timestamp_stats}\n\n--------------------------------------------------------\n")
         return timestamp_stats
 
+
+    def _transcode_for_web_playback(self) -> None:
+        """Re-encode any non-web-compatible video to H264/MP4 for browser playback.
+
+        Uses the resolved fourcc carried from the camera worker to decide whether
+        a transcode is needed — no av import required on platforms where H264 was
+        recorded directly (macOS via avc1, Windows via X264, Linux via pyav).
+        av is imported only when a transcode is actually needed.
+        """
+        for camera_id, camera_config in self.camera_configs.items():
+            resolved_fourcc = self.resolved_fourccs_by_camera.get(camera_id, '')
+            if resolved_fourcc in set(WEB_COMPATIBLE_CODECS):
+                logger.debug(f"Camera {camera_id}: codec '{resolved_fourcc}' is web-compatible, skipping transcode")
+                continue
+
+            video_path = Path(self.recording_info.video_file_path_from_camera_config(camera_config))
+            if not video_path.exists():
+                logger.warning(f"Video file not found, skipping transcode: {video_path}")
+                continue
+
+            logger.info(f"Camera {camera_id}: transcoding '{resolved_fourcc}' → H264: {video_path.name}")
+            final_path = video_path.with_suffix('.mp4')
+            transcode_to_h264(input_path=video_path, output_path=final_path)
+            if video_path != final_path:
+                video_path.unlink()
 
     def _save_folder_readme(self):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:

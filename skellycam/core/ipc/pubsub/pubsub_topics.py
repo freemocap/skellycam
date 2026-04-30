@@ -40,6 +40,7 @@ class RecordingInfoMessage(TopicMessageABC):
 class RecordingFinishedMessage(TopicMessageABC):
     recording_info: RecordingInfo
     frame_metadatas: list[np.recarray]
+    writer_fourcc: str  # resolved codec actually used (may differ from config.writer_fourcc)
 
     def __post_init__(self) -> None:
         if not self.frame_metadatas:

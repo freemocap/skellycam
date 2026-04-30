@@ -54,6 +54,7 @@ def finish_recording(ipc: CameraGroupIPC,
     ipc.pubsub.topics[TopicTypes.RECORDING_FINISHED].publish(RecordingFinishedMessage(
         recording_info=video_recorder.recording_info,
         frame_metadatas=frame_metadatas,
+        writer_fourcc=video_recorder.writer_fourcc,
     ))
     video_recorder = None
     return video_recorder 
