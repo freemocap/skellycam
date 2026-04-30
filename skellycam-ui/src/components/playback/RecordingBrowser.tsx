@@ -267,19 +267,18 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
             setError(null);
 
             try {
-                // If the recording has a full path, derive the parent directory
-                // to pass as recording_parent_directory query param for non-standard locations
-                let videosUrl = serverUrls.endpoints.playbackVideos(recording.name);
+                let parentParam = '';
                 if (recording.path) {
                     const normalized = recording.path.replace(/\\/g, '/').replace(/\/+$/, '');
                     const lastSlash = normalized.lastIndexOf('/');
                     if (lastSlash >= 0) {
-                        const parentDir = normalized.slice(0, lastSlash);
-                        videosUrl += `?recording_parent_directory=${encodeURIComponent(parentDir)}`;
+                        parentParam = `?recording_parent_directory=${encodeURIComponent(normalized.slice(0, lastSlash))}`;
                     }
                 }
 
-                const response = await backendFetch(videosUrl);
+                const response = await backendFetch(
+                    serverUrls.endpoints.playbackVideos(recording.name) + parentParam,
+                );
 
                 if (!response.ok) {
                     const detail = await response
@@ -298,7 +297,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                 const videos: LoadedVideo[] = data.map((v) => ({
                     videoId: v.video_id,
                     filename: v.filename,
-                    streamUrl: serverUrls.endpoints.playbackVideoStream(recording.name, v.video_id),
+                    streamUrl: serverUrls.endpoints.playbackVideoStream(recording.name, v.video_id) + parentParam,
                     sizeBytes: v.size_bytes,
                 }));
 
