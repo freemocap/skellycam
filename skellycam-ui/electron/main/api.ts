@@ -11,6 +11,7 @@ const { autoUpdater } = pkg;
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
+import http from 'node:http';
 import { APP_PATHS } from './app-paths';
 
 // Configure auto-updater (user triggers download manually)
@@ -185,6 +186,65 @@ export const api = t.router({
         installUpdate: t.procedure
             .mutation(() => {
                 autoUpdater.quitAndInstall(false, true);
+            }),
+    }),
+
+    // Backend HTTP proxy — routes renderer fetch() calls through Node.js's native
+    // http module, completely bypassing Chromium's network service and its
+    // cross-origin connection-pool limits that cause requests to stall on Linux.
+    backendHttp: t.router({
+        fetch: t.procedure
+            .input(z.object({
+                url: z.string(),
+                method: z.string().default('GET'),
+                headers: z.record(z.string(), z.string()).optional(),
+                body: z.string().optional(),
+            }))
+            .mutation(({ input }) => {
+                return new Promise<{
+                    ok: boolean;
+                    status: number;
+                    statusText: string;
+                    data: string;
+                }>((resolve, reject) => {
+                    const parsed = new URL(input.url);
+                    const options: import('node:http').RequestOptions = {
+                        hostname: parsed.hostname,
+                        port: parsed.port || 80,
+                        path: parsed.pathname + parsed.search,
+                        method: input.method,
+                        headers: input.headers,
+                    };
+
+                    const req = http.request(options, (res) => {
+                        let data = '';
+                        res.setEncoding('utf8');
+                        res.on('data', (chunk) => { data += chunk; });
+                        res.on('end', () => {
+                            resolve({
+                                ok: (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 300,
+                                status: res.statusCode ?? 0,
+                                statusText: res.statusMessage ?? '',
+                                data,
+                            });
+                        });
+                    });
+
+                    req.on('error', (err: NodeJS.ErrnoException) => {
+                        // Backend not ready yet — return a 503 instead of throwing so the
+                        // renderer sees a clean "not ok" response rather than an IPC error.
+                        if (err.code === 'ECONNREFUSED') {
+                            resolve({ ok: false, status: 503, statusText: 'Service Unavailable', data: '' });
+                        } else {
+                            reject(err);
+                        }
+                    });
+
+                    if (input.body) {
+                        req.write(input.body);
+                    }
+                    req.end();
+                });
             }),
     }),
 
