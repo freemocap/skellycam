@@ -83,7 +83,7 @@ class RecordingFinalizer:
         """
         for camera_id, camera_config in self.camera_configs.items():
             resolved_fourcc = self.resolved_fourccs_by_camera.get(camera_id, '')
-            if resolved_fourcc in set(WEB_COMPATIBLE_CODECS):
+            if resolved_fourcc in WEB_COMPATIBLE_CODECS:
                 logger.debug(f"Camera {camera_id}: codec '{resolved_fourcc}' is web-compatible, skipping transcode")
                 continue
 

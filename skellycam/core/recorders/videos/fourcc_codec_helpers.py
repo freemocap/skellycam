@@ -19,14 +19,16 @@ PYAV_H264_FOURCC = 'X264_PYAV'
 #   X264/H264 — compact H.264 mp4. Bundled on Windows OpenCV; usually NOT on
 #               pip-installed OpenCV for Linux/macOS (no libx264).
 #   avc1      — H.264 via Apple VideoToolbox. Mac-native MP4 path.
-_WEB_COMPATIBLE_CODECS = ["X264", "H264", "avc1", PYAV_H264_FOURCC]
+WEB_COMPATIBLE_CODECS = ["X264", "H264", "avc1", PYAV_H264_FOURCC]
 
 # Codecs that OpenCV can write but Chromium cannot play (last resort only).
 #   mp4v      — MPEG-4 Part 2, removed from Chrome for licensing reasons. 
 #               Less efficient than H.264 but very widely available, including on macOS and Linux.
 #   XVID      — AVI container. Widely available cross-platform.
 #   MJPG      — Universally supported AVI fallback of last resort (large files).
-_NON_WEB_CODECS = ["mp4v", "XVID", "MJPG"]
+NON_WEB_CODECS = ["mp4v", "XVID", "MJPG"]
+
+WEB_COMPATIBLE_AV_CODEC_NAMES = ['h264', 'hevc', 'vp8', 'vp9', 'av1']
 
 _CODEC_PROBE_TIMEOUT_SECONDS = 5
 
@@ -154,10 +156,10 @@ def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) ->
 
     logger.warning(
         f"Requested video codec '{requested_fourcc}' is not available on this system. "
-        f"Probing web-compatible fallbacks: {_WEB_COMPATIBLE_CODECS}"
+        f"Probing web-compatible fallbacks: {WEB_COMPATIBLE_CODECS}"
     )
 
-    for fourcc_str in _WEB_COMPATIBLE_CODECS:
+    for fourcc_str in WEB_COMPATIBLE_CODECS:
         if fourcc_str == requested_fourcc:
             continue
         if _probe_codec(fourcc_str=fourcc_str, frame_size=frame_size):
@@ -166,9 +168,9 @@ def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) ->
 
     logger.warning(
         f"No web-compatible codec available. Falling back to non-web-compatible codecs: "
-        f"{_NON_WEB_CODECS}. Recorded videos may not play in the browser."
+        f"{NON_WEB_CODECS}. Recorded videos may not play in the browser."
     )
-    for fourcc_str in _NON_WEB_CODECS:
+    for fourcc_str in NON_WEB_CODECS:
         if fourcc_str == requested_fourcc:
             continue
         if _probe_codec(fourcc_str=fourcc_str, frame_size=frame_size):
@@ -177,6 +179,6 @@ def resolve_writer_fourcc(requested_fourcc: str, frame_size: tuple[int, int]) ->
 
     raise RuntimeError(
         f"No usable video writer codec found (tried '{requested_fourcc}', "
-        f"{_WEB_COMPATIBLE_CODECS} and {_NON_WEB_CODECS}). "
+        f"{WEB_COMPATIBLE_CODECS} and {NON_WEB_CODECS}). "
         f"Ensure OpenCV is built with FFmpeg support or install codec libraries."
     )
