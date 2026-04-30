@@ -11,7 +11,7 @@ import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
 import { CamerasViewSettingsOverlay } from '@/components/camera-view-settings-overlay/CamerasViewSettingsOverlay';
 import { useElectronIPC } from '@/services';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
-import { backendFetch } from '@/services/server/backend-fetch';
+import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 

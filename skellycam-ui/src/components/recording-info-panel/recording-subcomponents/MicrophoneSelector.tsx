@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import {Mic, MicOff, Refresh} from "@mui/icons-material";
 import {serverUrls} from "@/services";
-import { backendFetch } from '@/services/server/backend-fetch';
+import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 
 type MicrophoneSelectorProps = {
     selectedMicIndex: number;

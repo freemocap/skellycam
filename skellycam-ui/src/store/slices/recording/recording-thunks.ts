@@ -2,7 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { z } from 'zod';
 import { RootState } from '@/store/types';
 import {serverUrls} from "@/services";
-import { backendFetch } from '@/services/server/backend-fetch';
+import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { RecordingCompletionData, StopRecordingResponseSchema } from './recording-types';
 
 const RecordStartRequestSchema = z.object({
