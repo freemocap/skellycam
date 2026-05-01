@@ -369,10 +369,6 @@ async def finalize_recording(
             camera_id: message.frame_metadatas
             for camera_id, message in recording_finished_messages_by_camera.items()
         },
-        resolved_fourccs_by_camera={
-            camera_id: message.writer_fourcc
-            for camera_id, message in recording_finished_messages_by_camera.items()
-        },
     )
     timestamp_stats = await recording_finalizer.finalize_recording()
     return recording_info, timestamp_stats
