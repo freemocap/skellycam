@@ -136,7 +136,7 @@ export function createDefaultCameraConfig(
         pixel_format: 'RGB',
         rotation: -1,
         exposure_mode: 'MANUAL',
-        exposure: -7,
+        exposure: -6,
         capture_fourcc: 'MJPG',
         writer_fourcc: 'X264',
     };

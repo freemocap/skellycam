@@ -22,7 +22,7 @@ DEFAULT_CAMERA_ID: CameraIdString = "000"
 DEFAULT_CAMERA_NAME: CameraNameString = "Default Camera"
 DEFAULT_RESOLUTION: ImageResolution = ImageResolution(height=DEFAULT_IMAGE_HEIGHT, width=DEFAULT_IMAGE_WIDTH)
 DEFAULT_EXPOSURE_MODE: str = ExposureModes.MANUAL.name
-DEFAULT_EXPOSURE: int = -7
+DEFAULT_EXPOSURE: int = -6
 DEFAULT_FRAMERATE: float = -1.0  # Use camera default framerate
 DEFAULT_ROTATION: RotationTypes = RotationTypes.NO_ROTATION
 DEFAULT_CAPTURE_FOURCC: str = "MJPG"  # skellycam/system/diagnostics/run_cv2_video_capture_diagnostics.py
