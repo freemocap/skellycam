@@ -35,7 +35,8 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
     const theme = useTheme();
     const dispatch = useAppDispatch();
     const {t} = useTranslation();
-    const {isConnected} = useServer();
+    const {isConnected, connectedCameraIds} = useServer();
+    const hasCamerasConnected = connectedCameraIds.length > 0;
     const selectedCameras = useAppSelector(selectSelectedCameras);
     const hasSelected = selectedCameras.length > 0;
 
@@ -156,12 +157,13 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                     </span>
                 </Tooltip>
 
-                {/* Pause/Play Button - Always visible, disabled when not connected */}
+                {/* Pause/Play Button - Always visible, disabled when no cameras connected */}
                 <Tooltip title={isPaused ? t("resumeStreaming") : t("pauseStreaming")}>
                     <span>
                         <IconButton
                             size="small"
                             onClick={handlePauseUnpause}
+                            disabled={!hasCamerasConnected || isActionInProgress}
                             sx={{
                                 color: "inherit",
                             }}
@@ -171,12 +173,13 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                     </span>
                 </Tooltip>
 
-                {/* Close Button - Always visible, disabled when not connected */}
+                {/* Close Button - Always visible, disabled when no cameras connected */}
                 <Tooltip title={t("closeAllCameras")}>
                     <span>
                         <IconButton
                             size="small"
                             onClick={handleCloseCameras}
+                            disabled={!hasCamerasConnected || isActionInProgress}
                             sx={{
                                 color: "inherit",
                             }}
