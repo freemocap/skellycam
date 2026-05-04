@@ -91,6 +91,7 @@ export const ServerConnectionStatus: React.FC = () => {
     // Transient state
     const [serverRunning, setServerRunning] = useState(false);
     const [serverReachable, setServerReachable] = useState(false);
+    const [initialStatusChecked, setInitialStatusChecked] = useState(false);
     const [serverLoading, setServerLoading] = useState(false);
     const [currentExePath, setCurrentExePath] = useState<string | null>(null);
     const [candidates, setCandidates] = useState<ExecutableCandidate[]>([]);
@@ -140,6 +141,7 @@ export const ServerConnectionStatus: React.FC = () => {
         } catch {
             setServerReachable(false);
         }
+        setInitialStatusChecked(true);
     }, [isElectron, api]);
 
     // ── Candidate management ──
@@ -280,12 +282,13 @@ export const ServerConnectionStatus: React.FC = () => {
         if (!autoLaunchServer) return;
         if (autoLaunchFiredRef.current) return;
         if (candidatesLoading) return; // wait for candidates to load
+        if (!initialStatusChecked) return; // wait for first health check to complete
         if (serverRunning || serverReachable || serverLoading) return;
 
         autoLaunchFiredRef.current = true;
         console.log('Auto-launching server...');
         startServer();
-    }, [isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
+    }, [isElectron, api, autoLaunchServer, candidatesLoading, initialStatusChecked, serverRunning, serverReachable, serverLoading, startServer]);
 
     // ── WebSocket auto-reconnect loop ──
     // When autoConnectWs is on and we're not connected, periodically call connect().
