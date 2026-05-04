@@ -128,7 +128,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             size="small"
                             onClick={handleConnectOrApply}
                             disabled={!isConnected || isActionInProgress}
-                            sx={{color: "inherit"}}
+                            sx={{color: "inherit", "&.Mui-disabled": {opacity: 0.5}}}
                         >
 
                         <Box sx={{position: 'relative', display: 'inline-flex', width: 24, height: 24}}>
@@ -164,9 +164,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             size="small"
                             onClick={handlePauseUnpause}
                             disabled={!hasCamerasConnected || isActionInProgress}
-                            sx={{
-                                color: "inherit",
-                            }}
+                            sx={{color: "inherit", "&.Mui-disabled": {opacity: 0.5}}}
                         >
                             {isPaused ? <PlayArrowIcon/> : <PauseIcon/>}
                         </IconButton>
@@ -180,9 +178,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             size="small"
                             onClick={handleCloseCameras}
                             disabled={!hasCamerasConnected || isActionInProgress}
-                            sx={{
-                                color: "inherit",
-                            }}
+                            sx={{color: "inherit", "&.Mui-disabled": {opacity: 0.5}}}
                         >
                             <VideocamOffIcon/>
                         </IconButton>
@@ -196,7 +192,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                             size="small"
                             onClick={handleRefreshCameras}
                             disabled={!isConnected || isActionInProgress}
-                            sx={{color: "inherit"}}
+                            sx={{color: "inherit", "&.Mui-disabled": {opacity: 0.5}}}
                         >
                             {isLoading || isActionInProgress ? (
                                 <CircularProgress size={20} sx={{color: "inherit"}}/>
