@@ -18,6 +18,7 @@ import {
 } from "@/store/slices/cameras/cameras-thunks";
 import {savedSettingsCleared} from "@/store/slices/cameras/cameras-slice";
 import {useTranslation} from 'react-i18next';
+import {useServer} from "@/services/server/ServerContextProvider";
 
 interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
@@ -34,6 +35,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
     const theme = useTheme();
     const dispatch = useAppDispatch();
     const {t} = useTranslation();
+    const {isConnected} = useServer();
     const selectedCameras = useAppSelector(selectSelectedCameras);
     const hasSelected = selectedCameras.length > 0;
 
@@ -119,11 +121,12 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 
             <Stack direction="row" spacing={1} sx={{mr: 2}}>
                 {/* Connect/Apply Button - Always visible, changes icon and behavior */}
-                <Tooltip title={t("connectCameras")}>
+                <Tooltip title={t(!isConnected ? "connectServerFirst" : "connectCameras")}>
                     <span>
                         <IconButton
                             size="small"
                             onClick={handleConnectOrApply}
+                            disabled={!isConnected || isActionInProgress}
                             sx={{color: "inherit"}}
                         >
 
@@ -184,11 +187,12 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                 </Tooltip>
 
                 {/* Refresh/Detect Button - Always visible */}
-                <Tooltip title={t("detectCameras")}>
+                <Tooltip title={t(!isConnected ? "connectServerFirst" : "detectCameras")}>
                     <span>
                         <IconButton
                             size="small"
                             onClick={handleRefreshCameras}
+                            disabled={!isConnected || isActionInProgress}
                             sx={{color: "inherit"}}
                         >
                             {isLoading || isActionInProgress ? (

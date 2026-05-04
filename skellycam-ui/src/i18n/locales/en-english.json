@@ -158,6 +158,8 @@
   "connected": "Connected",
   "connecting": "Connecting…",
   "connectionFailed": "Connection failed",
+  "connectServerFirst": "Must connect to server before connecting to cameras",
+  "connectCamerasBeforeRecording": "Connect to cameras before recording",
   "disconnected": "Disconnected",
   "disconnect": "Disconnect",
   "connect": "Connect",
