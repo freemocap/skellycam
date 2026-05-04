@@ -52,11 +52,13 @@ export class PythonServer {
 
             pythonProcess.on('exit', (code) => {
                 console.log(`Python server exited (code: ${code})`);
+                pythonProcess = null;
                 this.currentExecutablePath = null;
             });
 
             pythonProcess.on('error', (error) => {
                 console.error('Python server process error:', error);
+                pythonProcess = null;
                 this.currentExecutablePath = null;
             });
 
