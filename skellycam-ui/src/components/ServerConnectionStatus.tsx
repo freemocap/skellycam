@@ -101,6 +101,9 @@ export const ServerConnectionStatus: React.FC = () => {
     const autoLaunchFiredRef = useRef(false);
     // Guard against concurrent startServer calls from the auto-launch effect
     const serverLaunchingRef = useRef(false);
+    // Count consecutive failed WS connection attempts so we can stop spinning after giving up
+    const wsFailedAttemptsRef = useRef(0);
+    const [wsConnectionGaveUp, setWsConnectionGaveUp] = useState(false);
 
     // ── Persistence effects ──
 
@@ -278,24 +281,38 @@ export const ServerConnectionStatus: React.FC = () => {
     }, [isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
 
     // ── WebSocket auto-reconnect loop ──
-    // When autoConnectWs is on and we're not connected, periodically call connect().
-    // The underlying WebSocketConnection handles deduplication of CONNECTING state.
+    // Tries up to MAX_WS_CONNECT_ATTEMPTS times then stops and shows disconnected.
+    // Resets when the user manually connects, disconnects, or a connection succeeds.
+
+    const MAX_WS_CONNECT_ATTEMPTS = 15;
 
     useEffect(() => {
-        if (!autoConnectWs) return;
-        if (isConnected) return;
+        if (!autoConnectWs) {
+            wsFailedAttemptsRef.current = 0;
+            setWsConnectionGaveUp(false);
+            return;
+        }
+        if (isConnected) {
+            wsFailedAttemptsRef.current = 0;
+            setWsConnectionGaveUp(false);
+            return;
+        }
+        if (wsConnectionGaveUp) return;
 
-        // Fire one immediate attempt
         connect();
+        wsFailedAttemptsRef.current++;
 
         const interval = setInterval(() => {
-            if (!isConnected) {
-                connect();
+            if (wsFailedAttemptsRef.current >= MAX_WS_CONNECT_ATTEMPTS) {
+                setWsConnectionGaveUp(true);
+                return;
             }
+            connect();
+            wsFailedAttemptsRef.current++;
         }, WS_RECONNECT_INTERVAL_MS);
 
         return () => clearInterval(interval);
-    }, [autoConnectWs, isConnected, connect]);
+    }, [autoConnectWs, isConnected, wsConnectionGaveUp, connect]);
 
     // ── Toggle handlers ──
 
@@ -332,6 +349,8 @@ export const ServerConnectionStatus: React.FC = () => {
             setAutoConnectWs(false);
             disconnect();
         } else {
+            wsFailedAttemptsRef.current = 0;
+            setWsConnectionGaveUp(false);
             setAutoConnectWs(true);
             connect();
         }
@@ -356,7 +375,8 @@ export const ServerConnectionStatus: React.FC = () => {
 
     // ── Derived values ──
 
-    const wsStatusColor = isConnected ? '#00ffff' : '#f44336';
+    const isConnecting = autoConnectWs && !isConnected && !wsConnectionGaveUp;
+    const wsStatusColor = isConnected ? '#00ffff' : isConnecting ? '#ffb300' : '#f44336';
     const serverStatusColor = serverRunning ? theme.palette.success.main : theme.palette.text.disabled;
 
     const validCandidates = candidates.filter((c) => c.isValid);
@@ -397,6 +417,8 @@ export const ServerConnectionStatus: React.FC = () => {
                         >
                             {isConnected ? (
                                 <WifiIcon sx={{ fontSize: 16 }} />
+                            ) : isConnecting ? (
+                                <CircularProgress size={14} sx={{ color: wsStatusColor }} />
                             ) : (
                                 <WifiOffIcon sx={{ fontSize: 16 }} />
                             )}
@@ -407,7 +429,7 @@ export const ServerConnectionStatus: React.FC = () => {
                         variant="caption"
                         sx={{ fontWeight: 500, color: wsStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                     >
-                        {isConnected ? t('connected') : autoConnectWs ? t('connecting') : t('off')}
+                        {isConnected ? t('connected') : isConnecting ? t('connecting') : autoConnectWs ? t('disconnected') : t('off')}
                     </Typography>
 
                     {isElectron && (
@@ -730,16 +752,20 @@ export const ServerConnectionStatus: React.FC = () => {
                         </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box
-                                sx={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    backgroundColor: isConnected ? '#00ffff' : theme.palette.error.main,
-                                }}
-                            />
+                            {isConnecting ? (
+                                <CircularProgress size={8} sx={{ color: wsStatusColor }} />
+                            ) : (
+                                <Box
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: isConnected ? '#00ffff' : theme.palette.error.main,
+                                    }}
+                                />
+                            )}
                             <Typography variant="caption" sx={{ color: theme.palette.text.primary, flex: 1 }}>
-                                {isConnected ? t('connected') : autoConnectWs ? t('connecting') : t('disconnected')}
+                                {isConnected ? t('connected') : isConnecting ? t('connecting') : t('disconnected')}
                                 {isConnected && connectedCameraIds.length > 0
                                     ? ` — ${connectedCameraIds.length} camera${connectedCameraIds.length !== 1 ? 's' : ''}`
                                     : ''}
