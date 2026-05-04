@@ -157,6 +157,7 @@
   "videoLoadingSettings": "Video Loading Settings",
   "connected": "Connected",
   "connecting": "Connecting…",
+  "connectionFailed": "Connection failed",
   "disconnected": "Disconnected",
   "disconnect": "Disconnect",
   "connect": "Connect",

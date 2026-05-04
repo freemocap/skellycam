@@ -281,8 +281,8 @@ export const ServerConnectionStatus: React.FC = () => {
     }, [isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
 
     // ── WebSocket auto-reconnect loop ──
-    // Tries up to MAX_WS_CONNECT_ATTEMPTS times then stops and shows disconnected.
-    // Resets when the user manually connects, disconnects, or a connection succeeds.
+    // After MAX_WS_CONNECT_ATTEMPTS failures the UI shows "connection failed", but
+    // retrying continues in the background. A successful connection resets everything.
 
     const MAX_WS_CONNECT_ATTEMPTS = 15;
 
@@ -297,7 +297,6 @@ export const ServerConnectionStatus: React.FC = () => {
             setWsConnectionGaveUp(false);
             return;
         }
-        if (wsConnectionGaveUp) return;
 
         connect();
         wsFailedAttemptsRef.current++;
@@ -305,14 +304,13 @@ export const ServerConnectionStatus: React.FC = () => {
         const interval = setInterval(() => {
             if (wsFailedAttemptsRef.current >= MAX_WS_CONNECT_ATTEMPTS) {
                 setWsConnectionGaveUp(true);
-                return;
             }
             connect();
             wsFailedAttemptsRef.current++;
         }, WS_RECONNECT_INTERVAL_MS);
 
         return () => clearInterval(interval);
-    }, [autoConnectWs, isConnected, wsConnectionGaveUp, connect]);
+    }, [autoConnectWs, isConnected, connect]);
 
     // ── Toggle handlers ──
 
@@ -429,7 +427,7 @@ export const ServerConnectionStatus: React.FC = () => {
                         variant="caption"
                         sx={{ fontWeight: 500, color: wsStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                     >
-                        {isConnected ? t('connected') : isConnecting ? t('connecting') : autoConnectWs ? t('disconnected') : t('off')}
+                        {isConnected ? t('connected') : isConnecting ? t('connecting') : wsConnectionGaveUp ? t('connectionFailed') : autoConnectWs ? t('disconnected') : t('off')}
                     </Typography>
 
                     {isElectron && (
@@ -765,7 +763,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                 />
                             )}
                             <Typography variant="caption" sx={{ color: theme.palette.text.primary, flex: 1 }}>
-                                {isConnected ? t('connected') : isConnecting ? t('connecting') : t('disconnected')}
+                                {isConnected ? t('connected') : isConnecting ? t('connecting') : wsConnectionGaveUp ? t('connectionFailed') : t('disconnected')}
                                 {isConnected && connectedCameraIds.length > 0
                                     ? ` — ${connectedCameraIds.length} camera${connectedCameraIds.length !== 1 ? 's' : ''}`
                                     : ''}
