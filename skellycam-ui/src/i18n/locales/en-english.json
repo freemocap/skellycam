@@ -163,6 +163,7 @@
   "connect": "Connect",
   "off": "Off",
   "running": "Running",
+  "runningExternal": "Running (external)",
   "stopped": "Stopped",
   "working": "Working…",
   "invalid": "Invalid",
