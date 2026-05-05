@@ -29,7 +29,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from "react-i18next";
 import { useElectronIPC } from '@/services';
-import { DEFAULT_HOST, DEFAULT_PORT } from '@/services/server/server-helpers/server-urls';
+import { DEFAULT_HOST, DEFAULT_PORT, serverUrls } from '@/services/server/server-helpers/server-urls';
 
 interface ExecutableCandidate {
     name: string;
@@ -90,6 +90,8 @@ export const ServerConnectionStatus: React.FC = () => {
 
     // Transient state
     const [serverRunning, setServerRunning] = useState(false);
+    const [serverReachable, setServerReachable] = useState(false);
+    const [initialStatusChecked, setInitialStatusChecked] = useState(false);
     const [serverLoading, setServerLoading] = useState(false);
     const [currentExePath, setCurrentExePath] = useState<string | null>(null);
     const [candidates, setCandidates] = useState<ExecutableCandidate[]>([]);
@@ -101,6 +103,9 @@ export const ServerConnectionStatus: React.FC = () => {
     const autoLaunchFiredRef = useRef(false);
     // Guard against concurrent startServer calls from the auto-launch effect
     const serverLaunchingRef = useRef(false);
+    // Count consecutive failed WS connection attempts so we can stop spinning after giving up
+    const wsFailedAttemptsRef = useRef(0);
+    const [wsConnectionGaveUp, setWsConnectionGaveUp] = useState(false);
 
     // ── Persistence effects ──
 
@@ -130,6 +135,13 @@ export const ServerConnectionStatus: React.FC = () => {
         } catch (err) {
             console.error('Failed to poll server status:', err);
         }
+        try {
+            const res = await fetch(serverUrls.endpoints.health, { signal: AbortSignal.timeout(2000) });
+            setServerReachable(res.ok);
+        } catch {
+            setServerReachable(false);
+        }
+        setInitialStatusChecked(true);
     }, [isElectron, api]);
 
     // ── Candidate management ──
@@ -141,11 +153,11 @@ export const ServerConnectionStatus: React.FC = () => {
             const result = await api.pythonServer.getExecutableCandidates.query();
             const typed = result as ExecutableCandidate[];
             setCandidates(typed);
-            if (!selectedExePath) {
+            const validPaths = new Set(typed.filter((c) => c.isValid).map((c) => c.path));
+            const currentIsValid = selectedExePath && validPaths.has(selectedExePath);
+            if (!currentIsValid) {
                 const firstValid = typed.find((c) => c.isValid);
-                if (firstValid) {
-                    setSelectedExePath(firstValid.path);
-                }
+                setSelectedExePath(firstValid?.path ?? '');
             }
         } catch (err) {
             console.error('Failed to load executable candidates:', err);
@@ -270,28 +282,43 @@ export const ServerConnectionStatus: React.FC = () => {
         if (!autoLaunchServer) return;
         if (autoLaunchFiredRef.current) return;
         if (candidatesLoading) return; // wait for candidates to load
-        if (serverRunning || serverLoading) return;
+        if (!initialStatusChecked) return; // wait for first health check to complete
+        if (serverRunning || serverReachable || serverLoading) return;
 
         autoLaunchFiredRef.current = true;
         console.log('Auto-launching server...');
         startServer();
-    }, [isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
+    }, [isElectron, api, autoLaunchServer, candidatesLoading, initialStatusChecked, serverRunning, serverReachable, serverLoading, startServer]);
 
     // ── WebSocket auto-reconnect loop ──
     // When autoConnectWs is on and we're not connected, periodically call connect().
     // The underlying WebSocketConnection handles deduplication of CONNECTING state.
+    // After MAX_WS_CONNECT_ATTEMPTS failures the UI shows "connection failed", but
+    // retrying continues in the background. A successful connection resets everything.
+
+    const MAX_WS_CONNECT_ATTEMPTS = 5;
 
     useEffect(() => {
-        if (!autoConnectWs) return;
-        if (isConnected) return;
+        if (!autoConnectWs) {
+            wsFailedAttemptsRef.current = 0;
+            setWsConnectionGaveUp(false);
+            return;
+        }
+        if (isConnected) {
+            wsFailedAttemptsRef.current = 0;
+            setWsConnectionGaveUp(false);
+            return;
+        }
 
-        // Fire one immediate attempt
         connect();
+        wsFailedAttemptsRef.current++;
 
         const interval = setInterval(() => {
-            if (!isConnected) {
-                connect();
+            if (wsFailedAttemptsRef.current >= MAX_WS_CONNECT_ATTEMPTS) {
+                setWsConnectionGaveUp(true);
             }
+            connect();
+            wsFailedAttemptsRef.current++;
         }, WS_RECONNECT_INTERVAL_MS);
 
         return () => clearInterval(interval);
@@ -332,6 +359,8 @@ export const ServerConnectionStatus: React.FC = () => {
             setAutoConnectWs(false);
             disconnect();
         } else {
+            wsFailedAttemptsRef.current = 0;
+            setWsConnectionGaveUp(false);
             setAutoConnectWs(true);
             connect();
         }
@@ -356,8 +385,10 @@ export const ServerConnectionStatus: React.FC = () => {
 
     // ── Derived values ──
 
-    const wsStatusColor = isConnected ? '#00ffff' : '#f44336';
-    const serverStatusColor = serverRunning ? theme.palette.success.main : theme.palette.text.disabled;
+    const isConnecting = autoConnectWs && !isConnected && !wsConnectionGaveUp;
+    const wsStatusColor = isConnected ? '#00ffff' : isConnecting ? '#ffb300' : '#f44336';
+    const serverIsExternal = serverReachable && !serverRunning;
+    const serverStatusColor = (serverRunning || serverReachable) ? theme.palette.success.main : theme.palette.text.disabled;
 
     const validCandidates = candidates.filter((c) => c.isValid);
     const invalidCandidates = candidates.filter((c) => !c.isValid);
@@ -397,6 +428,8 @@ export const ServerConnectionStatus: React.FC = () => {
                         >
                             {isConnected ? (
                                 <WifiIcon sx={{ fontSize: 16 }} />
+                            ) : isConnecting ? (
+                                <CircularProgress size={14} sx={{ color: wsStatusColor }} />
                             ) : (
                                 <WifiOffIcon sx={{ fontSize: 16 }} />
                             )}
@@ -407,7 +440,7 @@ export const ServerConnectionStatus: React.FC = () => {
                         variant="caption"
                         sx={{ fontWeight: 500, color: wsStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                     >
-                        {isConnected ? t('connected') : autoConnectWs ? t('connecting') : t('off')}
+                        {isConnected ? t('connected') : isConnecting ? t('connecting') : wsConnectionGaveUp ? t('connectionFailed') : autoConnectWs ? t('disconnected') : t('off')}
                     </Typography>
 
                     {isElectron && (
@@ -436,7 +469,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                 variant="caption"
                                 sx={{ fontWeight: 500, color: serverStatusColor, whiteSpace: 'nowrap', fontSize: '0.7rem' }}
                             >
-                                {serverLoading ? t('working') : serverRunning ? t('running') : t('stopped')}
+                                {serverLoading ? t('working') : serverRunning ? t('running') : serverIsExternal ? t('runningExternal') : t('stopped')}
                             </Typography>
                         </>
                     )}
@@ -502,14 +535,14 @@ export const ServerConnectionStatus: React.FC = () => {
                                         width: 8,
                                         height: 8,
                                         borderRadius: '50%',
-                                        backgroundColor: serverRunning
+                                        backgroundColor: (serverRunning || serverReachable)
                                             ? theme.palette.success.main
                                             : theme.palette.error.main,
                                     }}
                                 />
                                 <Typography variant="caption" sx={{ color: theme.palette.text.primary }}>
-                                    {serverRunning ? t('running') : t('stopped')}
-                                    {processInfo?.pid && ` (PID: ${processInfo.pid})`}
+                                    {serverRunning ? t('running') : serverIsExternal ? t('runningExternal') : t('stopped')}
+                                    {serverRunning && processInfo?.pid && ` (PID: ${processInfo.pid})`}
                                 </Typography>
                             </Box>
 
@@ -520,7 +553,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                     value={selectedExePath}
                                     onChange={(e) => setSelectedExePath(e.target.value)}
                                     label={t("executable")}
-                                    disabled={serverRunning || serverLoading}
+                                    disabled={serverRunning || serverReachable || serverLoading}
                                     sx={{ fontSize: '0.75rem' }}
                                 >
                                     {validCandidates.map((candidate) => (
@@ -574,7 +607,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                     <IconButton
                                         size="small"
                                         onClick={browseForExecutable}
-                                        disabled={serverRunning || serverLoading}
+                                        disabled={serverRunning || serverReachable || serverLoading}
                                         sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}
                                     >
                                         <FolderOpenIcon sx={{ fontSize: 16 }} />
@@ -584,7 +617,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                     <IconButton
                                         size="small"
                                         onClick={refreshCandidates}
-                                        disabled={serverRunning || candidatesLoading}
+                                        disabled={serverRunning || serverReachable || candidatesLoading}
                                         sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}
                                     >
                                         {candidatesLoading ? (
@@ -604,7 +637,7 @@ export const ServerConnectionStatus: React.FC = () => {
                                     color="success"
                                     startIcon={serverLoading ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon />}
                                     onClick={() => startServer()}
-                                    disabled={serverRunning || serverLoading}
+                                    disabled={serverRunning || serverReachable || serverLoading}
                                     sx={{ flex: 1, fontSize: '0.7rem', textTransform: 'none' }}
                                 >
                                     Launch
@@ -730,16 +763,20 @@ export const ServerConnectionStatus: React.FC = () => {
                         </Box>
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box
-                                sx={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    backgroundColor: isConnected ? '#00ffff' : theme.palette.error.main,
-                                }}
-                            />
+                            {isConnecting ? (
+                                <CircularProgress size={8} sx={{ color: wsStatusColor }} />
+                            ) : (
+                                <Box
+                                    sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: '50%',
+                                        backgroundColor: isConnected ? '#00ffff' : theme.palette.error.main,
+                                    }}
+                                />
+                            )}
                             <Typography variant="caption" sx={{ color: theme.palette.text.primary, flex: 1 }}>
-                                {isConnected ? t('connected') : autoConnectWs ? t('connecting') : t('disconnected')}
+                                {isConnected ? t('connected') : isConnecting ? t('connecting') : wsConnectionGaveUp ? t('connectionFailed') : t('disconnected')}
                                 {isConnected && connectedCameraIds.length > 0
                                     ? ` — ${connectedCameraIds.length} camera${connectedCameraIds.length !== 1 ? 's' : ''}`
                                     : ''}

@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from "react";
-import {Box, Typography, useTheme} from "@mui/material";
+import {Box, Tooltip, Typography, useTheme} from "@mui/material";
+import {useTranslation} from "react-i18next";
 import {SimpleTreeView} from "@mui/x-tree-view/SimpleTreeView";
 import {TreeItem} from "@mui/x-tree-view/TreeItem";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -26,6 +27,7 @@ interface RecordingOperation {
 
 export const RecordingInfoPanel: React.FC = () => {
     const theme = useTheme();
+    const {t} = useTranslation();
     const dispatch = useAppDispatch();
     const recordingInfo = useAppSelector(
         (state) => state.recording
@@ -50,7 +52,7 @@ export const RecordingInfoPanel: React.FC = () => {
     const [recordingTag, setRecordingTag] = useState<string>("");
     const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
     const {isElectron, api} = useElectronIPC();
-    const {connectedCameraIds} = useServer();
+    const {connectedCameraIds, isConnected} = useServer();
     const noCamerasConnected = connectedCameraIds.length === 0;
 
     // Track when recording state changes to clear pending state
@@ -249,14 +251,18 @@ export const RecordingInfoPanel: React.FC = () => {
                             </Typography>
 
                             <Box onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} sx={{ flexGrow: 1, ml: 1.5 }}>
-                                <StartStopRecordingButton
-                                    isRecording={recordingInfo.isRecording}
-                                    isPending={pendingOperation !== null}
-                                    countdown={countdown}
-                                    recordingStartTime={recordingStartTime}
-                                    disabled={noCamerasConnected && !recordingInfo.isRecording}
-                                    onClick={handleRecordButtonClick}
-                                />
+                                <Tooltip title={(!isConnected || noCamerasConnected) && !recordingInfo.isRecording ? t('connectCamerasBeforeRecording') : ''}>
+                                    <span>
+                                        <StartStopRecordingButton
+                                            isRecording={recordingInfo.isRecording}
+                                            isPending={pendingOperation !== null}
+                                            countdown={countdown}
+                                            recordingStartTime={recordingStartTime}
+                                            disabled={(!isConnected || noCamerasConnected) && !recordingInfo.isRecording}
+                                            onClick={handleRecordButtonClick}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </Box>
                         </Box>
                     }

@@ -304,6 +304,10 @@ async def await_extracted_configs(
             ] = extracted_config_message.extracted_config
         await await_100ms()
 
+    failed = [cam_id for cam_id, config in updated_configs.items() if not isinstance(config, CameraConfig)]
+    if failed:
+        raise RuntimeError(f"Failed to initialize camera(s): {failed}")
+
     validate_camera_configs(updated_configs)
 
     return updated_configs

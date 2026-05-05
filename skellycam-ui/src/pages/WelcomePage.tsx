@@ -1,7 +1,7 @@
 import React, {useEffect, useState, useRef, useCallback} from 'react';
 import {
     Box, Button, Checkbox, CircularProgress, Container,
-    darken, Divider, Fade, FormControlLabel, Grow, Paper, Stack, Typography
+    darken, Divider, Fade, FormControlLabel, Grow, Paper, Stack, Tooltip, Typography
 } from '@mui/material';
 import {useNavigate} from 'react-router-dom';
 import {useTheme} from '@mui/material/styles';
@@ -25,7 +25,7 @@ const WelcomePage: React.FC = () => {
     const [telemetryEnabled, setTelemetryEnabled] = useState<boolean>(true);
     const [telemetryLoaded, setTelemetryLoaded] = useState<boolean>(false);
     const {isElectron, api} = useElectronIPC();
-    const {connectedCameraIds} = useServer();
+    const {connectedCameraIds, isConnected} = useServer();
     const dispatch = useAppDispatch();
     const [isConnecting, setIsConnecting] = useState(false);
 
@@ -212,6 +212,8 @@ const WelcomePage: React.FC = () => {
 
                     {/* ── PRIMARY CTA ── */}
                     <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mb: 2 }}>
+                        <Tooltip title={!isConnected ? t('connectServerFirst') : ''}>
+                            <span style={{ width: '100%', maxWidth: 400, display: 'flex', justifyContent: 'center' }}>
                         <Button
                             variant="contained"
                             size="large"
@@ -220,7 +222,7 @@ const WelcomePage: React.FC = () => {
                                 : <VideocamIcon sx={{ fontSize: 28 }} />
                             }
                             onClick={handleConnectCameras}
-                            disabled={isConnecting}
+                            disabled={isConnecting || !isConnected}
                             sx={{
                                 '&&': {
                                     px: 6,
@@ -250,6 +252,8 @@ const WelcomePage: React.FC = () => {
                         >
                             {t('connectToCameras')}
                         </Button>
+                            </span>
+                        </Tooltip>
                     </Box>
 
                     {/* ── SECONDARY LINKS ── */}
