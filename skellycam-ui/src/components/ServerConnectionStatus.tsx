@@ -153,11 +153,11 @@ export const ServerConnectionStatus: React.FC = () => {
             const result = await api.pythonServer.getExecutableCandidates.query();
             const typed = result as ExecutableCandidate[];
             setCandidates(typed);
-            if (!selectedExePath) {
+            const validPaths = new Set(typed.filter((c) => c.isValid).map((c) => c.path));
+            const currentIsValid = selectedExePath && validPaths.has(selectedExePath);
+            if (!currentIsValid) {
                 const firstValid = typed.find((c) => c.isValid);
-                if (firstValid) {
-                    setSelectedExePath(firstValid.path);
-                }
+                setSelectedExePath(firstValid?.path ?? '');
             }
         } catch (err) {
             console.error('Failed to load executable candidates:', err);
