@@ -2,6 +2,7 @@ import React from "react";
 import ButtonSm from "./ButtonSm";
 import DropdownButton from "./DropdownButton";
 import { ServerConnectionStatus } from "@/components/ServerConnectionStatus";
+import { EXTERNAL_URLS } from "@/constants/external-urls";
 
 /**
  * HeaderPanel Component
@@ -26,12 +27,10 @@ export default function HeaderPanel() {
         {/* Support button */}
         <ButtonSm
           iconClass="donate-icon"
-          text="Support the freemocap"
+          text="Support FreeMoCap"
           rightSideIcon="externallink"
           textColor="text-gray"
-          onClick={() => {
-            console.log("Support freemocap clicked");
-          }}
+          onClick={() => window.open(EXTERNAL_URLS.DONATE, "_blank")}
         />
 
         {/* Help dropdown menu */}
@@ -41,17 +40,16 @@ export default function HeaderPanel() {
             text: "Help",
             rightSideIcon: "dropdown",
             textColor: "text-gray",
-            iconClass: "",
-            onClick: () => console.log("help dropdown button clicked"),
+            iconClass: ""
           }}
           dropdownItems={[
             <ButtonSm
-              key="FreeMocap Guide"
+              key="Skellycam Documentation"
               rightSideIcon="externallink"
               buttonType="full-width"
-              text="FreeMocap Guide"
+              text="Skellycam Documentation"
               iconClass="learn-icon"
-              onClick={() => console.log("FreeMocap Guide clicked")}
+              onClick={() => window.open(EXTERNAL_URLS.DOCS_INTRO, "_blank")}
             />,
             <ButtonSm
               key="Ask Question on Discord"
@@ -59,14 +57,7 @@ export default function HeaderPanel() {
               buttonType="full-width"
               text="Ask Question on Discord"
               iconClass="discord-icon"
-              onClick={() => console.log("Ask Question on Discord clicked")}
-            />,
-            <ButtonSm
-              key="tutorials"
-              buttonType="full-width"
-              text="Download Sample Videos"
-              iconClass="download-icon"
-              onClick={() => console.log("Download Sample Videos clicked")}
+              onClick={() => window.open(EXTERNAL_URLS.DISCORD, "_blank")}
             />,
           ]}
         />
