@@ -14,7 +14,6 @@ import SlideshowIcon from '@mui/icons-material/Slideshow';
 import SettingsIcon from '@mui/icons-material/Settings';
 import {useLocation, useNavigate} from "react-router-dom";
 import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraConfigTreeView";
-import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {startRecording, stopRecording} from "@/store";
 import {useTranslation} from "react-i18next";
@@ -296,8 +295,6 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({
                     </Box>
                 </ListItem>
             </List>
-            {/* Server Settings */}
-            <ServerConnectionStatus/>
             {/* Prominent Cameras / Playback page toggle */}
             <Box sx={{
                 display: 'flex',

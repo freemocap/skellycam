@@ -1,5 +1,6 @@
 // skellycam-ui/src/layout/paperbase_theme/paperbase-theme.ts
 import {createTheme, PaletteMode} from '@mui/material/styles';
+import { THEME_COLORS } from '@/constants/theme-colors';
 
 // Define common theme settings
 const getBaseTheme = (mode: PaletteMode) => ({
@@ -41,68 +42,67 @@ const getBaseTheme = (mode: PaletteMode) => ({
     },
 });
 
-// Define the dark theme palette with better visibility
 const darkPalette = {
     mode: 'dark' as PaletteMode,
     primary: {
-        light: '#90b4f8',
-        main: '#5e92f3',
-        dark: '#163a6d',
-        contrastText: '#ffffff',
+        light: THEME_COLORS.blue100,
+        main: THEME_COLORS.blue800,
+        dark: THEME_COLORS.blue900,
+        contrastText: THEME_COLORS.gray100,
     },
     secondary: {
-        light: '#ff6090',
-        main: '#f50057',
-        dark: '#c51162',
-        contrastText: '#ffffff',
+        light: '#c084fc',
+        main: '#9333ea',
+        dark: '#7e22ce',
+        contrastText: THEME_COLORS.gray100,
     },
     background: {
-        default: '#0a0e1a',
-        paper: '#262f44',
+        default: THEME_COLORS.gray800,
+        paper: THEME_COLORS.gray700,
     },
     text: {
-        primary: '#ffffff',
-        secondary: '#b3b9c6',
+        primary: THEME_COLORS.gray100,
+        secondary: THEME_COLORS.gray400,
     },
-    divider: 'rgba(255, 255, 255, 0.12)',
+    divider: THEME_COLORS.gray600,
     action: {
-        active: '#ffffff',
-        hover: 'rgba(255, 255, 255, 0.08)',
-        selected: 'rgba(255, 255, 255, 0.16)',
-        disabled: 'rgba(255, 255, 255, 0.3)',
-        disabledBackground: 'rgba(255, 255, 255, 0.12)',
+        active: THEME_COLORS.gray100,
+        hover: 'rgba(50, 50, 50, 0.5)',
+        selected: 'rgba(50, 50, 50, 0.7)',
+        disabled: 'rgba(155, 155, 155, 0.38)',
+        disabledBackground: 'rgba(50, 50, 50, 0.3)',
     },
     success: {
-        main: '#4caf50',
-        light: '#80e27e',
-        dark: '#087f23',
+        main: THEME_COLORS.green100,
+        light: '#50f050',
+        dark: THEME_COLORS.green900,
     },
     warning: {
-        main: '#ff9800',
-        light: '#ffcc80',
-        dark: '#c66900',
+        main: THEME_COLORS.warning500,
+        light: '#ff7833',
+        dark: '#b83900',
     },
     error: {
-        main: '#f44336',
-        light: '#ff7961',
-        dark: '#ba000d',
+        main: THEME_COLORS.red500,
+        light: '#e84775',
+        dark: THEME_COLORS.red600,
     },
     info: {
-        main: '#29b6f6',
-        light: '#73e8ff',
-        dark: '#0086c3',
+        main: THEME_COLORS.blue800,
+        light: THEME_COLORS.blue100,
+        dark: THEME_COLORS.blue900,
     },
     grey: {
         50: '#fafafa',
-        100: '#f5f5f5',
-        200: '#eeeeee',
-        300: '#e0e0e0',
-        400: '#bdbdbd',
-        500: '#9e9e9e',
-        600: '#757575',
-        700: '#616161',
-        800: '#424242',
-        900: '#212121',
+        100: THEME_COLORS.gray100,
+        200: '#c0c0c0',
+        300: THEME_COLORS.gray400,
+        400: THEME_COLORS.gray400,
+        500: THEME_COLORS.gray500,
+        600: THEME_COLORS.gray600,
+        700: THEME_COLORS.gray700,
+        800: THEME_COLORS.gray800,
+        900: THEME_COLORS.gray900,
     },
 };
 
@@ -185,7 +185,7 @@ export const createExtendedTheme = (mode: PaletteMode) => {
             MuiDrawer: {
                 styleOverrides: {
                     paper: {
-                        backgroundColor: mode === 'dark' ? '#0f1419' : '#f8f9fa',
+                        backgroundColor: mode === 'dark' ? THEME_COLORS.gray800 : '#f8f9fa',
                     },
                 },
             },
@@ -297,23 +297,23 @@ export const createExtendedTheme = (mode: PaletteMode) => {
                 styleOverrides: {
                     root: {
                         '& .MuiOutlinedInput-root': {
-                            color: mode === 'dark' ? 'white' : 'rgba(0, 0, 0, 0.87)',
+                            color: mode === 'dark' ? THEME_COLORS.gray100 : 'rgba(0, 0, 0, 0.87)',
                             '& fieldset': {
-                                borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.23)',
+                                borderColor: mode === 'dark' ? THEME_COLORS.gray600 : 'rgba(0, 0, 0, 0.23)',
                             },
                             '&:hover fieldset': {
-                                borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.87)',
+                                borderColor: mode === 'dark' ? THEME_COLORS.gray400 : 'rgba(0, 0, 0, 0.87)',
                             },
                             '&.Mui-focused fieldset': {
                                 borderColor: baseTheme.palette.primary.main,
                             },
                         },
                         '& .MuiInputLabel-root': {
-                            color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                            color: mode === 'dark' ? THEME_COLORS.gray400 : 'rgba(0, 0, 0, 0.6)',
                             fontSize: 13,
                         },
                         '& .MuiInputBase-input': {
-                            color: mode === 'dark' ? 'white' : 'rgba(0, 0, 0, 0.87)',
+                            color: mode === 'dark' ? THEME_COLORS.gray100 : 'rgba(0, 0, 0, 0.87)',
                             fontSize: 13,
                             padding: '8px 12px',
                         },
@@ -351,7 +351,7 @@ export const createExtendedTheme = (mode: PaletteMode) => {
             MuiTypography: {
                 styleOverrides: {
                     root: {
-                        color: mode === 'dark' ? 'white' : 'rgba(0, 0, 0, 0.87)',
+                        color: mode === 'dark' ? THEME_COLORS.gray100 : 'rgba(0, 0, 0, 0.87)',
                     },
                 },
             },

@@ -3,6 +3,7 @@ import React, {useCallback, useRef, useState} from "react";
 import {ImperativePanelHandle, Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
+import HeaderPanel from "@/components/ui-components/HeaderPanel";
 import {useTheme} from "@mui/material/styles";
 import {Box} from "@mui/material";
 import {useMenuActions} from "@/hooks/useMenuActions";
@@ -40,6 +41,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
     return (
         <Box sx={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
+            <HeaderPanel />
             <PanelGroup
                 direction="vertical"
                 style={{flex: 1}}
