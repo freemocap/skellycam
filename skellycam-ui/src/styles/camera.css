@@ -1,0 +1,390 @@
+/* ============================================================
+   Camera Page & Grid
+   ============================================================ */
+
+.cameras-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--gray-800);
+  overflow: hidden;
+  position: relative;
+  padding: 4px;
+  gap: 0;
+}
+
+.cameras-page-content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.cameras-page-footer {
+  flex-shrink: 0;
+  padding: 4px;
+}
+
+.camera-grid-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.camera-grid-empty {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  padding: 16px;
+  color: var(--gray-400);
+}
+
+/* Camera cell wrapper (react-grid-layout child) */
+.camera-cell {
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.camera-cell.recording {
+  border: 2px solid #ff2020;
+  animation: recording-pulse 3s infinite ease-in-out;
+}
+
+@keyframes recording-pulse {
+  0%   { border-color: #ff2020; box-shadow: 0 0 4px rgba(255, 32, 32, 0.4); }
+  50%  { border-color: #aa1010; box-shadow: 0 0 8px rgba(255, 32, 32, 0.15); }
+  100% { border-color: #ff2020; box-shadow: 0 0 4px rgba(255, 32, 32, 0.4); }
+}
+
+/* react-grid-layout overrides */
+.camera-grid-container .react-grid-placeholder {
+  background-color: var(--blue-800);
+  opacity: 0.15;
+  border-radius: 4px;
+}
+
+.camera-grid-container .react-grid-item > .react-resizable-handle {
+  z-index: 10;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.camera-grid-container .react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+
+.camera-grid-container .react-grid-item > .react-resizable-handle::after {
+  width: 10px;
+  height: 10px;
+  right: 4px;
+  bottom: 4px;
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================
+   Resizable Camera View
+   ============================================================ */
+
+.resizable-camera-view {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.resizable-camera-view:hover { border-color: rgba(255, 255, 255, 0.4); }
+.resizable-camera-view.active { border-color: var(--blue-800); }
+
+.resizable-move-area {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.resizable-move-area.dragging { cursor: grabbing; }
+
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 2;
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(255, 255, 255, 0.45);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.45);
+}
+
+.resize-handle:hover::after,
+.resize-handle.active::after {
+  border-color: var(--blue-800);
+}
+
+/* ============================================================
+   View Settings Overlay
+   ============================================================ */
+
+.settings-overlay-trigger {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+}
+
+.settings-overlay-panel {
+  position: absolute;
+  top: 44px;
+  right: 8px;
+  z-index: 99;
+  min-width: 220px;
+}
+
+/* ============================================================
+   Range Input (native slider)
+   ============================================================ */
+
+.range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--gray-600);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.range-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue-800);
+  cursor: pointer;
+  transition: background var(--speed-1);
+}
+
+.range-input:disabled::-webkit-slider-thumb {
+  background: var(--gray-500);
+}
+
+.range-input::-webkit-slider-thumb:hover {
+  background: var(--blue-100);
+}
+
+.range-input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blue-800);
+  cursor: pointer;
+  border: none;
+}
+
+/* ============================================================
+   Camera Config Tree
+   ============================================================ */
+
+.camera-tree-root {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.camera-tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: var(--blue-900);
+  flex-shrink: 0;
+}
+
+.camera-section-header {
+  background-color: var(--gray-700);
+}
+
+.camera-section-header:hover {
+  background-color: var(--gray-600);
+}
+
+.camera-item-row {
+  background-color: var(--gray-800);
+  transition: background-color var(--speed-1);
+}
+
+.camera-item-row:hover {
+  background-color: var(--gray-700);
+}
+
+.camera-item-row.expanded {
+  background-color: var(--gray-700);
+}
+
+/* Status colors */
+.camera-status-connected  { color: var(--green-100); }
+.camera-status-available  { color: var(--blue-800); }
+.camera-status-error      { color: var(--red-500); }
+
+.camera-status-badge {
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.camera-status-badge.camera-status-connected  { background-color: var(--green-100); color: #000; }
+.camera-status-badge.camera-status-available  { background-color: var(--blue-800);  color: #fff; }
+.camera-status-badge.camera-status-error      { background-color: var(--red-500);   color: #fff; }
+
+/* Config summary chips */
+.camera-config-chip {
+  padding: 0 4px;
+  border: 1px solid var(--gray-600);
+  border-radius: 2px;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Expanded config panel */
+.config-panel {
+  margin-left: 20px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--gray-600);
+  background-color: var(--gray-700);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-panel-divider {
+  border-bottom: 1px solid var(--gray-600);
+  padding-top: 4px;
+}
+
+/* ============================================================
+   Start/Stop Recording Button
+   ============================================================ */
+
+.record-button {
+  padding: 10px 8px;
+  min-height: 44px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.record-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.record-button-duration {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-top: 2px;
+}
+
+.record-button-idle {
+  background-color: #005d94;
+  border: 3px solid #ff55ff;
+  transition: all 0.3s ease;
+}
+
+.record-button-idle:hover { border-color: #fb1402; }
+
+.record-button-active {
+  background-color: #8d0a02;
+  border: 3px solid #ff55ff;
+  animation: recording-button-pulse 3s infinite ease-in-out;
+}
+
+.record-button-pending {
+  border-color: #ffa500;
+  opacity: 0.8;
+}
+
+@keyframes recording-button-pulse {
+  0%   { background-color: #8d0a02; }
+  50%  { background-color: #3d0401; }
+  100% { background-color: #8d0a02; }
+}
+
+/* ============================================================
+   Recording Panel
+   ============================================================ */
+
+.recording-path-preview {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--gray-400);
+  overflow: hidden;
+}
+
+.recording-path-part {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.recording-path-part p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-selector-constrained {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Popup overlay for long values like directory paths */
+.directory-input-popup {
+  min-width: 320px;
+}
+
+.directory-input-popup input.input-field {
+  width: 100%;
+  min-width: 280px;
+}
+
+.recording-countdown {
+  text-align: center;
+  color: var(--warning-500);
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 8px;
+}

@@ -5,6 +5,7 @@
 @import './animation.css';
 @import './log-terminal.css';
 @import './framerate.css';
+@import './camera.css';
 /* base / reset */
 
 /* TOGGLE STYLES AND SHAPES */
@@ -1255,6 +1256,20 @@ input[type="checkbox"]:disabled {
 }
 
 .input-with-unit.tooltip:focus-within {
+  box-shadow: 0px 0px 0px 1px rgba(255, 255, 255, 0.5);
+  border-color: var(--gray-100);
+  transition: border var(--speed-2);
+}
+
+/* Apply the same focus/hover behaviour to all input containers */
+.input-with-unit:has(input.input-field:hover),
+.input-with-string:has(input.input-field:hover) {
+  border-color: var(--gray-400);
+  transition: border var(--speed-2);
+}
+
+.input-with-unit:focus-within,
+.input-with-string:focus-within {
   box-shadow: 0px 0px 0px 1px rgba(255, 255, 255, 0.5);
   border-color: var(--gray-100);
   transition: border var(--speed-2);

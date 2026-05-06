@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Button, IconButton, Paper, TextField, Checkbox, FormControlLabel, Tooltip } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
-import CloseIcon from '@mui/icons-material/Close';
-import GridViewIcon from '@mui/icons-material/GridView';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import clsx from 'clsx';
+import ToggleComponent from '@/components/ui-components/ToggleComponent';
+import SubactionHeader from '@/components/ui-components/SubactionHeader';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 
-interface CameraSettings {
-    columns: number | null;
-}
+interface CameraSettings { columns: number | null; }
 
 interface CamerasViewSettingsOverlayProps {
     onSettingsChange: (settings: CameraSettings) => void;
@@ -17,9 +13,8 @@ interface CamerasViewSettingsOverlayProps {
 }
 
 export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProps> = ({
-                                                                                          onSettingsChange,
-                                                                                          onResetLayout,
-                                                                                      }) => {
+    onSettingsChange,
+}) => {
     const { connectedCameraIds } = useServer();
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -32,102 +27,61 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         if (total <= 9) return 3;
         return 4;
     };
-
     const autoColumns = getAutoColumns(connectedCameraIds.length);
 
-    const handleAutoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const checked = event.target.checked;
+    const handleAutoToggle = (checked: boolean) => {
         setIsAuto(checked);
         onSettingsChange({ columns: checked ? null : manualColumns });
     };
 
-    const handleColumnsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(event.target.value);
+    const handleColumnsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value);
         if (!isNaN(value) && value > 0) {
             setManualColumns(value);
-            if (isAuto) {
-                setIsAuto(false);
-            }
+            if (isAuto) setIsAuto(false);
             onSettingsChange({ columns: value });
         }
     };
 
     return (
         <>
-            {/* Settings Button */}
-            <Box
-                sx={{
-                    position: 'absolute',
-                    top: 16,
-                    right: 16,
-                    zIndex: 1000,
-                }}
-            >
-                <Tooltip title={isOpen ? t("closeSettings") : t("gridSettings")}>
-                    <IconButton
-                        onClick={() => setIsOpen(!isOpen)}
-                        sx={{
-                            backgroundColor: 'background.paper',
-                            boxShadow: 2,
-                            '&:hover': {
-                                backgroundColor: 'action.hover',
-                            },
-                        }}
-                    >
-                        {isOpen ? <CloseIcon /> : <SettingsIcon />}
-                    </IconButton>
-                </Tooltip>
-            </Box>
-
-            {/* Settings Panel */}
-            {isOpen && (
-                <Paper
-                    elevation={8}
-                    sx={{
-                        position: 'absolute',
-                        top: 70,
-                        right: 16,
-                        zIndex: 999,
-                        padding: 2,
-                        minWidth: 250,
-                    }}
+            <div className="settings-overlay-trigger">
+                <button
+                    className="button icon-button br-1 border-1 border-black bg-dark"
+                    onClick={() => setIsOpen(!isOpen)}
+                    title={isOpen ? t("closeSettings") : t("gridSettings")}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                        <GridViewIcon fontSize="small" />
-                        <Box sx={{ fontWeight: 600 }}>{t("gridColumns")}</Box>
-                    </Box>
+                    <span className={clsx("icon icon-size-16", isOpen ? "close-icon" : "settings-icon")} />
+                </button>
+            </div>
 
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={isAuto}
-                                    onChange={handleAutoChange}
-                                    sx={{
-                                        '&.Mui-checked': {
-                                            color: 'text.primary',
-                                        },
-                                    }}
-                                />
-                            }
-                            label={t("auto")}
-                        />
+            {isOpen && (
+                <div className="settings-overlay-panel reveal slide-down bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-1">
+                    <SubactionHeader text={t("gridColumns")} />
 
-                        <TextField
-                            type="number"
-                            label={t("columns")}
-                            value={isAuto ? autoColumns : manualColumns}
-                            onChange={handleColumnsChange}
-                            fullWidth
-                            inputProps={{
-                                min: 1,
-                                step: 1,
-                            }}
-                            helperText={isAuto ? `Auto-detected: ${autoColumns}` : "Enter any positive number"}
-                        />
-                    </Box>
+                    <ToggleComponent
+                        text={t("auto")}
+                        isToggled={isAuto}
+                        onToggle={handleAutoToggle}
+                    />
 
-                </Paper>
+                    <div className="toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
+                        <p className="text md text-gray text-nowrap">{t("columns")}</p>
+                        <div className="input-with-unit">
+                            <input
+                                className="input-field numeric-input"
+                                type="number"
+                                min={1}
+                                value={isAuto ? autoColumns : manualColumns}
+                                onChange={handleColumnsChange}
+                            />
+                        </div>
+                    </div>
+
+                    {isAuto && (
+                        <p className="text sm text-darkgray p-1">Auto: {autoColumns}</p>
+                    )}
+                </div>
             )}
         </>
     );

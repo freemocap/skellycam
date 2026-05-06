@@ -1,17 +1,12 @@
 import React from 'react';
-import {Box, Typography} from '@mui/material';
-import {TreeItem} from '@mui/x-tree-view/TreeItem';
-import {
-    FullRecordingPathPreview
-} from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";
-import {RecordingControlsSection} from "@/components/recording-info-panel/RecordingControlsTreeSection";
+import { FullRecordingPathPreview } from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";
+import { RecordingControlsSection } from "@/components/recording-info-panel/RecordingControlsTreeSection";
 
 interface RecordingPathTreeItemProps {
     recordingDirectory: string;
     recordingName: string;
     subfolder?: string;
     countdown: number | null;
-    // Add all the control props
     recordingTag: string;
     useDelayStart: boolean;
     delaySeconds: number;
@@ -34,78 +29,25 @@ interface RecordingPathTreeItemProps {
 }
 
 export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
-                                                                                recordingDirectory,
-                                                                                recordingName,
-                                                                                subfolder,
-                                                                                countdown,
-                                                                                // Control props
-                                                                                recordingTag,
-                                                                                useDelayStart,
-                                                                                delaySeconds,
-                                                                                useTimestamp,
-                                                                                baseName,
-                                                                                useIncrement,
-                                                                                currentIncrement,
-                                                                                createSubfolder,
-                                                                                customSubfolderName,
-                                                                                isRecording,
-                                                                                onDelayToggle,
-                                                                                onDelayChange,
-                                                                                onTagChange,
-                                                                                onUseTimestampChange,
-                                                                                onBaseNameChange,
-                                                                                onUseIncrementChange,
-                                                                                onIncrementChange,
-                                                                                onCreateSubfolderChange,
-                                                                                onCustomSubfolderNameChange
-                                                                            }) => {
+    recordingDirectory, recordingName, subfolder, countdown, ...controlProps
+}) => {
     return (
-        <TreeItem
-            itemId="recording-path"
-            label={
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                    <FullRecordingPathPreview
-                        directory={recordingDirectory}
-                        filename={recordingName}
-                        subfolder={subfolder}
-                    />
-                </Box>
-            }
-        >
-            <Box
-                onKeyDown={(e) => e.stopPropagation()}
-                sx={{pl: 2, pt: 1, display: 'flex', flexDirection: 'column', gap: 2}}
-            >
-                {countdown !== null && (
-                    <Typography variant="h4" align="center" color="secondary">
-                        Starting in {countdown}...
-                    </Typography>
-                )}
+        <div className="flex flex-col gap-1" onKeyDown={(e) => e.stopPropagation()}>
+            <FullRecordingPathPreview
+                directory={recordingDirectory}
+                filename={recordingName}
+                subfolder={subfolder}
+            />
 
-                <RecordingControlsSection
-                    recordingDirectory={recordingDirectory}
-                    recordingName={recordingName}
-                    recordingTag={recordingTag}
-                    useDelayStart={useDelayStart}
-                    delaySeconds={delaySeconds}
-                    useTimestamp={useTimestamp}
-                    baseName={baseName}
-                    useIncrement={useIncrement}
-                    currentIncrement={currentIncrement}
-                    createSubfolder={createSubfolder}
-                    customSubfolderName={customSubfolderName}
-                    isRecording={isRecording}
-                    onDelayToggle={onDelayToggle}
-                    onDelayChange={onDelayChange}
-                    onTagChange={onTagChange}
-                    onUseTimestampChange={onUseTimestampChange}
-                    onBaseNameChange={onBaseNameChange}
-                    onUseIncrementChange={onUseIncrementChange}
-                    onIncrementChange={onIncrementChange}
-                    onCreateSubfolderChange={onCreateSubfolderChange}
-                    onCustomSubfolderNameChange={onCustomSubfolderNameChange}
-                />
-            </Box>
-        </TreeItem>
+            {countdown !== null && (
+                <p className="recording-countdown">{`Starting in ${countdown}...`}</p>
+            )}
+
+            <RecordingControlsSection
+                recordingDirectory={recordingDirectory}
+                recordingName={recordingName}
+                {...controlProps}
+            />
+        </div>
     );
 };

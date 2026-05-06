@@ -8,19 +8,25 @@ interface ButtonSmProps {
   onClick?: () => void;
   rightSideIcon?: string;
   textColor?: string;
+  title?: string;
+  disabled?: boolean;
 }
 
 const ButtonSm: React.FC<ButtonSmProps> = ({
-  iconClass = "", // left-side icon
-  buttonType = "", // valid types are : use classes like this  // for primaruy use: primary full-width justify-center // for secondary use " secondary full-width justify-center ""
+  iconClass = "",
+  buttonType = "",
   text,
   onClick = () => {},
-  rightSideIcon = "", // "externallink" | "dropdown" | ""
-  textColor = "text-gray", // "text-gray" | "text-white"
+  rightSideIcon = "",
+  textColor = "text-gray",
+  title,
+  disabled = false,
 }) => {
   return (
     <button
       onClick={onClick}
+      title={title}
+      disabled={disabled}
       className={clsx(
         "gap-1 br-1 button sm fit-content flex-inline text-left items-center", // base styles
         buttonType, // multiple classes supported here
