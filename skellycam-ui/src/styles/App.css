@@ -3,6 +3,8 @@
 @import './icons.css';
 @import './color.css';
 @import './animation.css';
+@import './log-terminal.css';
+@import './framerate.css';
 /* base / reset */
 
 /* TOGGLE STYLES AND SHAPES */
@@ -1002,6 +1004,18 @@ body,
 .top-header {
   background-color: var(--gray-900);
   border-bottom: 1.5px solid var(--gray-600);
+}
+
+/* ---- Footer / Bottom Info Panel ---- */
+.bottom-info-container {
+  background-color: var(--gray-800);
+}
+
+.info-panel-divider {
+  width: 4px;
+  background-color: var(--gray-600);
+  cursor: col-resize;
+  flex-shrink: 0;
 }
 
 /* ---- Splash Modal Styles ---- */

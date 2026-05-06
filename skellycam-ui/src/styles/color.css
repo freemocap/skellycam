@@ -27,4 +27,50 @@
   --blue-800: #0898ff;
   --blue-900: #083f66;
 
+  /* Chart series colors */
+  --chart-frontend: #1976d2;
+  --chart-frontend-bg: rgba(25, 118, 210, 0.13);
+  --chart-backend: #ff4d00;
+  --chart-backend-bg: rgba(255, 77, 0, 0.13);
+
+  /* Framerate metric colors */
+  --metric-recent: #50f050;
+  --metric-recent-bg: rgba(80, 240, 80, 0.2);
+  --metric-mean: #ff7833;
+  --metric-mean-bg: rgba(255, 120, 51, 0.2);
+  --metric-median: #b83900;
+  --metric-median-bg: rgba(184, 57, 0, 0.2);
+  --metric-stddev: #aed9f7;
+  --metric-stddev-bg: rgba(174, 217, 247, 0.2);
+  --metric-max: #e84775;
+  --metric-max-bg: rgba(232, 71, 117, 0.2);
+  --metric-min: #aed9f7;
+  --metric-min-bg: rgba(174, 217, 247, 0.2);
+
+  /* Log terminal UI */
+  --log-bg: #1a1a1a;
+  --log-row-bg: rgba(0, 0, 0, 0.2);
+  --log-timestamp: #888888;
+  --log-text: #ffffff;
+  --log-url: #58a6ff;
+  --log-detail-border: rgba(255, 255, 255, 0.1);
+  --log-stack-bg: #111111;
+
+  /* Log level colors */
+  --log-trace: #cccccc;
+  --log-trace-alpha: rgba(204, 204, 204, 0.1);
+  --log-debug: #88ccff;
+  --log-debug-alpha: rgba(136, 204, 255, 0.1);
+  --log-info: #00e5ff;
+  --log-info-alpha: rgba(0, 229, 255, 0.1);
+  --log-success: #ff66ff;
+  --log-success-alpha: rgba(255, 102, 255, 0.1);
+  --log-api: #66ff66;
+  --log-api-alpha: rgba(102, 255, 102, 0.1);
+  --log-warning: #ffff66;
+  --log-warning-alpha: rgba(255, 255, 102, 0.1);
+  --log-error: #ff6666;
+  --log-error-alpha: rgba(255, 102, 102, 0.1);
+  --log-critical: #ff0000;
+  --log-critical-alpha: rgba(255, 0, 0, 0.1);
 }
