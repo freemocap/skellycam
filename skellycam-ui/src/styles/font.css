@@ -1,40 +1,37 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
 
 
-/* typepography */
+/* typography */
 
 .title,
 h1 {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 14px;
-  /* letter-spacing: -0.43px; */
+  line-height: 18px;
 }
 
 .text.bg {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 17px;
+  line-height: 20px;
   letter-spacing: -0.43px;
 }
 
 .text.bg-md {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 15px;
+  line-height: 18px;
   letter-spacing: -0.43px;
 }
 
 .text.md {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 14px;
-  /* letter-spacing: -0.43px; */
+  line-height: 17px;
 }
 
 .text.sm {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 14px;
-  /* letter-spacing: -0.43px; */
+  line-height: 17px;
 }

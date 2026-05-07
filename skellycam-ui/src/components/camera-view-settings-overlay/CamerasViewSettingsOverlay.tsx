@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import clsx from 'clsx';
 import ToggleComponent from '@/components/ui-components/ToggleComponent';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
+import ValueSelector from '@/components/ui-components/ValueSelector';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -34,13 +35,10 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         onSettingsChange({ columns: checked ? null : manualColumns });
     };
 
-    const handleColumnsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(e.target.value);
-        if (!isNaN(value) && value > 0) {
-            setManualColumns(value);
-            if (isAuto) setIsAuto(false);
-            onSettingsChange({ columns: value });
-        }
+    const handleColumnsChange = (value: number) => {
+        setManualColumns(value);
+        if (isAuto) setIsAuto(false);
+        onSettingsChange({ columns: value });
     };
 
     return (
@@ -67,20 +65,14 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
 
                     <div className="toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
                         <p className="text md text-gray text-nowrap">{t("columns")}</p>
-                        <div className="input-with-unit">
-                            <input
-                                className="input-field numeric-input"
-                                type="number"
-                                min={1}
-                                value={isAuto ? autoColumns : manualColumns}
-                                onChange={handleColumnsChange}
-                            />
-                        </div>
+                        <ValueSelector
+                            value={isAuto ? autoColumns : manualColumns}
+                            min={1}
+                            max={8}
+                            unit="col"
+                            onChange={handleColumnsChange}
+                        />
                     </div>
-
-                    {isAuto && (
-                        <p className="text sm text-darkgray p-1">Auto: {autoColumns}</p>
-                    )}
                 </div>
             )}
         </>

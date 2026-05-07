@@ -49,7 +49,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     return (
         <div className="flex flex-col">
             <div
-                className={clsx("camera-item-row toggle-button gap-1 p-1 br-1 flex items-center h-25", localExpanded && "expanded")}
+                className={clsx("camera-item-row toggle-button gap-1 p-1 br-1 flex items-center", localExpanded && "expanded")}
                 onClick={() => setLocalExpanded(prev => !prev)}
             >
                 {/* Selection toggle */}
@@ -66,7 +66,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
                 {/* Name */}
                 <div className="flex flex-col flex-1 overflow-hidden">
                     <p className="text sm text-nowrap">Camera #{camera.index}</p>
-                    <p className="text sm text-gray text-nowrap" style={{ fontSize: '0.6rem' }}>{camera.name}</p>
+                    <p className="text sm text-gray text-nowrap">{camera.name}</p>
                 </div>
 
                 {/* Config summary chips */}

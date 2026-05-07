@@ -4,6 +4,7 @@ import {ImperativePanelHandle, Panel, PanelGroup, PanelResizeHandle} from "react
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
 import HeaderPanel from "@/components/ui-components/HeaderPanel";
+import {WelcomeModal} from "@/components/ui-components/WelcomeModal";
 import {useTheme} from "@mui/material/styles";
 import {Box} from "@mui/material";
 import {useMenuActions} from "@/hooks/useMenuActions";
@@ -13,6 +14,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const theme = useTheme();
     const leftPanelRef = useRef<ImperativePanelHandle>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [welcomeOpen, setWelcomeOpen] = useState(true);
 
     const handleToggleCollapse = useCallback(() => {
         const panel = leftPanelRef.current;
@@ -41,7 +43,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
     return (
         <Box sx={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
-            <HeaderPanel />
+            <HeaderPanel onOpenWelcome={() => setWelcomeOpen(true)} />
             <PanelGroup
                 direction="vertical"
                 style={{flex: 1}}
@@ -92,6 +94,8 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     <BottomPanelContent/>
                 </Panel>
             </PanelGroup>
+
+            <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
         </Box>
     );
 };

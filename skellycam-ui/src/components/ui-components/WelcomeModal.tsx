@@ -1,0 +1,196 @@
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Footer } from '@/components/ui-components/Footer';
+import { useElectronIPC } from '@/services';
+import { useServer } from '@/services/server/ServerContextProvider';
+import { LanguageSwitcher } from '@/components/languages/LanguageSwitcher';
+import { VersionChip } from '@/components/ui-components/VersionChip';
+import { EXTERNAL_URLS } from '@/constants/external-urls';
+import DesignerCheckbox from '@/components/ui-components/Checkbox';
+import ButtonSm from '@/components/ui-components/ButtonSm';
+import ButtonCard from '@/components/ui-components/ButtonCard';
+
+interface WelcomeModalProps {
+    open: boolean;
+    onClose: () => void;
+}
+
+export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    const [telemetryEnabled, setTelemetryEnabled] = useState<boolean>(true);
+    const [telemetryLoaded, setTelemetryLoaded] = useState<boolean>(false);
+    const { isElectron, api } = useElectronIPC();
+    const { connectedCameraIds } = useServer();
+    const prevCountRef = useRef(connectedCameraIds.length);
+
+    // Close automatically when cameras first connect
+    useEffect(() => {
+        if (!open) return;
+        const prevCount = prevCountRef.current;
+        const currentCount = connectedCameraIds.length;
+        if (prevCount === 0 && currentCount > 0) onClose();
+        prevCountRef.current = currentCount;
+    }, [connectedCameraIds, open, onClose]);
+
+    useEffect(() => {
+        const fetchLogo = async (): Promise<void> => {
+            try {
+                if (isElectron && api) {
+                    const dataUrl = await api.assets.getLogoBase64.query();
+                    if (dataUrl) setLogoDataUrl(dataUrl);
+                }
+            } catch (error) {
+                console.error('Failed to load logo:', error);
+            }
+        };
+        fetchLogo();
+    }, [isElectron, api]);
+
+    useEffect(() => {
+        const loadTelemetryPref = async (): Promise<void> => {
+            try {
+                if (isElectron && api) {
+                    const enabled = await api.telemetry.getEnabled.query();
+                    setTelemetryEnabled(enabled);
+                }
+            } catch (error) {
+                console.error('Failed to load telemetry preference:', error);
+            } finally {
+                setTelemetryLoaded(true);
+            }
+        };
+        loadTelemetryPref();
+    }, [isElectron, api]);
+
+    useEffect(() => {
+        if (!open) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, onClose]);
+
+    const handleTelemetryToggle = useCallback(async (checked: boolean) => {
+        setTelemetryEnabled(checked);
+        try {
+            if (isElectron && api) {
+                await api.telemetry.setEnabled.mutate({ enabled: checked });
+            }
+        } catch (error) {
+            console.error('Failed to save telemetry preference:', error);
+        }
+    }, [isElectron, api]);
+
+    const handleGoToCameras = useCallback(() => {
+        navigate('/cameras');
+        onClose();
+    }, [navigate, onClose]);
+
+    const handleGoToPlayback = useCallback(() => {
+        navigate('/playback');
+        onClose();
+    }, [navigate, onClose]);
+
+    if (!open) return null;
+
+    return (
+        <div
+            className="splash-overlay inset-0 reveal fadeIn"
+            style={{ position: 'fixed', zIndex: 50 }}
+            onClick={onClose}
+        >
+            <div
+                className="pos-rel welcome-modal br-2 flex flex-col p-1 bg-dark border-1 border-black"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="overflow-hidden flex-1 bg-middark br-1 flex flex-row gap-3 p-2">
+                    {/* Close button */}
+                    <button
+                        onClick={onClose}
+                        className="button icon-button close-button pos-abs top-0 right-0 m-1"
+                    >
+                        <span className="icon close-icon icon-size-16" />
+                    </button>
+
+                    {/* Left column — logo */}
+                    <div className="welcome-modal-image-col flex flex-1 items-center justify-center">
+                        {logoDataUrl
+                            ? <img src={logoDataUrl} alt="SkellyCam Logo" className="welcome-modal-logo" />
+                            : <img src="/skellycam-logo.png" alt="SkellyCam Logo" className="welcome-modal-logo" />
+                        }
+                    </div>
+
+                    {/* Right column — content */}
+                    <div className="flex-1 flex flex-col gap-2 p-1 justify-content-space-between">
+                        {/* Top actions */}
+                        <div className="flex flex-col p-2 gap-3">
+                            <h1 className="title">
+                                <span className="text-white">{t('welcomeTitle')}</span>
+                                <br />
+                                <span className="text-gray">{t('welcomeSubtitle')}</span>
+                            </h1>
+
+                            {/* Primary navigation cards */}
+                            <div className="flex gap-2">
+                                <ButtonCard
+                                    text={t('connectToCameras')}
+                                    iconClass="stream-icon icon-size-42"
+                                    onClick={handleGoToCameras}
+                                />
+                                <ButtonCard
+                                    text={t('videoPlayback')}
+                                    iconClass="video-icon icon-size-42"
+                                    onClick={handleGoToPlayback}
+                                />
+                            </div>
+
+                            {/* Telemetry checkbox */}
+                            {telemetryLoaded && (
+                                <DesignerCheckbox
+                                    label={t('sendAnonymousPings')}
+                                    checked={telemetryEnabled}
+                                    onChange={(e) => handleTelemetryToggle(e.target.checked)}
+                                />
+                            )}
+
+                            <div className="flex items-center gap-2">
+                                <LanguageSwitcher />
+                                <VersionChip variant="compact" />
+                            </div>
+                        </div>
+
+                        {/* Bottom links */}
+                        <div className="flex flex-col gap-1">
+                            <ButtonSm
+                                iconClass="learn-icon"
+                                text={t('documentation')}
+                                rightSideIcon="externallink"
+                                textColor="text-gray"
+                                onClick={() => window.open(EXTERNAL_URLS.DOCS_INTRO, '_blank')}
+                            />
+                            <ButtonSm
+                                iconClass="discord-icon"
+                                text="Join community"
+                                rightSideIcon="externallink"
+                                textColor="text-gray"
+                                onClick={() => window.open(EXTERNAL_URLS.DISCORD, '_blank')}
+                            />
+                            <ButtonSm
+                                iconClass=""
+                                text={t('roadmap')}
+                                rightSideIcon="externallink"
+                                textColor="text-gray"
+                                onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
+                            />
+                            <Footer />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};

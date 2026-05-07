@@ -1007,6 +1007,140 @@ body,
   border-bottom: 1.5px solid var(--gray-600);
 }
 
+/* ---- Welcome Page ---- */
+.welcome-modal {
+  width: 680px;
+  min-height: 400px;
+  animation: fadeIn, scaleIn;
+}
+
+.welcome-modal-image-col {
+  background: linear-gradient(160deg, var(--gray-900) 0%, var(--blue-900) 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+}
+
+.welcome-modal-logo {
+  max-width: 160px;
+  max-height: 160px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+.welcome-connect-button {
+  width: 100%;
+  max-width: 340px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color var(--speed-1), transform var(--speed-1);
+  background-color: var(--blue-900);
+  border: 2px solid var(--blue-800);
+  color: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.welcome-connect-button:hover:not(:disabled) {
+  background-color: var(--blue-800);
+  transform: translateY(-1px);
+}
+
+.welcome-connect-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---- Toast Notification ---- */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-600);
+  background-color: var(--gray-800);
+  animation: fadeIn var(--speed-2) ease;
+  max-width: 320px;
+  text-align: center;
+}
+
+.toast-notification.success { border-color: var(--green-100); }
+.toast-notification.error   { border-color: var(--red-500); }
+.toast-notification.info    { border-color: var(--blue-800); }
+
+/* ---- Version badge ---- */
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--gray-600);
+  border-radius: 99px;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  transition: border-color var(--speed-1), color var(--speed-1);
+}
+
+.version-badge:hover { border-color: var(--gray-400); color: var(--gray-100); }
+.version-badge.success { border-color: var(--green-100); color: var(--green-100); }
+.version-badge:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- Language switcher ---- */
+.language-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.language-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+}
+
+.language-option:hover { background-color: var(--gray-600); }
+.language-option.selected { background-color: var(--gray-700); }
+
+.translation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-size: 0.65rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.translation-badge.ai     { border-color: var(--warning-500); color: var(--warning-500); }
+.translation-badge.human  { border-color: var(--blue-800);    color: var(--blue-800); }
+.translation-badge.native { border-color: var(--green-100);   color: var(--green-100); }
+
 /* ---- Footer / Bottom Info Panel ---- */
 .bottom-info-container {
   background-color: var(--gray-800);
@@ -1327,4 +1461,34 @@ input[type="checkbox"]:disabled {
     max-width: calc(37%);
   }
 
+}
+/* Sidebar navigation tab buttons */
+.sidebar-nav-cameras {
+  background-color: var(--green-900);
+  color: var(--green-100);
+}
+
+.sidebar-nav-cameras:hover {
+  background-color: var(--green-900);
+  opacity: 0.9;
+}
+
+.sidebar-nav-playback {
+  background-color: var(--blue-900);
+  color: var(--blue-100);
+}
+
+.sidebar-nav-playback:hover {
+  background-color: var(--blue-900);
+  opacity: 0.9;
+}
+
+.sidebar-nav-inactive {
+  background-color: var(--gray-700);
+  color: var(--gray-400);
+}
+
+.sidebar-nav-inactive:hover {
+  background-color: var(--gray-600);
+  color: var(--gray-100);
 }
