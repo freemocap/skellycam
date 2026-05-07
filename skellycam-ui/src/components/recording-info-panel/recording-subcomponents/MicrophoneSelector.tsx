@@ -59,24 +59,30 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
     };
 
     return (
-        <div className="flex items-center gap-1">
-            <span className={clsx("icon icon-size-16", selectedMicIndex >= 0 ? "connected-icon" : "warning-icon")} />
-            <div className={clsx("flex-1", (disabled || loading) && "disabled")}>
-                <NameDropdownSelector
-                    options={options}
-                    initialValue={selectedName}
-                    onChange={handleChange}
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1">
+                <span className={clsx("icon icon-size-16", selectedMicIndex >= 0 ? "connected-icon" : "warning-icon")} />
+                <div className={clsx("flex-1", (disabled || loading) && "disabled")}>
+                    <NameDropdownSelector
+                        options={options}
+                        initialValue={selectedName}
+                        onChange={handleChange}
+                    />
+                </div>
+                <ButtonSm
+                    iconClass={loading ? "loader-icon" : "rotate-icon"}
+                    text=""
+                    textColor="text-gray"
+                    onClick={detectMicrophones}
+                    buttonType={disabled || loading ? "disabled" : ""}
+                    title={t("refreshMicrophoneList")}
                 />
             </div>
-            <ButtonSm
-                iconClass={loading ? "loader-icon" : "rotate-icon"}
-                text=""
-                textColor="text-gray"
-                onClick={detectMicrophones}
-                buttonType={disabled || loading ? "disabled" : ""}
-                title={t("refreshMicrophoneList")}
-            />
-            {error && <p className="text sm text-warning">{error}</p>}
+            {error && (
+                <p className="text sm text-error text-nowrap overflow-hidden" style={{ textOverflow: 'ellipsis' }} title={error}>
+                    {error}
+                </p>
+            )}
         </div>
     );
 };

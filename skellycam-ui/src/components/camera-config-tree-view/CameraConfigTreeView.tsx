@@ -37,7 +37,7 @@ export const CameraConfigTreeView: React.FC = () => {
     }, [isConnected, cameras.length, dispatch]);
 
     return (
-        <div className="camera-tree-root border-1 border-black">
+        <div className="camera-tree-root border-1 border-black m-1">
             <CameraConfigTreeViewHeader
                 cameraCount={cameras.length}
                 isLoading={isLoading}

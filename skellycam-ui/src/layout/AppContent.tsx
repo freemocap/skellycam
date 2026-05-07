@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {HashRouter} from 'react-router-dom';
 import {BasePanelLayout} from "@/layout/BasePanelLayout";
-import {BaseContentRouter} from "@/layout/BaseContentRouter";
+import {MainTabPanel} from "@/layout/MainTabPanel";
 import {UpdateBanner} from "@/components/ui-components/UpdateBanner";
 import {AutoUpdateProvider} from "@/hooks/AutoUpdateContext";
 import {useTranslation} from "react-i18next";
@@ -20,7 +20,7 @@ export const AppContent = function () {
         <HashRouter>
             <AutoUpdateProvider>
                 <BasePanelLayout>
-                    <BaseContentRouter/>
+                    <MainTabPanel/>
                 </BasePanelLayout>
                 <UpdateBanner/>
             </AutoUpdateProvider>

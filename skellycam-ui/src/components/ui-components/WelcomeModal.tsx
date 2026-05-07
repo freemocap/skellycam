@@ -6,6 +6,8 @@ import { useElectronIPC } from '@/services';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { LanguageSwitcher } from '@/components/languages/LanguageSwitcher';
 import { VersionChip } from '@/components/ui-components/VersionChip';
+import { useAppDispatch } from '@/store';
+import { camerasConnectOrUpdate } from '@/store/slices/cameras/cameras-thunks';
 import { EXTERNAL_URLS } from '@/constants/external-urls';
 import DesignerCheckbox from '@/components/ui-components/Checkbox';
 import ButtonSm from '@/components/ui-components/ButtonSm';
@@ -19,6 +21,7 @@ interface WelcomeModalProps {
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     const [telemetryEnabled, setTelemetryEnabled] = useState<boolean>(true);
     const [telemetryLoaded, setTelemetryLoaded] = useState<boolean>(false);
@@ -88,7 +91,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
     const handleGoToCameras = useCallback(() => {
         navigate('/cameras');
         onClose();
-    }, [navigate, onClose]);
+        dispatch(camerasConnectOrUpdate());
+    }, [navigate, onClose, dispatch]);
 
     const handleGoToPlayback = useCallback(() => {
         navigate('/playback');

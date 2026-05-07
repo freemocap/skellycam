@@ -296,47 +296,50 @@
    ============================================================ */
 
 .record-button {
-  padding: 10px 8px;
-  min-height: 44px;
+  padding: 6px 8px;
+  min-height: 36px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: background-color var(--speed-1) ease-in-out;
 }
 
 .record-button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .record-button-duration {
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: var(--gray-400);
-  margin-top: 2px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.5px;
 }
 
 .record-button-idle {
-  background-color: #005d94;
-  border: 3px solid #ff55ff;
-  transition: all 0.3s ease;
+  background-color: var(--red-500);
 }
 
-.record-button-idle:hover { border-color: #fb1402; }
+.record-button-idle:not(:disabled):hover {
+  background-color: var(--red-600);
+}
 
 .record-button-active {
-  background-color: #8d0a02;
-  border: 3px solid #ff55ff;
-  animation: recording-button-pulse 3s infinite ease-in-out;
+  background-color: var(--red-600);
+  animation: recording-button-pulse 2s infinite ease-in-out;
 }
 
 .record-button-pending {
-  border-color: #ffa500;
-  opacity: 0.8;
+  background-color: var(--gray-600);
 }
 
 @keyframes recording-button-pulse {
-  0%   { background-color: #8d0a02; }
-  50%  { background-color: #3d0401; }
-  100% { background-color: #8d0a02; }
+  0%, 100% { background-color: var(--red-500); }
+  50%       { background-color: var(--red-600); }
 }
 
 /* ============================================================

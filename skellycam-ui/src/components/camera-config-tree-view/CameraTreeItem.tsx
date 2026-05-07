@@ -49,35 +49,38 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     return (
         <div className="flex flex-col">
             <div
-                className={clsx("camera-item-row toggle-button gap-1 p-1 br-1 flex items-center", localExpanded && "expanded")}
+                className={clsx("camera-item-row toggle-button br-1 flex flex-col", localExpanded && "expanded")}
                 onClick={() => setLocalExpanded(prev => !prev)}
             >
-                {/* Selection toggle */}
-                <button
-                    className="button icon-button"
-                    onClick={handleToggleSelection}
-                >
-                    <span className={clsx("icon icon-size-16", camera.selected ? "connected-icon" : "warning-icon")} />
-                </button>
+                {/* Main row: icons, name, status badge */}
+                <div className="flex items-center gap-1 p-1">
+                    <button
+                        className="button icon-button"
+                        onClick={handleToggleSelection}
+                    >
+                        <span className={clsx("icon icon-size-16", camera.selected ? "connected-icon" : "warning-icon")} />
+                    </button>
 
-                {/* Camera icon + status color */}
-                <span className={clsx("icon stream-icon icon-size-16", `camera-status-${camera.connectionStatus}`)} />
+                    <span className={clsx("icon stream-icon icon-size-16", `camera-status-${camera.connectionStatus}`)} />
 
-                {/* Name */}
-                <div className="flex flex-col flex-1 overflow-hidden">
-                    <p className="text sm text-nowrap">Camera #{camera.index}</p>
-                    <p className="text sm text-gray text-nowrap">{camera.name}</p>
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                        <p className="text sm text-nowrap">Camera #{camera.index}</p>
+                        <p className="text sm text-gray text-nowrap">{camera.name}</p>
+                    </div>
+
+                    <span className={clsx("camera-status-badge", `camera-status-${camera.connectionStatus}`)}>
+                        {statusLabelMap[camera.connectionStatus] ?? camera.connectionStatus.toUpperCase()}
+                    </span>
                 </div>
 
-                {/* Config summary chips */}
-                {showConfigSummary && configSummary.slice(0, 5).map((item) => (
-                    <span key={item} className="camera-config-chip">{item}</span>
-                ))}
-
-                {/* Status badge */}
-                <span className={clsx("camera-status-badge", `camera-status-${camera.connectionStatus}`)}>
-                    {statusLabelMap[camera.connectionStatus] ?? camera.connectionStatus.toUpperCase()}
-                </span>
+                {/* Chips row — wraps into 2 lines */}
+                {showConfigSummary && (
+                    <div className="flex flex-wrap gap-1 pb-1" style={{paddingLeft: '2rem'}}>
+                        {configSummary.slice(0, 6).map((item) => (
+                            <span key={item} className="camera-config-chip">{item}</span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {localExpanded && <CameraConfigTreeSection camera={camera} />}

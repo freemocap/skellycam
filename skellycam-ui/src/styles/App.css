@@ -1525,3 +1525,11 @@ input[type="checkbox"]:disabled {
   background-color: var(--blue-100);
   transition: width 0.3s ease;
 }
+
+/* Main content tab bar */
+.main-tab-bar {
+  padding: 6px 8px 0;
+  background-color: var(--gray-800);
+  border-bottom: 1px solid var(--gray-700);
+  display: flex;
+}
