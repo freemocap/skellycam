@@ -1,4 +1,4 @@
-// Single source of truth for colors shared between the MUI theme and Electron's
+// Single source of truth for colors shared between the theme and Electron's
 // native BrowserWindow config. These mirror the CSS variables in src/styles/color.css
 // but must be TypeScript constants because the Electron main process (Node.js) cannot
 // read CSS files at window-creation time.

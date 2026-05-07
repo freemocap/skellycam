@@ -4,7 +4,7 @@ import ReactGridLayout, { noCompactor } from "react-grid-layout";
 import type { Layout, LayoutItem } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { CameraView } from "./CameraView";
+import { CameraGridCell } from "./CameraGridCell";
 import { useServer } from "@/services/server/ServerContextProvider";
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -180,7 +180,7 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
             >
                 {sortedConnectedCameraIds.map((cameraId) => (
                     <div key={cameraId} className={clsx("camera-cell", isRecording && "recording")}>
-                        <CameraView cameraId={cameraId} />
+                        <CameraGridCell cameraId={cameraId} />
                     </div>
                 ))}
             </ReactGridLayout>

@@ -13,10 +13,11 @@ interface CameraConfigPanelProps {
     config: CameraConfig;
     onConfigChange: (newConfig: CameraConfig) => void;
     isExpanded: boolean;
+    compact?: boolean;
 }
 
 export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
-    config, onConfigChange, isExpanded,
+    config, onConfigChange, isExpanded, compact = false,
 }) => {
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
@@ -28,9 +29,8 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
     };
 
     return (
-        <div className={clsx("config-panel", !isExpanded && "hidden")}>
-            {/* Top row */}
-            <div className="flex items-center gap-1 flex-wrap">
+        <div className={clsx("config-panel", !isExpanded && "hidden", compact && "config-panel-compact")}>
+            <div className={clsx("flex gap-1", compact ? "flex-col" : "items-center flex-wrap")}>
                 <CameraConfigResolution
                     resolution={config.resolution}
                     onChange={(w, h) => handleChange("resolution", { width: w, height: h })}
@@ -39,18 +39,16 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                     rotation={config.rotation}
                     onChange={(v: RotationValue) => handleChange("rotation", v)}
                 />
-                <div className="flex-1" />
                 <ButtonSm
                     text={otherCamerasCount > 0
                         ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? 's' : ''}`
                         : t("copySettingsToAll")}
                     iconClass="stream-icon"
-                    buttonType={otherCamerasCount === 0 ? "disabled" : ""}
+                    buttonType={clsx(otherCamerasCount === 0 && "disabled", compact && "full-width justify-center")}
                     onClick={() => { if (otherCamerasCount > 0) dispatch(configCopiedToAll(config.camera_id)); }}
                 />
             </div>
 
-            {/* Exposure */}
             <div className="config-panel-divider">
                 <CameraConfigExposure
                     exposureMode={config.exposure_mode}

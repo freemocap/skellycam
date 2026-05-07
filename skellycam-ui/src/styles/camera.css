@@ -532,3 +532,68 @@
   color: #ffcc80;
   font-weight: 600;
 }
+
+/* Camera grid cell overlay */
+.camera-cell-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.camera-cell:hover .camera-cell-overlay {
+  opacity: 1;
+}
+
+.camera-cell-toggle {
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.camera-cell-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* Constrain segmented controls to their config panel container */
+.config-panel .segmented-control-container {
+  max-width: 100%;
+  width: 100%;
+}
+
+.config-panel .segmented-control-button {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Compact config panel (used in camera grid modal) */
+.config-panel-compact {
+  overflow: hidden;
+}
+
+.config-panel-compact .name-dropdown-selector {
+  width: 100%;
+  display: block;
+}
+
+.config-panel-compact .name-dropdown-selector > button {
+  width: 100%;
+}
+
+.config-panel-compact .segmented-control-container {
+  max-width: 100%;
+  width: 100%;
+  flex-direction: column;
+}
+
+.config-panel-compact .segmented-control-button {
+  min-width: 0;
+  width: 100%;
+}
