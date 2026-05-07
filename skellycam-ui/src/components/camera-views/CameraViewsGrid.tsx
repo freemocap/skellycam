@@ -7,8 +7,9 @@ import "react-resizable/css/styles.css";
 import { CameraView } from "./CameraView";
 import { useServer } from "@/services/server/ServerContextProvider";
 import { useTranslation } from "react-i18next";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectConnectedCameras } from "@/store/slices/cameras/cameras-selectors";
+import { camerasConnectOrUpdate } from "@/store/slices/cameras/cameras-thunks";
 
 const GRID_COLS = 12;
 const MARGIN: [number, number] = [4, 4];
@@ -51,6 +52,15 @@ interface CameraViewsGridProps {
 
 export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns, resetKey }) => {
     const { connectedCameraIds } = useServer();
+    const dispatch = useAppDispatch();
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    const handleConnect = async () => {
+        setIsConnecting(true);
+        try { await dispatch(camerasConnectOrUpdate()).unwrap(); }
+        catch { /* error handled by store */ }
+        finally { setIsConnecting(false); }
+    };
     const { t } = useTranslation();
     const isRecording = useAppSelector(state => state.recording.isRecording);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -137,6 +147,17 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
     if (connectedCameraIds.length === 0) {
         return (
             <div ref={containerRef} className="camera-grid-container camera-grid-empty">
+                <button
+                    className="welcome-connect-button"
+                    onClick={handleConnect}
+                    disabled={isConnecting}
+                >
+                    {isConnecting
+                        ? <span className="icon loader-icon icon-size-16" />
+                        : <span className="icon stream-icon icon-size-16" />
+                    }
+                    <span>{t("connectToCameras")}</span>
+                </button>
                 <p className="text bg text-gray">{t("noCamerasConnected")}</p>
                 <p className="text sm text-gray">{t("waitingForCameraStreams")}</p>
             </div>

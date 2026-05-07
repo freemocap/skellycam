@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import clsx from 'clsx';
 import ToggleComponent from '@/components/ui-components/ToggleComponent';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
@@ -11,16 +11,22 @@ interface CameraSettings { columns: number | null; }
 interface CamerasViewSettingsOverlayProps {
     onSettingsChange: (settings: CameraSettings) => void;
     onResetLayout: () => void;
+    /** When true, renders the trigger inline (no absolute positioning).
+     *  The panel drops down using position:fixed anchored to the button. */
+    inline?: boolean;
 }
 
 export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProps> = ({
     onSettingsChange,
+    inline = false,
 }) => {
     const { connectedCameraIds } = useServer();
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [isAuto, setIsAuto] = useState<boolean>(true);
     const [manualColumns, setManualColumns] = useState<number>(2);
+    const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
+    const buttonRef = useRef<HTMLButtonElement>(null);
 
     const getAutoColumns = (total: number): number => {
         if (total <= 1) return 1;
@@ -41,40 +47,73 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         onSettingsChange({ columns: value });
     };
 
+    const handleToggle = () => {
+        if (!isOpen && inline && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setPanelStyle({
+                position: 'fixed',
+                top: rect.bottom + 4,
+                right: window.innerWidth - rect.right,
+                zIndex: 200,
+            });
+        }
+        setIsOpen((prev) => !prev);
+    };
+
+    const panel = (
+        <div
+            className="settings-overlay-panel reveal slide-down bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-1"
+            style={inline ? panelStyle : undefined}
+        >
+            <SubactionHeader text={t("gridColumns")} />
+
+            <ToggleComponent
+                text={t("auto")}
+                isToggled={isAuto}
+                onToggle={handleAutoToggle}
+            />
+
+            <div className="toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
+                <p className="text md text-gray text-nowrap">{t("columns")}</p>
+                <ValueSelector
+                    value={isAuto ? autoColumns : manualColumns}
+                    min={1}
+                    max={8}
+                    unit="col"
+                    onChange={handleColumnsChange}
+                />
+            </div>
+        </div>
+    );
+
+    if (inline) {
+        return (
+            <>
+                <button
+                    ref={buttonRef}
+                    className="button icon-button br-1 border-1 border-black bg-dark"
+                    onClick={handleToggle}
+                    title={isOpen ? t("closeSettings") : t("gridSettings")}
+                >
+                    <span className={clsx("icon icon-size-16", isOpen ? "close-icon" : "settings-icon")} />
+                </button>
+                {isOpen && panel}
+            </>
+        );
+    }
+
     return (
         <>
             <div className="settings-overlay-trigger">
                 <button
                     className="button icon-button br-1 border-1 border-black bg-dark"
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={handleToggle}
                     title={isOpen ? t("closeSettings") : t("gridSettings")}
                 >
                     <span className={clsx("icon icon-size-16", isOpen ? "close-icon" : "settings-icon")} />
                 </button>
             </div>
-
-            {isOpen && (
-                <div className="settings-overlay-panel reveal slide-down bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-1">
-                    <SubactionHeader text={t("gridColumns")} />
-
-                    <ToggleComponent
-                        text={t("auto")}
-                        isToggled={isAuto}
-                        onToggle={handleAutoToggle}
-                    />
-
-                    <div className="toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
-                        <p className="text md text-gray text-nowrap">{t("columns")}</p>
-                        <ValueSelector
-                            value={isAuto ? autoColumns : manualColumns}
-                            min={1}
-                            max={8}
-                            unit="col"
-                            onChange={handleColumnsChange}
-                        />
-                    </div>
-                </div>
-            )}
+            {isOpen && panel}
         </>
     );
 };

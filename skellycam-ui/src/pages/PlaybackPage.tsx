@@ -117,12 +117,7 @@ const PlaybackPage: React.FC = () => {
             <div className="flex flex-col flex-1 overflow-hidden">
                 <ErrorBoundary>
                     {hasVideos ? (
-                        <div className="flex flex-col h-full pos-rel">
-                            <CamerasViewSettingsOverlay
-                                onSettingsChange={handleSettingsChange}
-                                onResetLayout={handleResetLayout}
-                            />
-
+                        <div className="flex flex-col h-full">
                             {/* Recording header bar */}
                             <div
                                 className="flex items-center gap-2 px-2 py-1 flex-wrap"
@@ -163,6 +158,12 @@ const PlaybackPage: React.FC = () => {
                                         rec: {recordingFps} fps
                                     </span>
                                 )}
+
+                                <CamerasViewSettingsOverlay
+                                    inline
+                                    onSettingsChange={handleSettingsChange}
+                                    onResetLayout={handleResetLayout}
+                                />
                             </div>
 
                             {/* Player */}

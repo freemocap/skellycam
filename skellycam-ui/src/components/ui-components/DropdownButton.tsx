@@ -21,37 +21,49 @@ export default function DropdownButton({
   containerClassName,
 }: DropdownButtonProps) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
+  // Close on outside click
   useEffect(() => {
+    if (!open) return;
     function handleClickOutside(event: MouseEvent) {
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        popupRef.current && !popupRef.current.contains(event.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(event.target as Node)
       ) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   const handleButtonClick = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopupStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+        zIndex: 200,
+      });
+    }
     setOpen((prev) => !prev);
     buttonProps.onClick?.();
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={clsx("flex flex-col z-2", containerClassName)}
-    >
+    <div ref={buttonRef} className={clsx("pos-rel", containerClassName)}>
       <ButtonSm {...buttonProps} onClick={handleButtonClick} />
 
       {open && (
-        <div className="reveal slide-down dropdown-container border-1 border-black bg-middark br-2 flex flex-col gap-1 p-1">
+        <div
+          ref={popupRef}
+          className="reveal slide-down dropdown-container border-1 border-black bg-middark br-2 flex flex-col gap-1 p-1"
+          style={popupStyle}
+        >
           {dropdownItems}
         </div>
       )}
