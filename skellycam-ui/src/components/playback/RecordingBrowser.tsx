@@ -2,36 +2,10 @@
  * RecordingBrowser — lists available recording sessions from the server,
  * with search filtering, multi-field sorting, and rich per-recording metadata.
  *
- * Standalone component: only depends on MUI + server URL helper.
+ * Standalone component: only depends on CSS utility classes + server URL helper.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    IconButton,
-    InputAdornment,
-    List,
-    ListItemButton,
-    ListItemIcon,
-    ListItemText,
-    MenuItem,
-    Select,
-    type SelectChangeEvent,
-    TextField,
-    Tooltip,
-    Typography,
-    useTheme,
-} from '@mui/material';
-import FolderIcon from '@mui/icons-material/Folder';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import VideocamIcon from '@mui/icons-material/Videocam';
-import StorageIcon from '@mui/icons-material/Storage';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SearchIcon from '@mui/icons-material/Search';
-import SortIcon from '@mui/icons-material/Sort';
+import clsx from 'clsx';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { useTranslation } from 'react-i18next';
@@ -180,10 +154,6 @@ function compareRecordings(
 // Constants
 // ---------------------------------------------------------------------------
 
-const MONO_FONT = '"JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace';
-const ACCENT_BLUE = '#29b6f6';
-const ACCENT_GREEN = '#00ff88';
-
 const SORT_OPTIONS: { value: SortField; labelKey: string }[] = [
     { value: 'date', labelKey: 'date' },
     { value: 'name', labelKey: 'name' },
@@ -198,9 +168,7 @@ const SORT_OPTIONS: { value: SortField; labelKey: string }[] = [
 // ---------------------------------------------------------------------------
 
 export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingLoaded, initialLoadPath }) => {
-    const theme = useTheme();
     const { t } = useTranslation();
-    const isDark = theme.palette.mode === 'dark';
 
     // Data state
     const [recordings, setRecordings] = useState<RecordingEntry[]>([]);
@@ -340,7 +308,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
     // -----------------------------------------------------------------------
     // Sort controls
     // -----------------------------------------------------------------------
-    const handleSortFieldChange = (e: SelectChangeEvent) => {
+    const handleSortFieldChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSortField(e.target.value as SortField);
     };
 
@@ -352,235 +320,108 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
     // Render
     // -----------------------------------------------------------------------
     return (
-        <Box
-            sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                p: 2,
-                height: '100%',
-                overflow: 'hidden',
-            }}
-        >
-            {/* ── Manual path input ── */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                <TextField
-                    fullWidth
-                    size="small"
-                    label={t("recordingFolderPath")}
-                    placeholder="~/skellycam_data/recordings/2024-01-01..."
-                    value={manualPath}
-                    onChange={(e) => setManualPath(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleLoadManualPath();
-                    }}
-                    disabled={isLoadingRecording}
-                    sx={{ '& input': { fontFamily: MONO_FONT, fontSize: '0.85rem' } }}
-                />
-                <Button
-                    variant="contained"
+        <div className="flex flex-col gap-2 p-2 h-full overflow-hidden">
+            {/* Manual path row */}
+            <div className="flex gap-1 items-center">
+                <div className="input-with-string flex-1">
+                    <input
+                        className="input-field"
+                        placeholder="~/skellycam_data/recordings/2024-01-01..."
+                        value={manualPath}
+                        onChange={(e) => setManualPath(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleLoadManualPath();
+                        }}
+                        disabled={isLoadingRecording}
+                    />
+                </div>
+                <button
+                    className="button sm"
                     onClick={handleLoadManualPath}
                     disabled={!manualPath.trim() || isLoadingRecording}
-                    startIcon={
-                        isLoadingRecording && !loadingPath ? (
-                            <CircularProgress size={16} />
-                        ) : (
-                            <PlayArrowIcon />
-                        )
-                    }
-                    sx={{
-                        whiteSpace: 'nowrap',
-                        backgroundColor: isDark ? '#4caf50' : undefined,
-                        color: isDark ? '#fff' : undefined,
-                        '&:hover': { backgroundColor: isDark ? '#66bb6a' : undefined },
-                    }}
                 >
+                    {isLoadingRecording && !loadingPath
+                        ? <span className="icon loader-icon icon-size-16" />
+                        : <span className="icon stream-icon icon-size-16" />}
                     {t('load')}
-                </Button>
-            </Box>
+                </button>
+            </div>
 
-            {/* ── Error ── */}
-            {error && (
-                <Typography color="error" variant="body2" sx={{ px: 1 }}>
-                    {error}
-                </Typography>
-            )}
+            {/* Error */}
+            {error && <p className="text sm text-error">{error}</p>}
 
-            {/* ── Header bar: title, filter, sort, refresh ── */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 1,
-                }}
-            >
-                {/* Left: title + count */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography
-                        variant="subtitle2"
-                        sx={{
-                            color: theme.palette.text.primary,
-                            fontWeight: 600,
-                        }}
-                    >
-                        {t('recordings')}
-                    </Typography>
+            {/* Header bar */}
+            <div className="flex items-center justify-content-space-between gap-1 flex-wrap">
+                <div className="flex items-center gap-1">
+                    <p className="text bg text-white">{t('recordings')}</p>
                     {recordings.length > 0 && (
-                        <Chip
-                            label={
-                                filterText
-                                    ? `${filteredSorted.length} / ${recordings.length}`
-                                    : String(recordings.length)
-                            }
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                                height: 20,
-                                fontSize: '0.7rem',
-                                borderColor: isDark ? 'rgba(255,255,255,0.2)' : undefined,
-                                color: isDark ? '#b3b9c6' : undefined,
-                            }}
-                        />
+                        <span className="camera-status-badge">
+                            {filterText ? `${filteredSorted.length} / ${recordings.length}` : recordings.length}
+                        </span>
                     )}
-                </Box>
-
-                {/* Right: filter + sort + refresh */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {/* Search filter */}
-                    <TextField
-                        size="small"
-                        placeholder={t("filter")}
-                        value={filterText}
-                        onChange={(e) => setFilterText(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon
-                                        sx={{
-                                            fontSize: 16,
-                                            color: isDark
-                                                ? 'rgba(255,255,255,0.4)'
-                                                : 'rgba(0,0,0,0.4)',
-                                        }}
-                                    />
-                                </InputAdornment>
-                            ),
-                        }}
-                        sx={{
-                            width: 160,
-                            '& input': { fontSize: '0.8rem', py: 0.5 },
-                        }}
-                    />
-
-                    {/* Sort field dropdown */}
-                    <Select
+                </div>
+                <div className="flex items-center gap-1">
+                    <div className="input-with-string">
+                        <input
+                            className="input-field"
+                            placeholder={t('filter')}
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                        />
+                    </div>
+                    <select
+                        className="sort-select input-field"
                         value={sortField}
                         onChange={handleSortFieldChange}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                            minWidth: 100,
-                            '& .MuiSelect-select': {
-                                py: 0.4,
-                                fontSize: '0.75rem',
-                                color: isDark ? '#b3b9c6' : undefined,
-                            },
-                            '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: isDark
-                                    ? 'rgba(255,255,255,0.2)'
-                                    : undefined,
-                            },
-                            '& .MuiSvgIcon-root': {
-                                color: isDark
-                                    ? 'rgba(255,255,255,0.4)'
-                                    : undefined,
-                            },
-                        }}
                     >
                         {SORT_OPTIONS.map((opt) => (
-                            <MenuItem key={opt.value} value={opt.value}>
+                            <option key={opt.value} value={opt.value}>
                                 {t(opt.labelKey)}
-                            </MenuItem>
+                            </option>
                         ))}
-                    </Select>
-
-                    {/* Sort direction toggle */}
-                    <Tooltip
-                        title={`Sort ${sortDir === 'desc' ? 'newest first' : 'oldest first'} — click to toggle`}
+                    </select>
+                    <button
+                        className="button icon-button"
+                        onClick={toggleSortDir}
+                        title="Toggle sort direction"
                     >
-                        <IconButton
-                            size="small"
-                            onClick={toggleSortDir}
-                            sx={{
-                                color: isDark ? '#b3b9c6' : theme.palette.text.secondary,
-                            }}
-                        >
-                            <SortIcon
-                                sx={{
-                                    fontSize: 18,
-                                    transform: sortDir === 'asc' ? 'scaleY(-1)' : 'none',
-                                    transition: 'transform 0.2s ease',
-                                }}
-                            />
-                        </IconButton>
-                    </Tooltip>
-
-                    {/* Refresh */}
-                    <Button
-                        size="small"
-                        startIcon={<RefreshIcon />}
+                        {sortDir === 'desc' ? '↓' : '↑'}
+                    </button>
+                    <button
+                        className="button sm"
                         onClick={fetchRecordings}
                         disabled={isLoadingList}
-                        sx={{ color: isDark ? '#b3b9c6' : undefined }}
                     >
-                        {t('refresh')}
-                    </Button>
-                </Box>
-            </Box>
+                        <span className="icon rotate-icon icon-size-16" />{t('refresh')}
+                    </button>
+                </div>
+            </div>
 
-            {/* ── Recording list ── */}
+            {/* List */}
             {isLoadingList ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress size={24} sx={{ color: ACCENT_BLUE }} />
-                </Box>
+                <div className="flex items-center justify-center py-4">
+                    <span className="icon loader-icon icon-size-16" />
+                </div>
             ) : filteredSorted.length === 0 ? (
-                <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ textAlign: 'center', py: 4 }}
-                >
+                <p className="text sm text-gray text-center p-4">
                     {recordings.length === 0
                         ? t('noRecordingsFound')
                         : 'No recordings match your filter.'}
-                </Typography>
+                </p>
             ) : (
-                <List
-                    dense
-                    sx={{
-                        flex: 1,
-                        overflow: 'auto',
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 1,
-                        '& .MuiListItemButton-root + .MuiListItemButton-root': {
-                            borderTop: `1px solid ${theme.palette.divider}`,
-                        },
-                    }}
-                >
+                <div className="recording-list flex-1 overflow-y border-1 border-black br-1">
                     {filteredSorted.map((rec) => (
                         <RecordingRow
                             key={rec.path}
                             rec={rec}
                             isLoading={loadingPath === rec.path}
                             isAnyLoading={isLoadingRecording}
-                            isDark={isDark}
                             onClick={() => loadRecording(rec)}
                         />
                     ))}
-                </List>
+                </div>
             )}
-        </Box>
+        </div>
     );
 };
 
@@ -592,204 +433,62 @@ interface RecordingRowProps {
     rec: RecordingEntry;
     isLoading: boolean;
     isAnyLoading: boolean;
-    isDark: boolean;
     onClick: () => void;
 }
 
 const RecordingRow: React.FC<RecordingRowProps> = React.memo(
-    ({ rec, isLoading, isAnyLoading, isDark, onClick }) => {
-        const theme = useTheme();
+    ({ rec, isLoading, isAnyLoading, onClick }) => {
         const parsedDate = parseTimestampFromName(rec.name);
-    const { t } = useTranslation();
+        const { t } = useTranslation();
 
         return (
-            <ListItemButton
-                onClick={onClick}
-                disabled={isAnyLoading}
-                sx={{
-                    py: 1.25,
-                    px: 2,
-                    opacity: isAnyLoading && !isLoading ? 0.5 : 1,
-                }}
+            <div
+                className={clsx("recording-row toggle-button flex flex-col gap-1 p-2", isAnyLoading && !isLoading && "recording-row-disabled")}
+                onClick={!isAnyLoading ? onClick : undefined}
             >
-                {/* Folder icon or spinner */}
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                    {isLoading ? (
-                        <CircularProgress size={20} sx={{ color: ACCENT_BLUE }} />
-                    ) : (
-                        <FolderIcon
-                            fontSize="small"
-                            sx={{
-                                color: isDark
-                                    ? ACCENT_BLUE
-                                    : theme.palette.primary.main,
-                            }}
-                        />
+                <div className="flex items-center gap-1">
+                    {isLoading
+                        ? <span className="icon loader-icon icon-size-16" />
+                        : <span className="icon import-icon icon-size-16" />}
+                    <p className="text sm recording-name">{rec.name}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text sm text-gray" title="Camera streams">
+                        {rec.video_count} cam{rec.video_count !== 1 ? 's' : ''}
+                    </span>
+                    {rec.total_size_bytes != null && rec.total_size_bytes > 0 && (
+                        <span className="text sm text-gray" title="Total size">
+                            {formatBytes(rec.total_size_bytes)}
+                        </span>
                     )}
-                </ListItemIcon>
-
-                <ListItemText
-                    disableTypography
-                    primary={
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                fontFamily: MONO_FONT,
-                                fontWeight: 600,
-                                fontSize: '0.85rem',
-                                mb: 0.5,
-                                color: theme.palette.text.primary,
-                            }}
+                    {rec.duration_seconds != null && rec.duration_seconds > 0 && (
+                        <span className="text sm text-gray" title="Duration">
+                            {formatDuration(rec.duration_seconds)}
+                        </span>
+                    )}
+                    {rec.total_frames != null && rec.total_frames > 0 && (
+                        <span className="camera-config-chip" title={t('frameCountPerCamera')}>
+                            {rec.total_frames.toLocaleString()} frames
+                        </span>
+                    )}
+                    {rec.fps != null && rec.fps > 0 && (
+                        <span className="camera-config-chip" title={t('recordingCaptureFps')}>
+                            {rec.fps} fps
+                        </span>
+                    )}
+                    {parsedDate && (
+                        <span
+                            className="text sm text-gray"
+                            style={{ fontStyle: 'italic' }}
+                            title={parsedDate.toLocaleString()}
                         >
-                            {rec.name}
-                        </Typography>
-                    }
-                    secondary={
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 1.5,
-                                alignItems: 'center',
-                            }}
-                        >
-                            {/* Camera count */}
-                            <StatBadge
-                                icon={
-                                    <VideocamIcon
-                                        sx={{
-                                            fontSize: 14,
-                                            color: theme.palette.text.secondary,
-                                        }}
-                                    />
-                                }
-                                label={`${rec.video_count} cam${rec.video_count !== 1 ? 's' : ''}`}
-                                tooltip="Camera streams"
-                            />
-
-                            {/* Size */}
-                            {rec.total_size_bytes != null &&
-                                rec.total_size_bytes > 0 && (
-                                    <StatBadge
-                                        icon={
-                                            <StorageIcon
-                                                sx={{
-                                                    fontSize: 14,
-                                                    color: theme.palette.text
-                                                        .secondary,
-                                                }}
-                                            />
-                                        }
-                                        label={formatBytes(rec.total_size_bytes)}
-                                        tooltip="Total size on disk"
-                                    />
-                                )}
-
-                            {/* Duration */}
-                            {rec.duration_seconds != null &&
-                                rec.duration_seconds > 0 && (
-                                    <StatBadge
-                                        icon={
-                                            <AccessTimeIcon
-                                                sx={{
-                                                    fontSize: 14,
-                                                    color: theme.palette.text
-                                                        .secondary,
-                                                }}
-                                            />
-                                        }
-                                        label={formatDuration(rec.duration_seconds)}
-                                        tooltip="Recording duration"
-                                    />
-                                )}
-
-                            {/* Frame count chip */}
-                            {rec.total_frames != null && rec.total_frames > 0 && (
-                                <Tooltip title={t("frameCountPerCamera")}>
-                                    <Chip
-                                        label={`${rec.total_frames.toLocaleString()} frames`}
-                                        size="small"
-                                        variant="outlined"
-                                        sx={{
-                                            height: 18,
-                                            fontSize: '0.65rem',
-                                            fontFamily: MONO_FONT,
-                                            '& .MuiChip-label': { px: 0.75 },
-                                            borderColor: isDark
-                                                ? `${ACCENT_GREEN}44`
-                                                : undefined,
-                                            color: isDark
-                                                ? ACCENT_GREEN
-                                                : undefined,
-                                        }}
-                                    />
-                                </Tooltip>
-                            )}
-
-                            {/* FPS chip */}
-                            {rec.fps != null && rec.fps > 0 && (
-                                <Tooltip title={t("recordingCaptureFps")}>
-                                    <Chip
-                                        label={`${rec.fps} fps`}
-                                        size="small"
-                                        variant="outlined"
-                                        sx={{
-                                            height: 18,
-                                            fontSize: '0.65rem',
-                                            fontFamily: MONO_FONT,
-                                            '& .MuiChip-label': { px: 0.75 },
-                                            borderColor: isDark
-                                                ? `${ACCENT_BLUE}44`
-                                                : undefined,
-                                            color: isDark
-                                                ? ACCENT_BLUE
-                                                : theme.palette.info.main,
-                                        }}
-                                    />
-                                </Tooltip>
-                            )}
-
-                            {/* Relative time */}
-                            {parsedDate && (
-                                <Tooltip title={parsedDate.toLocaleString()}>
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            color: theme.palette.text.disabled,
-                                            fontStyle: 'italic',
-                                        }}
-                                    >
-                                        {formatRelativeTime(parsedDate)}
-                                    </Typography>
-                                </Tooltip>
-                            )}
-                        </Box>
-                    }
-                />
-            </ListItemButton>
+                            {formatRelativeTime(parsedDate)}
+                        </span>
+                    )}
+                </div>
+            </div>
         );
     },
 );
 
 RecordingRow.displayName = 'RecordingRow';
-
-// ---------------------------------------------------------------------------
-// StatBadge — tiny icon + label used in the secondary line
-// ---------------------------------------------------------------------------
-
-interface StatBadgeProps {
-    icon: React.ReactNode;
-    label: string;
-    tooltip: string;
-}
-
-const StatBadge: React.FC<StatBadgeProps> = ({ icon, label, tooltip }) => (
-    <Tooltip title={tooltip}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {icon}
-            <Typography variant="caption" color="text.secondary">
-                {label}
-            </Typography>
-        </Box>
-    </Tooltip>
-);

@@ -388,3 +388,144 @@
   font-weight: bold;
   padding: 8px;
 }
+
+/* Recording browser */
+.recording-list {
+  overflow-y: auto;
+  border: 1px solid var(--gray-600);
+  border-radius: 4px;
+}
+
+.recording-row {
+  border-bottom: 1px solid var(--gray-700);
+  cursor: pointer;
+}
+
+.recording-row:last-child {
+  border-bottom: none;
+}
+
+.recording-row-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.recording-name {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-weight: 600;
+}
+
+.sort-select {
+  min-width: 90px;
+  background-color: var(--gray-700);
+  border: 1px solid var(--gray-600);
+  border-radius: 4px;
+  color: var(--gray-400);
+  font-size: 13px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+/* ── Playback controls ── */
+.playback-controls {
+  border-top: 1px solid var(--gray-700);
+  background-color: var(--gray-800);
+  flex-shrink: 0;
+}
+
+.playback-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--blue-100);
+  cursor: pointer;
+}
+
+.playback-slider::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+}
+
+.playback-timecode {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green-100);
+  min-width: 70px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.playback-timecode.text-gray {
+  color: var(--gray-400);
+  text-align: left;
+}
+
+.playback-frame-badge {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green-100);
+  background-color: rgba(0, 255, 136, 0.08);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.playback-fps-badge {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 11px;
+  color: #ffcc80;
+  background-color: rgba(255, 204, 128, 0.08);
+  border: 1px solid rgba(255, 204, 128, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.playback-transport {
+  font-size: 14px;
+}
+
+.playback-play-btn {
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--green-100);
+  color: var(--green-100);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playback-play-btn:hover,
+.playback-play-btn.playing {
+  background-color: rgba(0, 255, 136, 0.1);
+}
+
+.playback-info-left {
+  min-width: 220px;
+  justify-content: flex-end;
+  margin-right: 8px;
+}
+
+.playback-info-right {
+  margin-left: 8px;
+}
+
+.playback-settings-popup {
+  min-width: 260px;
+}
+
+.playback-sync-info {
+  padding: 6px 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 204, 128, 0.06);
+  border: 1px solid rgba(255, 204, 128, 0.15);
+}
+
+.playback-sync-title {
+  color: #ffcc80;
+  font-weight: 600;
+}

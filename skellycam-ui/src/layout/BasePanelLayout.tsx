@@ -5,13 +5,10 @@ import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelCont
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
 import HeaderPanel from "@/components/ui-components/HeaderPanel";
 import {WelcomeModal} from "@/components/ui-components/WelcomeModal";
-import {useTheme} from "@mui/material/styles";
-import {Box} from "@mui/material";
 import {useMenuActions} from "@/hooks/useMenuActions";
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
-    const theme = useTheme();
     const leftPanelRef = useRef<ImperativePanelHandle>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [welcomeOpen, setWelcomeOpen] = useState(true);
@@ -19,7 +16,6 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const handleToggleCollapse = useCallback(() => {
         const panel = leftPanelRef.current;
         if (!panel) return;
-
         if (panel.isCollapsed()) {
             panel.expand();
         } else {
@@ -27,28 +23,16 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
         }
     }, []);
 
-    const handlePanelCollapse = useCallback(() => {
-        setIsCollapsed(true);
-    }, []);
+    const handlePanelCollapse = useCallback(() => setIsCollapsed(true), []);
+    const handlePanelExpand = useCallback(() => setIsCollapsed(false), []);
 
-    const handlePanelExpand = useCallback(() => {
-        setIsCollapsed(false);
-    }, []);
-
-    // Connect native menu actions to the app
     useMenuActions({ onToggleSidebar: handleToggleCollapse });
-
-    // Register global keyboard shortcuts (Ctrl+Shift+L, Shift+Space, etc.)
     useKeyboardShortcuts();
 
     return (
-        <Box sx={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
+        <div style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
             <HeaderPanel onOpenWelcome={() => setWelcomeOpen(true)} />
-            <PanelGroup
-                direction="vertical"
-                style={{flex: 1}}
-            >
-                {/* Top section (horizontal panels) */}
+            <PanelGroup direction="vertical" style={{flex: 1}}>
                 <Panel defaultSize={87} minSize={20}>
                     <PanelGroup direction="horizontal" style={{direction: "ltr"}}>
                         <Panel
@@ -65,30 +49,16 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                                 onToggleCollapse={handleToggleCollapse}
                             />
                         </Panel>
-                        {/* Horizontal Resize Handle */}
-                        <PanelResizeHandle
-                            style={{
-                                width: "4px",
-                                cursor: "col-resize",
-                                backgroundColor: theme.palette.primary.light,
-                            }}
-                        />
 
-                        {/* Main/Central Content Panel */}
+                        <PanelResizeHandle style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
+
                         <Panel defaultSize={76} minSize={10}>
                             {children}
                         </Panel>
                     </PanelGroup>
                 </Panel>
 
-                {/* Vertical Resize Handle */}
-                <PanelResizeHandle
-                    style={{
-                        height: "4px",
-                        cursor: "row-resize",
-                        backgroundColor: theme.palette.primary.light,
-                    }}
-                />
+                <PanelResizeHandle style={{height: "4px", cursor: "row-resize", backgroundColor: "var(--gray-600)"}} />
 
                 <Panel collapsible defaultSize={13} minSize={10} collapsedSize={4}>
                     <BottomPanelContent/>
@@ -96,6 +66,6 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
             </PanelGroup>
 
             <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
-        </Box>
+        </div>
     );
 };
