@@ -9,6 +9,8 @@ import { stopRecording } from '@/store/slices/recording';
 import { selectVideoLoadFolder } from '@/store/slices/videos';
 import { localeChanged, selectLocale, localeToggled } from '@/store/slices/settings';
 import { isElectron } from '@/services/electron-ipc/electron-ipc';
+import { isTauri } from '@/services/tauri-ipc/tauri-detection';
+import { buildApplicationMenu } from '@/services/menu/menu-builder';
 import { SUPPORTED_LOCALES } from '@/i18n';
 
 import type { SupportedLocale } from '@/i18n';
@@ -63,26 +65,56 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
     const isRecording = useAppSelector((state) => state.recording.isRecording);
     const currentLocale = useAppSelector(selectLocale);
 
-    // Send translated menu labels + locale list to the main process whenever the language changes
+    // Send translated menu labels + locale list to rebuild the native menu
     useEffect(() => {
-        if (!isElectron() || !window.electronAPI?.sendMenuLabels) return;
-
         const labels: Record<string, string> = {};
         for (const key of MENU_LABEL_KEYS) {
             labels[key] = t(key);
         }
-        window.electronAPI.sendMenuLabels({
-            labels,
-            locales: LOCALE_ENTRIES,
-            currentLocale,
-        });
+
+        if (isTauri()) {
+            buildApplicationMenu({
+                labels,
+                locales: LOCALE_ENTRIES,
+                currentLocale,
+                onMenuAction: (action: string) => {
+                    // handled by the event listener below
+                },
+            });
+            return;
+        }
+
+        if (isElectron() && window.electronAPI?.sendMenuLabels) {
+            window.electronAPI.sendMenuLabels({
+                labels,
+                locales: LOCALE_ENTRIES,
+                currentLocale,
+            });
+        }
     }, [t, i18n.language, currentLocale]);
 
     // Listen for menu actions dispatched from the native menu
     useEffect(() => {
+        // Tauri: custom DOM event dispatched by menu-builder.ts
+        if (isTauri()) {
+            const handler = (e: Event) => {
+                handleMenuAction((e as CustomEvent).detail as string);
+            };
+            window.addEventListener('menu-action', handler);
+            return () => window.removeEventListener('menu-action', handler);
+        }
+
+        // Electron: IPC event from main process
         if (!isElectron() || !window.electronAPI?.onMenuAction) return;
 
         const cleanup = window.electronAPI.onMenuAction((action: string) => {
+            handleMenuAction(action);
+        });
+
+        return cleanup;
+    }, [dispatch, navigate, isRecording, onToggleSidebar]);
+
+    function handleMenuAction(action: string) {
             // Handle locale change actions (dynamic pattern: "change-locale:xx")
             if (action.startsWith('change-locale:')) {
                 const localeCode = action.slice('change-locale:'.length);
@@ -167,8 +199,5 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
                     navigate('/playback');
                     break;
             }
-        });
-
-        return cleanup;
-    }, [dispatch, navigate, isRecording, onToggleSidebar]);
+    }
 }

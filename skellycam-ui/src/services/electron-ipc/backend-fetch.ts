@@ -10,6 +10,7 @@
  * Falls back to native fetch() in non-Electron contexts (plain browser).
  */
 import { electronIpcClient } from '@/services/electron-ipc/electron-ipc-client';
+import { tauriTrpcClient } from '@/services/tauri-ipc/tauri-trpc-shim';
 
 interface BackendResponse {
     ok: boolean;
@@ -21,23 +22,34 @@ interface BackendResponse {
 }
 
 export async function backendFetch(url: string, init?: RequestInit): Promise<BackendResponse> {
-    // Check at call time so we always reflect the actual Electron environment state.
-    if (typeof window !== 'undefined' && window.electronAPI) {
-        const method = (init?.method ?? 'GET').toUpperCase();
-        const headers = init?.headers as Record<string, string> | undefined;
-        const body = typeof init?.body === 'string' ? init.body : undefined;
+    const method = (init?.method ?? 'GET').toUpperCase();
+    const headers = init?.headers as Record<string, string> | undefined;
+    const body = typeof init?.body === 'string' ? init.body : undefined;
 
-        const result = await electronIpcClient.backendHttp.fetch.mutate({ url, method, headers, body });
-
-        return {
-            ok: result.ok,
-            status: result.status,
-            statusText: result.statusText,
-            json: async () => JSON.parse(result.data),
-            text: async () => result.data,
-        };
+    // Check at call time so we always reflect the actual runtime environment.
+    if (typeof window !== 'undefined') {
+        if ((window as any).__TAURI_INTERNALS__) {
+            const result = await tauriTrpcClient.backendHttp.fetch.mutate({ url, method, headers, body });
+            return {
+                ok: result.ok,
+                status: result.status,
+                statusText: result.statusText,
+                json: async () => JSON.parse(result.data),
+                text: async () => result.data,
+            };
+        }
+        if (window.electronAPI) {
+            const result = await electronIpcClient.backendHttp.fetch.mutate({ url, method, headers, body });
+            return {
+                ok: result.ok,
+                status: result.status,
+                statusText: result.statusText,
+                json: async () => JSON.parse(result.data),
+                text: async () => result.data,
+            };
+        }
     }
 
-    // Non-Electron fallback (plain browser dev without proxy)
+    // Non-Electron/non-Tauri fallback (plain browser dev)
     return fetch(url, init);
 }

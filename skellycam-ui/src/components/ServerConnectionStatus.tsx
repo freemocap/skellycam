@@ -94,7 +94,7 @@ export const ServerConnectionStatus: React.FC = () => {
     const [currentExePath, setCurrentExePath] = useState<string | null>(null);
     const [candidates, setCandidates] = useState<ExecutableCandidate[]>([]);
     const [candidatesLoading, setCandidatesLoading] = useState(false);
-    const [processInfo, setProcessInfo] = useState<{ pid: number | undefined; killed: boolean } | null>(null);
+    const [processInfo, setProcessInfo] = useState<{ pid: number | null | undefined; killed: boolean } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Track whether the initial auto-launch has been attempted so we only fire once

@@ -1,0 +1,383 @@
+name: Build installers (Pyinstaller + Tauri)
+
+on:
+  push:
+    branches:
+      - development
+    tags:
+      - 'v*'
+    paths-ignore:
+      - 'skellycam-docs/**'
+      - '**.md'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════
+  # BUILD — runs on all 5 platform/arch combos
+  # ═══════════════════════════════════════════════════════
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            label: windows-x64
+            server-binary: skellycam_server.exe
+            tauri-target: x86_64-pc-windows-msvc
+
+          - os: macos-15-intel
+            platform: macos
+            arch: x64
+            label: macos-x64-intel
+            server-binary: skellycam_server
+            tauri-target: x86_64-apple-darwin
+
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            label: macos-arm64-apple-silicon
+            server-binary: skellycam_server
+            tauri-target: aarch64-apple-darwin
+
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x64
+            label: linux-x64
+            server-binary: skellycam_server
+            tauri-target: x86_64-unknown-linux-gnu
+
+          - os: ubuntu-22.04-arm
+            platform: linux
+            arch: arm64
+            label: linux-arm64
+            server-binary: skellycam_server
+            tauri-target: aarch64-unknown-linux-gnu
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # ── Linux system dependencies ──
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-glx \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender1 \
+            libv4l-dev \
+            libfuse2 \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
+            upx-ucl \
+            patchelf
+
+      # ── macOS UPX for binary compression ──
+      - name: Install UPX (macOS)
+        if: matrix.platform == 'macos'
+        run: brew install upx
+
+      # ── Common setup ──
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.tauri-target }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv and enable cache
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+
+      - name: Create venv
+        run: uv venv
+
+      - name: Install the project dependencies
+        run: uv sync
+
+      # ── Write build metadata ──
+      - name: Write build info
+        shell: bash
+        run: |
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-8)
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          cat > skellycam/build_info.py << EOF
+          """Build metadata and secrets populated by CI."""
+          BUILD_GIT_SHA: str = "${{ github.sha }}"
+          BUILD_GIT_SHA_SHORT: str = "${SHA_SHORT}"
+          BUILD_NUMBER: str = "${{ github.run_number }}"
+          BUILD_TIMESTAMP: str = "${TIMESTAMP}"
+          BUILD_TAG: str = "${{ github.ref_name }}"
+          SKELLYPINGS_SERVER_URL: str = "https://skellypings-401698866387.northamerica-northeast1.run.app"
+          SKELLYPINGS_SECRET: str = "${{ secrets.SKELLYPINGS_SECRET }}"
+          EOF
+
+      # ── PyInstaller build ──
+      - name: Build with PyInstaller
+        run: |
+          uv pip install pyinstaller
+          uv run pyinstaller ./skellycam.spec --clean
+
+      # ── Move server binary into src-tauri/ ──
+      - name: Move server binary into src-tauri (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          Move-Item -Path ".\dist\${{ matrix.server-binary }}" -Destination ".\skellycam-ui\src-tauri\${{ matrix.server-binary }}"
+
+      - name: Move server binary into src-tauri (macOS/Linux)
+        if: matrix.platform != 'windows'
+        run: |
+          mv "./dist/${{ matrix.server-binary }}" "./skellycam-ui/src-tauri/${{ matrix.server-binary }}"
+          chmod +x "./skellycam-ui/src-tauri/${{ matrix.server-binary }}"
+
+      # ── macOS code signing (server binary) ──
+      - name: Sign server binary with codesign (macOS)
+        if: matrix.platform == 'macos'
+        env:
+          MAC_CERTIFICATE_P12: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$MAC_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$MAC_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          rm -f "$CERT_PATH"
+
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+          codesign --force --options runtime --sign "Developer ID Application" \
+            --timestamp \
+            "./skellycam-ui/src-tauri/${{ matrix.server-binary }}"
+          codesign --verify --verbose "./skellycam-ui/src-tauri/${{ matrix.server-binary }}"
+
+      # ── Add server binary to Tauri bundle resources ──
+      - name: Configure Tauri resources to include server binary
+        shell: bash
+        run: |
+          # Use jq to add or update the resources array in tauri.conf.json
+          cd skellycam-ui/src-tauri
+          SERVER_GLOB="${{ matrix.server-binary }}"
+
+          # Read existing config, add/replace the resources array
+          jq --arg resource "$SERVER_GLOB" \
+            '.bundle.resources = [$resource, "../../shared/skellycam-logo/*"]' \
+            tauri.conf.json > tauri.conf.tmp && mv tauri.conf.tmp tauri.conf.json
+
+          echo "Updated tauri.conf.json resources:"
+          cat tauri.conf.json | grep -A5 resources
+
+      # ── Install frontend dependencies ──
+      - name: Install UI dependencies
+        run: |
+          cd skellycam-ui
+          npm install
+
+      # ── Tauri build ──
+      - name: Build Tauri app (Windows)
+        if: matrix.platform == 'windows'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          cd skellycam-ui
+          npm run build -- --target ${{ matrix.tauri-target }}
+
+      - name: Build Tauri app (macOS)
+        if: matrix.platform == 'macos'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          cd skellycam-ui
+          for attempt in 1 2 3; do
+            echo "=== Tauri build + notarize attempt $attempt of 3 ==="
+            npm run build -- --target ${{ matrix.tauri-target }} && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "All 3 attempts failed"
+              exit 1
+            fi
+            echo "Build/notarize failed on attempt $attempt. Retrying in 30s..."
+            sleep 30
+          done
+
+      - name: Build Tauri app (Linux)
+        if: matrix.platform == 'linux'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          cd skellycam-ui
+          npm run build -- --target ${{ matrix.tauri-target }}
+
+      # ── macOS keychain cleanup ──
+      - name: Clean up macOS keychain
+        if: matrix.platform == 'macos' && always()
+        shell: bash
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
+
+      # ── Upload installer artifacts ──
+      - name: Upload installer artifacts (Windows)
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.label }}
+          path: |
+            skellycam-ui/src-tauri/target/release/bundle/nsis/*.exe
+            skellycam-ui/src-tauri/target/release/bundle/msi/*.msi
+          include-hidden-files: true
+
+      - name: Upload installer artifacts (macOS)
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.label }}
+          path: |
+            skellycam-ui/src-tauri/target/release/bundle/dmg/*.dmg
+            skellycam-ui/src-tauri/target/release/bundle/macos/*.tar.gz
+          include-hidden-files: true
+
+      - name: Upload installer artifacts (Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.label }}
+          path: |
+            skellycam-ui/src-tauri/target/release/bundle/appimage/*.AppImage
+            skellycam-ui/src-tauri/target/release/bundle/deb/*.deb
+          include-hidden-files: true
+
+      # ── Upload server binary artifact (for debugging/standalone use) ──
+      - name: Upload server binary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: server-${{ matrix.label }}
+          path: |
+            skellycam-ui/src-tauri/${{ matrix.server-binary }}
+          include-hidden-files: true
+
+  # ═══════════════════════════════════════════════════════
+  # RELEASE — only runs on tag pushes (e.g. v2.0.0)
+  # ═══════════════════════════════════════════════════════
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: find artifacts -type f | sort
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION=$VERSION"
+
+          # ── Server binaries ──
+          for dir in artifacts/server-*; do
+            label=$(basename "$dir" | sed 's/^server-//')
+
+            if [ -f "$dir/skellycam_server.exe" ]; then
+              cp "$dir/skellycam_server.exe" "release-assets/skellycam_server_${VERSION}_${label}.exe"
+            elif [ -f "$dir/skellycam_server" ]; then
+              cp "$dir/skellycam_server" "release-assets/skellycam_server_${VERSION}_${label}"
+            else
+              echo "::error::No server binary found in $dir"
+              exit 1
+            fi
+          done
+
+          # ── App installers ──
+          for dir in artifacts/installer-*; do
+            label=$(basename "$dir" | sed 's/^installer-//')
+
+            find "$dir" -type f \( \
+              -name '*.exe' -o \
+              -name '*.msi' -o \
+              -name '*.dmg' -o \
+              -name '*.tar.gz' -o \
+              -name '*.AppImage' -o \
+              -name '*.deb' \
+            \) | while read -r file; do
+              ext="${file##*.}"
+              # Handle .tar.gz
+              if echo "$file" | grep -q '\.tar\.gz$'; then
+                ext="tar.gz"
+              fi
+              cp "$file" "release-assets/skellycam_${VERSION}_${label}.${ext}"
+            done
+          done
+
+          echo "=== Release assets ==="
+          ls -lh release-assets/
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" &>/dev/null; then
+            echo "Release $TAG already exists — uploading new assets only"
+            gh release upload "$TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            echo "Creating new pre-release for $TAG"
+            gh release create "$TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --prerelease \
+              --generate-notes \
+              --title "$TAG"
+          fi
