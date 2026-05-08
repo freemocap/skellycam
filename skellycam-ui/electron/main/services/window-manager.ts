@@ -3,7 +3,6 @@ import { BrowserWindow, shell } from 'electron';
 import { LifecycleLogger } from './logger';
 import { APP_ENVIRONMENT } from '../index';
 import {APP_PATHS} from "../app-paths";
-import { THEME_COLORS } from '../../../src/constants/theme-colors';
 
 export class WindowManager {
     private static mainWindow: BrowserWindow | null = null;
@@ -17,7 +16,7 @@ export class WindowManager {
         const window = new BrowserWindow({
             title: 'Skellycam 💀📸',
             icon: APP_PATHS.SKELLYCAM_ICON_PATH,
-            backgroundColor: THEME_COLORS.gray800,
+            backgroundColor: '#1b1b1b',
             width: 1280,
             height: 720,
             minWidth: 800,
