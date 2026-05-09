@@ -148,7 +148,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                                 />
                                 <ButtonCard
                                     text={t('videoPlayback')}
-                                    iconClass="import-icon icon-size-42"
+                                    iconClass="importVideos-icon icon-size-42"
                                     onClick={handleGoToPlayback}
                                 />
                             </div>

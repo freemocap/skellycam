@@ -581,7 +581,7 @@ a:after {
 .m-4 {
   margin: 16px;
 }
-
+/* margin-bottom */
 .mb-4 {
   margin-bottom: 16px;
 }
@@ -827,6 +827,12 @@ a:after {
 
 .import-icon {
   background-image: var(--import-icon);
+}
+.importVideos-icon {
+  background-image: var(--importVideos-icon);
+}
+.github-icon {
+  background-image: var(--github-icon);
 }
 
 .discord-icon {

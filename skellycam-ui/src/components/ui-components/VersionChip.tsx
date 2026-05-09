@@ -50,7 +50,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) =>
     if (!version) return null;
 
     return (
-        <div className="version-button-container flex flex-row items-center gap-1">
+        <div className="version-button-container flex flex-row items-center gap-2">
             <button
                 className={clsx("version-badge", showSuccess && "success")}
                 onClick={checkForUpdate}
@@ -62,7 +62,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) =>
             </button>
 
             <button
-                className="button icon-button"
+                className="button icon icon-size-16 github-icon"
                 onClick={() => window.open(EXTERNAL_URLS.GITHUB_RELEASES, '_blank')}
                 title="GitHub Releases"
             >

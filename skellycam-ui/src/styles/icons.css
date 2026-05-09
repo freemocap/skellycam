@@ -1,3 +1,30 @@
+/* How to add icons to the design system
+
+1. Ask the team to share the Figma file with you so you can collaborate.
+
+2. Icons should always use a 1.33px stroke width and be exported as a 16px square.
+   Always convert the stroke/border into a solid shape before exporting.
+
+3. To add an icon to the codebase, first import the 16x16px SVG file.
+
+4. Add the icon to `icons.css` as a variable so it can be reused easily throughout the design system.
+
+5. Update `app.css` and use the same icon variable you just created as a class.
+
+Note:
+The FreeMoCap design system uses icons as CSS background images.
+To ensure icons are always consistent and reusable across the app, we define the variable in `app.css` as a background image.
+
+Study the codebase HTML structure carefully. You will notice that whenever icons are used for buttons, we use the following class structure:
+
+- `icon`
+- `import-icon`
+- `icon-size-16`
+
+`icon` indicates that the HTML DOM element contains an icon.
+`import-icon` defines the actual background image used by the app.
+`icon-size-16` defines the icon size specified in the `app.css` design system.
+*/
 /* icons vars */
   :root { 
     --plus-icon: url("../assets/icons/plus_icon.svg");
@@ -6,6 +33,8 @@
   --rotate-icon: url("../assets/icons/rotate_icon.svg");
   --live-icon: url("../assets/icons/live_icon.svg");
   --import-icon: url("../assets/icons/import_icon.svg");
+  --importVideos-icon: url("../assets/icons/importVideos_icon.svg");
+   --github-icon: url("../assets/icons/github_icon.svg");
   --externallink-icon: url("../assets/icons/externallink_icon.svg");
   --dropdown-icon: url("../assets/icons/dropdown_icon.svg");
   --stream-icon: url("../assets/icons/stream_icon.svg");
