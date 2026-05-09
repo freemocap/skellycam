@@ -50,7 +50,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) =>
     if (!version) return null;
 
     return (
-        <div className="flex items-center gap-1">
+        <div className="version-button-container flex flex-row items-center gap-1">
             <button
                 className={clsx("version-badge", showSuccess && "success")}
                 onClick={checkForUpdate}

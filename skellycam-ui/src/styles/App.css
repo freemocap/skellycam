@@ -1012,7 +1012,7 @@ body,
 }
 
 /* ---- Welcome Page ---- */
-.welcome-modal {
+.welcome-modal, {
   width: 680px;
   min-height: 400px;
   animation: fadeIn, scaleIn;
@@ -1089,12 +1089,13 @@ body,
   gap: 4px;
   padding: 2px 8px;
   border: 1px solid var(--gray-600);
-  border-radius: 99px;
+  border-radius: 4px;
   cursor: pointer;
   font-family: monospace;
   font-size: 0.75rem;
   color: var(--gray-400);
   transition: border-color var(--speed-1), color var(--speed-1);
+  background-color: var(--gray-800);
 }
 
 .version-badge:hover { border-color: var(--gray-400); color: var(--gray-100); }
@@ -1202,7 +1203,18 @@ body,
   background-repeat: no-repeat;
   background-size: contain;
 }
-
+.splashmodal-mini-menu-container {
+    position: absolute;
+    top: 21px;
+    left: 22px;
+}
+.version-button-container {
+    position: absolute;
+    top: 252px;
+    left: 0px;
+    /* display: block; */
+    text-wrap: nowrap;
+}
 .splash-image-logo-container {
   background-image: url(/images/logo_name.svg);
   background-repeat: no-repeat;
@@ -1211,7 +1223,12 @@ body,
   height: 28px;
   opacity: 0.5;
 }
-
+.footer-content {
+position: absolute;
+    bottom: -23px;
+    left: 24px;
+    opacity: 0.5;
+}
 /* --------- ui components styles -------- */
 /* --------- ui components styles -------- */
 

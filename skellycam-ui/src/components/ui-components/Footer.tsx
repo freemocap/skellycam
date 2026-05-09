@@ -6,7 +6,7 @@ export const Footer = function () {
     const { t } = useTranslation();
 
     return (
-        <p className="text sm text-gray text-center">
+        <p className="footer-content text sm text-gray text-center">
             {t('footerWith') + ' '}
             <a
                 className="text-gray"
@@ -27,5 +27,12 @@ export const Footer = function () {
             </a>
             {' '}{new Date().getFullYear()}
         </p>
+            //  <ButtonSm
+            //                     iconClass=""
+            //                     text={t('roadmap')}
+            //                     rightSideIcon="externallink"
+            //                     textColor="text-gray"
+            //                     onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
+            //                 />
     );
 };
