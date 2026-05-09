@@ -50,16 +50,25 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) =>
     if (!version) return null;
 
     return (
-        <div className="version-button-container flex flex-row items-center gap-2">
+        <div className="version-button-container pos-abs flex flex-row items-center gap-2">
             <button
                 className={clsx("version-badge", showSuccess && "success")}
                 onClick={checkForUpdate}
                 disabled={isChecking}
                 title={t('checkForUpdates')}
             >
-                <span className={clsx("icon icon-size-16", isChecking ? "loader-icon" : showSuccess ? "connected-icon" : "rotate-icon")} />
-                v{version}
-            </button>
+    <span
+        className={clsx(
+            "icon icon-size-16",
+            isChecking
+                ? "updateAvailable-icon"
+                : showSuccess
+                ? "upToDate-icon"
+                : "checkUpdate-icon"
+        )}
+    />
+    v{version}
+</button>
 
             <button
                 className="button icon icon-size-16 github-icon"
@@ -67,6 +76,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) =>
                 title="GitHub Releases"
             >
                 <span className="icon icon-size-16 externallink-icon" />
+                
             </button>
 
             {toast && (

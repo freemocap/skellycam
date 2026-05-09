@@ -351,7 +351,7 @@ a.link:hover {
   transition: filter var(--speed-1) ease-in-out;
 }
 
-a:after {
+a:not(.ai)::after {
   content: var(--externallink-icon);
   display: inline-block;
   position: absolute;
@@ -810,6 +810,15 @@ a:after {
 .plus-icon {
   background-image: var(--plus-icon);
 }
+.checkUpdate-icon {
+  background-image: var(--checkUpdate-icon);
+}
+.upToDate-icon {
+  background-image: var(--upToDate-icon);
+}
+.updateAvailable-icon {
+  background-image: var(--updateAvailable-icon);
+}
 
 .addsubfolder-icon {
   background-image: var(--addsubfolder_icon);
@@ -1094,14 +1103,14 @@ body,
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border: 1px solid var(--gray-600);
+  border: none;
   border-radius: 4px;
   cursor: pointer;
   font-family: monospace;
   font-size: 0.75rem;
   color: var(--gray-400);
   transition: border-color var(--speed-1), color var(--speed-1);
-  background-color: var(--gray-800);
+  /* background-color: var(--gray-800); */
 }
 
 .version-badge:hover { border-color: var(--gray-400); color: var(--gray-100); }
@@ -1210,13 +1219,13 @@ body,
   background-size: contain;
 }
 .splashmodal-mini-menu-container {
-    position: absolute;
-    top: 21px;
-    left: 22px;
+    /* position: absolute; */
+    top: 5px;
+    left: 5px;
 }
 .version-button-container {
-    position: absolute;
-    top: 252px;
+    /* position: absolute; */
+    top: 284px;
     left: 0px;
     /* display: block; */
     text-wrap: nowrap;

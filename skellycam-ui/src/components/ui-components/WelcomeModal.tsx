@@ -162,7 +162,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                                 />
                             )}
 
-                            <div className="splashmodal-mini-menu-container flex items-center gap-2">
+                            <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2">
                                 <LanguageSwitcher />
                                 <VersionChip variant="compact" />
                             </div>

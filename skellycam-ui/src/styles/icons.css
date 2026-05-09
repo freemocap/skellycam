@@ -27,7 +27,10 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 */
 /* icons vars */
   :root { 
-    --plus-icon: url("../assets/icons/plus_icon.svg");
+  --plus-icon: url("../assets/icons/plus_icon.svg");
+  --checkUpdate-icon: url("../assets/icons/checkUpdate-icon.svg");
+  --upToDate-icon: url("../assets/icons/upToDate-icon.svg");
+  --updateAvailable-icon: url("../assets/icons/updateAvailable-icon.svg");
   --minus-icon: url("../assets/icons/minus_icon.svg");
   --close-icon: url("../assets/icons/close_icon.svg");
   --rotate-icon: url("../assets/icons/rotate_icon.svg");
