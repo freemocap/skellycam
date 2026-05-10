@@ -6,27 +6,36 @@ export const Footer = function () {
     const { t } = useTranslation();
 
     return (
-        <p className="footer-content text sm text-gray text-center">
+           
+        <p className="pos-abs footer-content text sm text-gray text-center">
+            <a
+                className="text-gray"
+                href={EXTERNAL_URLS.GITHUB_ORG}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+                class="flex flex-row gap-1 "
+            >
             {t('footerWith') + ' '}
-            <a
+            <span class="flex-inline icon icon-size-16 donate-icon"></span>
+            {/* <a
                 className="text-gray"
                 href={EXTERNAL_URLS.GITHUB_ORG}
                 target="_blank"
                 rel="noopener noreferrer"
-            >
-                ❤️
-            </a>
+                style={{ textDecoration: 'none' }}
+            > */}
+                
+            {/* </a> */}
             {' ' + t('footerFrom') + ' '}
-            <a
-                className="text-gray"
-                href={EXTERNAL_URLS.GITHUB_ORG}
-                target="_blank"
-                rel="noopener noreferrer"
-            >
+         
                 {t('footerOrgName')}
-            </a>
+            
             {' '}{new Date().getFullYear()}
+            <span class="flex-inline icon icon-size-16 externallink-icon"></span>
+            </a>
         </p>
+        
             //  <ButtonSm
             //                     iconClass=""
             //                     text={t('roadmap')}
