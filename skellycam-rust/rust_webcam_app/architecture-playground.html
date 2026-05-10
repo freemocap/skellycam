@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>webcam_app — Architecture Walkthrough</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,sans-serif;background:#0f1117;color:#c9cdd4;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+  /* ── Tab bar ── */
+  #tab-bar{display:flex;background:#161822;border-bottom:1px solid #252836;padding:0 12px;flex-shrink:0;overflow-x:auto}
+  .tab-btn{padding:10px 14px;background:none;border:none;color:#6b7280;font-size:0.78rem;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:0.15s}
+  .tab-btn:hover{color:#c9cdd4}
+  .tab-btn.active{color:#c7d2fe;border-bottom-color:#6366f1}
+  .tab-num{font-size:0.6rem;color:#4b5563;margin-right:4px}
+
+  /* ── Main layout ── */
+  #body-row{display:flex;flex:1;overflow:hidden}
+
+  /* Left panel */
+  #left-panel{width:320px;min-width:220px;background:#161822;display:flex;flex-direction:column;padding:16px;gap:12px;overflow-y:auto}
+  #panel-divider{width:5px;min-width:5px;background:#252836;cursor:col-resize;transition:background 0.15s;flex-shrink:0}
+  #panel-divider:hover,#panel-divider.active{background:#6366f1}
+  #chapter-title{font-size:1.1rem;font-weight:700;color:#e4e7ed}
+  #chapter-subtitle{font-size:0.78rem;color:#6b7280}
+  #chapter-prose{font-size:0.8rem;line-height:1.55;color:#a0a4b0}
+  #chapter-prose code{background:#1e2030;padding:1px 5px;border-radius:3px;font-size:0.75rem;color:#c9cdd4}
+  #chapter-insights{margin-top:4px}
+  .insight-item{display:flex;gap:8px;padding:6px 0;font-size:0.76rem;line-height:1.4;color:#a0a4b0;border-top:1px solid #1e2030}
+  .insight-bulb{flex-shrink:0;color:#fbbf24;font-size:0.85rem}
+  #chapter-comments{margin-top:auto}
+  .ch-section-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;margin-bottom:4px}
+  #comments-list{display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto}
+  .comment-item{background:#1e2030;border:1px solid #252836;border-radius:5px;padding:5px 7px;font-size:0.72rem}
+  .comment-target{color:#818cf8;font-weight:600}
+  .comment-text{color:#a0a4b0;line-height:1.3}
+  .comment-delete{margin-top:2px;font-size:0.62rem;color:#ef4444;cursor:pointer;background:none;border:none;padding:0}
+  .comment-delete:hover{color:#fca5a5}
+
+  /* Right panel */
+  #right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  #canvas-wrap{flex:1;overflow:auto;position:relative;cursor:default;background:#0d0f16;background-image:radial-gradient(circle,#16192a 1px,transparent 1px);background-size:24px 24px}
+  #canvas-wrap.dragging{cursor:grabbing}
+  svg{display:block}
+
+  /* Minimap */
+  #minimap{position:absolute;bottom:10px;right:10px;width:180px;height:120px;background:#12141f;border:1px solid #333;border-radius:6px;overflow:hidden;z-index:50;opacity:0.82;transition:opacity 0.2s}
+  #minimap:hover{opacity:1}
+  #minimap canvas{display:block;width:100%;height:100%}
+
+  /* Bottom bar */
+  #prompt-bar{background:#161822;border-top:1px solid #252836;padding:8px 14px;display:flex;gap:10px;align-items:flex-start;flex-shrink:0}
+  #prompt-text{flex:1;font-family:"SF Mono","Fira Code","Cascadia Code",monospace;font-size:0.72rem;color:#a0a4b0;white-space:pre-wrap;line-height:1.4;min-height:28px;max-height:70px;overflow-y:auto}
+  #copy-btn{padding:6px 12px;border-radius:5px;border:1px solid #333;background:#1e2030;color:#a0a4b0;font-size:0.74rem;cursor:pointer;white-space:nowrap;transition:0.15s;flex-shrink:0}
+  #copy-btn:hover{border-color:#6366f1;color:#e0e3f0}
+  #copy-btn.copied{background:#14532d;border-color:#22c55e;color:#86efac}
+
+  /* Zoom/reset row */
+  #zoom-row{display:flex;align-items:center;gap:6px;padding:4px 0}
+  .zbtn{height:24px;border-radius:4px;border:1px solid #333;background:#1e2030;color:#a0a4b0;font-size:0.72rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 8px}
+  .zbtn:hover{border-color:#6366f1}
+  .zoom-label{font-size:0.72rem;color:#6b7280}
+
+  /* Modal */
+  #modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center}
+  #modal-overlay.open{display:flex}
+  #modal{background:#1e2030;border:1px solid #333;border-radius:10px;padding:18px;width:400px;max-width:90vw}
+  #modal h3{font-size:0.9rem;margin-bottom:3px}
+  #modal .file-path{font-size:0.7rem;color:#6b7280;margin-bottom:10px;font-family:monospace}
+  #modal textarea{width:100%;height:72px;background:#0f1117;border:1px solid #333;border-radius:6px;color:#c9cdd4;padding:8px;font-size:0.8rem;font-family:system-ui,sans-serif;resize:vertical}
+  #modal textarea:focus{outline:none;border-color:#6366f1}
+  .modal-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
+  .modal-actions button{padding:6px 14px;border-radius:5px;border:1px solid #333;font-size:0.78rem;cursor:pointer}
+  .btn-cancel{background:transparent;color:#a0a4b0}
+  .btn-save{background:#312e81;border-color:#6366f1;color:#c7d2fe}
+  .btn-save:hover{background:#3730a3}
+
+  .node-group{cursor:grab}
+  .node-group:hover .node-rect{filter:brightness(1.25)}
+  .node-group.commented .node-rect{stroke:#818cf8;stroke-width:2.5}
+  .node-group.dimmed .node-rect{opacity:0.45}
+
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="tab-bar"></div>
+
+<div id="body-row">
+  <div id="left-panel">
+    <div id="chapter-title"></div>
+    <div id="chapter-subtitle"></div>
+    <div id="chapter-prose"></div>
+    <div id="chapter-insights"></div>
+
+    <div id="zoom-row">
+      <button class="zbtn" id="zoom-out">−</button>
+      <button class="zbtn" id="zoom-in">+</button>
+      <button class="zbtn" id="zoom-reset">Reset Zoom</button>
+      <button class="zbtn" id="reset-positions">Reset Layout</button>
+      <button class="zbtn" id="auto-layout" style="color:#fbbf24;border-color:#92400e">Auto Layout</button>
+      <span class="zoom-label" id="zoom-label">100%</span>
+    </div>
+    <div style="font-size:0.62rem;color:#555;line-height:1.3">Drag nodes or click <b style="color:#fbbf24">Auto Layout</b> for force-directed graph arrangement. Reset restores the hand-tuned chapter layout.</div>
+
+    <div id="chapter-comments">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="ch-section-label">Feedback on this view</span>
+        <span style="background:#312e81;color:#a5b4fc;font-size:0.64rem;padding:1px 6px;border-radius:8px" id="comment-count">0</span>
+      </div>
+      <div id="comments-list"></div>
+    </div>
+  </div>
+
+  <div id="panel-divider"></div>
+
+  <div id="right-panel">
+    <div id="canvas-wrap">
+      <svg id="diagram" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="minimap"><canvas id="minimap-canvas"></canvas></div>
+    </div>
+    <div id="prompt-bar">
+      <div id="prompt-text"></div>
+      <button id="copy-btn">Copy Prompt</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title"></h3>
+    <div class="file-path" id="modal-path"></div>
+    <textarea id="modal-textarea" placeholder="What do you want to change, add, or ask about this component?"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modal-cancel">Cancel</button>
+      <button class="btn-save" id="modal-save">Save Feedback</button>
+    </div>
+  </div>
+</div>
+
+<svg style="position:absolute;width:0;height:0" aria-hidden="true">
+  <defs>
+    <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3b82f6"/></marker>
+    <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#10b981"/></marker>
+    <marker id="arr-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f97316"/></marker>
+    <marker id="arr-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#ef4444"/></marker>
+    <marker id="arr-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6b7280"/></marker>
+    <marker id="arr-highlight" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#fbbf24"/></marker>
+  </defs>
+</svg>
+
+<script>
+// ═══════════════ NODE DEFINITIONS (shared across all chapters) ═══════════════
+
+const ALL_NODES = [
+  { id:'ext_webcam',  label:'USB Webcam',      sub:'Hardware device',                    layer:'external' },
+  { id:'ext_nokhwa',  label:'nokhwa',          sub:'Camera capture library',             layer:'external' },
+  { id:'ext_minifb',  label:'minifb',          sub:'Window / framebuffer',               layer:'external' },
+  { id:'ext_image',   label:'image crate',     sub:'RgbImage + rotation ops',            layer:'external' },
+  { id:'ext_clap',    label:'clap',            sub:'CLI argument parsing',               layer:'external' },
+  { id:'ext_anyhow',  label:'anyhow',          sub:'Error handling / Result<T>',         layer:'external' },
+  { id:'ext_ffmpeg',  label:'ffmpeg',          sub:'H.264 MP4 encoder (subprocess)',    layer:'external' },
+
+  { id:'cap_thread',   label:'Camera Thread',   sub:'spawn_camera_thread() — src/camera.rs:163',  layer:'capture' },
+  { id:'cap_manager',  label:'CameraManager',   sub:'Owns nokhwa Camera (not Send) — L269',       layer:'capture' },
+  { id:'cap_handle',   label:'CameraHandle',    sub:'Command sender + metadata — L65',             layer:'capture' },
+  { id:'cap_protocol', label:'Channel Protocol',sub:'CameraCommand & CameraEvent enums — L18-52',  layer:'capture' },
+  { id:'cap_packet',   label:'FramePacket',     sub:'RgbImage + sequence + timestamp — L43',       layer:'capture' },
+  { id:'cap_query',    label:'query_camera()',  sub:'Temp open for metadata — L110',               layer:'capture' },
+
+  { id:'disp_window',  label:'DisplayWindow',   sub:'minifb Window wrapper — src/display.rs:73',  layer:'display' },
+  { id:'disp_convert', label:'RGB → ARGB',      sub:'Raw-pointer auto-vectorized loop — L146',     layer:'display' },
+  { id:'disp_font',    label:'Bitmap Font',     sub:'5×7 embedded font (ASCII 32-90) — L7',       layer:'display' },
+  { id:'disp_overlay', label:'Overlay Bar',     sub:'Status: REC, FPS, rotation, control — L205',  layer:'display' },
+
+  { id:'rec_recorder', label:'VideoRecorder',   sub:'ffmpeg subprocess manager — src/recorder.rs:8',  layer:'recording' },
+  { id:'rec_pipe',     label:'ffmpeg Pipe',     sub:'stdin-based raw RGB24 → H.264 — L16',             layer:'recording' },
+  { id:'rec_finish',   label:'Finish / Flush',  sub:'Close stdin, wait ffmpeg, check exit — L70',      layer:'recording' },
+
+  { id:'main_cli',     label:'CLI Parser',      sub:'clap Arguments struct — src/main.rs:30',      layer:'orchestration' },
+  { id:'main_loop',    label:'Main Loop',       sub:'while display.is_open() — L128',              layer:'orchestration' },
+  { id:'main_keys',    label:'Keyboard Input',  sub:'Key routing: R, Q, arrows, 1-9 — L133',      layer:'orchestration' },
+  { id:'main_rot',     label:'Rotation',        sub:'0°/90°/180°/270° — apply_rotation() L502',    layer:'orchestration' },
+  { id:'main_resize',  label:'Fast Resizer',    sub:'Integer-ratio nearest-neighbor — L535',       layer:'orchestration' },
+  { id:'main_timing',  label:'Perf Timing',     sub:'Per-stage nanosecond accumulators — L457',    layer:'orchestration' },
+];
+
+const NODE_MAP = {}; ALL_NODES.forEach(n => NODE_MAP[n.id] = n);
+
+// ═══════════════ ALL CONNECTIONS ═══════════════
+
+const ALL_CONNS = [
+  // Data flow
+  { from:'ext_webcam',  to:'cap_manager',  type:'data-flow',   label:'USB frames' },
+  { from:'cap_manager', to:'cap_packet',   type:'data-flow',   label:'decoded RgbImage' },
+  { from:'cap_packet',  to:'main_loop',    type:'data-flow',   label:'FramePacket via mpsc' },
+  { from:'main_loop',   to:'main_rot',     type:'data-flow',   label:'RgbImage' },
+  { from:'main_rot',    to:'main_resize',  type:'data-flow',   label:'rotated image' },
+  { from:'main_resize', to:'disp_convert', type:'data-flow',   label:'scaled RGB bytes' },
+  { from:'main_resize', to:'rec_recorder', type:'data-flow',   label:'raw RGB24 bytes' },
+  { from:'disp_convert',to:'disp_window',  type:'data-flow',   label:'ARGB u32 buffer' },
+  { from:'rec_recorder',to:'rec_pipe',     type:'data-flow',   label:'stdin write_all()' },
+  { from:'rec_pipe',    to:'ext_ffmpeg',   type:'data-flow',   label:'pipe → MP4 file' },
+  { from:'rec_recorder',to:'rec_finish',   type:'data-flow',   label:'drop stdin → wait' },
+  // Events
+  { from:'cap_protocol',to:'main_loop',    type:'event',       label:'CameraEvent via sync_channel(2)' },
+  { from:'cap_manager', to:'cap_protocol', type:'event',       label:'CameraEvent::Frame / Error' },
+  // Commands
+  { from:'main_loop',   to:'cap_handle',   type:'command',     label:'send_adjust_control / shutdown' },
+  { from:'main_keys',   to:'cap_handle',   type:'command',     label:'Up/Down → adjust_control' },
+  { from:'cap_handle',  to:'cap_thread',   type:'command',     label:'CameraCommand via mpsc' },
+  { from:'cap_thread',  to:'cap_protocol', type:'command',     label:'try_recv() drain loop' },
+  // Tool calls
+  { from:'main_cli',    to:'main_loop',    type:'tool-call',   label:'Arguments::parse()' },
+  { from:'main_loop',   to:'cap_query',    type:'tool-call',   label:'query_camera() metadata' },
+  { from:'main_rot',    to:'ext_image',    type:'tool-call',   label:'imageops::rotate90/180/270' },
+  { from:'main_cli',    to:'ext_clap',     type:'tool-call',   label:'#[derive(Parser)]' },
+  { from:'disp_window', to:'ext_minifb',   type:'tool-call',   label:'Window::new / update_with_buffer' },
+  { from:'cap_manager', to:'ext_nokhwa',   type:'tool-call',   label:'Camera::frame() / set_control()' },
+  { from:'cap_thread',  to:'cap_manager',  type:'tool-call',   label:'CameraManager::open_inner()' },
+  // Dependencies
+  { from:'cap_thread',  to:'cap_packet',   type:'dependency',  label:'creates FramePacket' },
+  { from:'disp_window', to:'disp_convert', type:'dependency',  label:'show() calls conversion' },
+  { from:'disp_window', to:'disp_overlay', type:'dependency',  label:'draw_overlay()' },
+  { from:'disp_overlay',to:'disp_font',    type:'dependency',  label:'draw_text_scaled()' },
+  { from:'rec_recorder',to:'rec_pipe',     type:'dependency',  label:'owns stdin handle' },
+  { from:'main_loop',   to:'disp_window',  type:'dependency',  label:'owns DisplayWindow' },
+  { from:'main_loop',   to:'rec_recorder', type:'dependency',  label:'Option<VideoRecorder>' },
+  { from:'main_loop',   to:'main_timing',  type:'dependency',  label:'per-frame timing' },
+  { from:'main_loop',   to:'cap_handle',   type:'dependency',  label:'owns CameraHandle' },
+  { from:'main_keys',   to:'main_rot',     type:'dependency',  label:'Left/Right → change_rotation' },
+  { from:'main_keys',   to:'rec_recorder', type:'dependency',  label:'R → toggle_recording()' },
+  { from:'main_loop',   to:'ext_anyhow',   type:'dependency',  label:'Result<T> throughout' },
+];
+
+const CONN_TYPE_CFG = {
+  'data-flow':  { name:'Data Flow',  color:'#3b82f6', dash:'',     marker:'blue' },
+  'tool-call':  { name:'API/Calls',  color:'#10b981', dash:'6,3',  marker:'green' },
+  'command':    { name:'Commands',   color:'#f97316', dash:'8,4',  marker:'orange' },
+  'event':      { name:'Events',     color:'#ef4444', dash:'4,3',  marker:'red' },
+  'dependency': { name:'Owns/Uses',  color:'#6b7280', dash:'2,3',  marker:'gray' },
+  'highlight':  { name:'Highlight',  color:'#fbbf24', dash:'',     marker:'highlight' },
+};
+
+// ═══════════════ CHAPTERS ═══════════════
+// Each chapter has a hand-tuned layout, a curated set of visible nodes,
+// allowed connection types, and prose explanation.
+
+function makeChapter(id, title, subtitle, prose, insights, layout, connTypes, highlights) {
+  return { id, title, subtitle, prose, insights, layout, connTypes, highlights: highlights || [] };
+}
+
+const CHAPTERS = [
+  makeChapter('overview',
+    'Overview',
+    'The four modules and how they connect',
+    `The webcam_app is structured as four Rust modules that run together in a single process. The <code>camera</code> module captures frames on a dedicated thread. The <code>main</code> module orchestrates everything from the primary thread — it receives frames, applies rotation and scaling, then fans them out to both the <code>display</code> module (for live preview) and the <code>recorder</code> module (for MP4 output).
+
+The program starts by parsing CLI arguments via <code>clap</code>, then opens a temporary camera handle to query metadata (resolution, supported controls). The real camera is opened on a spawned thread so that platform-specific camera initialization happens where the camera lives — the main thread never touches the camera object directly.`,
+    [
+      'The camera lives on its own thread. The main thread communicates with it through typed mpsc channels — CameraCommands go in, CameraEvents come out. This avoids all locking.',
+      'After the main loop receives a frame, it fans out to two independent sinks: the display window and the optional video recorder. The recorder can be toggled on/off at runtime with the R key.',
+    ],
+    {
+      ext_webcam:{x:260,y:30,w:170,h:48}, ext_nokhwa:{x:260,y:105,w:170,h:48},
+      ext_minifb:{x:700,y:385,w:170,h:48}, ext_image:{x:520,y:555,w:170,h:48},
+      ext_ffmpeg:{x:700,y:525,w:170,h:48}, ext_clap:{x:50,y:30,w:170,h:48},
+      ext_anyhow:{x:50,y:105,w:170,h:48},
+      cap_thread:{x:260,y:195,w:210,h:52}, cap_manager:{x:260,y:270,w:210,h:52},
+      cap_handle:{x:260,y:345,w:210,h:52}, cap_packet:{x:260,y:420,w:210,h:52},
+      main_loop:{x:520,y:195,w:210,h:52}, main_cli:{x:520,y:95,w:210,h:52},
+      main_keys:{x:520,y:290,w:210,h:52}, main_rot:{x:520,y:385,w:210,h:52},
+      main_resize:{x:520,y:460,w:210,h:52},
+      disp_window:{x:780,y:195,w:210,h:52}, disp_convert:{x:780,y:270,w:210,h:52},
+      rec_recorder:{x:780,y:395,w:210,h:52}, rec_pipe:{x:780,y:470,w:210,h:52},
+    },
+    ['data-flow','tool-call','dependency'],
+    [] // no special highlights — the presets filter by type instead
+  ),
+
+  makeChapter('camera-thread',
+    'Camera Thread Model',
+    'Thread-bound camera with channel-based IPC',
+    `This is the most architecturally interesting part of the program. The <code>nokhwa</code> camera library has platform-specific initialization requirements — on Windows it needs COM STA, on macOS it needs AVFoundation on the main thread, and on Linux V4L2 has thread-affinity expectations. To handle this robustly, the camera is <strong>opened and kept on its own dedicated thread</strong> and never crosses a thread boundary.
+
+The <code>CameraManager</code> struct (src/camera.rs:269) owns the nokhwa <code>Camera</code> object and is explicitly <strong>not Send</strong> — the Rust compiler enforces that it stays on its thread. All communication happens through two <code>std::sync::mpsc</code> channels:
+
+The <strong>command channel</strong> (unbuffered <code>mpsc::channel</code>) carries <code>CameraCommand</code> enums from the main thread: <code>AdjustControl</code> (change brightness/contrast/etc.), <code>GetControlInfo</code> (query current value), and <code>Shutdown</code>.
+
+The <strong>event channel</strong> (bounded <code>sync_channel(2)</code>) carries <code>CameraEvent</code> enums back: <code>Frame(FramePacket)</code> carrying an owned <code>RgbImage</code>, <code>ControlAdjusted</code>, <code>ControlInfo</code>, and <code>Error</code>.
+
+The bounded sync channel with capacity 2 provides natural backpressure — if the main loop falls behind, the camera thread blocks on send rather than building up an unbounded frame queue.`,
+    [
+      'CameraManager is !Send by design — the Rust type system guarantees the camera never leaves its thread. Only owned RgbImage (Vec<u8>) crosses the boundary.',
+      'The sync_channel(2) gives natural backpressure. If the main loop is slow, the camera thread blocks on send — no unbounded memory growth.',
+      'Commands are drained in a non-blocking try_recv() loop at the top of each capture iteration, so control adjustments take effect immediately.',
+    ],
+    {
+      ext_webcam:{x:370,y:30,w:170,h:50}, ext_nokhwa:{x:370,y:105,w:170,h:50},
+      cap_thread:{x:85,y:230,w:200,h:54},
+      cap_manager:{x:340,y:230,w:210,h:54},
+      cap_handle:{x:605,y:230,w:200,h:54},
+      cap_protocol:{x:340,y:360,w:210,h:54},
+      cap_packet:{x:85,y:360,w:200,h:54},
+      main_loop:{x:605,y:440,w:200,h:54},
+      main_keys:{x:605,y:520,w:200,h:54},
+    },
+    ['command','event','tool-call','dependency'],
+    [
+      // Highlight the two channel paths
+      { from:'main_loop', to:'cap_handle', type:'highlight', label:'Command channel: mpsc::channel()' },
+      { from:'cap_protocol', to:'main_loop', type:'highlight', label:'Event channel: sync_channel(2)' },
+    ]
+  ),
+
+  makeChapter('frame-pipeline',
+    'Frame Pipeline',
+    'The journey of one frame: USB → display',
+    `This chapter follows a single frame from capture to screen. The pipeline is a straightforward left-to-right chain:
+
+<strong>1. Capture:</strong> The USB webcam delivers raw frame data. The <code>CameraManager</code> (running on the camera thread) calls <code>camera.frame()</code> then <code>decode_image::<RgbFormat>()</code> to get an owned <code>RgbImage</code>. This is wrapped in a <code>FramePacket</code> with a monotonically increasing sequence number and a timestamp.
+
+<strong>2. Transfer:</strong> The <code>FramePacket</code> is sent over the bounded sync_channel(2) to the main thread. The <code>RgbImage</code> is heap-allocated (<code>Vec&lt;u8&gt;</code>) so ownership transfer is cheap — it's just a pointer + length + capacity move.
+
+<strong>3. Process:</strong> On the main thread, the frame goes through two optional transforms: <code>apply_rotation()</code> (0°/90°/180°/270° via the <code>image</code> crate), then <code>fast_resize_to_fit()</code> — a custom nearest-neighbor downscaler that works on raw <code>[u8]</code> slices with integer ratio arithmetic, avoiding the per-pixel overhead of <code>image::imageops::resize</code>.
+
+<strong>4. Fan-out:</strong> The processed frame is sent to two sinks: the display window (via <code>DisplayWindow::show()</code>) and optionally the video recorder (via <code>VideoRecorder::feed_frame()</code>).`,
+    [
+      'fast_resize_to_fit() is a custom integer-ratio downscaler. It avoids float-per-pixel math and the trait dispatch overhead of the image crate — critical for 1080p/30fps throughput.',
+      'The sync_channel(2) capacity means the camera thread can have at most 2 frames queued. This caps latency at ~66ms at 30fps and prevents unbounded memory growth.',
+    ],
+    {
+      ext_webcam:{x:30,y:310,w:160,h:52},
+      cap_manager:{x:240,y:310,w:180,h:52},
+      cap_packet:{x:470,y:310,w:170,h:52},
+      main_loop:{x:690,y:310,w:180,h:52},
+      main_rot:{x:690,y:425,w:180,h:52},
+      main_resize:{x:690,y:540,w:180,h:52},
+      disp_convert:{x:920,y:350,w:180,h:52},
+      disp_window:{x:920,y:250,w:180,h:52},
+      rec_recorder:{x:920,y:480,w:180,h:52},
+    },
+    ['data-flow','tool-call'],
+    []
+  ),
+
+  makeChapter('recording',
+    'Recording Subsystem',
+    'Piping raw frames to ffmpeg for H.264 encoding',
+    `The recording system is refreshingly simple: it spawns an <code>ffmpeg</code> child process and writes raw RGB24 frames to its stdin. No external Rust video encoding crates — just a subprocess and a pipe.
+
+<strong>Starting a recording:</strong> <code>VideoRecorder::start()</code> spawns ffmpeg with arguments specifying raw RGB24 input on stdin, libx264 encoding at ultrafast preset, and CRF 23 quality. The ffmpeg stdout and stderr are discarded.
+
+<strong>Feeding frames:</strong> <code>feed_frame()</code> calls <code>stdin.write_all(rgb_data)</code> on every frame. The data must be exactly width × height × 3 bytes. Frame counting is tracked for the final summary.
+
+<strong>Finishing:</strong> <code>finish()</code> drops the stdin handle (signaling EOF to ffmpeg), then waits for the child process to exit. If ffmpeg exits with a non-zero code, an error is returned.
+
+<strong>Safety:</strong> The <code>Drop</code> implementation ensures cleanup even on panic — it takes the stdin handle (closing the pipe) and kills the ffmpeg process. The recorder is stored as <code>Option&lt;VideoRecorder&gt;</code> in the main loop; pressing R toggles between <code>Some</code> (recording) and <code>None</code> (idle).`,
+    [
+      'Using ffmpeg as a subprocess with a stdin pipe avoids pulling in complex Rust video encoding libraries. ffmpeg handles all the codec complexity.',
+      'The Drop impl guarantees cleanup: if the program panics, stdin is closed and ffmpeg is killed — no orphaned encoder processes.',
+    ],
+    {
+      main_loop:{x:30,y:340,w:200,h:54},
+      main_resize:{x:30,y:440,w:200,h:54},
+      rec_recorder:{x:310,y:285,w:220,h:54},
+      rec_pipe:{x:310,y:395,w:220,h:54},
+      rec_finish:{x:310,y:505,w:220,h:54},
+      ext_ffmpeg:{x:610,y:340,w:200,h:54},
+      main_keys:{x:30,y:545,w:200,h:54},
+    },
+    ['data-flow','dependency'],
+    [
+      { from:'rec_recorder', to:'rec_pipe', type:'highlight', label:'stdin write_all() per frame' },
+    ]
+  ),
+
+  makeChapter('display',
+    'Display & Overlay',
+    'From RGB bytes to a window with a status bar',
+    `The display subsystem wraps the <code>minifb</code> crate to show live camera frames in a native window.
+
+<strong>RGB → ARGB conversion</strong> (src/display.rs:146) is the performance-critical path. It uses raw pointers in an unsafe block so the compiler can auto-vectorize the loop. For each pixel, it reads 3 bytes (R, G, B) and packs them into a u32: <code>0xFF000000 | (R &lt;&lt; 16) | (G &lt;&lt; 8) | B</code>. The conversion and buffer-update timings are measured separately and reported in the periodic perf output.
+
+<strong>The overlay bar</strong> (src/display.rs:205) draws a semi-transparent status strip at the bottom of each frame. It uses a custom 5×7 bitmap font covering ASCII 32-90, rendered at a scale proportional to frame height. The bar shows: recording status + frame count, FPS, rotation angle, and the currently selected camera control with its value.
+
+<strong>Window management:</strong> The window auto-resizes when the frame dimensions change (e.g. after rotation swaps width and height). <code>update_dimensions()</code> recreates the minifb window with the new size.`,
+    [
+      'The unsafe RGB→ARGB loop is a deliberate optimization. By using raw pointers instead of .chunks_exact(3).zip(...), the compiler can emit SIMD instructions.',
+      'The 5×7 bitmap font is embedded as a const array — no font loading, no external dependencies. At 1/13 of the bar height per glyph "pixel", it stays readable at any resolution.',
+    ],
+    {
+      disp_window:{x:330,y:30,w:220,h:54},
+      disp_convert:{x:70,y:120,w:220,h:54},
+      disp_overlay:{x:330,y:180,w:220,h:54},
+      disp_font:{x:70,y:180,w:220,h:54},
+      ext_minifb:{x:330,y:120,w:220,h:54},
+      main_loop:{x:70,y:30,w:220,h:54},
+      main_resize:{x:70,y:280,w:220,h:54},
+    },
+    ['data-flow','dependency','tool-call'],
+    [
+      { from:'disp_convert', to:'disp_window', type:'highlight', label:'u32 ARGB buffer → update_with_buffer()' },
+    ]
+  ),
+
+  makeChapter('keyboard-controls',
+    'Keyboard & Camera Controls',
+    'Input handling and real-time camera adjustment',
+    `The keyboard input system routes key presses to various actions in the main loop. <code>minifb</code> provides key events (with key repeat disabled), which are collected into a <code>Vec&lt;Key&gt;</code> and processed each frame.
+
+<strong>Key bindings:</strong> Q/Esc quits, R toggles recording, S prints all camera settings, Left/Right rotate the image, 1-9 select a camera control, Up/Down adjust the selected control up or down.
+
+<strong>Camera control adjustment:</strong> The main loop sends a <code>CameraCommand::AdjustControl(control, delta)</code> to the camera thread. The <code>CameraManager::adjust_control()</code> method reads the control's current value and description (min/max/step for ranges, or free value), applies the delta with clamping, then calls <code>camera.set_camera_control()</code> on the nokhwa handle. The result is sent back as a <code>CameraEvent::ControlAdjusted</code>.
+
+<strong>9 controls</strong> are exposed: Brightness, Contrast, Saturation, Sharpness, Gain, WhiteBalance, Exposure, Focus, and Zoom. Not all cameras support all controls — the supported set is queried during <code>query_camera()</code> and controls that aren't supported are marked with ✗ in the help output.
+
+<strong>Rotation:</strong> Uses the <code>image</code> crate's <code>rotate90</code>/<code>rotate180</code>/<code>rotate270</code>. When rotation changes between landscape and portrait (0°↔90° or 180°↔270°), any active recording is automatically stopped because the aspect ratio changes.`,
+    [
+      'Control adjustment uses a typed delta approach: each Up/Down press sends ±1 step. The CameraManager clamps to the control\'s min/max range.',
+      'Recording is auto-stopped when the aspect ratio changes (rotation swaps width/height). This prevents corrupted video files with changing dimensions.',
+    ],
+    {
+      main_keys:{x:40,y:160,w:210,h:54},
+      cap_handle:{x:310,y:160,w:210,h:54},
+      cap_thread:{x:310,y:290,w:210,h:54},
+      cap_manager:{x:310,y:420,w:210,h:54},
+      ext_nokhwa:{x:310,y:540,w:210,h:54},
+      ext_webcam:{x:310,y:630,w:210,h:54},
+      main_loop:{x:40,y:290,w:210,h:54},
+      main_rot:{x:40,y:420,w:210,h:54},
+      rec_recorder:{x:40,y:540,w:210,h:54},
+      cap_query:{x:580,y:160,w:200,h:54},
+      ext_clap:{x:580,y:290,w:200,h:54},
+      main_cli:{x:580,y:420,w:200,h:54},
+    },
+    ['command','tool-call','dependency','event'],
+    [
+      { from:'main_keys', to:'cap_handle', type:'highlight', label:'AdjustControl / GetControlInfo commands' },
+    ]
+  ),
+];
+
+// ═══════════════ STATE ═══════════════
+
+const SVG_W = 1200, SVG_H = 750;
+
+const state = {
+  chapterIdx: 0,
+  positions: {},       // live positions (mutated by drag)
+  baseLayout: {},      // chapter's default positions (reset target)
+  comments: [],        // [{ id, target, targetLabel, targetFile, text, chapterId }]
+  zoom: 1,
+  drag: null,          // { type:'node', nodeId, offsetX, offsetY, moved }
+  layoutRAF: null,     // requestAnimationFrame id for running force layout
+  panelResizing: false, // true while dragging the panel divider
+  panelStartX: 0,
+  panelStartWidth: 320,
+};
+
+function initChapter(idx) {
+  state.chapterIdx = idx;
+  const ch = CHAPTERS[idx];
+  state.positions = JSON.parse(JSON.stringify(ch.layout));
+  state.baseLayout = JSON.parse(JSON.stringify(ch.layout));
+  state.drag = null;
+}
+
+// ═══════════════ SVG ═══════════════
+
+const svg = document.getElementById('diagram');
+const canvasWrap = document.getElementById('canvas-wrap');
+const NS = 'http://www.w3.org/2000/svg';
+
+function getPos(id) { return state.positions[id] || { x:0, y:0, w:100, h:40 }; }
+
+function renderDiagram() {
+  const ch = CHAPTERS[state.chapterIdx];
+  const chapterComments = state.comments.filter(c => c.chapterId === ch.id);
+
+  svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+  svg.setAttribute('width', SVG_W * state.zoom);
+  svg.setAttribute('height', SVG_H * state.zoom);
+  svg.innerHTML = '';
+
+  const g = document.createElementNS(NS, 'g');
+
+  // Draw a subtle title in the background
+  const titleBg = document.createElementNS(NS, 'text');
+  titleBg.setAttribute('x', SVG_W / 2);
+  titleBg.setAttribute('y', SVG_H / 2);
+  titleBg.setAttribute('fill', '#ffffff');
+  titleBg.setAttribute('font-size', '60');
+  titleBg.setAttribute('font-weight', '800');
+  titleBg.setAttribute('text-anchor', 'middle');
+  titleBg.setAttribute('opacity', '0.015');
+  titleBg.style.pointerEvents = 'none';
+  titleBg.textContent = ch.title;
+  g.appendChild(titleBg);
+
+  const visibleIds = new Set(Object.keys(ch.layout));
+
+  // Build a map of visible connections, including highlights
+  const visibleConns = [];
+  const seenEdges = new Set();
+
+  // Highlights first (drawn on top via later pass, but collected here)
+  for (const h of ch.highlights) {
+    visibleConns.push({ ...h, isHighlight: true });
+    seenEdges.add(h.from + '|' + h.to);
+  }
+
+  // Regular connections
+  for (const conn of ALL_CONNS) {
+    if (!ch.connTypes.includes(conn.type)) continue;
+    if (!visibleIds.has(conn.from) || !visibleIds.has(conn.to)) continue;
+    const key = conn.from + '|' + conn.to;
+    if (seenEdges.has(key)) continue; // highlight replaces this edge
+    seenEdges.add(key);
+    visibleConns.push({ ...conn, isHighlight: false });
+  }
+
+  // Group duplicates for spread
+  const edgeGroups = {};
+  visibleConns.forEach((c, i) => {
+    const k = c.from + '|' + c.to;
+    if (!edgeGroups[k]) edgeGroups[k] = [];
+    edgeGroups[k].push({ conn: c, idx: i });
+  });
+  const spreads = {};
+  for (const [k, group] of Object.entries(edgeGroups)) {
+    group.forEach((g, gi) => {
+      spreads[visibleConns.indexOf(g.conn)] = group.length > 1 ? (gi - (group.length-1)/2) * 9 : 0;
+    });
+  }
+
+  // Draw connections
+  for (let i = 0; i < visibleConns.length; i++) {
+    const conn = visibleConns[i];
+    const fp = getPos(conn.from), tp = getPos(conn.to);
+    if (!fp || !tp) continue;
+    const spread = spreads[i] || 0;
+    drawConnection(g, fp, tp, conn, spread);
+  }
+
+  // Draw nodes
+  for (const node of ALL_NODES) {
+    if (!visibleIds.has(node.id)) continue;
+    drawNode(g, node, chapterComments);
+  }
+
+  svg.appendChild(g);
+}
+
+function drawNode(g, node, chapterComments) {
+  const pos = getPos(node.id);
+  const hasComment = chapterComments.some(c => c.target === node.id);
+  const group = document.createElementNS(NS, 'g');
+  group.setAttribute('class', 'node-group' + (hasComment ? ' commented' : ''));
+  group.setAttribute('data-node-id', node.id);
+
+  // Shadow
+  const sh = document.createElementNS(NS, 'rect');
+  sh.setAttribute('x', pos.x+2); sh.setAttribute('y', pos.y+2);
+  sh.setAttribute('width', pos.w); sh.setAttribute('height', pos.h);
+  sh.setAttribute('rx', 6); sh.setAttribute('fill', '#000'); sh.setAttribute('opacity', '0.2');
+  group.appendChild(sh);
+
+  // Main rect
+  const rect = document.createElementNS(NS, 'rect');
+  rect.setAttribute('class', 'node-rect');
+  rect.setAttribute('x', pos.x); rect.setAttribute('y', pos.y);
+  rect.setAttribute('width', pos.w); rect.setAttribute('height', pos.h);
+  rect.setAttribute('rx', 6);
+  rect.setAttribute('fill', '#1a1d2e');
+  rect.setAttribute('stroke', hasComment ? '#818cf8' : '#333');
+  rect.setAttribute('stroke-width', hasComment ? '2' : '1');
+  rect.setAttribute('stroke-opacity', '0.7');
+  group.appendChild(rect);
+
+  // Top highlight
+  const hl = document.createElementNS(NS, 'line');
+  hl.setAttribute('x1', pos.x+4); hl.setAttribute('y1', pos.y+1);
+  hl.setAttribute('x2', pos.x+pos.w-4); hl.setAttribute('y2', pos.y+1);
+  hl.setAttribute('stroke', '#fff'); hl.setAttribute('stroke-opacity', '0.05');
+  group.appendChild(hl);
+
+  // Label
+  const lbl = document.createElementNS(NS, 'text');
+  lbl.setAttribute('x', pos.x+10); lbl.setAttribute('y', pos.y+20);
+  lbl.setAttribute('fill', '#e4e7ed'); lbl.setAttribute('font-size', '13'); lbl.setAttribute('font-weight', '600');
+  lbl.style.userSelect = 'none'; lbl.style.pointerEvents = 'none';
+  lbl.textContent = node.label;
+  group.appendChild(lbl);
+
+  // Subtitle
+  const sub = document.createElementNS(NS, 'text');
+  sub.setAttribute('x', pos.x+10); sub.setAttribute('y', pos.y+39);
+  sub.setAttribute('fill', '#6b7280'); sub.setAttribute('font-size', '9.5');
+  sub.style.userSelect = 'none'; sub.style.pointerEvents = 'none';
+  sub.textContent = node.sub;
+  group.appendChild(sub);
+
+  if (hasComment) {
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('cx', pos.x+pos.w-10); dot.setAttribute('cy', pos.y+10);
+    dot.setAttribute('r', 4); dot.setAttribute('fill', '#818cf8');
+    dot.style.pointerEvents = 'none';
+    group.appendChild(dot);
+  }
+
+  group.addEventListener('mousedown', (e) => onNodeMouseDown(e, node));
+  group.addEventListener('click', (e) => {
+    if (!state.drag || !state.drag.moved) { e.stopPropagation(); openModal(node); }
+  });
+  g.appendChild(group);
+}
+
+function drawConnection(g, fromPos, toPos, conn, spread) {
+  const isHL = conn.isHighlight;
+  const cfg = isHL ? CONN_TYPE_CFG['highlight'] : CONN_TYPE_CFG[conn.type];
+  const fc = { x: fromPos.x+fromPos.w/2, y: fromPos.y+fromPos.h/2 };
+  const tc = { x: toPos.x+toPos.w/2, y: toPos.y+toPos.h/2 };
+  const dx = tc.x-fc.x, dy = tc.y-fc.y;
+  const absDx = Math.abs(dx), absDy = Math.abs(dy);
+
+  let fp, tp, sideFrom, sideTo;
+  if (absDy > absDx*1.3) {
+    if (dy>0) { fp={x:fc.x,y:fromPos.y+fromPos.h}; tp={x:tc.x,y:toPos.y}; sideFrom='S'; sideTo='N'; }
+    else      { fp={x:fc.x,y:fromPos.y}; tp={x:tc.x,y:toPos.y+toPos.h}; sideFrom='N'; sideTo='S'; }
+  } else {
+    if (dx>0) { fp={x:fromPos.x+fromPos.w,y:fc.y}; tp={x:toPos.x,y:tc.y}; sideFrom='E'; sideTo='W'; }
+    else      { fp={x:fromPos.x,y:fc.y}; tp={x:toPos.x+toPos.w,y:tc.y}; sideFrom='W'; sideTo='E'; }
+  }
+
+  if (spread) {
+    if (sideFrom==='N'||sideFrom==='S') fp.x+=spread; else fp.y+=spread;
+    if (sideTo==='N'||sideTo==='S') tp.x+=spread; else tp.y+=spread;
+  }
+  fp = clampToEdge(fromPos, fp); tp = clampToEdge(toPos, tp);
+
+  const exitOff = sideFrom==='N'?30:sideFrom==='S'?30:50;
+  const enterOff = sideTo==='N'?30:sideTo==='S'?30:50;
+
+  let cp1, cp2;
+  if (sideFrom==='S') cp1={x:fp.x,y:fp.y+exitOff};
+  else if (sideFrom==='N') cp1={x:fp.x,y:fp.y-exitOff};
+  else if (sideFrom==='E') cp1={x:fp.x+exitOff,y:fp.y};
+  else cp1={x:fp.x-exitOff,y:fp.y};
+
+  if (sideTo==='N') cp2={x:tp.x,y:tp.y-enterOff};
+  else if (sideTo==='S') cp2={x:tp.x,y:tp.y+enterOff};
+  else if (sideTo==='W') cp2={x:tp.x-enterOff,y:tp.y};
+  else cp2={x:tp.x+enterOff,y:tp.y};
+
+  const dist = Math.sqrt(dx*dx+dy*dy);
+  const s = Math.min(1, dist/150);
+  cp1 = lerp(fp,cp1,s); cp2 = lerp(tp,cp2,s);
+
+  const d = `M${fp.x},${fp.y} C${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tp.x},${tp.y}`;
+
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('stroke', cfg.color);
+  path.setAttribute('stroke-width', isHL ? '2.2' : conn.type==='data-flow'?'1.8':'1.2');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke-dasharray', cfg.dash);
+  path.setAttribute('opacity', isHL ? '0.9' : '0.7');
+  path.setAttribute('marker-end', `url(#arr-${cfg.marker})`);
+  if (isHL) {
+    // Glow effect for highlights
+    const glow = path.cloneNode();
+    glow.setAttribute('stroke-width', '4');
+    glow.setAttribute('opacity', '0.25');
+    glow.removeAttribute('marker-end');
+    g.appendChild(glow);
+  }
+  g.appendChild(path);
+
+  if (conn.label && spread===0) {
+    const mid = bezierMid(fp,cp1,cp2,tp);
+    const tl = document.createElementNS(NS, 'text');
+    tl.setAttribute('x', mid.x); tl.setAttribute('y', mid.y-5);
+    tl.setAttribute('fill', cfg.color); tl.setAttribute('font-size', isHL?'10':'9');
+    tl.setAttribute('text-anchor', 'middle'); tl.setAttribute('opacity', isHL?'0.95':'0.8');
+    tl.style.pointerEvents = 'none';
+    tl.textContent = conn.label;
+    g.appendChild(tl);
+  }
+}
+
+function clampToEdge(pos, pt) {
+  const m=2;
+  return { x:Math.max(pos.x+m,Math.min(pos.x+pos.w-m,pt.x)), y:Math.max(pos.y+m,Math.min(pos.y+pos.h-m,pt.y)) };
+}
+function lerp(a,b,t){return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}
+function bezierMid(p0,p1,p2,p3){return{x:0.125*p0.x+0.375*p1.x+0.375*p2.x+0.125*p3.x,y:0.125*p0.y+0.375*p1.y+0.375*p2.y+0.125*p3.y};}
+
+// ═══════════════ DRAGGING ═══════════════
+
+function svgPoint(cx, cy) {
+  const vb = svg.viewBox.baseVal;
+  const r = svg.getBoundingClientRect();
+  return { x: (cx-r.left)*vb.width/r.width+vb.x, y: (cy-r.top)*vb.height/r.height+vb.y };
+}
+
+function onNodeMouseDown(e, node) {
+  if (e.button!==0) return;
+  if (state.layoutRAF) { cancelAnimationFrame(state.layoutRAF); state.layoutRAF = null; }
+  const pt = svgPoint(e.clientX, e.clientY);
+  const pos = getPos(node.id);
+  state.drag = { type:'node', nodeId:node.id, offsetX:pt.x-pos.x, offsetY:pt.y-pos.y, moved:false };
+  e.preventDefault(); e.stopPropagation();
+}
+
+document.addEventListener('mousemove', (e) => {
+  // ── Panel divider drag ──
+  if (state.panelResizing) {
+    const leftPanel = document.getElementById('left-panel');
+    const newWidth = state.panelStartWidth + (e.clientX - state.panelStartX);
+    leftPanel.style.width = Math.max(220, Math.min(600, newWidth)) + 'px';
+    // Trigger SVG re-layout since the viewport size changed
+    updateMinimap();
+    return;
+  }
+
+  // ── Node drag ──
+  if (!state.drag) return;
+  const pt = svgPoint(e.clientX, e.clientY);
+  if (state.drag.type==='node') {
+    const pos = state.positions[state.drag.nodeId];
+    if (!pos) return;
+    const nx=pt.x-state.drag.offsetX, ny=pt.y-state.drag.offsetY;
+    if (Math.abs(nx-pos.x)>1||Math.abs(ny-pos.y)>1) state.drag.moved=true;
+    pos.x=nx; pos.y=ny;
+  }
+  if (state.drag.moved) canvasWrap.classList.add('dragging');
+  renderDiagram();
+});
+
+document.addEventListener('mouseup', () => {
+  if (state.panelResizing) {
+    state.panelResizing = false;
+    document.getElementById('panel-divider').classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    updateMinimap();
+  }
+  if (state.drag) { state.drag=null; canvasWrap.classList.remove('dragging'); renderDiagram(); updateMinimap(); }
+});
+
+// ═══════════════ MINIMAP ═══════════════
+
+const minimapCanvas = document.getElementById('minimap-canvas');
+const minimapEl = document.getElementById('minimap');
+const MW=180, MH=120;
+
+function updateMinimap() {
+  const canvas = minimapCanvas;
+  canvas.width=MW*2; canvas.height=MH*2;
+  const ctx=canvas.getContext('2d'); ctx.scale(2,2);
+  ctx.clearRect(0,0,MW,MH);
+  ctx.fillStyle='#12141f'; ctx.fillRect(0,0,MW,MH);
+
+  const sx=MW/SVG_W, sy=MH/SVG_H;
+  const ch = CHAPTERS[state.chapterIdx];
+  const visibleIds = new Set(Object.keys(ch.layout));
+
+  // Nodes
+  for (const node of ALL_NODES) {
+    if (!visibleIds.has(node.id)) continue;
+    const pos = getPos(node.id);
+    ctx.fillStyle='#2a2d3e'; ctx.fillRect(pos.x*sx,pos.y*sy,pos.w*sx,pos.h*sy);
+    if (state.comments.some(c=>c.target===node.id&&c.chapterId===ch.id)) {
+      ctx.fillStyle='#818cf8'; ctx.fillRect((pos.x+pos.w)*sx-2,pos.y*sy+1,2,2);
+    }
+  }
+
+  // Connections
+  for (const conn of ALL_CONNS) {
+    if (!ch.connTypes.includes(conn.type)) continue;
+    if (!visibleIds.has(conn.from)||!visibleIds.has(conn.to)) continue;
+    const fp=getPos(conn.from), tp=getPos(conn.to);
+    const cfg=CONN_TYPE_CFG[conn.type];
+    ctx.strokeStyle=cfg.color; ctx.lineWidth=0.4;
+    if (cfg.dash) ctx.setLineDash([1,1]); else ctx.setLineDash([]);
+    ctx.globalAlpha=0.4;
+    ctx.beginPath(); ctx.moveTo((fp.x+fp.w/2)*sx,(fp.y+fp.h/2)*sy); ctx.lineTo((tp.x+tp.w/2)*sx,(tp.y+tp.h/2)*sy);
+    ctx.stroke(); ctx.globalAlpha=1; ctx.setLineDash([]);
+  }
+
+  // Viewport
+  const wrap=canvasWrap;
+  const vx=wrap.scrollLeft/(state.zoom||1), vy=wrap.scrollTop/(state.zoom||1);
+  const vw=wrap.clientWidth/(state.zoom||1), vh=wrap.clientHeight/(state.zoom||1);
+  ctx.strokeStyle='#6366f1'; ctx.lineWidth=1;
+  ctx.fillStyle='rgba(99,102,241,0.1)';
+  ctx.fillRect(vx*sx,vy*sy,vw*sx,vh*sy); ctx.strokeRect(vx*sx,vy*sy,vw*sx,vh*sy);
+}
+
+minimapEl.addEventListener('mousedown', (e) => {
+  const r=minimapEl.getBoundingClientRect();
+  const mx=(e.clientX-r.left)/MW, my=(e.clientY-r.top)/MH;
+  const z=state.zoom||1;
+  canvasWrap.scrollLeft=mx*SVG_W*z-canvasWrap.clientWidth/2;
+  canvasWrap.scrollTop=my*SVG_H*z-canvasWrap.clientHeight/2;
+  updateMinimap();
+});
+canvasWrap.addEventListener('scroll', updateMinimap);
+
+// ═══════════════ MODAL ═══════════════
+
+let activeModalNode = null;
+function openModal(node) {
+  activeModalNode=node;
+  document.getElementById('modal-title').textContent=node.label;
+  document.getElementById('modal-path').textContent=node.sub;
+  document.getElementById('modal-textarea').value='';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('modal-textarea').focus(),50);
+}
+function closeModal(){activeModalNode=null;document.getElementById('modal-overlay').classList.remove('open');}
+function saveComment(){
+  const text=document.getElementById('modal-textarea').value.trim();
+  if(!text||!activeModalNode) return;
+  const ch=CHAPTERS[state.chapterIdx];
+  state.comments.push({id:Date.now(),target:activeModalNode.id,targetLabel:activeModalNode.label,targetFile:activeModalNode.sub,text,chapterId:ch.id});
+  closeModal(); updateAll();
+}
+function deleteComment(id){state.comments=state.comments.filter(c=>c.id!==id);updateAll();}
+document.getElementById('modal-save').addEventListener('click',saveComment);
+document.getElementById('modal-cancel').addEventListener('click',closeModal);
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ═══════════════ TAB BAR ═══════════════
+
+function buildTabs() {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = '';
+  CHAPTERS.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === state.chapterIdx ? ' active' : '');
+    btn.innerHTML = `<span class="tab-num">${i+1}</span>${ch.title}`;
+    btn.addEventListener('click', () => switchChapter(i));
+    bar.appendChild(btn);
+  });
+}
+
+function switchChapter(idx) {
+  initChapter(idx);
+  buildTabs();
+  updateChapterText();
+  updateAll();
+}
+
+// ═══════════════ LEFT PANEL TEXT ═══════════════
+
+function updateChapterText() {
+  const ch = CHAPTERS[state.chapterIdx];
+  document.getElementById('chapter-title').textContent = ch.title;
+  document.getElementById('chapter-subtitle').textContent = ch.subtitle;
+  document.getElementById('chapter-prose').innerHTML = ch.prose.split('\n\n').map(p => `<p style="margin-bottom:8px">${p.trim()}</p>`).join('');
+
+  const insightsDiv = document.getElementById('chapter-insights');
+  insightsDiv.innerHTML = ch.insights.map(t =>
+    `<div class="insight-item"><span class="insight-bulb">★</span><span>${t}</span></div>`
+  ).join('');
+}
+
+function renderComments() {
+  const ch = CHAPTERS[state.chapterIdx];
+  const chapterComments = state.comments.filter(c => c.chapterId === ch.id);
+  document.getElementById('comment-count').textContent = chapterComments.length;
+  const list = document.getElementById('comments-list');
+  list.innerHTML = '';
+  for (const c of chapterComments) {
+    const div = document.createElement('div'); div.className = 'comment-item';
+    div.innerHTML = `<div class="comment-target">${c.targetLabel}</div><div class="comment-text">${escHtml(c.text)}</div><button class="comment-delete">Delete</button>`;
+    div.querySelector('.comment-delete').addEventListener('click', () => deleteComment(c.id));
+    list.appendChild(div);
+  }
+}
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// ═══════════════ PROMPT ═══════════════
+
+function updatePrompt() {
+  const ch = CHAPTERS[state.chapterIdx];
+  const parts = [`This is the webcam_app "${ch.title}" view.`];
+  const chapterComments = state.comments.filter(c => c.chapterId === ch.id);
+  if (chapterComments.length) {
+    parts.push('\nFeedback on components in this view:\n');
+    for (const c of chapterComments) {
+      parts.push(`**${c.targetLabel}** (${c.targetFile}):\n${c.text}\n`);
+    }
+  } else {
+    parts.push('\nNo feedback added yet. Click a component to add notes.');
+  }
+  document.getElementById('prompt-text').textContent = parts.join('\n');
+}
+function copyPrompt(){
+  navigator.clipboard.writeText(document.getElementById('prompt-text').textContent).then(()=>{
+    const btn=document.getElementById('copy-btn');btn.textContent='Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy Prompt';btn.classList.remove('copied');},1500);
+  });
+}
+document.getElementById('copy-btn').addEventListener('click', copyPrompt);
+
+// ═══════════════ ZOOM & RESET ═══════════════
+
+function resetChapterLayout() {
+  const ch = CHAPTERS[state.chapterIdx];
+  state.positions = JSON.parse(JSON.stringify(ch.layout));
+  state.baseLayout = JSON.parse(JSON.stringify(ch.layout));
+  updateAll();
+}
+
+// ═══════════════ FORCE-DIRECTED AUTO LAYOUT ═══════════════
+//
+// Classic Fruchterman-Reingold style spring-electric simulation.
+// Nodes repel each other (inverse-square), edges act as springs
+// pulling toward an ideal length. Runs ~150 iterations over ~30
+// animation frames so you see nodes settle into position.
+
+function getVisibleConnsForChapter() {
+  const ch = CHAPTERS[state.chapterIdx];
+  const visibleIds = new Set(Object.keys(ch.layout));
+  const result = [];
+  for (const conn of ALL_CONNS) {
+    if (!ch.connTypes.includes(conn.type)) continue;
+    if (!visibleIds.has(conn.from) || !visibleIds.has(conn.to)) continue;
+    result.push(conn);
+  }
+  return result;
+}
+
+function runForceLayout() {
+  // Cancel any already-running animation
+  if (state.layoutRAF) { cancelAnimationFrame(state.layoutRAF); state.layoutRAF = null; }
+
+  const nodeIds = Object.keys(state.positions);
+  if (nodeIds.length < 2) return;
+
+  const vel = {};
+  nodeIds.forEach(id => { vel[id] = { vx: 0, vy: 0 }; });
+
+  const visibleConns = getVisibleConnsForChapter();
+
+  // Build adjacency for per-node edge count
+  const edgeCount = {};
+  nodeIds.forEach(id => { edgeCount[id] = 0; });
+  visibleConns.forEach(c => { edgeCount[c.from] = (edgeCount[c.from]||0)+1; edgeCount[c.to] = (edgeCount[c.to]||0)+1; });
+
+  const ITERS_PER_FRAME = 5;
+  const TOTAL_FRAMES = 30;   // 150 total iterations
+  let frame = 0;
+
+  const IDEAL = 200;          // ideal edge length in viewBox px
+  const REPULSION = 6000;     // inverse-square repulsion strength
+  const ATTRACTION = 0.004;   // spring constant
+  const DAMPING = 0.82;       // velocity decay per iteration
+  const CENTER_PULL = 0.0008; // gentle centering
+  const GRAVITY = 0.03;       // slight downward bias for "flow" direction
+  const MARGIN = 15;
+
+  function tick() {
+    for (let iter = 0; iter < ITERS_PER_FRAME; iter++) {
+      // ── Repulsion: all pairs ──
+      for (let i = 0; i < nodeIds.length; i++) {
+        const a = state.positions[nodeIds[i]];
+        const ax = a.x + a.w/2, ay = a.y + a.h/2;
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const b = state.positions[nodeIds[j]];
+          const dx = ax - (b.x + b.w/2);
+          const dy = ay - (b.y + b.h/2);
+          const distSq = dx*dx + dy*dy;
+          const dist = Math.max(Math.sqrt(distSq), 5); // min distance to avoid explosion
+          const force = REPULSION / distSq;
+          const fx = force * dx / dist;
+          const fy = force * dy / dist;
+          vel[nodeIds[i]].vx += fx;
+          vel[nodeIds[i]].vy += fy;
+          vel[nodeIds[j]].vx -= fx;
+          vel[nodeIds[j]].vy -= fy;
+        }
+      }
+
+      // ── Attraction: edges as springs ──
+      for (const conn of visibleConns) {
+        const a = state.positions[conn.from], b = state.positions[conn.to];
+        if (!a || !b) continue;
+        const dx = (a.x + a.w/2) - (b.x + b.w/2);
+        const dy = (a.y + a.h/2) - (b.y + b.h/2);
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 1) continue;
+        const force = ATTRACTION * (dist - IDEAL);
+        const fx = force * dx / dist;
+        const fy = force * dy / dist;
+        vel[conn.from].vx -= fx;
+        vel[conn.from].vy -= fy;
+        vel[conn.to].vx += fx;
+        vel[conn.to].vy += fy;
+      }
+
+      // ── Damping, centering, gravity, boundary ──
+      for (const id of nodeIds) {
+        const p = state.positions[id];
+        const cx = p.x + p.w/2, cy = p.y + p.h/2;
+
+        vel[id].vx += (SVG_W/2 - cx) * CENTER_PULL;
+        vel[id].vy += GRAVITY;
+        vel[id].vx *= DAMPING;
+        vel[id].vy *= DAMPING;
+
+        p.x += vel[id].vx;
+        p.y += vel[id].vy;
+
+        // Clamp to viewBox
+        p.x = Math.max(MARGIN, Math.min(SVG_W - p.w - MARGIN, p.x));
+        p.y = Math.max(MARGIN, Math.min(SVG_H - p.h - MARGIN, p.y));
+      }
+    }
+
+    renderDiagram();
+    updateMinimap();
+    frame++;
+
+    if (frame < TOTAL_FRAMES) {
+      state.layoutRAF = requestAnimationFrame(tick);
+    } else {
+      state.layoutRAF = null;
+      // baseLayout unchanged — "Reset Layout" always
+      // restores the hand-tuned chapter original.
+      updateAll();
+    }
+  }
+
+  state.layoutRAF = requestAnimationFrame(tick);
+}
+
+// ── Cancel layout if user switches chapter mid-animation ──
+const origSwitchChapter = switchChapter;
+switchChapter = function(idx) {
+  if (state.layoutRAF) { cancelAnimationFrame(state.layoutRAF); state.layoutRAF = null; }
+  origSwitchChapter(idx);
+};
+
+document.getElementById('auto-layout').addEventListener('click', () => {
+  if (state.layoutRAF) {
+    // Clicking again cancels the animation early
+    cancelAnimationFrame(state.layoutRAF);
+    state.layoutRAF = null;
+    updateAll();
+    return;
+  }
+  runForceLayout();
+});
+
+document.getElementById('zoom-in').addEventListener('click', ()=>{state.zoom=Math.min(2,+(state.zoom+0.25).toFixed(2));updateAll();});
+document.getElementById('zoom-out').addEventListener('click', ()=>{state.zoom=Math.max(0.5,+(state.zoom-0.25).toFixed(2));updateAll();});
+document.getElementById('zoom-reset').addEventListener('click', ()=>{state.zoom=1;resetChapterLayout();});
+document.getElementById('reset-positions').addEventListener('click', resetChapterLayout);
+
+function updateAll() {
+  renderDiagram(); renderComments(); updatePrompt(); updateMinimap();
+  document.getElementById('zoom-label').textContent = Math.round(state.zoom*100)+'%';
+  const btn = document.getElementById('auto-layout');
+  btn.textContent = state.layoutRAF ? 'Running…' : 'Auto Layout';
+}
+
+// ═══════════════ PANEL DIVIDER ═══════════════
+
+document.getElementById('panel-divider').addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  state.panelResizing = true;
+  state.panelStartX = e.clientX;
+  state.panelStartWidth = document.getElementById('left-panel').getBoundingClientRect().width;
+  document.getElementById('panel-divider').classList.add('active');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+
+// ═══════════════ INIT ═══════════════
+
+initChapter(0);
+buildTabs();
+updateChapterText();
+updateAll();
+</script>
+</body>
+</html>

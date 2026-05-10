@@ -1,0 +1,11 @@
+[package]
+name = "webcam_app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nokhwa = { version = "0.10.10", features = ["input-native"] }
+image = "0.25.10"
+minifb = "0.28.0"
+clap = { version = "4.6.1", features = ["derive"] }
+anyhow = "1.0.102"
