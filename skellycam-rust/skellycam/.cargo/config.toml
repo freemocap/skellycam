@@ -1,0 +1,4 @@
+[env]
+OPENCV_LINK_LIBS = "opencv_world4130"
+OPENCV_LINK_PATHS = "C:\\tools\\opencv\\build\\x64\\vc16\\lib"
+OPENCV_INCLUDE_PATHS = "C:\\tools\\opencv\\build\\include"
