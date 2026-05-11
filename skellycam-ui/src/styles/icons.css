@@ -34,6 +34,11 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --minus-icon: url("../assets/icons/minus_icon.svg");
   --close-icon: url("../assets/icons/close_icon.svg");
   --rotate-icon: url("../assets/icons/rotate_icon.svg");
+  --pause-icon: url("../assets/icons/pause_icon.svg");
+  --scan-icon: url("../assets/icons/scan_icon.svg");
+  --home-icon: url("../assets/icons/home_icon.svg");
+  --clear-icon: url("../assets/icons/clear_icon.svg");
+  --load-icon: url("../assets/icons/load_icon.svg");
   --live-icon: url("../assets/icons/live_icon.svg");
   --import-icon: url("../assets/icons/import_icon.svg");
   --importVideos-icon: url("../assets/icons/importVideos_icon.svg");

@@ -778,31 +778,39 @@ a.link:hover {
 .rotate-icon {
   background-image: var(--rotate-icon);
 }
-
+.pause-icon {
+  background-image: var(--pause-icon);
+}
+.clear-icon {
+  background-image: var(--clear-icon);
+}
+.load-icon {
+  background-image: var(--load-icon);
+}
+.home-icon {
+  background-image: var(--home-icon);
+}
+.scan-icon {
+  background-image: var(--scan-icon);
+}
 .externallink-icon {
   background-image: var(--externallink-icon);
 }
-
 .stream-icon {
   background-image: var(--stream-icon);
 }
-
 .streaming-icon {
   background-image: var(--streaming-icon);
 }
-
 .calibrate-icon {
   background-image: var(--calibrate-icon);
 }
-
 .explainer-icon {
   background-image: var(--explainer-icon);
 }
-
 .calibrated-icon {
   background-image: var(--calibrated-icon);
 }
-
 .subfolder-icon {
   background-image: var(--subfolder_icon);
 }
