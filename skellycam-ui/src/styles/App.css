@@ -234,8 +234,9 @@ button.rotate-button {
 
 .main-segmented-control {
   position: absolute;
-  left: 9px;
-  top: 38px;
+     left: 6px;
+    top: 6px;
+    z-index: 2;
 }
 
 .active-tools-header {
@@ -593,6 +594,13 @@ a.link:hover {
 .mt-1 {
   margin-top: 4px;
 }
+.mt-3 {
+  margin-top: 12px;
+}
+.mt-4 {
+  margin-top: 16px;
+}
+
 
 /* widths/heights */
 .w-full {
@@ -1093,7 +1101,9 @@ animation: fadeIn, scaleIn;
   opacity: 0.6;
   cursor: not-allowed;
 }
-
+.mode-header{
+  min-height: 33px;
+}
 /* ---- Toast Notification ---- */
 .toast-notification {
   position: fixed;
