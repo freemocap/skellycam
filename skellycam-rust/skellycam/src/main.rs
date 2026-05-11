@@ -35,7 +35,7 @@ fn main() -> anyhow::Result<()> {
     let (handle, event_receiver, frame_receiver) =
         camera::spawn_camera_thread(index, requested_width, requested_height, identity);
 
-    let start = Instant::now();
+    let mut start: Option<Instant> = None;
     let mut frame_count: u64 = 0;
     let mut last_report = Instant::now();
 
@@ -48,6 +48,10 @@ fn main() -> anyhow::Result<()> {
 
         match frame_receiver.recv() {
             Ok(packet) => {
+                if start.is_none() {
+                    start = Some(Instant::now());
+                    last_report = Instant::now();
+                }
                 frame_count += 1;
 
                 if frame_count <= 3 {
@@ -60,26 +64,33 @@ fn main() -> anyhow::Result<()> {
                     );
                 }
 
-                if frame_count % 60 == 0 {
+                if frame_count % 30 == 0 {
                     let elapsed = last_report.elapsed();
-                    let fps = 60.0 / elapsed.as_secs_f64();
+                    let fps = 30.0 / elapsed.as_secs_f64();
                     println!(
                         "Frame {:>5} | {:>5.1} fps | {}x{}",
                         packet.frame_number, fps, packet.width, packet.height,
                     );
                     last_report = Instant::now();
                 }
+
+                if frame_count >= 500 {
+                    println!("\nReached 500 frames, stopping.");
+                    break;
+                }
             }
             Err(mpsc::RecvError) => break,
         }
     }
 
-    let total = start.elapsed();
-    println!(
-        "\n{frame_count} frames in {:.1}s ({:.1} fps avg).",
-        total.as_secs_f64(),
-        frame_count as f64 / total.as_secs_f64(),
-    );
+    if let Some(s) = start {
+        let total = s.elapsed();
+        println!(
+            "\n{frame_count} frames in {:.1}s ({:.1} fps avg).",
+            total.as_secs_f64(),
+            frame_count as f64 / total.as_secs_f64(),
+        );
+    }
     drop(handle);
     Ok(())
 }

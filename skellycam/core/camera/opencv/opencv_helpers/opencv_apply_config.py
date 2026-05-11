@@ -94,6 +94,18 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
             raise FailedToApplyCameraConfigurationError(
                 f"Failed to apply configuration to Camera {config.camera_index} - Camera closed when applying configuration"
             )
+
+        if should_apply_capture_fourcc:
+            actual_fourcc = extracted_config.capture_fourcc
+            requested_fourcc = config.capture_fourcc
+            if actual_fourcc == requested_fourcc:
+                logger.info(f"Camera {config.camera_index} - capture fourcc successfully set to '{actual_fourcc}'")
+            else:
+                logger.warning(
+                    f"Camera {config.camera_index} - capture fourcc mismatch! "
+                    f"Requested '{requested_fourcc}' but camera reports '{actual_fourcc}'"
+                )
+
         logger.trace(f"Camera {config.camera_index} configuration applied, extracted config: {extracted_config}")
         return extracted_config
     except Exception as e:

@@ -12,6 +12,11 @@ from skellycam.core.camera.opencv.opencv_helpers.recommend_camera_exposure_setti
 logger = logging.getLogger(__name__)
 
 
+def decode_fourcc(fourcc_value: float) -> str:
+    fourcc_int = int(fourcc_value)
+    return "".join(chr((fourcc_int >> 8 * i) & 0xFF) for i in range(4))
+
+
 def extract_config_from_cv2_capture(camera_index: CameraIndexInt,
                                     camera_id: str,
                                     camera_name: str,
@@ -22,6 +27,14 @@ def extract_config_from_cv2_capture(camera_index: CameraIndexInt,
     height = int(cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
     exposure = int(cv2_capture.get(cv2.CAP_PROP_EXPOSURE))
     framerate = cv2_capture.get(cv2.CAP_PROP_FPS)
+    fourcc_raw = cv2_capture.get(cv2.CAP_PROP_FOURCC)
+    fourcc_string = decode_fourcc(fourcc_raw)
+    logger.trace(f"\n\n\n Camera {camera_index} - Extracted config from cv2.VideoCapture: "
+                 f"\n- int(cv2_capture.get(cv2.CAP_PROP_FRAME_WIDTH))={width}, "
+                 f"\n- int(cv2_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))={height}, "
+                 f"\n- int(cv2_capture.get(cv2.CAP_PROP_EXPOSURE))={exposure}, "
+                 f"\n- cv2_capture.get(cv2.CAP_PROP_FPS)={framerate}, "
+                 f"\n- decode_fourcc(cv2_capture.get(cv2.CAP_PROP_FOURCC))={fourcc_string}\n\n\n")
 
     if any([
         width == 0, 
@@ -44,6 +57,7 @@ def extract_config_from_cv2_capture(camera_index: CameraIndexInt,
             exposure=exposure,
             framerate=framerate,
             rotation=rotation,
+            capture_fourcc=fourcc_string,
         )
     except Exception as e:
         logger.error(f"Failed to extract configuration from cv2.VideoCapture object - {type(e).__name__}: {e}")

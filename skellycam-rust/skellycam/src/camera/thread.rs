@@ -135,12 +135,21 @@ pub fn spawn_camera_thread(
     (handle, event_receiver, frame_receiver)
 }
 
+fn decode_fourcc(fourcc: u32) -> String {
+    let bytes = [
+        (fourcc & 0xFF) as u8,
+        ((fourcc >> 8) & 0xFF) as u8,
+        ((fourcc >> 16) & 0xFF) as u8,
+        ((fourcc >> 24) & 0xFF) as u8,
+    ];
+    String::from_utf8_lossy(&bytes).to_string()
+}
+
 fn open_camera(
     index: u32,
     requested_width: u32,
     requested_height: u32,
 ) -> anyhow::Result<videoio::VideoCapture> {
-    // Try CAP_ANY — let OpenCV pick the best backend
     let mut capture = videoio::VideoCapture::new(index as i32, videoio::CAP_DSHOW)
         .context("Failed to open camera with DirectShow")?;
 
@@ -148,28 +157,53 @@ fn open_camera(
         anyhow::bail!("Camera {index} opened but is_opened() returned false.");
     }
 
-    // Match Python SkellyCam's property-setting order exactly:
-    // FOURCC → WIDTH → HEIGHT → FPS → BUFFERSIZE
-    // DirectShow respects this order; MSMF ignores FOURCC and BUFFERSIZE.
     let mjpeg = 0x47504A4Du32 as f64; // fourcc('M','J','P','G')
-    let _ = capture.set(videoio::CAP_PROP_FOURCC, mjpeg);
 
+    // --- Phase A: pre-read config (matching Python create_cv2_video_capture) ---
+    let _ = capture.set(videoio::CAP_PROP_FOURCC, mjpeg);
     if requested_width > 0 {
         let _ = capture.set(videoio::CAP_PROP_FRAME_WIDTH, requested_width as f64);
         let _ = capture.set(videoio::CAP_PROP_FRAME_HEIGHT, requested_height as f64);
     }
-    let _ = capture.set(videoio::CAP_PROP_FPS, 30.0);
-
-    // BUFFERSIZE=1: only buffer 1 frame — reduces latency, required for
-    // some DirectShow drivers to apply other property changes.
     let _ = capture.set(videoio::CAP_PROP_BUFFERSIZE, 1.0);
 
+    // --- Warmup read: starts the DirectShow streaming graph ---
+    let mut warmup = Mat::default();
+    let read_ok = capture.read(&mut warmup)?;
+    let warmup_size = if read_ok { warmup.size().unwrap_or_default() } else { opencv::core::Size::default() };
+
+    // --- Phase B: post-read config ---
+    // FOURCC must be set AGAIN after the first read().
+    // Do NOT re-set W/H here — changing resolution after the graph
+    // is running can trigger a media type renegotiation that resets
+    // the FOURCC back to the camera's default.
+    let _ = capture.set(videoio::CAP_PROP_FOURCC, mjpeg);
+
+    // --- Read back actual config ---
     let actual_w = capture.get(videoio::CAP_PROP_FRAME_WIDTH).unwrap_or(-1.0);
     let actual_h = capture.get(videoio::CAP_PROP_FRAME_HEIGHT).unwrap_or(-1.0);
-    let fourcc = capture.get(videoio::CAP_PROP_FOURCC).unwrap_or(-1.0) as u32;
-    eprintln!(
-        "Camera {index}: {actual_w}x{actual_h} fourcc=0x{fourcc:08X}"
+    let fourcc_val = capture.get(videoio::CAP_PROP_FOURCC).unwrap_or(-1.0) as u32;
+    let fourcc_str = decode_fourcc(fourcc_val);
+    let actual_fps = capture.get(videoio::CAP_PROP_FPS).unwrap_or(-1.0);
+    let backend = capture
+        .get_backend_name()
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    eprintln!();
+    eprintln!("╔══════════════════════════════════════════╗");
+    eprintln!("║  CAMERA {index} CONFIG                       ║", );
+    eprintln!("╠══════════════════════════════════════════╣");
+    eprintln!("║  BACKEND:  {backend:<30} ║");
+    eprintln!("║  FOURCC:   {fourcc_str:<30} ║");
+    eprintln!("║  FOURCC hex: 0x{fourcc_val:08X}                  ║");
+    eprintln!("║  RESOLUTION: {actual_w}x{actual_h:<30} ║");
+    eprintln!("║  FPS:       {actual_fps:<30} ║");
+    eprintln!("║  WARMUP:    ok={read_ok}  {warmup_w}x{warmup_h}              ║",
+        warmup_w = warmup_size.width,
+        warmup_h = warmup_size.height,
     );
+    eprintln!("╚══════════════════════════════════════════╝");
+    eprintln!();
 
     Ok(capture)
 }
