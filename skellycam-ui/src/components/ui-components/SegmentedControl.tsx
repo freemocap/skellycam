@@ -63,7 +63,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
 
   return (
     <div
-      className={`segmented-control-container br-1-1 gap-1 p-1 bg-middark flex ${className}`}
+      className={`segmented-control-container br-1-1 gap-1 p-1 bg-middark flex main-segmented-control ${className}`}
     >
       {options.map((option) => (
         <button

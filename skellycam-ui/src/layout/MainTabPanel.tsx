@@ -12,8 +12,8 @@ export const MainTabPanel: React.FC = () => {
     const activeTab = location.pathname.startsWith('/playback') ? 'playback' : 'cameras';
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="main-tab-bar">
+        <div className="main-container gap-1 overflow-hidden flex flex-row flex-1 pos-rel">
+            {/* <div className="segmented-control-container br-1-1 gap-1 p-1 bg-middark flex main-segmented-control"> */}
                 <SegmentedControl
                     options={[
                         { label: t('cameras'), value: 'cameras' },
@@ -23,8 +23,8 @@ export const MainTabPanel: React.FC = () => {
                     onChange={(v) => navigate('/' + v)}
                     size="md"
                 />
-            </div>
-            <div className="flex-1 overflow-hidden">
+            {/* </div> */}
+            <div className="mode-container flex-5 br-2 bg-darkgray border-mid-black border-1 overflow-hidden flex flex-col flex-1 gap-1 p-1">
                 <BaseContentRouter />
             </div>
         </div>

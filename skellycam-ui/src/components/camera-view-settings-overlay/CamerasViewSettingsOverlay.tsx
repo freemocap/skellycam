@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import ToggleComponent from '@/components/ui-components/ToggleComponent';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
 import ValueSelector from '@/components/ui-components/ValueSelector';
+import ButtonSm from '@/components/ui-components/ButtonSm';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 
@@ -104,7 +105,18 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
 
     return (
         <>
-            <div className="settings-overlay-trigger">
+            <div className='mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between'>
+
+               
+                <ButtonSm
+                    text="Stream"
+                    iconClass="stream-icon"
+                    textColor="text-white"
+                    onClick={() => { }} // add logic                    onClick="" // add logic
+                />
+        
+               
+            <div className="settings-overlay-trigger"></div>
                 <button
                     className="button icon-button br-1 border-1 border-black bg-dark"
                     onClick={handleToggle}
