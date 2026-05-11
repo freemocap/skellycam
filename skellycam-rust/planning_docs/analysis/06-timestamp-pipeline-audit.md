@@ -118,7 +118,7 @@ This tells us how long the camera thread was waiting on backpressure. We can com
 
 **`pre_frame_retrieve_ns` / `post_frame_retrieve_ns` → `pre_frame_decode_ns` / `post_frame_decode_ns`**
 
-Reason: In OpenCV, `retrieve()` decodes the raw frame (MJPEG → BGR). In nokhwa, the equivalent is decoding the raw buffer. On the decoder thread, this is the primary operation. "Decode" is the more general term and applies regardless of the underlying camera API.
+Reason: In OpenCV, `retrieve()` decodes the raw frame (MJPEG → BGR). This happens on the same camera thread immediately after `grab()`. "Decode" is the more general term and applies regardless of the underlying camera API.
 
 ### Stages that STAY
 

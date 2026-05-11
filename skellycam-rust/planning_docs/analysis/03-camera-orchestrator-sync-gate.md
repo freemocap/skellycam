@@ -146,13 +146,13 @@ The per-camera loop runs in its own process. Exact execution order per iteration
 | 11 `multiprocessing.Value("b")` per camera | `Arc<AtomicBool>` per flag OR `Arc<AtomicU16>` bitfield OR `Arc<Mutex<CameraState>>` | Can choose representation based on access pattern. Bitfield gives atomic read of all flags at once. |
 | `deepcopy(self.camera_frame_counts)` in sync gate | Read `AtomicI64` values into local array; compare. `Ordering::Acquire` for consistency. | No `deepcopy` needed — `AtomicI64::load()` returns a copy |
 | `should_grab_by_id()` polling with `wait_10us()` | Same polling pattern OR blocking `sync_channel(1)` per camera (structural backpressure) | **Key design decision**: polling vs. blocking. Blocking gives lockstep without spin-wait but changes the control flow. See below. |
-| `cap.grab()` + `cap.retrieve()` | `camera.frame()` (nokhwa combines them) OR split into raw buffer + decode | nokhwa supports both; the split is available via `CameraBuffer` + `.decode_image::<RgbFormat>()` |
-| Pre-allocated numpy recarray for `retrieve(image=)` | Pre-allocated `Vec<u8>` passed by `&mut [u8]`. nokhwa's `decode_image_to_buffer()` can write into existing buffer. | Same zero-allocation pattern. `Vec<u8>` is the heap buffer. |
-| `while not frame_success` retry loop (max 30) | Same retry loop. Rust's `Result` makes the error path explicit. | `match camera.frame() { Ok(buf) => ..., Err(e) => { fail_count += 1; continue; } }` |
+| `cap.grab()` + `cap.retrieve()` | `capture.grab()` + `capture.retrieve_def(&mut frame)` on same thread | OpenCV's `VideoCapture` is not `Send` — it holds internal DirectShow state and must stay on the creation thread. `grab()` and `retrieve()` happen sequentially on the same dedicated OS thread. `retrieve_def()` uses default channel flag (0). |
+| Pre-allocated numpy recarray for `retrieve(image=)` | `Mat::default()` pre-allocated at top of loop. `retrieve_def(&mut frame)` reuses OpenCV's internal buffer. `frame.data_bytes()` gives zero-copy `&[u8]` view of BGR pixels. | Same zero-allocation pattern. OpenCV manages the Mat buffer internally — no `Vec<u8>` allocation in the hot path. |
+| `while not frame_success` retry loop (max 30) | Same retry loop. `grab()` and `retrieve_def()` return `Result<bool>`. | `match capture.grab() { Ok(true) => ..., Ok(false) | Err(_) => { fail_count += 1; continue; } }` |
 | `finally` block for recording finalization | `Drop` impl on a `CameraLoopGuard` struct that holds the VideoRecorder handle | Deterministic cleanup — compiler guarantees `Drop` runs |
 | PubSub for recording info / config changes | `mpsc::Receiver` per camera for commands, or `tokio::sync::broadcast` for multi-consumer | Typed channels replace untyped PubSub queues |
 | `framerate` median calculation from deque | Same: `VecDeque<f64>` with `OrderedFloat` for `f64::total_cmp` | Rust's `sort_by` + index or the `order-stat` crate for O(n) median |
-| `check_framerate_reset()` re-creates cv2.VideoCapture | nokhwa `Camera::new()` — recreate entire camera handle | Same recovery pattern. nokhwa camera handles are not `Clone` or `Copy` — must drop and re-create. |
+| `check_framerate_reset()` re-creates cv2.VideoCapture | `VideoCapture::new(index, CAP_DSHOW)` — recreate entire capture object | Same recovery pattern. Drop the old `VideoCapture` (releases DirectShow filter graph), create a new one. |
 | `initialize_frame_recarray()` clears timestamps | `FramePacket` is owned, constructed fresh each iteration. No clear needed. | Ownership means each frame is a new allocation (or pool-allocated). No overwrite-in-place pattern. |
 | OpenCV BGR → JPEG for frontend | `image` crate for rotation + `image::codecs::jpeg` for encoding | RGB order (not BGR). Same JPEG quality parameter. |
 | Drawing frame stamp on image | `imageproc` crate or manual pixel writes | Can use `imageproc::drawing::draw_text` or a simpler bitmap font (like the existing test project's 5x7 font) |
@@ -206,33 +206,29 @@ loop {
 - **Consequence**: cameras CAN'T run independently — they're structurally gated by the gatherer
 - **Concern from SkellyCam docs**: "if one camera lags, the others must wait" — this is the DESIRED behavior (lockstep)
 
-### Decision: Option B + Grab/Decode Split (CONFIRMED)
+### Decision: Option B + Same-Thread Grab/Retrieve (CONFIRMED)
 
 **Structural backpressure** eliminates the spin-wait entirely. It's also simpler — no `should_grab_by_id()` logic, no atomics for frame counts. The gatherer's `recv()` calls ARE the synchronization.
 
-**Grab/decode split across threads**: the camera thread does ONLY the raw grab (thin, fast). Decode happens in a separate decoder thread. This reduces inter-camera grab timing spread.
+**Why grab and retrieve stay on the same thread**: OpenCV's `VideoCapture` is not `Send` — it holds internal DirectShow filter graph state and must stay on the thread that created it. `retrieve()` decodes from internal OpenCV state, not from a buffer you can hand off to another thread. So the camera thread does both `grab()` (USB dequeue, ~1ms) and `retrieve()` (MJPG decode into BGR Mat, ~3-5ms), takes four timestamps (pre/post grab, pre/post retrieve), then sends the decoded `FramePacket` via `sync_channel(1)`.
 
 #### Pipeline topology (per camera)
 
 ```
-CAMERA THREAD (grab only)         DECODER THREAD              GATHERER
-camera.frame() → CameraBuffer     raw_rx.recv()
-  (raw MJPEG/YUY2 from USB)        ↓
-timestamp = Instant::now()        buffer.decode_image()
-  ↓                                 (MJPEG→RGB, expensive)
-raw_tx.send(RawFrame {                ↓
-  buffer, ts, camera_id            decoded_tx.send(
-})  ← BLOCKED if decoder             FramePacket {            decoder_rx.recv() ← BLOCKS
-     hasn't consumed prev               image, ts,             until decoder sends
-     frame (sync_channel(1))            camera_id              ↓
-                                    })                   f0 = decoder0_rx.recv()
-                                                          f1 = decoder1_rx.recv()
-                                                    BACKPRESSURE FLOW:
-                                                    gatherer blocks decoders,
-                                                    decoders block camera threads
-                                                    All at step N → gatherer emits
-                                                    → decoders unblock → cameras unblock
+CAMERA THREAD (one per camera)        GATHERER THREAD (one per group)
+capture.grab() ── grab timestamp
+capture.retrieve() ── retrieve ts
+frame.data_bytes() → zero-copy BGR
+FramePacket { data: Bgr(bytes),
+              timestamps, identity,   camera0_rx.recv() ← BLOCKED until camera 0 sends
+              frame_number }   ────→  camera1_rx.recv() ← BLOCKED until camera 1 sends
+frame_sender.send(packet)            // barrier: all cameras sent frame N
+  ↑ BLOCKED if sync_channel(1)       MultiFramePayload { frames, step: N }
+    has unconsumed frame N           step += 1
+                                     // cameras unblock, proceed to frame N+1
 ```
+
+**Backpressure flow**: Gatherer blocks on `recv()` from each camera. Each camera blocks on `send()` after sending frame N (because capacity 1 is full until gatherer recvs frame N and loops back). The slowest camera determines the group framerate. Zero polling, zero atomics.
 
 **What CameraStatus flags become**: With structural backpressure, many flags are unnecessary:
 - `grabbing_frame` — gone (backpressure is the gate)
@@ -246,14 +242,14 @@ raw_tx.send(RawFrame {                ↓
 ## Functionality That Must Be Preserved
 
 1. **Frame-count-gated lockstep** — now structural via sync_channel(1) + gatherer recv, not polling
-2. **Grab separate from decode across threads** — camera thread grabs raw buffer; decoder thread decodes; timestamps at both stages
-3. **Pre-allocated frame buffers** — decoder writes into pre-allocated `Vec<u8>`, no allocation in hot path
+2. **Grab and retrieve on same thread** — `VideoCapture` is not `Send`; both operations happen sequentially on the camera's dedicated OS thread with four separate timestamps (pre/post grab, pre/post retrieve)
+3. **Pre-allocated frame buffers** — `Mat::default()` reused each iteration; OpenCV manages the internal buffer. `data_bytes()` provides zero-copy access.
 4. **Recording boundaries via pause + frame offset** — same pattern, but recording happens in a recorder thread fed by broadcast
-5. **Pause gate** — paused camera threads skip grab; paused decoders skip decode
+5. **Pause gate** — paused camera threads skip the entire grab/retrieve cycle
 6. **Initialization barrier** — all cameras open, publish config, then gatherer starts first recv cycle
 7. **Recording boundary coordination** — `first/last_recording_frame_number` set while paused, with +3 frame offset
-8. **Per-frame timestamps** — grab timestamps on camera thread, retrieve timestamps on decoder thread
+8. **Per-frame timestamps** — four timestamps per frame (pre/post grab, pre/post retrieve) all captured on the camera thread
 9. **Camera error → group shutdown** — error in any thread triggers clean shutdown; channels break, Drop impls fire
 10. **Recording finalization on crash** — video files closed and timestamps flushed via Drop impls
 11. **Framerate tracking** — rolling median on camera thread (grab-to-grab duration)
-12. **Frame stamp on image** — drawn on decoder thread after decode
+12. **Frame stamp on image** — drawn on camera thread after retrieve (directly on the BGR Mat using OpenCV's `imgproc::put_text`)

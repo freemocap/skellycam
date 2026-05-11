@@ -126,7 +126,7 @@ Logic: If no camera group exists with these camera IDs, creates and starts a new
 | `POST` | `/skellycam/camera/detect` | Detect available cameras | `filter_virtual: bool` (default true), `backend_id: int` (optional) | `DetectedCamerasResponse` |
 | `GET` | `/skellycam/camera/microphone/detect` | Detect microphones | — | `DetectedMicrophonesResponse` |
 
-**`POST /camera/detect`** — Uses `nokhwa` (or platform-specific API) to enumerate connected cameras.
+**`POST /camera/detect`** — Uses OpenCV `VideoCapture::new(i, CAP_DSHOW)` to enumerate DirectShow cameras (indices 0..15).
 
 Response (`DetectedCamerasResponse`):
 ```json

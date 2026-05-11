@@ -1,6 +1,6 @@
 # SkellyCam Rust — Implementation Plan
 
-Status: **PROPOSED — awaiting review and approval**
+Status: **IN PROGRESS — Phase 1 complete, Phase 2 active**
 
 Based on 9 analysis artifacts covering every component of the Python backend.
 
@@ -8,137 +8,190 @@ Based on 9 analysis artifacts covering every component of the Python backend.
 
 ## Overview
 
-Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a single Rust binary (Axum + nokhwa + tokio). The frontend (Electron/React) remains unchanged. The HTTP API and WebSocket binary protocol are preserved bit-for-bit.
+Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a single Rust binary (Axum + OpenCV + tokio). The frontend (Electron/React) remains unchanged. The HTTP API and WebSocket binary protocol are preserved bit-for-bit.
 
 **Core principle**: Build each component as a standalone, testable unit before integration. Verify against the Python implementation at every boundary.
 
 ---
 
-## Phase 0: Project Scaffolding
+## Phase 0: Project Scaffolding ✅ COMPLETE
 
 **Goal**: Cargo project, dependencies, module skeleton. No logic yet.
 
 ### Tasks
 
-1. Create `skellycam-rust/skellycam/` as a Cargo binary+library project
-2. Declare dependencies in `Cargo.toml`:
-   - **Runtime**: `nokhwa` (camera), `image` (rotation/resize/JPEG), `axum` (HTTP), `tokio` (async runtime), `serde`/`serde_json` (serialization), `utoipa` (OpenAPI), `tower-http` (CORS), `anyhow` (errors), `tracing` (logging), `bytemuck` (safe transmutation), `csv` (streaming writes), `polars` (dataframe analysis), `chrono` (time formatting)
-   - **Dev**: `tokio-test`, test utilities
-3. Set up `src/main.rs` (binary entry point) and `src/lib.rs` (library root)
-4. Declare module tree (all modules, initially empty or with placeholder `pub fn`)
-5. Configure `tracing_subscriber` for structured logging
-6. Verify: `cargo build` succeeds with all dependencies
+1. Create `skellycam-rust/skellycam/` as a Cargo binary+library project ✅
+2. Declare dependencies in `Cargo.toml` ✅:
+   - **Runtime**: `opencv` 0.98 with `videoio`, `imgproc`, `imgcodecs` features (camera via DirectShow), `image` 0.25 (rotation/resize/JPEG), `axum` 0.7 with `ws` (HTTP + WebSocket), `tokio` 1 with `full` features (async runtime), `serde`/`serde_json` (serialization), `utoipa` 5 + `utoipa-swagger-ui` 9 (OpenAPI), `tower` 0.5 + `tower-http` 0.6 with `cors` and `fs` (middleware), `anyhow` 1 + `thiserror` 2 (errors), `tracing` 0.1 + `tracing-subscriber` 0.3 with `env-filter` (logging), `uuid` 1 with `v4`, `chrono` 0.4 (time formatting), `csv` 1 (streaming writes), `ffmpeg-sidecar` 2 (ffmpeg auto-download)
+   - **Commented out**: `polars` 0.41 with `lazy`, `csv-file` features (Phase 3 — recording analysis)
+3. Set up `src/main.rs` (binary entry point) and `src/lib.rs` (library root) ✅
+4. Declare module tree — all modules declared in `lib.rs` (currently placeholders for unimplemented modules) ✅
+5. Configure `tracing_subscriber` for structured logging ✅
+6. Configure `.cargo/config.toml` with OpenCV environment variables (link libs, link paths, include paths) ✅
+7. Create `build.rs` to copy OpenCV runtime DLLs to target directory ✅
+8. Verify: `cargo build` succeeds with all dependencies ✅
 
-**Deliverable**: Compiling project with full dependency tree and empty module skeleton.
+**Deliverable**: Compiling project with full dependency tree and module skeleton. **DONE.**
 
 ---
 
-## Phase 1: Camera Core — Single Camera
+## Phase 1: Camera Core — Single Camera ✅ COMPLETE
 
-**Goal**: Grab a frame from one camera on a dedicated thread, timestamp it, send it through the pipeline. No server, no multi-camera sync, no recording. Testable from `main.rs` with a simple preview loop.
+**Goal**: Grab a frame from one camera on a dedicated thread, timestamp it, send it through the pipeline. No server, no multi-camera synchronization, no recording. Testable from `main.rs` with FPS reporting.
 
 **Depends on**: Phase 0
 
 ### Tasks
 
-#### 1.1: Camera Types (`camera/types.rs`)
+#### 1.1: Camera Types (`camera/types.rs`) ✅
 
-- `CameraCommand` enum — `AdjustControl`, `GetControlInfo`, `Shutdown`
-- `CameraEvent` enum — `Frame(RawFrame)`, `ControlAdjusted`, `Error`
-- `RawFrame` struct — raw bytes from camera, timestamp, camera identifier, camera index
-- `FramePacket` struct — decoded RGB image, timestamps, camera identifier
-- Port `CameraMetadata` (resolution, controls) from existing webcam test project
+- `FrameData` enum — `Bgr(Vec<u8>)` variant (OpenCV's native pixel format is BGR)
+- `FramePacket` struct — BGR pixel bytes, width, height, `grab_timestamp_nanoseconds` (i64, nanoseconds since process start), `identity: CameraIdentity`, `frame_number: i64`
+- `CameraIdentity` struct — `display_name`, `camera_index`, `unique_identifier` (6-char hex hash of device path), `device_path`
+- `MultiFramePayload` struct — `frames: Vec<FramePacket>`, `step: i64`, with `inter_camera_grab_spread_nanoseconds()` method
+- `CameraCommand` enum — `Shutdown` (only command for now)
+- `CameraEvent` enum — `Error(String)` (only event for now)
+- `CameraHandle` struct — holds `command_sender: mpsc::Sender<CameraCommand>`, identity, width, height; with `send_shutdown()` convenience method
 
-#### 1.2: Camera Thread (`camera/thread.rs`)
+#### 1.2: Camera Thread (`camera/thread.rs`) ✅
 
-- `spawn_camera_thread()` — opens camera, enters grab loop
-- Grab loop: `camera.frame()` → timestamp → `sync_channel.send(RawFrame)`
-- Processes `CameraCommand`s via `sync_channel` receiver
-- Thin and fast — camera thread does ONLY grab, not decode
+- `spawn_camera_thread(index, requested_width, requested_height, identity)` — opens camera, spawns dedicated OS thread (`std::thread::spawn`, not tokio task)
+- `open_camera(index, requested_width, requested_height)` — **two-phase MJPG setup**:
+  - **Phase A (pre-warmup)**: Create `VideoCapture::new(index, CAP_DSHOW)`, set FOURCC to MJPG, set frame width/height, set buffer size to 1
+  - **Warmup read**: `capture.read(&mut warmup)` — starts the DirectShow streaming filter graph
+  - **Phase B (post-warmup)**: Set FOURCC to MJPG **again** (must re-set after graph is running; DirectShow renegotiates the media type on the first read and may drop MJPG). Do NOT change resolution after warmup (changing resolution resets FOURCC)
+  - Read back actual config: resolution, FOURCC, FPS, backend name; print debug summary
+- Returns `(CameraHandle, mpsc::Receiver<CameraEvent>, mpsc::Receiver<FramePacket>)`
+- Grab loop (hot path per frame):
+  1. Drain command channel (check for `Shutdown`)
+  2. `capture.read(&mut frame)` — combined grab+retrieve (single call since OpenCV's `VideoCapture` is not `Send`: it must stay on the thread that created it)
+  3. `performance_counter_nanoseconds()` — monotonic nanosecond timestamp since process start
+  4. `frame.data_bytes()` — zero-copy access to BGR pixel bytes (OpenCV Mat internal pointer)
+  5. Build `FramePacket` → `frame_sender.send(packet)` on `sync_channel(1)` (blocks if consumer not ready — structural backpressure already in place)
+  6. Every 60 frames: print timing diagnostics (average grab interval, FPS, channel wait time)
 
-#### 1.3: Decoder Thread (`camera/decoder.rs`)
+#### 1.3: Timestamp Clock (`timestamps/performance.rs`) ✅
 
-- Receives `RawFrame` from camera thread
-- Decodes raw buffer → RGB (MJPEG/YUY2 → RgbImage)
-- Timestamps decode operation
-- Sends `FramePacket` downstream via `sync_channel`
+- `performance_counter_nanoseconds()` function — returns `i64` nanoseconds since process start
+- Uses `OnceLock<Instant>` stored statically for the process start epoch
+- Monotonic, high-precision, not subject to wall-clock adjustments
 
-#### 1.4: Timestamp Hot-Path Struct (`timestamps/frame_timestamps.rs`)
+#### 1.4: Single-Camera Test Harness (`main.rs`) ✅
 
-- `FrameTimestamps` struct — 6 `i64` fields (pre/post grab, pre/post decode, pre/post record)
-- Stack-allocated, `Copy`, zero heap
-- `TimestampStage` enum — extensible stage definitions
-- `to_stage_map()` conversion for storage/CSV output
+- Opens camera index 0 at 1280x720
+- Spawns camera thread, receives `FramePacket` on main thread
+- Reports FPS every 30 frames (rolling average)
+- Runs for 500 frames then cleanly shuts down
+- Reports summary: total frames, average FPS
+- Verified: camera opens, grabs frames at 30fps, clean shutdown
 
-#### 1.5: Single-Camera Main Loop Test
-
-- `main.rs` test: spawn camera thread + decoder thread
-- Receive `FramePacket` on main thread
-- Display in minifb window (from existing webcam test project)
-- Print per-stage timing averages every 60 frames
-- Verify: camera opens, grabs frames, decodes, displays
-
-**Deliverable**: Working single-camera capture with grab/decode split and timestamp measurement.
+**Deliverable**: Working single-camera capture with OpenCV + DirectShow + MJPG at 30fps. **DONE.**
 
 ---
 
-## Phase 2: Multi-Camera Lockstep
+## Phase 2: Multi-Camera Lockstep ← ACTIVE
 
-**Goal**: Two or more cameras operating in synchronized lockstep via structural backpressure. No server, no recording.
+**Goal**: Two or more cameras operating in synchronized lockstep via structural backpressure (`sync_channel(1)`). No server, no recording.
 
 **Depends on**: Phase 1
 
+**Architecture**:
+
+The sync gate uses **structural backpressure** rather than polling atomics. Each camera thread runs on its own dedicated OS thread with a `VideoCapture` object that is not `Send` (must stay on the thread that created it). The gatherer thread calls `recv()` on all cameras' `sync_channel(1)` receivers — this is the lockstep barrier.
+
+```
+CAMERA THREAD 0                    CAMERA THREAD 1
+  VideoCapture (not Send)            VideoCapture (not Send)
+  grab() + retrieve()                 grab() + retrieve()
+  frame_sender.send(packet) ───┐     frame_sender.send(packet) ───┐
+    blocked if full             │       blocked if full            │
+                                ▼                                  ▼
+                        GATHERER THREAD
+                  camera0_rx.recv() // blocks
+                  camera1_rx.recv() // blocks
+                  // barrier: all cameras at step N
+                  MultiFramePayload { frames, step: N }
+                  step += 1
+                  // cameras unblock, proceed to frame N+1
+```
+
+**Why grab+retrieve on same thread**: OpenCV's `VideoCapture` internally holds the DirectShow filter graph state. It is not `Send` — it must be created, used, and dropped on the same OS thread. The `retrieve()` call decodes the last grabbed frame from internal OpenCV state rather than from a buffer that could be handed to another thread. So the camera thread does both `grab()` (USB dequeue, ~1ms) and `retrieve()` (MJPG decode into BGR Mat, ~3-5ms), then sends the decoded `FramePacket` (BGR bytes from `data_bytes()`) downstream.
+
 ### Tasks
 
-#### 2.1: CameraGroup Channels (`camera_group/channels.rs`)
+#### 2.1: Camera Enumeration (`camera/enumerate.rs`)
 
-Define all channel types for a camera group:
+- `enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>>`
+- Iterate indices 0..15: try `VideoCapture::new(i, CAP_DSHOW).is_opened()` → query device path (`CAP_PROP_GUID`), default resolution, backend name → build `CameraIdentity` → release capture
+- Generate `unique_identifier` as 6-char hex hash of device path (matching Python pattern)
+- Add `pub mod enumerate;` to `camera/mod.rs`, re-export the function
+
+#### 2.2: CameraGroup Types (`camera_group/types.rs`)
 
 ```rust
-pub struct CameraGroupChannels {
-    /// Camera thread → decoder thread (one per camera)
-    pub raw_frame_senders: HashMap<String, SyncSender<RawFrame>>,
-    pub raw_frame_receivers: HashMap<String, Receiver<RawFrame>>,
-
-    /// Decoder thread → gatherer (one per camera)
-    pub decoded_frame_senders: HashMap<String, SyncSender<FramePacket>>,
-    pub decoded_frame_receivers: HashMap<String, Receiver<FramePacket>>,
-
-    /// Gatherer fan-out: every frame
-    pub recorder_sender: UnboundedSender<Arc<MultiFramePayload>>,
-
-    /// Gatherer fan-out: latest only
-    pub websocket_sender: watch::Sender<Arc<MultiFramePayload>>,
-
-    /// Camera control (one per camera)
-    pub control_senders: HashMap<String, Sender<ControlCommand>>,
+pub struct CameraGroupConfig {
+    pub camera_index: u32,
+    pub requested_width: u32,
+    pub requested_height: u32,
+    pub identity: CameraIdentity,
 }
 ```
 
-#### 2.2: CameraOrchestrator (`camera_group/orchestrator.rs`)
+#### 2.3: Gatherer (`camera_group/gatherer.rs`)
 
-- Pause/unpause: sets `AtomicBool` per camera, awaits state change
-- Recording boundaries: `first_recording_frame_number: AtomicI64`, `last_recording_frame_number: AtomicI64`
-- `should_record_frame(frame_number) -> (bool, bool)` — same logic as Python
-- Gatherer loop: `recv()` from all decoder channels → assemble `MultiFramePayload` → fan out to recorder + WebSocket
+- `spawn_gatherer(frame_receivers: Vec<Receiver<FramePacket>>, event_receivers: Vec<Receiver<CameraEvent>>, camera_handles: Vec<CameraHandle>) -> (Receiver<MultiFramePayload>, JoinHandle<()>)`
+- Gatherer loop on dedicated thread:
+  1. Check all event channels (non-blocking `try_recv`) — log errors
+  2. Lockstep barrier: `recv()` from every frame receiver — blocks until each camera sends frame N
+  3. Assemble `MultiFramePayload { frames, step }`, step += 1
+  4. Log inter-camera grab spread every 30 multiframes
+  5. Send to downstream recorder/websocket channels (Phase 3+)
+- If any camera channel disconnects → log, shut down all cameras, exit
 
-#### 2.3: CameraGroup (`camera_group/group.rs`)
+#### 2.4: CameraGroup (`camera_group/group.rs`)
 
-- `CameraGroup::create(configs)` — spawns camera threads + decoder threads per camera
-- `start()` — begins gatherer loop
-- `pause()` / `unpause()` — delegates to orchestrator
-- `close()` — graceful shutdown of all threads
-- Two-phase startup: spawn → receive extracted configs → proceed (same pattern as Python, but with channels instead of PubSub)
+```rust
+pub struct CameraGroup {
+    pub group_identifier: String,
+    pub camera_handles: Vec<CameraHandle>,
+    pub gatherer_join_handle: Option<JoinHandle<()>>,
+    pub multi_frame_receiver: Option<Receiver<MultiFramePayload>>,
+}
+```
 
-#### 2.4: Test — Two-Camera Lockstep
+- `CameraGroup::create(configs: Vec<CameraGroupConfig>) -> anyhow::Result<Self>`
+  1. Validate unique camera indices
+  2. For each config: `camera::spawn_camera_thread(index, width, height, identity)`
+  3. Collect handles, frame receivers, event receivers
+  4. `spawn_gatherer(frame_receivers, event_receivers, handles.clone())`
+  5. Return `CameraGroup` with handles, gatherer join handle, multi-frame receiver
+- `CameraGroup::shutdown(&self)` — calls `send_shutdown()` on all camera handles
+- `CameraGroup::wait_for_shutdown(self)` — joins gatherer thread
+- Shutdown ordering: send shutdown commands first (all cameras start exiting simultaneously), then join gatherer
 
-- `cargo run -- --cameras 0,1` — opens two cameras
-- Verify: both cameras produce frames at the same step number
-- Print inter-camera grab timing spread per multiframe
-- Test pause/unpause — verify both cameras pause within one frame
-- Run for 60 seconds, verify no drift (all cameras at same frame number at all times)
+#### 2.5: Multi-Camera Test Harness (`main.rs` update)
 
-**Deliverable**: Working multi-camera synchronized capture with structural backpressure.
+- CLI args: `--cameras N` (number to use), `--indices 0,1,2` (optional explicit indices)
+- Flow: enumerate cameras → select N cameras → build `CameraGroupConfig` for each → `CameraGroup::create()` → consumer loop
+- Consumer loop: `recv()` from multi-frame receiver, print aggregate stats every 30 multiframes (inter-camera grab spread, per-camera FPS, multiframe rate)
+- Ctrl+C handler: call `camera_group.shutdown()`, wait for gatherer, report summary
+- Default: run for 600 multiframes (~20 seconds at 30fps) or until Ctrl+C
+
+#### 2.6: Incremental Validation Strategy
+
+Test with increasing camera counts:
+
+| Test | Cameras | Key Verified |
+|------|---------|-------------|
+| 2-camera | 2 | Lockstep mechanism works. Inter-camera spread < 3ms. Clean shutdown. |
+| 3-camera | 3 | Backpressure scales. Slowest camera determines group FPS. |
+| 4-camera | 4 | USB 2.0 bandwidth tested. Monitor for grab failures. |
+| 5-camera | 5 | High USB load. May need USB 3.0 or separate host controllers. |
+| 6-camera | 6 | Maximum load. May need reduced resolution (640x480). |
+
+Each test: run for 300 multiframes minimum. Verify zero drift — all cameras at same frame number. The `sync_channel(1)` + gatherer `recv()` mathematically guarantees this; tests validate it under real USB/OS conditions.
+
+**Deliverable**: Working multi-camera synchronized capture with structural backpressure. Tested incrementally from 2 to 6 cameras.
 
 ---
 
@@ -444,9 +497,7 @@ For automated testing without physical cameras, build a mock camera that replays
 
 ### Risk 2: Windows COM/STA Threading (LOW)
 
-**Mitigation**: nokhwa handles this internally. The camera thread runs on a dedicated OS thread (not a tokio async task), satisfying COM requirements. Already validated in the webcam test project.
-
-**Mitigation**: nokhwa handles this internally. The camera thread runs on a dedicated OS thread (not a tokio async task), satisfying COM requirements. Already validated in the webcam test project.
+**Mitigation**: OpenCV's `VideoCapture` with `CAP_DSHOW` initializes COM internally for the DirectShow backend. The camera runs on a dedicated OS thread (`std::thread::spawn`, not a tokio async task), which satisfies COM apartment requirements. The thread creates the capture, uses it, and drops it — all on the same thread. Already validated in Phase 1.
 
 ---
 
@@ -461,16 +512,15 @@ skellycam-rust/skellycam/
 
     camera/
       mod.rs                         # Re-exports
-      types.rs                       # RawFrame, FramePacket, CameraCommand, CameraEvent
-      manager.rs                     # Camera lifecycle (open, configure, close, query)
-      thread.rs                      # spawn_camera_thread, grab loop
-      decoder.rs                     # Decoder thread (raw buffer → RGB)
+      types.rs                       # FramePacket, CameraCommand, CameraEvent, CameraIdentity, etc.
+      thread.rs                      # spawn_camera_thread, open_camera (two-phase MJPG)
+      enumerate.rs                   # enumerate_directshow_cameras
 
     camera_group/
       mod.rs                         # Re-exports
-      group.rs                       # CameraGroup: create, start, pause, unpause, close
-      orchestrator.rs                # Sync gate, gatherer loop, recording boundaries
-      channels.rs                    # All channel type definitions
+      types.rs                       # CameraGroupConfig, CameraGroupConfigSource
+      group.rs                       # CameraGroup: create, shutdown, wait_for_shutdown
+      gatherer.rs                    # Gatherer: lockstep recv barrier, MultiFramePayload assembly
 
     camera_group_manager/
       mod.rs                         # CameraGroupManager: CRUD, recording, state
@@ -519,12 +569,15 @@ skellycam-rust/skellycam/
 
 | # | Decision | Rationale |
 |---|----------|-----------|
-| 1 | **`image` crate for JPEG, NOT `opencv`** | Pure Rust, no system dependency. The `opencv` crate requires an OpenCV installation — unacceptable for "it just works." `image` crate's JPEG encoder produces valid JPEGs; any visual difference from OpenCV's encoder is imperceptible. |
-| 2 | **ffmpeg via `ffmpeg-sidecar`** | Battle-tested, produces files that play everywhere, handles every edge case. `ffmpeg-sidecar` auto-downloads the correct binary on first launch — zero user setup. The subprocess pipe pattern is already proven in the webcam test project. |
-| 3 | **Best-practice high-precision monotonic clock** | Use the Rust equivalent of `time.perf_counter_ns()`: monotonic, highest available precision, not subject to wall-clock adjustments. Likely `libc::clock_gettime(CLOCK_MONOTONIC)` on Linux/macOS or `QueryPerformanceCounter` on Windows, wrapped in a cross-platform function. |
-| 4 | **Range requests via `tower_http::ServeDir`** | Natively supported. If incompatible with dynamic path routing, manual `Range` header parsing. |
-| 5 | **`utoipa` for OpenAPI/Swagger** | Derive macros on request/response structs. Swagger UI served at `/docs`. |
-| 6 | **UUID with last 6 hex characters as group ID** | Matches Python behavior exactly. `uuid::Uuid::new_v4().to_string()[..6]` or equivalent truncation. |
+| 1 | **`opencv` crate for camera capture, `image` crate for JPEG encoding** | OpenCV with DirectShow is the only approach that reliably configured MJPG on Windows. The `image` crate (pure Rust) handles rotation, resize, and JPEG encoding for the frontend WebSocket payload. OpenCV is used only for camera capture and raw pixel extraction. |
+| 2 | **Two-phase MJPG setup** | DirectShow requires the filter graph to be running before MJPG format negotiation completes. Set FOURCC → warmup `read()` → set FOURCC again → verify. Never change resolution after the graph starts (it resets FOURCC). This is the critical insight from weeks of experimentation. |
+| 3 | **Grab + retrieve on same thread** | OpenCV's `VideoCapture` is not `Send` — it holds internal DirectShow filter graph state that must stay on one thread. `retrieve()` decodes from internal state, not from a buffer you can hand off. The dedicated OS thread does both `grab()` and `retrieve()`, then sends the decoded `FramePacket` via `sync_channel`. |
+| 4 | **Structural backpressure via `sync_channel(1)`** | Replaces Python's polling-based sync gate. Capacity-1 channel means producer blocks if consumer hasn't received previous frame. Gatherer `recv()` from all cameras is the implicit barrier — zero polling, zero atomics. Slowest camera determines group framerate. |
+| 5 | **ffmpeg via `ffmpeg-sidecar`** | Battle-tested, produces files that play everywhere, handles every edge case. `ffmpeg-sidecar` auto-downloads the correct binary on first launch — zero user setup. The subprocess pipe pattern is already proven in the webcam test project. |
+| 6 | **Best-practice high-precision monotonic clock** | Uses `Instant::now()` with a `OnceLock<Instant>` process-start epoch to produce `i64` nanosecond timestamps via `performance_counter_nanoseconds()`. Monotonic, highest available precision, not subject to wall-clock adjustments. |
+| 7 | **UUID with last 6 hex characters as group ID** | Matches Python behavior exactly. `uuid::Uuid::new_v4().to_string()[..6]` or equivalent truncation. |
+| 9 | **Range requests via `tower_http::ServeDir`** | Natively supported. If incompatible with dynamic path routing, manual `Range` header parsing. |
+| 8 | **`utoipa` for OpenAPI/Swagger** | Derive macros on request/response structs. Swagger UI served at `/docs`. |
 
 ---
 
@@ -532,7 +585,7 @@ skellycam-rust/skellycam/
 
 | Milestone | Phases | Success Criterion |
 |-----------|--------|-------------------|
-| **M1: Camera Works** | 0-1 | Single camera grabs frames, displays preview, measures timestamps |
+| **M1: Camera Works** ✅ | 0-1 | Single camera grabs frames at 30fps, measures timestamps, clean shutdown |
 | **M2: Sync Works** | 2 | Two cameras in lockstep, zero drift over 5 minutes, grab spread < 1ms |
 | **M3: Recording Works** | 3 | Two-camera synchronized video files, timestamps, statistics |
 | **M4: JPEG Validated** | 5 | Live camera frames display in a browser from Rust WebSocket |
