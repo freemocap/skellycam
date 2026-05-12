@@ -34,7 +34,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
             <HeaderPanel onOpenWelcome={() => setWelcomeOpen(true)} />
             <PanelGroup className="app-container" direction="vertical" style={{flex: 1}}>
                 <Panel className="app-container-inner" defaultSize={87} minSize={20}>
-                    <PanelGroup className="app-container-sub"direction="horizontal" style={{direction: "ltr"}}>
+                    <PanelGroup className="app-container-sub p-1" direction="horizontal" style={{direction: "ltr"}}>
 
 
                         <Panel 
@@ -43,7 +43,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                             {children}
                         </Panel>
                         <PanelResizeHandle className="resizable-component" style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
-                        <Panel className="LeftSidePanel"
+                        <Panel className="left-side-panel action-container bg-darkgray br-2 border-mid-black border-1"
                             ref={leftPanelRef}
                             collapsible
                             defaultSize={24}
@@ -60,9 +60,9 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                     </PanelGroup>
                 </Panel>
 
-                <PanelResizeHandle style={{height: "4px", cursor: "row-resize", backgroundColor: "var(--gray-600)"}} />
+                <PanelResizeHandle className="resizable-component" style={{height: "4px", cursor: "row-resize", backgroundColor: "var(--gray-600)"}} />
 
-                <Panel collapsible defaultSize={13} minSize={10} collapsedSize={4}>
+                <Panel className="console-area pr-1 pl-1 pb-1" collapsible defaultSize={13} minSize={10} collapsedSize={4}>
                     <BottomPanelContent/>
                 </Panel>
             </PanelGroup>

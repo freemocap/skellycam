@@ -6,15 +6,15 @@ import FramerateViewerPanel from "@/components/framerate-viewer/FrameRateViewer"
 
 export default function BottomPanelContent() {
     return (
-        <div className="bottom-info-container border-1 border-black br-2 flex h-full overflow-hidden">
-            <PanelGroup direction="horizontal" style={{direction: "ltr"}}>
-                <Panel defaultSize={30} minSize={15}>
+        <div className="bottom-info-container border-1 border-mid-black br-2 flex h-full overflow-hidden">
+            <PanelGroup className="console-area p-1" direction="horizontal" style={{direction: "ltr"}}>
+                <Panel className="camera-performance-metric-container bg-middark bg-darkgray p-1 br-1" defaultSize={30} minSize={15}>
                     <FramerateViewerPanel />
                 </Panel>
 
-                <PanelResizeHandle className="info-panel-divider" />
+                <PanelResizeHandle className="info-panel-divider resizable-component" />
 
-                <Panel defaultSize={70} minSize={20}>
+                <Panel className="server-logs-container bg-middark bg-darkgray p-1 br-1" defaultSize={70} minSize={20}>
                     <LogTerminal />
                 </Panel>
             </PanelGroup>

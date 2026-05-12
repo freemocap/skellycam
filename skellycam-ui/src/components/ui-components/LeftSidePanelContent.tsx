@@ -79,8 +79,8 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
 
     return (
         <div
-            className="flex flex-col w-full h-full overflow-y-auto overflow-x-hidden"
-            style={{backgroundColor: 'var(--gray-800)'}}
+            className="inner flex flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
+           
         >
             {/* Header row */}
             <div

@@ -559,8 +559,24 @@ a.link:hover {
 }
 
 
+.pb-1 {
+  padding-bottom: 4px;
+}
 .pb-2 {
   padding-bottom: 8px;
+}
+
+.pl-1 {
+  padding-left: 4px;
+}
+.pl-2 {
+  padding-left: 8px;
+}
+.pr-1 {
+  padding-right: 4px;
+}
+.pr-2 {
+  padding-right: 8px;
 }
 
 
@@ -1055,10 +1071,13 @@ body,
 }
 
 .top-header {
-  background-color: var(--gray-900);
-  border-bottom: 1.5px solid var(--gray-600);
+  background-color: var(--gray-800);
+  /* border-bottom: 1.5px solid var(--gray-600); */
 }
+.resizable-component { 
 
+  background-color: transparent!important;
+}
 /* ---- Welcome Page ---- */
 .welcome-modal {
 width: 680px;
