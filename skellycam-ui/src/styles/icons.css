@@ -28,9 +28,9 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 /* icons vars */
   :root { 
   --plus-icon: url("../assets/icons/plus_icon.svg");
-  --checkUpdate-icon: url("../assets/icons/checkUpdate-icon.svg");
+  --checkUpdate-icon: url("../assets/icons/checkUpdate_icon.svg");
   --upToDate-icon: url("../assets/icons/upToDate-icon.svg");
-  --updateAvailable-icon: url("../assets/icons/updateAvailable-icon.svg");
+  --updateAvailable-icon: url("../assets/icons/updateAvailable_icon.svg");
   --minus-icon: url("../assets/icons/minus_icon.svg");
   --close-icon: url("../assets/icons/close_icon.svg");
   --rotate-icon: url("../assets/icons/rotate_icon.svg");
@@ -40,7 +40,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --clear-icon: url("../assets/icons/clear_icon.svg");
   --load-icon: url("../assets/icons/load_icon.svg");
   --live-icon: url("../assets/icons/live_icon.svg");
-  --import-icon: url("../assets/icons/import_icon.svg");
+  --import-icon: url("../assets/icons/import-icon.svg");
   --importVideos-icon: url("../assets/icons/importVideos_icon.svg");
   --github-icon: url("../assets/icons/github_icon.svg");
   --externallink-icon: url("../assets/icons/externallink_icon.svg");
