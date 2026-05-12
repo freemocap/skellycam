@@ -74,7 +74,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                 onToggle={handleAutoToggle}
             />
 
-            <div className="toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
+            <div className="gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
                 <p className="text md text-gray text-nowrap">{t("columns")}</p>
                 <ValueSelector
                     value={isAuto ? autoColumns : manualColumns}
@@ -118,7 +118,9 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                 <span className="icon icon-size-16 pause-icon" />
               </button>
             </div>
-            <div className='configure-camera-action-container flex flex-row gap-1'>
+            <div className='configure-camera-action-container text-white text md text-align-left flex flex-row items-center gap-1'>
+                   <p className='text-nowrap flex flex-row gap-1 text-gray'><span>5</span>Connected Cameras</p>
+                   
                    <button className="button icon-button"
                         onClick="">
                         <span className="icon icon-size-16 scan-icon" />
@@ -136,14 +138,14 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
           </div>
           <div className="settings-overlay-trigger"></div>
           <button
-            className="button icon-button br-1 border-1 border-black bg-dark"
+            className="button icon-button br-1"
             onClick={handleToggle}
             title={isOpen ? t("closeSettings") : t("gridSettings")}
           >
             <span
               className={clsx(
                 "icon icon-size-16",
-                isOpen ? "close-icon" : "settings-icon",
+                isOpen ? "close-icon" : "grid2-icon",
               )}
             />
           </button>

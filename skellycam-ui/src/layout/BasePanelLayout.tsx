@@ -38,7 +38,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
 
                         <Panel 
-                                className="RightSidePanel"
+                                className="right-side-panel"
                                 defaultSize={76} minSize={10}>
                             {children}
                         </Panel>

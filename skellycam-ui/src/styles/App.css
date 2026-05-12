@@ -1123,13 +1123,26 @@ animation: fadeIn, scaleIn;
   background-color: var(--blue-800);
   transform: translateY(-1px);
 }
+.right-side-panel {
 
+  height: 100%;
+}
+.main-container  {
+  height: inherit;
+}
+.all-actions-components {
+  align-items: center;
+    justify-content: space-between;
+    align-content: center;
+    width: 100%;
+}
 .welcome-connect-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 .mode-header{
   min-height: 33px;
+  width: inherit;
 }
 /* ---- Toast Notification ---- */
 .toast-notification {
