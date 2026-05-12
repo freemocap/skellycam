@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import ToggleComponent from '@/components/ui-components/ToggleComponent';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
@@ -6,8 +6,8 @@ import ValueSelector from '@/components/ui-components/ValueSelector';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
-import { useAppDispatch } from '@/store/hooks';
-import { camerasConnectOrUpdate } from '@/store/slices/cameras/cameras-thunks';
+import { useAppDispatch, useAppSelector, selectCameras } from '@/store';
+import { camerasConnectOrUpdate, detectCameras } from '@/store/slices/cameras/cameras-thunks';
 import { CameraConfigModal } from '@/components/camera-config-tree-view/CameraConfigModal';
 
 interface CameraSettings { columns: number | null; }
@@ -24,9 +24,16 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
     onSettingsChange,
     inline = false,
 }) => {
-    const { connectedCameraIds } = useServer();
+    const { connectedCameraIds, isConnected } = useServer();
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
+    const cameras = useAppSelector(selectCameras);
+
+    useEffect(() => {
+        if (isConnected && cameras.length === 0) {
+            dispatch(detectCameras({ filterVirtual: true }));
+        }
+    }, [isConnected, cameras.length, dispatch]);
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
     const [isAuto, setIsAuto] = useState<boolean>(true);
@@ -113,7 +120,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         <CameraConfigModal open={isConfigModalOpen} onClose={() => setIsConfigModalOpen(false)} />
         <div className="mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between">
           <div className="all-actions-components flex flex-row">
-            <div className="stream-actions-container flex flex-row gap-1">
+            <div className="stream-actions-container flex flex-row gap-1 items-center">
               <ButtonSm
                 text="Stream"
                 iconClass="stream-icon"

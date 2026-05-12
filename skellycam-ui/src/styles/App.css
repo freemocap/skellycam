@@ -239,7 +239,7 @@ button.rotate-button {
 
 .main-segmented-control {
   position: absolute;
-     left: 6px;
+    left: 6px;
     top: 6px;
     z-index: 2;
 }
@@ -250,13 +250,15 @@ button.rotate-button {
 }
 
 .segmented-control-button {
-  min-width: 0;
+  min-width: 110px;
   transition: color var(--speed-1) ease-in-out;
 }
 
 .segmented-control-button>p.text.md {
   /* medium size */
   min-height: 25px;
+  line-height: 25px;
+  padding: 0;
 }
 
 .segmented-control-button>p.text.sm {
@@ -1146,6 +1148,7 @@ animation: fadeIn, scaleIn;
 .mode-header{
   min-height: 33px;
   width: inherit;
+  margin-bottom: 1px;
 }
 /* ---- Toast Notification ---- */
 .toast-notification {

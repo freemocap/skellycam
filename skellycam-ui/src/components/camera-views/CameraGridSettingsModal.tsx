@@ -4,6 +4,7 @@ import { cameraDesiredConfigUpdated } from '@/store/slices/cameras/cameras-slice
 import { Camera, CameraConfig, ExposureMode, RotationValue, ROTATION_OPTIONS, ROTATION_DEGREE_LABELS } from '@/store/slices/cameras/cameras-types';
 import NameDropdownSelector from '@/components/ui-components/NameDropdownSelector';
 import SegmentedControl from '@/components/ui-components/SegmentedControl';
+import ValueSelector from '@/components/ui-components/ValueSelector';
 
 interface CameraGridSettingsModalProps {
     camera: Camera;
@@ -17,7 +18,8 @@ const PRESET_RESOLUTIONS = [
     { width: 1920, height: 1080, label: '1920 × 1080' },
 ];
 
-const EXPOSURE_VALUES = Array.from({ length: 10 }, (_, i) => String(-13 + i));
+const EXPOSURE_MIN = -13;
+const EXPOSURE_MAX = -4;
 
 const resolutionLabel = (config: CameraConfig): string => {
     const preset = PRESET_RESOLUTIONS.find(
@@ -131,10 +133,11 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
             {/* Exposure value — only when manual */}
             {isManual && (
                 <Row label="Change exposure" indent>
-                    <NameDropdownSelector
-                        options={EXPOSURE_VALUES}
-                        initialValue={String(config.exposure ?? -7)}
-                        onChange={(v) => handleConfigChange({ exposure: parseInt(v) })}
+                    <ValueSelector
+                        value={config.exposure ?? -7}
+                        min={EXPOSURE_MIN}
+                        max={EXPOSURE_MAX}
+                        onChange={(v) => handleConfigChange({ exposure: v })}
                     />
                 </Row>
             )}

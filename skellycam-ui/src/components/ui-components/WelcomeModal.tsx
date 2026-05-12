@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Footer } from '@/components/ui-components/Footer';
 import { useElectronIPC } from '@/services';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { LanguageSwitcher } from '@/components/languages/LanguageSwitcher';
@@ -191,7 +190,6 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                                 textColor="text-gray"
                                 onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
                             /> */}
-                            <Footer />
                         </div>
                     </div>
                 </div>

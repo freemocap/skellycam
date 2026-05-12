@@ -147,17 +147,6 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
     if (connectedCameraIds.length === 0) {
         return (
             <div ref={containerRef} className="camera-grid-container camera-grid-empty">
-                <button
-                    className="welcome-connect-button"
-                    onClick={handleConnect}
-                    disabled={isConnecting}
-                >
-                    {isConnecting
-                        ? <span className="icon loader-icon icon-size-16" />
-                        : <span className="icon stream-icon icon-size-16" />
-                    }
-                    <span>{t("connectToCameras")}</span>
-                </button>
                 <p className="text bg text-gray">{t("noCamerasConnected")}</p>
                 <p className="text sm text-gray">{t("waitingForCameraStreams")}</p>
             </div>
