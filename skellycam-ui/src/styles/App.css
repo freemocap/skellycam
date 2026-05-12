@@ -250,9 +250,7 @@ button.rotate-button {
 }
 
 .segmented-control-button {
-  /* global size */
-  min-width: 104px;
-  /* min-height: 22px; */
+  min-width: 0;
   transition: color var(--speed-1) ease-in-out;
 }
 

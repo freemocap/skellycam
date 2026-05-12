@@ -1,14 +1,41 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CameraConfigPanel } from '@/components/camera-config-panel/CameraConfigPanel';
 import { useAppDispatch } from '@/store';
 import { cameraDesiredConfigUpdated } from '@/store/slices/cameras/cameras-slice';
-import { Camera, CameraConfig } from '@/store/slices/cameras/cameras-types';
+import { Camera, CameraConfig, ExposureMode, RotationValue, ROTATION_OPTIONS, ROTATION_DEGREE_LABELS } from '@/store/slices/cameras/cameras-types';
+import NameDropdownSelector from '@/components/ui-components/NameDropdownSelector';
+import SegmentedControl from '@/components/ui-components/SegmentedControl';
 
 interface CameraGridSettingsModalProps {
     camera: Camera;
     initialPos: { top: number; right: number };
     onClose: () => void;
 }
+
+const PRESET_RESOLUTIONS = [
+    { width: 640, height: 480, label: '640 × 480' },
+    { width: 1280, height: 720, label: '1280 × 720' },
+    { width: 1920, height: 1080, label: '1920 × 1080' },
+];
+
+const EXPOSURE_VALUES = Array.from({ length: 10 }, (_, i) => String(-13 + i));
+
+const resolutionLabel = (config: CameraConfig): string => {
+    const preset = PRESET_RESOLUTIONS.find(
+        p => p.width === config.resolution.width && p.height === config.resolution.height
+    );
+    return preset?.label ?? `${config.resolution.width} × ${config.resolution.height}`;
+};
+
+const Row: React.FC<{ label: string; indent?: boolean; children: React.ReactNode }> = ({ label, indent, children }) => (
+    <div className="flex items-center gap-2 p-1" style={{ paddingLeft: indent ? '1.5rem' : undefined }}>
+        <p className="text md text-gray text-nowrap" style={{ minWidth: 80 }}>
+            {indent ? '└ ' : ''}{label}
+        </p>
+        <div className="flex-1 flex justify-content-flex-end">
+            {children}
+        </div>
+    </div>
+);
 
 export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = ({ camera, initialPos, onClose }) => {
     const dispatch = useAppDispatch();
@@ -21,8 +48,8 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
         return () => window.removeEventListener('keydown', handleKey);
     }, [onClose]);
 
-    const handleConfigChange = (newConfig: CameraConfig) => {
-        dispatch(cameraDesiredConfigUpdated({ cameraId: camera.id, config: newConfig }));
+    const handleConfigChange = (patch: Partial<CameraConfig>) => {
+        dispatch(cameraDesiredConfigUpdated({ cameraId: camera.id, config: { ...camera.desiredConfig, ...patch } }));
     };
 
     const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -47,30 +74,70 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
         }
     };
 
+    const config = camera.desiredConfig;
+    const isManual = config.exposure_mode === 'MANUAL';
+
     return (
         <div
-            className="camera-grid-settings-modal bg-dark border-1 border-black br-2 elevated-sharp flex flex-col p-1 gap-1 reveal fadeIn"
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 300, width: 240, overflow: 'hidden', cursor: 'grab' }}
+            className="bg-dark border-1 border-black br-2 elevated-sharp flex flex-col reveal fadeIn"
+            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 300, width: 320, cursor: 'grab' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="flex items-center justify-content-space-between bg-middark br-1 p-1">
-                <p className="text sm text-gray">Camera #{camera.index} · {camera.id}</p>
+            {/* Header */}
+            <div className="flex items-center gap-1 p-1" style={{ borderBottom: '1px solid var(--gray-700)' }}>
+                <p className="text md text-white flex-1">Camera settings</p>
                 <button className="button icon-button" onClick={onClose}>
                     <span className="icon close-icon icon-size-16" />
                 </button>
             </div>
 
-            <div className="bg-middark br-1 p-1">
-                <CameraConfigPanel
-                    config={camera.desiredConfig}
-                    onConfigChange={handleConfigChange}
-                    isExpanded={true}
-                    compact
+            {/* Rotate */}
+            <Row label="Rotate">
+                <SegmentedControl
+                    options={ROTATION_OPTIONS.map((o: RotationValue) => ({
+                        label: ROTATION_DEGREE_LABELS[o],
+                        value: String(o),
+                    }))}
+                    value={String(config.rotation ?? -1)}
+                    onChange={(v) => handleConfigChange({ rotation: Number(v) as RotationValue })}
+                    size="sm"
                 />
-            </div>
+            </Row>
+
+            {/* Resolution */}
+            <Row label="Resolution">
+                <NameDropdownSelector
+                    options={PRESET_RESOLUTIONS.map(p => p.label)}
+                    initialValue={resolutionLabel(config)}
+                    onChange={(label) => {
+                        const preset = PRESET_RESOLUTIONS.find(p => p.label === label);
+                        if (preset) handleConfigChange({ resolution: { width: preset.width, height: preset.height } });
+                    }}
+                />
+            </Row>
+
+            {/* Exposure mode */}
+            <Row label="Exposure">
+                <NameDropdownSelector
+                    options={['Manual', 'Auto']}
+                    initialValue={config.exposure_mode === 'MANUAL' ? 'Manual' : 'Auto'}
+                    onChange={(v) => handleConfigChange({ exposure_mode: (v === 'Manual' ? 'MANUAL' : 'AUTO') as ExposureMode })}
+                />
+            </Row>
+
+            {/* Exposure value — only when manual */}
+            {isManual && (
+                <Row label="Change exposure" indent>
+                    <NameDropdownSelector
+                        options={EXPOSURE_VALUES}
+                        initialValue={String(config.exposure ?? -7)}
+                        onChange={(v) => handleConfigChange({ exposure: parseInt(v) })}
+                    />
+                </Row>
+            )}
         </div>
     );
 };

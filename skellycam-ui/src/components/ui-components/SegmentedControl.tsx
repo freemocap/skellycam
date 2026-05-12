@@ -63,20 +63,21 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
 
   return (
     <div
-      className={`segmented-control-container br-1-1 gap-1 p-1 bg-middark flex main-segmented-control ${className}`}
+      className={`segmented-control-container gap-1 flex ${className}`}
     >
       {options.map((option) => (
         <button
           key={option.value}
           className={`segmented-control-button justify-center button gap-1 br-1 flex-inline items-center ${
             activeValue === option.value
-              ? "active text-white bg-dark"
+              ? "active text-white bg-black"
               : "idle text-gray"
           }`}
+          style={activeValue === option.value ? { padding: '2px 8px' } : { padding: '2px 8px', background: 'transparent' }}
           onClick={() => handleClick(option.value)}
         >
           {option.iconClass && <i className={option.iconClass} />}
-          <p className={`${textSizeClass} text text-center p-1`}>
+          <p className={`${textSizeClass} text text-center`}>
             {option.label}
           </p>
         </button>

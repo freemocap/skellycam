@@ -5,7 +5,6 @@ import {useAppDispatch, useAppSelector} from "@/store";
 import {startRecording, stopRecording} from "@/store";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
-import {CameraConfigTreeView} from "@/components/camera-config-tree-view/CameraConfigTreeView";
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
 
 interface LeftSidePanelContentProps {
@@ -109,7 +108,6 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
             {/* Main content */}
             <div className="flex flex-col gap-1 pt-1 pb-4">
                 <RecordingInfoPanel/>
-                <CameraConfigTreeView/>
             </div>
         </div>
     );
