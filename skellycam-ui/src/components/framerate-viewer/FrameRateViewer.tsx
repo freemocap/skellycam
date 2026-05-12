@@ -16,7 +16,7 @@ export const FramerateViewerPanel = () => {
     const [showHistogram, setShowHistogram] = useState(true)
 
     return (
-        <div className="framerate-viewer">
+        <div className="framerate-viewer br-1">
             {/* Header */}
             <div className="framerate-viewer-header">
                 <p className="text bg text-gray">{t('cameraPerformanceMetrics')}</p>

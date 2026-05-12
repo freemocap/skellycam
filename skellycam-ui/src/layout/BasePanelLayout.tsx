@@ -30,12 +30,20 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     useKeyboardShortcuts();
 
     return (
-        <div style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
+        <div className="main-app-container" style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
             <HeaderPanel onOpenWelcome={() => setWelcomeOpen(true)} />
-            <PanelGroup direction="vertical" style={{flex: 1}}>
-                <Panel defaultSize={87} minSize={20}>
-                    <PanelGroup direction="horizontal" style={{direction: "ltr"}}>
-                        <Panel
+            <PanelGroup className="app-container" direction="vertical" style={{flex: 1}}>
+                <Panel className="app-container-inner" defaultSize={87} minSize={20}>
+                    <PanelGroup className="app-container-sub p-1" direction="horizontal" style={{direction: "ltr"}}>
+
+
+                        <Panel 
+                                className="right-side-panel"
+                                defaultSize={76} minSize={10}>
+                            {children}
+                        </Panel>
+                        <PanelResizeHandle className="resizable-component" style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
+                        <Panel className="left-side-panel action-container bg-darkgray br-2 border-mid-black border-1"
                             ref={leftPanelRef}
                             collapsible
                             defaultSize={24}
@@ -49,18 +57,12 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                                 onToggleCollapse={handleToggleCollapse}
                             />
                         </Panel>
-
-                        <PanelResizeHandle style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
-
-                        <Panel defaultSize={76} minSize={10}>
-                            {children}
-                        </Panel>
                     </PanelGroup>
                 </Panel>
 
-                <PanelResizeHandle style={{height: "4px", cursor: "row-resize", backgroundColor: "var(--gray-600)"}} />
+                <PanelResizeHandle className="resizable-component" style={{height: "4px", cursor: "row-resize", backgroundColor: "var(--gray-600)"}} />
 
-                <Panel collapsible defaultSize={13} minSize={10} collapsedSize={4}>
+                <Panel className="console-area pr-1 pl-1 pb-1" collapsible defaultSize={13} minSize={10} collapsedSize={4}>
                     <BottomPanelContent/>
                 </Panel>
             </PanelGroup>

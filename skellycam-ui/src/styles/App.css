@@ -71,7 +71,12 @@
 
   overflow: hidden;
 }
-
+.tag {
+  background-color: var(--gray-600);
+  padding: 2px 5px 2px 5px;
+  text-align: center;
+  border-radius: 4px;
+}
 /* BUTTON STYLES AND SHAPES */
 /* Activate button */
 .activated>p {
@@ -170,7 +175,9 @@ button.rotate-button {
   button.active,
   .toggle-button, .rotate-button):active {
   transform: scale(96%);
+
 }
+
 
 .button.rotate-button:not(.primary, .secondary, .activated):hover:active,
 .toggle-button:hover:active>.button.rotate-button:not(.primary, .secondary, .activated) {
@@ -232,8 +239,9 @@ button.rotate-button {
 
 .main-segmented-control {
   position: absolute;
-  left: 9px;
-  top: 38px;
+     left: 6px;
+    top: 6px;
+    z-index: 2;
 }
 
 .active-tools-header {
@@ -351,12 +359,12 @@ a.link:hover {
   transition: filter var(--speed-1) ease-in-out;
 }
 
-a:after {
+/* a:not(.ai)::after {
   content: var(--externallink-icon);
   display: inline-block;
   position: absolute;
   margin-left: 2px;
-}
+} */
 
 /* z-index */
 .z-1 {
@@ -556,8 +564,24 @@ a:after {
 }
 
 
+.pb-1 {
+  padding-bottom: 4px;
+}
 .pb-2 {
   padding-bottom: 8px;
+}
+
+.pl-1 {
+  padding-left: 4px;
+}
+.pl-2 {
+  padding-left: 8px;
+}
+.pr-1 {
+  padding-right: 4px;
+}
+.pr-2 {
+  padding-right: 8px;
 }
 
 
@@ -582,6 +606,7 @@ a:after {
   margin: 16px;
 }
 
+/* margin-bottom */
 .mb-4 {
   margin-bottom: 16px;
 }
@@ -590,6 +615,13 @@ a:after {
 .mt-1 {
   margin-top: 4px;
 }
+.mt-3 {
+  margin-top: 12px;
+}
+.mt-4 {
+  margin-top: 16px;
+}
+
 
 /* widths/heights */
 .w-full {
@@ -721,6 +753,11 @@ a:after {
   height: 16px;
 }
 
+.icon-size-32 {
+  width: 32px;
+  height: 32px;
+}
+
 .icon-size-42 {
   width: 42px;
   height: 42px;
@@ -762,27 +799,39 @@ a:after {
 .rotate-icon {
   background-image: var(--rotate-icon);
 }
-
+.pause-icon {
+  background-image: var(--pause-icon);
+}
+.clear-icon {
+  background-image: var(--clear-icon);
+}
+.load-icon {
+  background-image: var(--load-icon);
+}
+.home-icon {
+  background-image: var(--home-icon);
+}
+.scan-icon {
+  background-image: var(--scan-icon);
+}
+.externallink-icon {
+  background-image: var(--externallink-icon);
+}
 .stream-icon {
   background-image: var(--stream-icon);
 }
-
 .streaming-icon {
   background-image: var(--streaming-icon);
 }
-
 .calibrate-icon {
   background-image: var(--calibrate-icon);
 }
-
 .explainer-icon {
   background-image: var(--explainer-icon);
 }
-
 .calibrated-icon {
   background-image: var(--calibrated-icon);
 }
-
 .subfolder-icon {
   background-image: var(--subfolder_icon);
 }
@@ -811,6 +860,18 @@ a:after {
   background-image: var(--plus-icon);
 }
 
+.checkUpdate-icon {
+  background-image: var(--checkUpdate-icon);
+}
+
+.upToDate-icon {
+  background-image: var(--upToDate-icon);
+}
+
+.updateAvailable-icon {
+  background-image: var(--updateAvailable-icon);
+}
+
 .addsubfolder-icon {
   background-image: var(--addsubfolder_icon);
 }
@@ -827,6 +888,14 @@ a:after {
 
 .import-icon {
   background-image: var(--import-icon);
+}
+
+.importVideos-icon {
+  background-image: var(--importVideos-icon);
+}
+
+.github-icon {
+  background-image: var(--github-icon);
 }
 
 .discord-icon {
@@ -1007,15 +1076,18 @@ body,
 }
 
 .top-header {
-  background-color: var(--gray-900);
-  border-bottom: 1.5px solid var(--gray-600);
+  background-color: var(--gray-800);
+  /* border-bottom: 1.5px solid var(--gray-600); */
 }
+.resizable-component { 
 
+  background-color: transparent!important;
+}
 /* ---- Welcome Page ---- */
 .welcome-modal {
-  width: 680px;
-  min-height: 400px;
-  animation: fadeIn, scaleIn;
+width: 680px;
+min-height: 400px;
+animation: fadeIn, scaleIn;
 }
 
 .welcome-modal-image-col {
@@ -1056,12 +1128,27 @@ body,
   background-color: var(--blue-800);
   transform: translateY(-1px);
 }
+.right-side-panel {
 
+  height: 100%;
+}
+.main-container  {
+  height: inherit;
+}
+.all-actions-components {
+  align-items: center;
+    justify-content: space-between;
+    align-content: center;
+    width: 100%;
+}
 .welcome-connect-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
+.mode-header{
+  min-height: 33px;
+  width: inherit;
+}
 /* ---- Toast Notification ---- */
 .toast-notification {
   position: fixed;
@@ -1078,9 +1165,17 @@ body,
   text-align: center;
 }
 
-.toast-notification.success { border-color: var(--green-100); }
-.toast-notification.error   { border-color: var(--red-500); }
-.toast-notification.info    { border-color: var(--blue-800); }
+.toast-notification.success {
+  border-color: var(--green-100);
+}
+
+.toast-notification.error {
+  border-color: var(--red-500);
+}
+
+.toast-notification.info {
+  border-color: var(--blue-800);
+}
 
 /* ---- Version badge ---- */
 .version-badge {
@@ -1088,18 +1183,30 @@ body,
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border: 1px solid var(--gray-600);
-  border-radius: 99px;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
   font-family: monospace;
   font-size: 0.75rem;
   color: var(--gray-400);
   transition: border-color var(--speed-1), color var(--speed-1);
+  /* background-color: var(--gray-800); */
 }
 
-.version-badge:hover { border-color: var(--gray-400); color: var(--gray-100); }
-.version-badge.success { border-color: var(--green-100); color: var(--green-100); }
-.version-badge:disabled { opacity: 0.5; cursor: not-allowed; }
+.version-badge:hover {
+  border-color: var(--gray-400);
+  color: var(--gray-100);
+}
+
+.version-badge.success {
+  border-color: var(--green-100);
+  color: var(--green-100);
+}
+
+.version-badge:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ---- Language switcher ---- */
 .language-dropdown-container {
@@ -1126,8 +1233,13 @@ body,
   padding: 6px 8px;
 }
 
-.language-option:hover { background-color: var(--gray-600); }
-.language-option.selected { background-color: var(--gray-700); }
+.language-option:hover {
+  background-color: var(--gray-600);
+}
+
+.language-option.selected {
+  background-color: var(--gray-700);
+}
 
 .translation-badge {
   display: inline-flex;
@@ -1141,9 +1253,20 @@ body,
   text-decoration: none;
 }
 
-.translation-badge.ai     { border-color: var(--warning-500); color: var(--warning-500); }
-.translation-badge.human  { border-color: var(--blue-800);    color: var(--blue-800); }
-.translation-badge.native { border-color: var(--green-100);   color: var(--green-100); }
+.translation-badge.ai {
+  border-color: var(--warning-500);
+  color: var(--warning-500);
+}
+
+.translation-badge.human {
+  border-color: var(--blue-800);
+  color: var(--blue-800);
+}
+
+.translation-badge.native {
+  border-color: var(--green-100);
+  color: var(--green-100);
+}
 
 /* ---- Footer / Bottom Info Panel ---- */
 .bottom-info-container {
@@ -1203,6 +1326,20 @@ body,
   background-size: contain;
 }
 
+.splashmodal-mini-menu-container {
+  /* position: absolute; */
+  top: 5px;
+  left: 5px;
+}
+
+.version-button-container {
+  /* position: absolute; */
+  top: 284px;
+  left: 0px;
+  /* display: block; */
+  text-wrap: nowrap;
+}
+
 .splash-image-logo-container {
   background-image: url(/images/logo_name.svg);
   background-repeat: no-repeat;
@@ -1210,6 +1347,15 @@ body,
   width: 88px;
   height: 28px;
   opacity: 0.5;
+}
+
+.footer-content {
+  /* position: absolute; */
+  bottom: -30px;
+  left: 50%;
+  opacity: 0.5;
+  text-wrap: nowrap;
+  transform: translateX(-50%);
 }
 
 /* --------- ui components styles -------- */
@@ -1466,6 +1612,7 @@ input[type="checkbox"]:disabled {
   }
 
 }
+
 /* Sidebar navigation tab buttons */
 .sidebar-nav-cameras {
   background-color: var(--green-900);
@@ -1507,14 +1654,25 @@ input[type="checkbox"]:disabled {
   flex-shrink: 0;
 }
 
-.update-banner-error   { background-color: var(--red-600);   color: var(--gray-100); }
-.update-banner-info    { background-color: var(--blue-900);  color: var(--blue-100); }
-.update-banner-success { background-color: var(--green-900); color: var(--green-100); }
+.update-banner-error {
+  background-color: var(--red-600);
+  color: var(--gray-100);
+}
+
+.update-banner-info {
+  background-color: var(--blue-900);
+  color: var(--blue-100);
+}
+
+.update-banner-success {
+  background-color: var(--green-900);
+  color: var(--green-100);
+}
 
 .update-progress-track {
   height: 4px;
   border-radius: 2px;
-  background-color: rgba(255,255,255,0.2);
+  background-color: rgba(255, 255, 255, 0.2);
   overflow: hidden;
   margin-top: 4px;
 }

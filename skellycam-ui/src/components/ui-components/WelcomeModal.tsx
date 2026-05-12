@@ -108,7 +108,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
             onClick={onClose}
         >
             <div
-                className="pos-rel welcome-modal br-2 flex flex-col p-1 bg-dark border-1 border-black"
+                className="pos-rel splash-modal fade reveal main-container br-2 flex flex-col p-1 bg-dark border-1 border-black"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="overflow-hidden flex-1 bg-middark br-1 flex flex-row gap-3 p-2">
@@ -121,11 +121,12 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                     </button>
 
                     {/* Left column — logo */}
-                    <div className="welcome-modal-image-col flex flex-1 items-center justify-center">
-                        {logoDataUrl
-                            ? <img src={logoDataUrl} alt="SkellyCam Logo" className="welcome-modal-logo" />
-                            : <img src="/skellycam-logo.png" alt="SkellyCam Logo" className="welcome-modal-logo" />
-                        }
+                    <div className="splash-image-container flex flex-1">
+                        
+                        {/* <div className="splash-image-logo-container m-2" /> */}
+                        
+                         
+                        
                     </div>
 
                     {/* Right column — content */}
@@ -142,12 +143,12 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                             <div className="flex gap-2">
                                 <ButtonCard
                                     text={t('connectToCameras')}
-                                    iconClass="stream-icon icon-size-42"
+                                    iconClass="live-icon icon-size-42"
                                     onClick={handleGoToCameras}
                                 />
                                 <ButtonCard
                                     text={t('videoPlayback')}
-                                    iconClass="video-icon icon-size-42"
+                                    iconClass="importVideos-icon icon-size-42"
                                     onClick={handleGoToPlayback}
                                 />
                             </div>
@@ -161,7 +162,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                                 />
                             )}
 
-                            <div className="flex items-center gap-2">
+                            <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2">
                                 <LanguageSwitcher />
                                 <VersionChip variant="compact" />
                             </div>
@@ -183,13 +184,13 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                                 textColor="text-gray"
                                 onClick={() => window.open(EXTERNAL_URLS.DISCORD, '_blank')}
                             />
-                            <ButtonSm
+                            {/* <ButtonSm
                                 iconClass=""
                                 text={t('roadmap')}
                                 rightSideIcon="externallink"
                                 textColor="text-gray"
                                 onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
-                            />
+                            /> */}
                             <Footer />
                         </div>
                     </div>

@@ -46,8 +46,8 @@ export default function DropdownButton({
       setPopupStyle({
         position: "fixed",
         top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-        zIndex: 200,
+        left: 8, /* window.innerWidth - rect.right, */
+        zIndex: 10,
       });
     }
     setOpen((prev) => !prev);

@@ -59,7 +59,7 @@ export const LanguageSwitcher: React.FC = () => {
             <div ref={containerRef} className="language-dropdown-container">
                 {/* Trigger */}
                 <button
-                    className="gap-1 br-1 button sm fit-content flex-inline items-center border-1 border-mid-black dropdown"
+                    className="gap-1 br-1 button sm fit-content flex-inline items-center dropdown"
                     onClick={() => setOpen((prev) => !prev)}
                 >
                     <FlagIcon countryCode={currentLocaleData?.flag ?? ""} />

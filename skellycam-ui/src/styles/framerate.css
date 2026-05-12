@@ -9,7 +9,7 @@
   overflow: hidden;
   padding: 4px;
   gap: 4px;
-  background-color: var(--gray-700);
+  /* background-color: var(--gray-700); */
 }
 
 .framerate-viewer-header {

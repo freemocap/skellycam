@@ -17,7 +17,7 @@ export const CamerasPage = () => {
     }, []);
 
     return (
-        <div className="cameras-page">
+        <div className="cameras-page p-0">
             <CamerasViewSettingsOverlay
                 onSettingsChange={handleSettingsChange}
                 onResetLayout={handleResetLayout}
