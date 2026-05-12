@@ -1,4 +1,9 @@
+# OpenCV environment variables for the `opencv` Rust crate.
+# Using C:\opencv (4.10.0, manual install) because it has both
+# videoio_ffmpeg and videoio_msmf backends. The chocolatey install
+# (C:\tools\opencv, 4.13.0) is missing the MSMF backend DLL, which
+# can cause MJPEG decode to fall back to a slow software path.
 [env]
-OPENCV_LINK_LIBS = "opencv_world4130"
-OPENCV_LINK_PATHS = "C:\\tools\\opencv\\build\\x64\\vc16\\lib"
-OPENCV_INCLUDE_PATHS = "C:\\tools\\opencv\\build\\include"
+OPENCV_LINK_LIBS = "opencv_world4100"
+OPENCV_LINK_PATHS = "C:\\opencv\\build\\x64\\vc16\\lib"
+OPENCV_INCLUDE_PATHS = "C:\\opencv\\build\\include"

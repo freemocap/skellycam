@@ -7,6 +7,9 @@ edition = "2024"
 # Camera capture — OpenCV (DirectShow/V4L2/AVFoundation)
 opencv = { version = "0.98", default-features = false, features = ["videoio", "imgproc", "imgcodecs"] }
 
+# Signal handling (Ctrl+C)
+ctrlc = "3"
+
 # Image processing (rotate, resize, JPEG encode/decode)
 image = "0.25"
 

@@ -1,12 +1,27 @@
-//! Phase 1: Single camera test — verify 30fps at 1280x720.
+//! Phase 1/2: Camera test harness.
+//!
+//! IMPORTANT: Always use `cargo run --release` for real performance testing.
+//! Debug builds are significantly slower — frame rate may drop below 30fps
+//! and timing diagnostics will not reflect actual capture performance.
+//!
+//! Usage:
+//!   cargo run --release -- --detect    # enumerate cameras
+//!   cargo run --release                # single-camera test (index 0)
 
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-use skellycam::camera::{self, CameraEvent, CameraIdentity};
+use skellycam::camera::{self, enumerate_directshow_cameras, CameraEvent, CameraIdentity};
 
 fn main() -> anyhow::Result<()> {
+    if cfg!(debug_assertions) {
+        eprintln!(
+            "WARNING: Running in debug mode. Use `cargo run --release` for full performance.\n"
+        );
+    }
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -14,6 +29,30 @@ fn main() -> anyhow::Result<()> {
         )
         .init();
 
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|arg| arg == "--detect") {
+        return run_detection();
+    }
+
+    run_single_camera()
+}
+
+fn run_detection() -> anyhow::Result<()> {
+    let cameras = enumerate_directshow_cameras()?;
+    if cameras.is_empty() {
+        eprintln!("No cameras found.");
+    } else {
+        eprintln!(
+            "Found {} camera{} total.",
+            cameras.len(),
+            if cameras.len() == 1 { "" } else { "s" }
+        );
+    }
+    Ok(())
+}
+
+fn run_single_camera() -> anyhow::Result<()> {
     let index: u32 = 0;
     let requested_width: u32 = 1280;
     let requested_height: u32 = 720;
@@ -35,18 +74,34 @@ fn main() -> anyhow::Result<()> {
     let (handle, event_receiver, frame_receiver) =
         camera::spawn_camera_thread(index, requested_width, requested_height, identity);
 
+    let running = Arc::new(AtomicBool::new(true));
+    let running_flag = running.clone();
+
+    // Install CTRL+C handler — sets the flag so the loop can exit cleanly
+    let _ = ctrlc::set_handler(move || {
+        eprintln!("\nCtrl+C received, shutting down...");
+        running_flag.store(false, Ordering::SeqCst);
+    });
+
     let mut start: Option<Instant> = None;
     let mut frame_count: u64 = 0;
     let mut last_report = Instant::now();
 
     loop {
+        if !running.load(Ordering::SeqCst) {
+            eprintln!("Shutdown requested, exiting loop.");
+            break;
+        }
+
         while let Ok(event) = event_receiver.try_recv() {
             match event {
                 CameraEvent::Error(msg) => eprintln!("ERROR: {msg}"),
             }
         }
 
-        match frame_receiver.recv() {
+        // Use recv_timeout so the loop can periodically check the running flag
+        // and respond to CTRL+C instead of blocking indefinitely
+        match frame_receiver.recv_timeout(Duration::from_millis(100)) {
             Ok(packet) => {
                 if start.is_none() {
                     start = Some(Instant::now());
@@ -66,7 +121,7 @@ fn main() -> anyhow::Result<()> {
 
                 if frame_count % 30 == 0 {
                     let elapsed = last_report.elapsed();
-                    let fps = 30.0 / elapsed.as_secs_f64();
+                    let fps = 30.0_f64 / elapsed.as_secs_f64();
                     println!(
                         "Frame {:>5} | {:>5.1} fps | {}x{}",
                         packet.frame_number, fps, packet.width, packet.height,
@@ -79,7 +134,14 @@ fn main() -> anyhow::Result<()> {
                     break;
                 }
             }
-            Err(mpsc::RecvError) => break,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                // No frame yet — loop back to check running flag and events
+                continue;
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                eprintln!("Camera channel disconnected.");
+                break;
+            }
         }
     }
 
@@ -91,6 +153,8 @@ fn main() -> anyhow::Result<()> {
             frame_count as f64 / total.as_secs_f64(),
         );
     }
+    eprintln!("Shutting down camera...");
     drop(handle);
+    eprintln!("Done.");
     Ok(())
 }

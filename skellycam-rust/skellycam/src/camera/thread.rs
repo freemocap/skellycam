@@ -45,89 +45,119 @@ pub fn spawn_camera_thread(
             }
         };
 
+        const MAX_FAIL_COUNT: u32 = 30;
+
         let mut width: u32 = 0;
         let mut height: u32 = 0;
         let mut frame_number: i64 = 0;
         let mut previous_timestamp: i64 = 0;
         let mut total_interval_ns: f64 = 0.0;
+        let mut total_read_ns: f64 = 0.0;
         let mut total_wait_ns: f64 = 0.0;
         let mut sample_count: u64 = 0;
+        let mut fail_count: u32 = 0;
         let mut frame = Mat::default();
 
         loop {
-            let mut should_shutdown = false;
             loop {
                 match command_receiver.try_recv() {
-                    Ok(CameraCommand::Shutdown) => { should_shutdown = true; break; }
-                    Err(mpsc::TryRecvError::Empty) => break,
-                    Err(mpsc::TryRecvError::Disconnected) => { should_shutdown = true; break; }
-                }
-            }
-            if should_shutdown {
-                let _ = capture.release();
-                tracing::info!("Camera {label} exiting.");
-                return;
-            }
-
-            match capture.read(&mut frame) {
-                Ok(true) => {
-                    let timestamp = performance_counter_nanoseconds();
-
-                    if frame_number > 0 {
-                        total_interval_ns += (timestamp - previous_timestamp) as f64;
-                        sample_count += 1;
-                    }
-                    previous_timestamp = timestamp;
-
-                    if width == 0 {
-                        width = frame.cols() as u32;
-                        height = frame.rows() as u32;
-                        tracing::info!("Camera {label}: {width}x{height}");
-                    }
-
-                    let bgr = frame.data_bytes().unwrap_or(&[]).to_vec();
-
-                    let packet = FramePacket {
-                        data: FrameData::Bgr(bgr),
-                        width,
-                        height,
-                        grab_timestamp_nanoseconds: timestamp,
-                        identity: identity.clone(),
-                        frame_number,
-                    };
-                    frame_number += 1;
-
-                    let send_start = performance_counter_nanoseconds();
-                    let send_result = frame_sender.send(packet);
-                    let send_end = performance_counter_nanoseconds();
-                    total_wait_ns += (send_end - send_start) as f64;
-
-                    if frame_number % 60 == 0 && sample_count > 0 {
-                        let avg_interval_ms = total_interval_ns / sample_count as f64 / 1_000_000.0;
-                        let fps = 1_000_000_000.0 / (total_interval_ns / sample_count as f64);
-                        let wait_us = total_wait_ns / 60.0 / 1_000.0;
-                        eprintln!(
-                            "[{id}] {fps:>5.1} fps | grab {grab:>5.0} µs | wait {wait_us:>5.0} µs",
-                            id = identity.unique_identifier,
-                            grab = avg_interval_ms * 1_000.0,
-                        );
-                        total_interval_ns = 0.0;
-                        total_wait_ns = 0.0;
-                        sample_count = 0;
-                    }
-
-                    if send_result.is_err() {
+                    Ok(CameraCommand::Shutdown) => {
                         let _ = capture.release();
+                        tracing::info!("Camera {label} exiting.");
+                        return;
+                    }
+                    Err(mpsc::TryRecvError::Empty) => break,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        let _ = capture.release();
+                        tracing::info!("Camera {label} exiting (disconnected).");
                         return;
                     }
                 }
-                Ok(false) => continue,
-                Err(error) => {
-                    let _ = event_sender.send(CameraEvent::Error(format!(
-                        "Read error on {label}: {error}"
-                    )));
+            }
+
+            // --- read: combined grab+retrieve (using read() because separate
+            //     grab()/retrieve_def() showed 53ms retrieve times on some systems) ---
+            let pre_grab = performance_counter_nanoseconds();
+            match capture.read(&mut frame) {
+                Ok(true) => {}
+                Ok(false) => {
+                    fail_count += 1;
+                    tracing::warn!("Camera {label}: read returned false (fail {fail_count}/{MAX_FAIL_COUNT})");
+                    if fail_count >= MAX_FAIL_COUNT {
+                        let _ = event_sender.send(CameraEvent::Error(format!(
+                            "Too many read misses on {label}"
+                        )));
+                        let _ = capture.release();
+                        return;
+                    }
                     continue;
                 }
+                Err(error) => {
+                    fail_count += 1;
+                    tracing::warn!("Camera {label}: read error (fail {fail_count}/{MAX_FAIL_COUNT}): {error}");
+                    if fail_count >= MAX_FAIL_COUNT {
+                        let _ = event_sender.send(CameraEvent::Error(format!(
+                            "Too many read failures on {label}: {error}"
+                        )));
+                        let _ = capture.release();
+                        return;
+                    }
+                    continue;
+                }
+            };
+            let post_retrieve = performance_counter_nanoseconds();
+
+            // Success — reset fail counter
+            fail_count = 0;
+
+            if frame_number > 0 {
+                total_interval_ns += (pre_grab - previous_timestamp) as f64;
+                sample_count += 1;
+            }
+            previous_timestamp = pre_grab;
+
+            total_read_ns += (post_retrieve - pre_grab) as f64;
+
+            if width == 0 {
+                width = frame.cols() as u32;
+                height = frame.rows() as u32;
+                tracing::info!("Camera {label}: {width}x{height}");
+            }
+
+            let bgr = frame.data_bytes().unwrap_or(&[]).to_vec();
+
+            let packet = FramePacket {
+                data: FrameData::Bgr(bgr),
+                width,
+                height,
+                grab_timestamp_nanoseconds: pre_grab,
+                identity: identity.clone(),
+                frame_number,
+            };
+            frame_number += 1;
+
+            let send_start = performance_counter_nanoseconds();
+            let send_result = frame_sender.send(packet);
+            let send_end = performance_counter_nanoseconds();
+            total_wait_ns += (send_end - send_start) as f64;
+
+            if frame_number % 60 == 0 && sample_count > 0 {
+                let fps = 1_000_000_000.0 / (total_interval_ns / sample_count as f64);
+                let read_us = total_read_ns / 60.0 / 1_000.0;
+                let wait_us = total_wait_ns / 60.0 / 1_000.0;
+                eprintln!(
+                    "[{id}] {fps:>5.1} fps | read {read_us:>6.0} µs | wait {wait_us:>5.0} µs",
+                    id = identity.unique_identifier,
+                );
+                total_interval_ns = 0.0;
+                total_read_ns = 0.0;
+                total_wait_ns = 0.0;
+                sample_count = 0;
+            }
+
+            if send_result.is_err() {
+                let _ = capture.release();
+                return;
             }
         }
     });
@@ -135,15 +165,7 @@ pub fn spawn_camera_thread(
     (handle, event_receiver, frame_receiver)
 }
 
-fn decode_fourcc(fourcc: u32) -> String {
-    let bytes = [
-        (fourcc & 0xFF) as u8,
-        ((fourcc >> 8) & 0xFF) as u8,
-        ((fourcc >> 16) & 0xFF) as u8,
-        ((fourcc >> 24) & 0xFF) as u8,
-    ];
-    String::from_utf8_lossy(&bytes).to_string()
-}
+// decode_fourcc is now in super::decode_fourcc (camera/mod.rs)
 
 fn open_camera(
     index: u32,
@@ -183,7 +205,7 @@ fn open_camera(
     let actual_w = capture.get(videoio::CAP_PROP_FRAME_WIDTH).unwrap_or(-1.0);
     let actual_h = capture.get(videoio::CAP_PROP_FRAME_HEIGHT).unwrap_or(-1.0);
     let fourcc_val = capture.get(videoio::CAP_PROP_FOURCC).unwrap_or(-1.0) as u32;
-    let fourcc_str = decode_fourcc(fourcc_val);
+    let fourcc_str = super::decode_fourcc(fourcc_val);
     let actual_fps = capture.get(videoio::CAP_PROP_FPS).unwrap_or(-1.0);
     let backend = capture
         .get_backend_name()
