@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# Camera capture — OpenCV (DirectShow/V4L2/AVFoundation)
-opencv = { version = "0.98", default-features = false, features = ["videoio", "imgproc", "imgcodecs"] }
-
 # Signal handling (Ctrl+C)
 ctrlc = "3"
 

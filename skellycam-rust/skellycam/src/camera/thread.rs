@@ -1,15 +1,14 @@
-//! Camera thread: OpenCV DirectShow capture.
+//! Camera thread: openpnp-capture DirectShow capture on a dedicated OS thread.
 
 use std::sync::mpsc;
 use std::thread;
 
-use anyhow::Context;
-use opencv::core::Mat;
-use opencv::prelude::*;
-use opencv::videoio;
-
+use super::ffi::*;
 use super::types::{CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData, FramePacket};
 use crate::timestamps::performance::performance_counter_nanoseconds;
+
+const TARGET_EXPOSURE: i32 = -7;
+const STABILIZATION_FRAMES: u32 = 30;
 
 pub fn spawn_camera_thread(
     index: u32,
@@ -28,109 +27,126 @@ pub fn spawn_camera_thread(
     let handle = CameraHandle {
         command_sender: command_sender.clone(),
         identity: identity.clone(),
-        width: 0,
-        height: 0,
+        width: requested_width,
+        height: requested_height,
     };
 
     let label = identity.label();
 
     thread::spawn(move || {
-        let mut capture = match open_camera(index, requested_width, requested_height) {
-            Ok(cap) => cap,
+        let result = run_camera_thread(
+            index,
+            requested_width,
+            requested_height,
+            &identity,
+            &label,
+            &command_receiver,
+            &event_sender,
+            &frame_sender,
+        );
+        if let Err(error) = result {
+            let _ = event_sender.send(CameraEvent::Error(format!(
+                "Camera {label} thread error: {error}"
+            )));
+        }
+    });
+
+    (handle, event_receiver, frame_receiver)
+}
+
+fn run_camera_thread(
+    index: u32,
+    requested_width: u32,
+    requested_height: u32,
+    identity: &CameraIdentity,
+    label: &str,
+    command_receiver: &mpsc::Receiver<CameraCommand>,
+    event_sender: &mpsc::Sender<CameraEvent>,
+    frame_sender: &mpsc::SyncSender<FramePacket>,
+) -> anyhow::Result<()> {
+    unsafe {
+        let ctx = Cap_createContext();
+        if ctx.is_null() {
+            anyhow::bail!("Cap_createContext returned null");
+        }
+
+        let open_result = open_camera_stream(ctx, index, requested_width, requested_height, label);
+        let (stream, actual_width, actual_height) = match open_result {
+            Ok(v) => v,
             Err(error) => {
-                let _ = event_sender.send(CameraEvent::Error(format!(
-                    "Failed to open camera {label}: {error}"
-                )));
-                return;
+                Cap_releaseContext(ctx);
+                return Err(error);
             }
         };
 
-        const MAX_FAIL_COUNT: u32 = 30;
+        configure_exposure(ctx, stream, label);
+        stabilize(ctx, stream, actual_width, actual_height);
 
-        let mut width: u32 = 0;
-        let mut height: u32 = 0;
+        tracing::info!("Camera {label}: capture loop starting ({actual_width}x{actual_height})");
+
+        let frame_bytes = (actual_width * actual_height * 3) as usize;
+        let mut buffer: Vec<u8> = vec![0u8; frame_bytes];
         let mut frame_number: i64 = 0;
         let mut previous_timestamp: i64 = 0;
         let mut total_interval_ns: f64 = 0.0;
         let mut total_read_ns: f64 = 0.0;
         let mut total_wait_ns: f64 = 0.0;
         let mut sample_count: u64 = 0;
-        let mut fail_count: u32 = 0;
-        let mut frame = Mat::default();
 
         loop {
-            loop {
-                match command_receiver.try_recv() {
-                    Ok(CameraCommand::Shutdown) => {
-                        let _ = capture.release();
-                        tracing::info!("Camera {label} exiting.");
-                        return;
-                    }
-                    Err(mpsc::TryRecvError::Empty) => break,
-                    Err(mpsc::TryRecvError::Disconnected) => {
-                        let _ = capture.release();
-                        tracing::info!("Camera {label} exiting (disconnected).");
-                        return;
-                    }
+            match command_receiver.try_recv() {
+                Ok(CameraCommand::Shutdown) => {
+                    tracing::info!("Camera {label}: shutdown command received");
+                    break;
+                }
+                Err(mpsc::TryRecvError::Empty) => {}
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    tracing::info!("Camera {label}: command channel disconnected");
+                    break;
                 }
             }
 
-            // --- read: combined grab+retrieve (using read() because separate
-            //     grab()/retrieve_def() showed 53ms retrieve times on some systems) ---
-            let pre_grab = performance_counter_nanoseconds();
-            match capture.read(&mut frame) {
-                Ok(true) => {}
-                Ok(false) => {
-                    fail_count += 1;
-                    tracing::warn!("Camera {label}: read returned false (fail {fail_count}/{MAX_FAIL_COUNT})");
-                    if fail_count >= MAX_FAIL_COUNT {
-                        let _ = event_sender.send(CameraEvent::Error(format!(
-                            "Too many read misses on {label}"
-                        )));
-                        let _ = capture.release();
-                        return;
-                    }
-                    continue;
+            let wait_start = std::time::Instant::now();
+            loop {
+                if Cap_hasNewFrame(ctx, stream) != 0 {
+                    break;
                 }
-                Err(error) => {
-                    fail_count += 1;
-                    tracing::warn!("Camera {label}: read error (fail {fail_count}/{MAX_FAIL_COUNT}): {error}");
-                    if fail_count >= MAX_FAIL_COUNT {
-                        let _ = event_sender.send(CameraEvent::Error(format!(
-                            "Too many read failures on {label}: {error}"
-                        )));
-                        let _ = capture.release();
-                        return;
-                    }
-                    continue;
+                std::thread::yield_now();
+                if wait_start.elapsed().as_secs() > 5 {
+                    let _ = event_sender.send(CameraEvent::Error(format!(
+                        "Camera {label}: timeout waiting for frame {frame_number}"
+                    )));
+                    Cap_closeStream(ctx, stream);
+                    Cap_releaseContext(ctx);
+                    return Ok(());
                 }
-            };
-            let post_retrieve = performance_counter_nanoseconds();
+            }
 
-            // Success — reset fail counter
-            fail_count = 0;
+            let pre_capture = performance_counter_nanoseconds();
+            let result = Cap_captureFrame(ctx, stream, buffer.as_mut_ptr(), frame_bytes as u32);
+            let post_capture = performance_counter_nanoseconds();
+
+            if result != CAPRESULT_OK {
+                let _ = event_sender.send(CameraEvent::Error(format!(
+                    "Camera {label}: captureFrame failed at frame {frame_number} ({})",
+                    result_name(result)
+                )));
+                break;
+            }
+
+            total_read_ns += (post_capture - pre_capture) as f64;
 
             if frame_number > 0 {
-                total_interval_ns += (pre_grab - previous_timestamp) as f64;
+                total_interval_ns += (pre_capture - previous_timestamp) as f64;
                 sample_count += 1;
             }
-            previous_timestamp = pre_grab;
-
-            total_read_ns += (post_retrieve - pre_grab) as f64;
-
-            if width == 0 {
-                width = frame.cols() as u32;
-                height = frame.rows() as u32;
-                tracing::info!("Camera {label}: {width}x{height}");
-            }
-
-            let bgr = frame.data_bytes().unwrap_or(&[]).to_vec();
+            previous_timestamp = pre_capture;
 
             let packet = FramePacket {
-                data: FrameData::Bgr(bgr),
-                width,
-                height,
-                grab_timestamp_nanoseconds: pre_grab,
+                data: FrameData::Rgb(buffer.clone()),
+                width: actual_width,
+                height: actual_height,
+                grab_timestamp_nanoseconds: pre_capture,
                 identity: identity.clone(),
                 frame_number,
             };
@@ -156,76 +172,110 @@ pub fn spawn_camera_thread(
             }
 
             if send_result.is_err() {
-                let _ = capture.release();
-                return;
+                tracing::info!("Camera {label}: frame receiver dropped, exiting");
+                break;
             }
         }
-    });
 
-    (handle, event_receiver, frame_receiver)
+        Cap_closeStream(ctx, stream);
+        Cap_releaseContext(ctx);
+        tracing::info!("Camera {label}: shutdown complete");
+    }
+    Ok(())
 }
 
-// decode_fourcc is now in super::decode_fourcc (camera/mod.rs)
-
-fn open_camera(
+unsafe fn open_camera_stream(
+    ctx: CapContext,
     index: u32,
     requested_width: u32,
     requested_height: u32,
-) -> anyhow::Result<videoio::VideoCapture> {
-    let mut capture = videoio::VideoCapture::new(index as i32, videoio::CAP_DSHOW)
-        .context("Failed to open camera with DirectShow")?;
-
-    if !capture.is_opened()? {
-        anyhow::bail!("Camera {index} opened but is_opened() returned false.");
+    label: &str,
+) -> anyhow::Result<(CapStream, u32, u32)> {
+    let device_count = unsafe { Cap_getDeviceCount(ctx) };
+    if index >= device_count {
+        anyhow::bail!("Camera index {index} not found (only {device_count} devices)");
     }
 
-    let mjpeg = 0x47504A4Du32 as f64; // fourcc('M','J','P','G')
-
-    // --- Phase A: pre-read config (matching Python create_cv2_video_capture) ---
-    let _ = capture.set(videoio::CAP_PROP_FOURCC, mjpeg);
-    if requested_width > 0 {
-        let _ = capture.set(videoio::CAP_PROP_FRAME_WIDTH, requested_width as f64);
-        let _ = capture.set(videoio::CAP_PROP_FRAME_HEIGHT, requested_height as f64);
+    let num_formats = unsafe { Cap_getNumFormats(ctx, index) };
+    if num_formats <= 0 {
+        anyhow::bail!("Camera {label}: no formats available");
     }
-    let _ = capture.set(videoio::CAP_PROP_BUFFERSIZE, 1.0);
 
-    // --- Warmup read: starts the DirectShow streaming graph ---
-    let mut warmup = Mat::default();
-    let read_ok = capture.read(&mut warmup)?;
-    let warmup_size = if read_ok { warmup.size().unwrap_or_default() } else { opencv::core::Size::default() };
+    let mut chosen_format: Option<CapFormatID> = None;
+    let mut chosen_info = CapFormatInfo::default();
 
-    // --- Phase B: post-read config ---
-    // FOURCC must be set AGAIN after the first read().
-    // Do NOT re-set W/H here — changing resolution after the graph
-    // is running can trigger a media type renegotiation that resets
-    // the FOURCC back to the camera's default.
-    let _ = capture.set(videoio::CAP_PROP_FOURCC, mjpeg);
+    for f in 0..num_formats {
+        let mut info = CapFormatInfo::default();
+        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK {
+            if info.fourcc == FOURCC_MJPG
+                && info.width == requested_width
+                && info.height == requested_height
+            {
+                chosen_format = Some(f as CapFormatID);
+                chosen_info = info;
+                break;
+            }
+        }
+    }
 
-    // --- Read back actual config ---
-    let actual_w = capture.get(videoio::CAP_PROP_FRAME_WIDTH).unwrap_or(-1.0);
-    let actual_h = capture.get(videoio::CAP_PROP_FRAME_HEIGHT).unwrap_or(-1.0);
-    let fourcc_val = capture.get(videoio::CAP_PROP_FOURCC).unwrap_or(-1.0) as u32;
-    let fourcc_str = super::decode_fourcc(fourcc_val);
-    let actual_fps = capture.get(videoio::CAP_PROP_FPS).unwrap_or(-1.0);
-    let backend = capture
-        .get_backend_name()
-        .unwrap_or_else(|_| "unknown".to_string());
+    if chosen_format.is_none() {
+        for f in 0..num_formats {
+            let mut info = CapFormatInfo::default();
+            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
+                && info.fourcc == FOURCC_MJPG
+            {
+                chosen_format = Some(f as CapFormatID);
+                chosen_info = info;
+                break;
+            }
+        }
+    }
 
-    eprintln!();
-    eprintln!("╔══════════════════════════════════════════╗");
-    eprintln!("║  CAMERA {index} CONFIG                       ║", );
-    eprintln!("╠══════════════════════════════════════════╣");
-    eprintln!("║  BACKEND:  {backend:<30} ║");
-    eprintln!("║  FOURCC:   {fourcc_str:<30} ║");
-    eprintln!("║  FOURCC hex: 0x{fourcc_val:08X}                  ║");
-    eprintln!("║  RESOLUTION: {actual_w}x{actual_h:<30} ║");
-    eprintln!("║  FPS:       {actual_fps:<30} ║");
-    eprintln!("║  WARMUP:    ok={read_ok}  {warmup_w}x{warmup_h}              ║",
-        warmup_w = warmup_size.width,
-        warmup_h = warmup_size.height,
+    let format_id = chosen_format
+        .ok_or_else(|| anyhow::anyhow!("Camera {label}: no MJPG format found"))?;
+
+    tracing::info!(
+        "Camera {label}: using format {format_id} ({}x{} @{}fps MJPG)",
+        chosen_info.width,
+        chosen_info.height,
+        chosen_info.fps,
     );
-    eprintln!("╚══════════════════════════════════════════╝");
-    eprintln!();
 
-    Ok(capture)
+    let stream = unsafe { Cap_openStream(ctx, index, format_id) };
+    if stream < 0 {
+        anyhow::bail!("Camera {label}: Cap_openStream returned {stream}");
+    }
+
+    Ok((stream, chosen_info.width, chosen_info.height))
+}
+
+unsafe fn configure_exposure(ctx: CapContext, stream: CapStream, label: &str) {
+    let mut min: i32 = 0;
+    let mut max: i32 = 0;
+    let mut default: i32 = 0;
+    let r = unsafe {
+        Cap_getPropertyLimits(ctx, stream, CAPPROPID_EXPOSURE, &mut min, &mut max, &mut default)
+    };
+    tracing::info!(
+        "Camera {label}: exposure limits min={min} max={max} default={default} ({})",
+        result_name(r)
+    );
+
+    unsafe { Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 0) };
+    let r = unsafe { Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, TARGET_EXPOSURE) };
+    tracing::info!("Camera {label}: exposure set to {TARGET_EXPOSURE} ({})", result_name(r));
+}
+
+unsafe fn stabilize(ctx: CapContext, stream: CapStream, width: u32, height: u32) {
+    let frame_bytes = (width * height * 3) as usize;
+    let mut buffer: Vec<u8> = vec![0u8; frame_bytes];
+    for _ in 0..STABILIZATION_FRAMES {
+        loop {
+            if unsafe { Cap_hasNewFrame(ctx, stream) } != 0 {
+                break;
+            }
+            std::thread::yield_now();
+        }
+        unsafe { Cap_captureFrame(ctx, stream, buffer.as_mut_ptr(), frame_bytes as u32) };
+    }
 }

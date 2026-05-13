@@ -5,13 +5,19 @@ use std::sync::mpsc;
 /// Frame pixel data format.
 #[derive(Debug, Clone)]
 pub enum FrameData {
-    Bgr(Vec<u8>),
+    Rgb(Vec<u8>),
 }
 
 impl FrameData {
     pub fn len(&self) -> usize {
         match self {
-            Self::Bgr(bytes) => bytes.len(),
+            Self::Rgb(bytes) => bytes.len(),
+        }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            Self::Rgb(bytes) => bytes,
         }
     }
 }

@@ -1,0 +1,5 @@
+[package]
+name = "openpnp-capture-poc"
+version = "0.1.0"
+edition = "2021"
+description = "Proof of concept: openpnp-capture C library via Rust FFI"

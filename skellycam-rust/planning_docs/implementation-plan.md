@@ -1,14 +1,17 @@
 # SkellyCam Rust — Implementation Plan
 
-Status: **IN PROGRESS — Phase 1 complete, Phase 2 active**
+Status: **IN PROGRESS — Phase 1 updated (openpnp-capture PoC complete), Phase 2 active**
 
 Based on 9 analysis artifacts covering every component of the Python backend.
+Updated 2026-05-13: Replaced OpenCV with openpnp-capture based on PoC findings.
 
 ---
 
 ## Overview
 
-Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a single Rust binary (Axum + OpenCV + tokio). The frontend (Electron/React) remains unchanged. The HTTP API and WebSocket binary protocol are preserved bit-for-bit.
+Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a single Rust binary (Axum + openpnp-capture + tokio). The frontend (Electron/React) remains unchanged. The HTTP API and WebSocket binary protocol are preserved bit-for-bit.
+
+Camera capture uses the **openpnp-capture** C library (MIT licensed, cross-platform DirectShow/V4L2/AVFoundation) via manual Rust FFI bindings. This replaces OpenCV, eliminating the 500MB manual installation requirement. The library is compiled from source via cmake+nmake and linked statically.
 
 **Core principle**: Build each component as a standalone, testable unit before integration. Verify against the Python implementation at every boundary.
 
@@ -22,22 +25,25 @@ Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a
 
 1. Create `skellycam-rust/skellycam/` as a Cargo binary+library project ✅
 2. Declare dependencies in `Cargo.toml` ✅:
-   - **Runtime**: `opencv` 0.98 with `videoio`, `imgproc`, `imgcodecs` features (camera via DirectShow), `image` 0.25 (rotation/resize/JPEG), `axum` 0.7 with `ws` (HTTP + WebSocket), `tokio` 1 with `full` features (async runtime), `serde`/`serde_json` (serialization), `utoipa` 5 + `utoipa-swagger-ui` 9 (OpenAPI), `tower` 0.5 + `tower-http` 0.6 with `cors` and `fs` (middleware), `anyhow` 1 + `thiserror` 2 (errors), `tracing` 0.1 + `tracing-subscriber` 0.3 with `env-filter` (logging), `uuid` 1 with `v4`, `chrono` 0.4 (time formatting), `csv` 1 (streaming writes), `ffmpeg-sidecar` 2 (ffmpeg auto-download)
+   - **Runtime**: `openpnp-capture` (C library, statically linked via build.rs — cross-platform DirectShow/V4L2/AVFoundation), `image` 0.25 (rotation/resize/JPEG for frontend payloads), `axum` 0.7 with `ws` (HTTP + WebSocket), `tokio` 1 with `full` features (async runtime), `serde`/`serde_json` (serialization), `utoipa` 5 + `utoipa-swagger-ui` 9 (OpenAPI), `tower` 0.5 + `tower-http` 0.6 with `cors` and `fs` (middleware), `anyhow` 1 + `thiserror` 2 (errors), `tracing` 0.1 + `tracing-subscriber` 0.3 with `env-filter` (logging), `uuid` 1 with `v4`, `chrono` 0.4 (time formatting), `csv` 1 (streaming writes), `ffmpeg-sidecar` 2 (ffmpeg auto-download)
    - **Commented out**: `polars` 0.41 with `lazy`, `csv-file` features (Phase 3 — recording analysis)
+   - **Build dependencies**: `cc` or manual `cmake` + `nmake` to compile openpnp-capture C library as a static `.lib`. On Windows, requires Visual Studio BuildTools (installed via chocolatey: `visualstudio2026buildtools` + `visualstudio2026-workload-vctools`).
 3. Set up `src/main.rs` (binary entry point) and `src/lib.rs` (library root) ✅
 4. Declare module tree — all modules declared in `lib.rs` (currently placeholders for unimplemented modules) ✅
 5. Configure `tracing_subscriber` for structured logging ✅
-6. Configure `.cargo/config.toml` with OpenCV environment variables (link libs, link paths, include paths) ✅
-7. Create `build.rs` to copy OpenCV runtime DLLs to target directory ✅
+6. Configure `.cargo/config.toml` for openpnp-capture static library link paths ✅
+7. Create `build.rs` to link against openpnp-capture static library + transitive system libs (ole32, oleaut32, strmiids) ✅
 8. Verify: `cargo build` succeeds with all dependencies ✅
 
 **Deliverable**: Compiling project with full dependency tree and module skeleton. **DONE.**
 
 ---
 
-## Phase 1: Camera Core — Single Camera ✅ COMPLETE
+## Phase 1: Camera Core — Single Camera ✅ COMPLETE (updated: openpnp-capture)
 
 **Goal**: Grab a frame from one camera on a dedicated thread, timestamp it, send it through the pipeline. No server, no multi-camera synchronization, no recording. Testable from `main.rs` with FPS reporting.
+
+**Camera backend**: openpnp-capture C library via manual Rust FFI (`extern "C"` blocks). Static link. No OpenCV dependency.
 
 **Depends on**: Phase 0
 
@@ -45,28 +51,30 @@ Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a
 
 #### 1.1: Camera Types (`camera/types.rs`) ✅
 
-- `FrameData` enum — `Bgr(Vec<u8>)` variant (OpenCV's native pixel format is BGR)
-- `FramePacket` struct — BGR pixel bytes, width, height, `grab_timestamp_nanoseconds` (i64, nanoseconds since process start), `identity: CameraIdentity`, `frame_number: i64`
-- `CameraIdentity` struct — `display_name`, `camera_index`, `unique_identifier` (6-char hex hash of device path), `device_path`
+- `FrameData` enum — `Rgb(Vec<u8>)` variant (openpnp-capture decodes all formats to 24-bit RGB internally)
+- `FramePacket` struct — RGB pixel bytes, width, height, `grab_timestamp_nanoseconds` (i64, nanoseconds since process start), `identity: CameraIdentity`, `frame_number: i64`
+- `CameraIdentity` struct — `display_name`, `camera_index`, `unique_identifier` (camera's USB device path from openpnp-capture — persistent per USB port), `device_path`
 - `MultiFramePayload` struct — `frames: Vec<FramePacket>`, `step: i64`, with `inter_camera_grab_spread_nanoseconds()` method
 - `CameraCommand` enum — `Shutdown` (only command for now)
 - `CameraEvent` enum — `Error(String)` (only event for now)
 - `CameraHandle` struct — holds `command_sender: mpsc::Sender<CameraCommand>`, identity, width, height; with `send_shutdown()` convenience method
 
-#### 1.2: Camera Thread (`camera/thread.rs`) ✅
+#### 1.2: Camera Thread (`camera/thread.rs`) ✅ (PoC proven, pending integration)
 
 - `spawn_camera_thread(index, requested_width, requested_height, identity)` — opens camera, spawns dedicated OS thread (`std::thread::spawn`, not tokio task)
-- `open_camera(index, requested_width, requested_height)` — **two-phase MJPG setup**:
-  - **Phase A (pre-warmup)**: Create `VideoCapture::new(index, CAP_DSHOW)`, set FOURCC to MJPG, set frame width/height, set buffer size to 1
-  - **Warmup read**: `capture.read(&mut warmup)` — starts the DirectShow streaming filter graph
-  - **Phase B (post-warmup)**: Set FOURCC to MJPG **again** (must re-set after graph is running; DirectShow renegotiates the media type on the first read and may drop MJPG). Do NOT change resolution after warmup (changing resolution resets FOURCC)
-  - Read back actual config: resolution, FOURCC, FPS, backend name; print debug summary
+- `open_camera(ctx, index, requested_width, requested_height)` — **openpnp-capture format enumeration + two-phase MJPG setup**:
+  - **Phase 1 — Enumerate formats**: Call `Cap_getNumFormats()` and `Cap_getFormatInfo()` to list all supported (width, height, fps, fourcc) combinations
+  - **Phase 2 — Find MJPG match**: Iterate formats, find one matching `1280x720 MJPG 30fps` (fourcc = `0x47504A4D` on Windows DirectShow). Fall back to any MJPG format if 720p not available
+  - **Phase 3 — Open stream**: `Cap_openStream(ctx, deviceID, formatID)` — this sets the format on the CAPTURE pin and builds the DirectShow filter graph. PoC discovery: use `PIN_CATEGORY_CAPTURE` (not PREVIEW) in the graph so that format re-application works correctly
+  - **Phase 4 — Set exposure**: Turn off auto-exposure (`Cap_setAutoProperty(EXPOSURE, false)`) and set exposure to `-7` (1/128s ≈ 7.8ms) via `Cap_setProperty(EXPOSURE, -7)`. This forces a short sensor exposure time that allows the MJPEG encoder pipeline to run at full 30fps. Without this, auto-exposure in typical indoor lighting may choose longer exposures (1/20s–1/15s) that cap the sensor cycle rate at 15–20fps
+  - **Phase 5 — Stabilize**: Capture ~30 frames to let the camera's image signal processor lock onto the new exposure setting
+  - Read back actual config: resolution, FOURCC, FPS
 - Returns `(CameraHandle, mpsc::Receiver<CameraEvent>, mpsc::Receiver<FramePacket>)`
 - Grab loop (hot path per frame):
   1. Drain command channel (check for `Shutdown`)
-  2. `capture.read(&mut frame)` — combined grab+retrieve (single call since OpenCV's `VideoCapture` is not `Send`: it must stay on the thread that created it)
-  3. `performance_counter_nanoseconds()` — monotonic nanosecond timestamp since process start
-  4. `frame.data_bytes()` — zero-copy access to BGR pixel bytes (OpenCV Mat internal pointer)
+  2. `Cap_hasNewFrame(ctx, stream)` — spin-wait (with `std::thread::yield_now()`) for next hardware frame. Non-blocking poll rather than blocking read allows command channel draining between frames
+  3. `Cap_captureFrame(ctx, stream, buffer, bufferBytes)` — copies latest RGB frame into pre-allocated buffer
+  4. `performance_counter_nanoseconds()` — monotonic nanosecond timestamp since process start
   5. Build `FramePacket` → `frame_sender.send(packet)` on `sync_channel(1)` (blocks if consumer not ready — structural backpressure already in place)
   6. Every 60 frames: print timing diagnostics (average grab interval, FPS, channel wait time)
 
@@ -76,16 +84,17 @@ Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a
 - Uses `OnceLock<Instant>` stored statically for the process start epoch
 - Monotonic, high-precision, not subject to wall-clock adjustments
 
-#### 1.4: Single-Camera Test Harness (`main.rs`) ✅
+#### 1.4: Single-Camera Test Harness (`main.rs`) ✅ (PoC proven)
 
-- Opens camera index 0 at 1280x720
+- Opens camera index 0 at 1280x720 via openpnp-capture FFI
 - Spawns camera thread, receives `FramePacket` on main thread
-- Reports FPS every 30 frames (rolling average)
-- Runs for 500 frames then cleanly shuts down
-- Reports summary: total frames, average FPS
-- Verified: camera opens, grabs frames at 30fps, clean shutdown
+- Reports FPS every 60 frames (rolling average)
+- Runs for 300 frames then cleanly shuts down
+- Reports summary: total frames, average FPS, average read latency
+- Verified: all 6 USB cameras achieve 30fps at 1280x720 MJPG (some run slightly faster at ~33fps with short manual exposure)
+- PoC located at `skellycam-rust/tools/openpnp-capture-poc/` — to be integrated into `skellycam` crate proper
 
-**Deliverable**: Working single-camera capture with OpenCV + DirectShow + MJPG at 30fps. **DONE.**
+**Deliverable**: Working single-camera capture with openpnp-capture + DirectShow + MJPG at 30fps. **PoC DONE, integration pending.**
 
 ---
 
@@ -97,12 +106,12 @@ Convert the SkellyCam Python backend (FastAPI + OpenCV + multiprocessing) into a
 
 **Architecture**:
 
-The sync gate uses **structural backpressure** rather than polling atomics. Each camera thread runs on its own dedicated OS thread with a `VideoCapture` object that is not `Send` (must stay on the thread that created it). The gatherer thread calls `recv()` on all cameras' `sync_channel(1)` receivers — this is the lockstep barrier.
+The sync gate uses **structural backpressure** rather than polling atomics. Each camera thread runs on its own dedicated OS thread with a `CapContext` + `CapStream` that must stay on the creating thread (the internal DirectShow COM objects are thread-affine). The gatherer thread calls `recv()` on all cameras' `sync_channel(1)` receivers — this is the lockstep barrier.
 
 ```
 CAMERA THREAD 0                    CAMERA THREAD 1
-  VideoCapture (not Send)            VideoCapture (not Send)
-  grab() + retrieve()                 grab() + retrieve()
+  CapContext + CapStream (not Send)    CapContext + CapStream (not Send)
+  hasNewFrame() + captureFrame()       hasNewFrame() + captureFrame()
   frame_sender.send(packet) ───┐     frame_sender.send(packet) ───┐
     blocked if full             │       blocked if full            │
                                 ▼                                  ▼
@@ -115,15 +124,16 @@ CAMERA THREAD 0                    CAMERA THREAD 1
                   // cameras unblock, proceed to frame N+1
 ```
 
-**Why grab+retrieve on same thread**: OpenCV's `VideoCapture` internally holds the DirectShow filter graph state. It is not `Send` — it must be created, used, and dropped on the same OS thread. The `retrieve()` call decodes the last grabbed frame from internal OpenCV state rather than from a buffer that could be handed to another thread. So the camera thread does both `grab()` (USB dequeue, ~1ms) and `retrieve()` (MJPG decode into BGR Mat, ~3-5ms), then sends the decoded `FramePacket` (BGR bytes from `data_bytes()`) downstream.
+**Why everything on the same thread**: openpnp-capture's `CapContext` and `CapStream` internally hold DirectShow COM objects that are thread-affine. They must be created, used, and destroyed on the same OS thread. openpnp-capture decodes camera frames to RGB888 internally (via sample grabber callback + BGR→RGB flip in `submitBuffer`), so `Cap_captureFrame` gives us RGB bytes directly. The camera thread polls `hasNewFrame`, captures, timestamps, and sends decoded `FramePacket` downstream.
 
 ### Tasks
 
 #### 2.1: Camera Enumeration (`camera/enumerate.rs`)
 
 - `enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>>`
-- Iterate indices 0..15: try `VideoCapture::new(i, CAP_DSHOW).is_opened()` → query device path (`CAP_PROP_GUID`), default resolution, backend name → build `CameraIdentity` → release capture
-- Generate `unique_identifier` as 6-char hex hash of device path (matching Python pattern)
+- Use openpnp-capture API: `Cap_getDeviceCount()` → iterate with `Cap_getDeviceName()` and `Cap_getDeviceUniqueID()`. The unique ID is the USB device path (e.g. `\\?\usb#vid_0c45&pid_6366&mi_00#...`) — persistent per USB port, no hashing needed
+- Filter out virtual cameras (OBS, LSVCam) by checking `Cap_getNumFormats() > 0`
+- Generate `unique_identifier` as short hex hash of device path (matching Python pattern)
 - Add `pub mod enumerate;` to `camera/mod.rs`, re-export the function
 
 #### 2.2: CameraGroup Types (`camera_group/types.rs`)
@@ -191,7 +201,7 @@ Test with increasing camera counts:
 
 Each test: run for 300 multiframes minimum. Verify zero drift — all cameras at same frame number. The `sync_channel(1)` + gatherer `recv()` mathematically guarantees this; tests validate it under real USB/OS conditions.
 
-**Deliverable**: Working multi-camera synchronized capture with structural backpressure. Tested incrementally from 2 to 6 cameras.
+**Deliverable**: Working multi-camera synchronized capture with structural backpressure via openpnp-capture. Tested incrementally from 2 to 6 cameras, all hitting 30fps.
 
 ---
 
@@ -497,7 +507,7 @@ For automated testing without physical cameras, build a mock camera that replays
 
 ### Risk 2: Windows COM/STA Threading (LOW)
 
-**Mitigation**: OpenCV's `VideoCapture` with `CAP_DSHOW` initializes COM internally for the DirectShow backend. The camera runs on a dedicated OS thread (`std::thread::spawn`, not a tokio async task), which satisfies COM apartment requirements. The thread creates the capture, uses it, and drops it — all on the same thread. Already validated in Phase 1.
+**Mitigation**: openpnp-capture's DirectShow backend initializes COM internally. The camera runs on a dedicated OS thread (`std::thread::spawn`, not a tokio async task), which satisfies COM apartment requirements. The thread creates the context, opens the stream, captures frames, and tears down — all on the same thread. Already validated in Phase 1 PoC.
 
 ---
 
@@ -512,9 +522,10 @@ skellycam-rust/skellycam/
 
     camera/
       mod.rs                         # Re-exports
-      types.rs                       # FramePacket, CameraCommand, CameraEvent, CameraIdentity, etc.
-      thread.rs                      # spawn_camera_thread, open_camera (two-phase MJPG)
-      enumerate.rs                   # enumerate_directshow_cameras
+      types.rs                       # FramePacket(Rgb), CameraCommand, CameraEvent, CameraIdentity, etc.
+      ffi.rs                         # extern "C" declarations for openpnp-capture API
+      thread.rs                      # spawn_camera_thread, open_camera (format enum + MJPG + exposure fix)
+      enumerate.rs                   # enumerate cameras via openpnp-capture Cap_getDeviceName/UniqueID
 
     camera_group/
       mod.rs                         # Re-exports
@@ -569,15 +580,15 @@ skellycam-rust/skellycam/
 
 | # | Decision | Rationale |
 |---|----------|-----------|
-| 1 | **`opencv` crate for camera capture, `image` crate for JPEG encoding** | OpenCV with DirectShow is the only approach that reliably configured MJPG on Windows. The `image` crate (pure Rust) handles rotation, resize, and JPEG encoding for the frontend WebSocket payload. OpenCV is used only for camera capture and raw pixel extraction. |
-| 2 | **Two-phase MJPG setup** | DirectShow requires the filter graph to be running before MJPG format negotiation completes. Set FOURCC → warmup `read()` → set FOURCC again → verify. Never change resolution after the graph starts (it resets FOURCC). This is the critical insight from weeks of experimentation. |
-| 3 | **Grab + retrieve on same thread** | OpenCV's `VideoCapture` is not `Send` — it holds internal DirectShow filter graph state that must stay on one thread. `retrieve()` decodes from internal state, not from a buffer you can hand off. The dedicated OS thread does both `grab()` and `retrieve()`, then sends the decoded `FramePacket` via `sync_channel`. |
+| 1 | **openpnp-capture (C library via manual FFI) for camera capture, `image` crate for JPEG encoding** | openpnp-capture is a cross-platform (Windows/Linux/macOS) MIT-licensed C library wrapping DirectShow/V4L2/AVFoundation. Compiles to a 4.5MB static library — no 500MB OpenCV installation needed. Built via cmake+nmake (Windows) and linked statically via `build.rs`. The `image` crate (pure Rust) handles rotation, resize, and JPEG encoding for the frontend WebSocket payload. |
+| 2 | **CAPTURE pin (not PREVIEW) + manual exposure for 30fps MJPG** | openpnp-capture originally used `PIN_CATEGORY_PREVIEW` for streaming, which worked for LifeCam 3000 but caused 15–20fps on our multi-camera USB rigs. Switching to `PIN_CATEGORY_CAPTURE` matches OpenCV's DirectShow backend architecture. Additionally, setting manual exposure to `-7` (1/128s) forces a short sensor exposure time — auto-exposure in indoor lighting typically picks longer exposures (1/15s–1/20s) that cap the sensor cycle rate. The combination of CAPTURE pin + manual short exposure achieves consistent 30fps on all tested cameras. |
+| 3 | **openpnp-capture objects stay on dedicated OS thread** | The `CapContext` is created, used, and destroyed on the same OS thread that runs the grab loop. openpnp-capture's internal DirectShow COM objects must stay on their creating thread. The dedicated OS thread does the grab loop (poll `hasNewFrame`, capture frame, timestamp) and sends decoded RGB `FramePacket` via `sync_channel`. |
 | 4 | **Structural backpressure via `sync_channel(1)`** | Replaces Python's polling-based sync gate. Capacity-1 channel means producer blocks if consumer hasn't received previous frame. Gatherer `recv()` from all cameras is the implicit barrier — zero polling, zero atomics. Slowest camera determines group framerate. |
 | 5 | **ffmpeg via `ffmpeg-sidecar`** | Battle-tested, produces files that play everywhere, handles every edge case. `ffmpeg-sidecar` auto-downloads the correct binary on first launch — zero user setup. The subprocess pipe pattern is already proven in the webcam test project. |
 | 6 | **Best-practice high-precision monotonic clock** | Uses `Instant::now()` with a `OnceLock<Instant>` process-start epoch to produce `i64` nanosecond timestamps via `performance_counter_nanoseconds()`. Monotonic, highest available precision, not subject to wall-clock adjustments. |
 | 7 | **UUID with last 6 hex characters as group ID** | Matches Python behavior exactly. `uuid::Uuid::new_v4().to_string()[..6]` or equivalent truncation. |
-| 9 | **Range requests via `tower_http::ServeDir`** | Natively supported. If incompatible with dynamic path routing, manual `Range` header parsing. |
 | 8 | **`utoipa` for OpenAPI/Swagger** | Derive macros on request/response structs. Swagger UI served at `/docs`. |
+| 9 | **Range requests via `tower_http::ServeDir`** | Natively supported. If incompatible with dynamic path routing, manual `Range` header parsing. |
 
 ---
 
@@ -585,7 +596,7 @@ skellycam-rust/skellycam/
 
 | Milestone | Phases | Success Criterion |
 |-----------|--------|-------------------|
-| **M1: Camera Works** ✅ | 0-1 | Single camera grabs frames at 30fps, measures timestamps, clean shutdown |
+| **M1: Camera Works** ✅ | 0-1 | Single camera grabs frames at 30fps via openpnp-capture, measures timestamps, clean shutdown. Validated on 6 USB cameras at 1280x720 MJPG. |
 | **M2: Sync Works** | 2 | Two cameras in lockstep, zero drift over 5 minutes, grab spread < 1ms |
 | **M3: Recording Works** | 3 | Two-camera synchronized video files, timestamps, statistics |
 | **M4: JPEG Validated** | 5 | Live camera frames display in a browser from Rust WebSocket |
