@@ -1,0 +1,85 @@
+use std::sync::Arc;
+
+use axum::response::Html;
+use axum::Router;
+use tower_http::cors::{Any, CorsLayer};
+use utoipa::OpenApi;
+
+use crate::websocket;
+
+use super::application_state::AppState;
+use super::camera_routes::camera_routes;
+use super::models::*;
+
+#[derive(OpenApi)]
+#[openapi(
+    components(schemas(
+        DetectedCamera,
+        DetectedCamerasResponse,
+        CameraGroupApplyRequest,
+        CreateCameraGroupResponse,
+        CloseAllResponse,
+    )),
+    info(
+        title = "Skellycam API",
+        version = "0.1.0",
+        description = "Multi-camera capture and recording system"
+    )
+)]
+struct ApiDoc;
+
+pub fn build_router(state: Arc<AppState>) -> Router {
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    Router::new()
+        .merge(camera_routes())
+        .merge(websocket::server::websocket_route())
+        .route("/api-docs/openapi.json", axum::routing::get(openapi_json))
+        .route("/docs", axum::routing::get(swagger_ui))
+        .route("/health", axum::routing::get(health_check))
+        .route("/", axum::routing::get(health_check))
+        .route("/test", axum::routing::get(serve_test_page))
+        .layer(axum::middleware::from_fn(super::middleware::log_requests))
+        .layer(cors)
+        .with_state(state)
+}
+
+async fn openapi_json() -> axum::Json<utoipa::openapi::OpenApi> {
+    axum::Json(ApiDoc::openapi())
+}
+
+async fn swagger_ui() -> Html<&'static str> {
+    Html(SWAGGER_HTML)
+}
+
+async fn health_check() -> &'static str {
+    "skellycam ok"
+}
+
+async fn serve_test_page() -> Html<&'static str> {
+    Html(include_str!("test_page.html"))
+}
+
+const SWAGGER_HTML: &str = r##"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Skellycam API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"/>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
+  <script>
+    SwaggerUIBundle({
+      url: "/api-docs/openapi.json",
+      dom_id: "#swagger-ui",
+      deepLinking: true,
+    });
+  </script>
+</body>
+</html>"##;
