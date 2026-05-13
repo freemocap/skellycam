@@ -6,11 +6,7 @@ import { SettingsModal } from "./SettingsModal";
 import { ServerConnectionStatus } from "@/components/ServerConnectionStatus";
 import { EXTERNAL_URLS } from "@/constants/external-urls";
 
-interface HeaderPanelProps {
-  onOpenWelcome: () => void;
-}
-
-export default function HeaderPanel({ onOpenWelcome }: HeaderPanelProps) {
+export default function HeaderPanel() {
   const { t } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -22,13 +18,6 @@ export default function HeaderPanel({ onOpenWelcome }: HeaderPanelProps) {
         </div>
 
         <div className="flex right-section gap-2 items-center">
-          <ButtonSm
-            iconClass=""
-            text={t('home')}
-            textColor="text-gray"
-            onClick={onOpenWelcome}
-          />
-
           <ButtonSm
             iconClass="settings-icon"
             text={t('settings')}
