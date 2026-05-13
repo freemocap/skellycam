@@ -9,13 +9,18 @@ export const MainTabPanel: React.FC = () => {
     const location = useLocation();
     const { t } = useTranslation();
 
-    const activeTab = location.pathname.startsWith('/playback') ? 'playback' : 'cameras';
+    const activeTab = location.pathname.startsWith('/playback')
+        ? 'playback'
+        : location.pathname.startsWith('/cameras')
+            ? 'cameras'
+            : 'home';
 
     return (
         <div className="main-container gap-1 overflow-hidden flex flex-row flex-1 pos-rel">
             {/* <div className="segmented-control-container br-1-1 gap-1 p-1 bg-middark flex main-segmented-control"> */}
                 <SegmentedControl
                     options={[
+                        { label: t('home'), value: 'home' },
                         { label: t('cameras'), value: 'cameras' },
                         { label: t('videoPlayback'), value: 'playback' },
                     ]}

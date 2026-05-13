@@ -4,14 +4,12 @@ import {ImperativePanelHandle, Panel, PanelGroup, PanelResizeHandle} from "react
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
 import HeaderPanel from "@/components/ui-components/HeaderPanel";
-import {WelcomeModal} from "@/components/ui-components/WelcomeModal";
 import {useMenuActions} from "@/hooks/useMenuActions";
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
     const leftPanelRef = useRef<ImperativePanelHandle>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [welcomeOpen, setWelcomeOpen] = useState(true);
 
     const handleToggleCollapse = useCallback(() => {
         const panel = leftPanelRef.current;
@@ -31,7 +29,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
     return (
         <div className="main-app-container" style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
-            <HeaderPanel onOpenWelcome={() => setWelcomeOpen(true)} />
+            <HeaderPanel />
             <PanelGroup className="app-container" direction="vertical" style={{flex: 1}}>
                 <Panel className="app-container-inner" defaultSize={87} minSize={20}>
                     <PanelGroup className="app-container-sub p-1" direction="horizontal" style={{direction: "ltr"}}>
@@ -67,7 +65,6 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                 </Panel>
             </PanelGroup>
 
-            <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
         </div>
     );
 };
