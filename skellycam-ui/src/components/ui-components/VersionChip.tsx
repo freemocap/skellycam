@@ -7,11 +7,13 @@ import { EXTERNAL_URLS } from '@/constants/external-urls';
 
 interface VersionChipProps {
     variant?: 'compact' | 'full';
+    className?: string;
+    style?: React.CSSProperties;
 }
 
 type ToastType = 'success' | 'error' | 'info';
 
-export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) => {
+export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', className, style }) => {
     const { t } = useTranslation();
     const version = useAppVersion();
     const { status, version: updateVersion, errorMessage, checkForUpdate } = useAutoUpdate();
@@ -50,7 +52,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full' }) =>
     if (!version) return null;
 
     return (
-        <div className="version-button-container pos-abs flex flex-row items-center gap-2">
+        <div className={`version-button-container pos-abs flex flex-row items-center gap-2${className ? ` ${className}` : ''}`} style={style}>
             <button
                 className={clsx("version-badge", showSuccess && "success")}
                 onClick={checkForUpdate}

@@ -72,8 +72,13 @@ export const HomePage: React.FC = () => {
 
     return (
         <div className="home-page overflow-hidden flex-1 bg-middark br-1 flex flex-row gap-3 p-2">
-            {/* Left column — logo */}
-            <div className="splash-image-container flex flex-1">
+            {/* Left column — logo + language/version */}
+            <div className="flex flex-1 flex-col">
+                <div className="splash-image-container flex-1" />
+                <div className="flex items-center gap-2 p-1">
+                    <LanguageSwitcher />
+                    <VersionChip variant="compact" style={{ position: 'relative', top: 'auto', left: 'auto' }} />
+                </div>
             </div>
 
             {/* Right column — content */}
