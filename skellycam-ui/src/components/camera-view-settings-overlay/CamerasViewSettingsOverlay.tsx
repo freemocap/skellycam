@@ -132,7 +132,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
               </button>
             </div>
             <div className='configure-camera-action-container text-white text md text-align-left flex flex-row items-center gap-1'>
-                   <p className='text-nowrap items-center flex flex-row flex-inline gap-1 text-gray'><span className='tag'>5</span>Connected Cameras</p>
+                   <p className='text-nowrap items-center flex flex-row flex-inline gap-1 text-gray'><span className='tag'>{connectedCameraIds.length}</span>Connected Cameras</p>
                    
                    <button className="button icon-button"
                         onClick={() => dispatch(camerasConnectOrUpdate())}>

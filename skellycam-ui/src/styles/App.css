@@ -71,6 +71,9 @@
 
   overflow: hidden;
 }
+.text-wrap {
+  overflow-wrap: break-word;
+}
 .tag {
   background-color: var(--gray-600);
   padding: 2px 5px 2px 5px;
@@ -264,6 +267,8 @@ button.rotate-button {
 .segmented-control-button>p.text.sm {
   /* small size */
   min-height: 22px;
+  line-height: 22px;
+  padding: 0;
 }
 
 .segmented-control-button:hover>p {

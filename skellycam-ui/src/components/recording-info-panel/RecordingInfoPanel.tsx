@@ -166,6 +166,9 @@ export const RecordingInfoPanel: React.FC = () => {
                 buttonType="full-width"
                 onClick={() => setPathModalOpen(true)}
             />
+            <p className="recording-path-preview text-wrap pl-1">
+                {recordingInfo.recordingDirectory}
+            </p>
 
             <RecordingCompleteDialog />
 
