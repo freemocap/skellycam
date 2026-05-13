@@ -72,7 +72,7 @@ Server starts on `http://localhost:53117`. Swagger docs at `http://localhost:531
 See the [Development guide](https://freemocap.github.io/skellycam/docs/development/) for full setup instructions including prerequisites and troubleshooting.
 
 #### Linux Only
-
+    
 Audio recording requires additional system packages:
 
 ```bash
