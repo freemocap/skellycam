@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ButtonSm from "./ButtonSm";
 import DropdownButton from "./DropdownButton";
-import ThemeToggle from "./ThemeToggle";
 import { SettingsModal } from "./SettingsModal";
 import { ServerConnectionStatus } from "@/components/ServerConnectionStatus";
 import { EXTERNAL_URLS } from "@/constants/external-urls";
@@ -36,8 +35,6 @@ export default function HeaderPanel({ onOpenWelcome }: HeaderPanelProps) {
             textColor="text-gray"
             onClick={() => setSettingsOpen(true)}
           />
-
-          <ThemeToggle />
 
           <ButtonSm
             iconClass="donate-icon"

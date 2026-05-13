@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import useDraggableTooltips from '@/hooks/useDraggableTooltips';
 import SubactionHeader from './SubactionHeader';
-import SegmentedControl from './SegmentedControl';
 import ToggleComponent from './ToggleComponent';
 import { VersionChip } from './VersionChip';
 import { Footer } from './Footer';
 import { LanguageSwitcher } from '@/components/languages/LanguageSwitcher';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { themeModeSet } from '@/store/slices/theme';
 import {
     showTranslationIndicatorToggled,
     selectShowTranslationIndicator,
     selectLocale,
 } from '@/store/slices/settings';
 import { getTranslationSource } from '@/i18n';
-import type { ThemeMode } from '@/store/slices/theme';
 import { EXTERNAL_URLS } from '@/constants/external-urls';
 
 interface SettingsModalProps {
@@ -28,7 +24,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
 
-    const themeMode = useAppSelector((state) => state.theme.mode);
     const showTranslationIndicator = useAppSelector(selectShowTranslationIndicator);
     const currentLocale = useAppSelector(selectLocale);
     const translationSource = getTranslationSource(currentLocale);
@@ -43,10 +38,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [open, onClose]);
-
-    const handleThemeChange = useCallback((value: string) => {
-        dispatch(themeModeSet(value as ThemeMode));
-    }, [dispatch]);
 
     const handleTranslationIndicatorToggle = useCallback(() => {
         dispatch(showTranslationIndicatorToggled());
@@ -99,24 +90,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                         isToggled={showTranslationIndicator}
                         onToggle={handleTranslationIndicatorToggle}
                     />
-                </div>
-
-                {/* Appearance */}
-                <div className="flex flex-col gap-1 bg-middark br-1 p-2">
-                    <SubactionHeader text={t('appearance')} />
-
-                    <div className="flex items-center gap-2 h-25">
-                        <p className="text md text-gray text-nowrap">{t('themeMode')}</p>
-                        <SegmentedControl
-                            options={[
-                                { label: t('lightMode'), value: 'light' },
-                                { label: t('darkMode'), value: 'dark' },
-                            ]}
-                            value={themeMode}
-                            onChange={handleThemeChange}
-                            size="sm"
-                        />
-                    </div>
                 </div>
 
                 {/* About */}

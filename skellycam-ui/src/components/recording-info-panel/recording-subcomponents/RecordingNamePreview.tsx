@@ -7,15 +7,26 @@ interface RecordingNamePreviewProps {
     tag: string;
     isRecording: boolean;
     onTagChange: (tag: string) => void;
+    onNameChange: (name: string) => void;
 }
 
 export const RecordingNamePreview: React.FC<RecordingNamePreviewProps> = ({
-    name, tag, isRecording, onTagChange,
+    name, tag, isRecording, onTagChange, onNameChange,
 }) => {
     const { t } = useTranslation();
     return (
         <div className="flex flex-col gap-1">
-            <p className="text sm text-gray">{t('recordingName', { name })}</p>
+            <p className="text sm text-gray">Recording Name</p>
+            {!isRecording ? (
+                <TextSelector
+                    value={name}
+                    onChange={onNameChange}
+                    placeholder={t("recordingName")}
+                    popupClassName="directory-input-popup"
+                />
+            ) : (
+                <p className="text sm text-gray recording-path-preview">{name}</p>
+            )}
             {!isRecording && (
                 <TextSelector
                     value={tag}

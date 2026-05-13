@@ -23,6 +23,7 @@ interface RecordingPathModalProps {
     onDelayToggle: (value: boolean) => void;
     onDelayChange: (value: number) => void;
     onTagChange: (value: string) => void;
+    onNameChange: (value: string) => void;
     onUseTimestampChange: (value: boolean) => void;
     onBaseNameChange: (value: string) => void;
     onUseIncrementChange: (value: boolean) => void;

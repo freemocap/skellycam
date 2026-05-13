@@ -1,6 +1,10 @@
 import React from 'react';
-import { FullRecordingPathPreview } from "@/components/recording-info-panel/recording-subcomponents/FullRecordingPathPreview";
 import { RecordingControlsSection } from "@/components/recording-info-panel/RecordingControlsTreeSection";
+import SubactionHeader from "@/components/ui-components/SubactionHeader";
+import TextSelector from "@/components/ui-components/TextSelector";
+import { useAppDispatch } from '@/store';
+import { recordingDirectoryChanged } from '@/store/slices/recording/recording-slice';
+import { useElectronIPC } from '@/services';
 
 interface RecordingPathTreeItemProps {
     recordingDirectory: string;
@@ -20,6 +24,7 @@ interface RecordingPathTreeItemProps {
     onDelayToggle: (value: boolean) => void;
     onDelayChange: (value: number) => void;
     onTagChange: (value: string) => void;
+    onNameChange: (value: string) => void;
     onUseTimestampChange: (value: boolean) => void;
     onBaseNameChange: (value: string) => void;
     onUseIncrementChange: (value: boolean) => void;
@@ -31,22 +36,75 @@ interface RecordingPathTreeItemProps {
 export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
     recordingDirectory, recordingName, subfolder, countdown, ...controlProps
 }) => {
+    const dispatch = useAppDispatch();
+    const { api, isElectron } = useElectronIPC();
+
+    const handleSelectDirectory = async (): Promise<void> => {
+        if (!isElectron || !api) return;
+        try {
+            const result: string | null = await api.fileSystem.selectDirectory.mutate();
+            if (result) dispatch(recordingDirectoryChanged(result));
+        } catch (error) {
+            console.error('Failed to select directory:', error);
+        }
+    };
+
+    const {
+        createSubfolder, customSubfolderName, onCreateSubfolderChange, onCustomSubfolderNameChange,
+        ...sectionProps
+    } = controlProps;
+
     return (
         <div className="flex flex-col gap-1" onKeyDown={(e) => e.stopPropagation()}>
-            <FullRecordingPathPreview
-                directory={recordingDirectory}
-                filename={recordingName}
-                subfolder={subfolder}
-            />
+            <SubactionHeader text="Recording Folder" />
+
+            {/* Base folder row */}
+            <div className="flex items-center gap-1">
+                <button
+                    className="button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
+                    onClick={handleSelectDirectory}
+                    title="Click to select recording folder"
+                    disabled={!isElectron}
+                >
+                    <span className="icon subfolder-icon icon-size-16" />
+                    <p className="recording-path-preview text-wrap flex-1">{recordingDirectory}</p>
+                </button>
+                <button
+                    className="button icon-button"
+                    onClick={() => { onCreateSubfolderChange(true); onCustomSubfolderNameChange('NewSubfolder'); }}
+                    title="Add subfolder"
+                >
+                    <span className="icon addsubfolder-icon icon-size-16" />
+                </button>
+            </div>
+
+            {/* Subfolder row */}
+            {createSubfolder && (
+                <div className="flex items-center gap-1 pl-2">
+                    <span className="text sm text-gray">└</span>
+                    <TextSelector
+                        value={customSubfolderName}
+                        onChange={onCustomSubfolderNameChange}
+                        placeholder="subfolder name"
+                        popupClassName="directory-input-popup"
+                    />
+                    <button
+                        className="button icon-button"
+                        onClick={() => { onCreateSubfolderChange(false); onCustomSubfolderNameChange(''); }}
+                        title="Remove subfolder"
+                    >
+                        <span className="icon close-icon icon-size-16" />
+                    </button>
+                </div>
+            )}
 
             {countdown !== null && (
                 <p className="recording-countdown">{`Starting in ${countdown}...`}</p>
             )}
 
             <RecordingControlsSection
-                recordingDirectory={recordingDirectory}
                 recordingName={recordingName}
-                {...controlProps}
+                {...sectionProps}
             />
         </div>
     );

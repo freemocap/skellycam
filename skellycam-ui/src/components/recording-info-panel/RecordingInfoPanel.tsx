@@ -129,6 +129,9 @@ export const RecordingInfoPanel: React.FC = () => {
 
     const recordingName = buildRecordingName() + (useIncrement ? `_${currentIncrement}` : '');
     const subfolderName = createSubfolder ? (customSubfolderName || undefined) : undefined;
+    const displayPath = (createSubfolder && customSubfolderName)
+        ? `${recordingInfo.recordingDirectory}/${customSubfolderName}/${recordingName}`
+        : `${recordingInfo.recordingDirectory}/${recordingName}`;
 
     return (
         <div className="flex flex-col gap-1 bg-dark br-2 border-1 border-black p-1 m-1">
@@ -167,7 +170,7 @@ export const RecordingInfoPanel: React.FC = () => {
                 onClick={() => setPathModalOpen(true)}
             />
             <p className="recording-path-preview text-wrap pl-1">
-                {recordingInfo.recordingDirectory}
+                {displayPath}
             </p>
 
             <RecordingCompleteDialog />
@@ -192,6 +195,7 @@ export const RecordingInfoPanel: React.FC = () => {
                 onDelayToggle={setUseDelayStart}
                 onDelayChange={setDelaySeconds}
                 onTagChange={setRecordingTag}
+                onNameChange={(value) => { setUseTimestamp(false); setBaseName(value); }}
                 onUseTimestampChange={setUseTimestamp}
                 onBaseNameChange={setBaseName}
                 onUseIncrementChange={setUseIncrement}

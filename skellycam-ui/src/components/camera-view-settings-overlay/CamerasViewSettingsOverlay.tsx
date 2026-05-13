@@ -7,7 +7,8 @@ import ButtonSm from '@/components/ui-components/ButtonSm';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector, selectCameras } from '@/store';
-import { camerasConnectOrUpdate, detectCameras } from '@/store/slices/cameras/cameras-thunks';
+import { camerasConnectOrUpdate, detectCameras, pauseUnpauseCameras } from '@/store/slices/cameras/cameras-thunks';
+import { selectIsPaused } from '@/store/slices/cameras/cameras-selectors';
 import { CameraConfigModal } from '@/components/camera-config-tree-view/CameraConfigModal';
 
 interface CameraSettings { columns: number | null; }
@@ -28,6 +29,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
     const cameras = useAppSelector(selectCameras);
+    const isPaused = useAppSelector(selectIsPaused);
 
     useEffect(() => {
         if (isConnected && cameras.length === 0) {
@@ -127,8 +129,12 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                 textColor="text-white"
                 onClick={() => {}}
               />
-              <button className="button icon-button" onClick="">
-                <span className="icon icon-size-16 pause-icon" />
+              <button
+                className="button icon-button"
+                onClick={() => dispatch(pauseUnpauseCameras())}
+                title={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
+              >
+                <span className={clsx('icon icon-size-16', isPaused ? 'play-icon' : 'pause-icon')} />
               </button>
             </div>
             <div className='configure-camera-action-container text-white text md text-align-left flex flex-row items-center gap-1'>

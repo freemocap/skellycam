@@ -10,21 +10,15 @@ interface RecordingSettingsProps {
     baseName: string;
     useIncrement: boolean;
     currentIncrement: number;
-    createSubfolder: boolean;
-    customSubfolderName: string;
     onUseTimestampChange: (value: boolean) => void;
     onBaseNameChange: (value: string) => void;
     onUseIncrementChange: (value: boolean) => void;
     onIncrementChange: (value: number) => void;
-    onCreateSubfolderChange: (value: boolean) => void;
-    onCustomSubfolderNameChange: (value: string) => void;
 }
 
 export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
     useTimestamp, baseName, useIncrement, currentIncrement,
-    createSubfolder, customSubfolderName,
     onUseTimestampChange, onBaseNameChange, onUseIncrementChange, onIncrementChange,
-    onCreateSubfolderChange, onCustomSubfolderNameChange,
 }) => {
     const { t } = useTranslation();
 
@@ -44,22 +38,6 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
                         value={baseName}
                         onChange={onBaseNameChange}
                         placeholder={t("baseName")}
-                    />
-                )}
-            </div>
-
-            {/* Subfolder toggle + name input */}
-            <div className="flex items-center gap-1">
-                <ToggleComponent
-                    text={t("subfolder")}
-                    isToggled={createSubfolder}
-                    onToggle={onCreateSubfolderChange}
-                />
-                {createSubfolder && (
-                    <TextSelector
-                        value={customSubfolderName}
-                        onChange={onCustomSubfolderNameChange}
-                        placeholder={t("subfolderPlaceholder")}
                     />
                 )}
             </div>

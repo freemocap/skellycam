@@ -35,6 +35,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --close-icon: url("../assets/icons/close_icon.svg");
   --rotate-icon: url("../assets/icons/rotate_icon.svg");
   --pause-icon: url("../assets/icons/pause_icon.svg");
+  --play-icon: url("../assets/icons/play_icon.svg");
   --scan-icon: url("../assets/icons/scan_icon.svg");
   --home-icon: url("../assets/icons/home_icon.svg");
   --clear-icon: url("../assets/icons/clear_icon.svg");

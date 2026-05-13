@@ -72,6 +72,8 @@ interface ValueSelectorProps {
   value?: number;
 }
 
+const POPUP_HEIGHT = 60;
+
 const ValueSelector: React.FC<ValueSelectorProps> = ({
   unit = "mm",
   initialValue = 1,
@@ -81,7 +83,9 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
   value,
 }) => {
   const [open, setOpen] = useState(false);
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const currentValue = value !== undefined ? value : initialValue;
 
@@ -103,12 +107,32 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
     if (currentValue > min) onChange?.(currentValue - 1);
   };
 
+  const handleOpen = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const style: React.CSSProperties = {
+        position: 'fixed',
+        right: window.innerWidth - rect.right,
+        zIndex: 200,
+      };
+      if (spaceBelow < POPUP_HEIGHT + 8) {
+        style.bottom = window.innerHeight - rect.top + 4;
+      } else {
+        style.top = rect.bottom + 4;
+      }
+      setPopupStyle(style);
+    }
+    setOpen((prev) => !prev);
+  };
+
   return (
     <div ref={containerRef} className="value-selector pos-rel inline-block">
       {/* Trigger Button */}
       <button
+        ref={buttonRef}
         className="input-with-unit button sm fit-content dropdown"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleOpen}
       >
         <span className="value-label text md">{currentValue}</span>
         <span className="unit-label text md">{unit}</span>
@@ -116,7 +140,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
 
       {/* Tooltip */}
       {open && (
-        <div className="value-selector-container border-1 border-black elevated-sharp pos-abs flex flex-row right-0 p-1 bg-dark br-2 z-1 reveal slide-down">
+        <div className="border-1 border-black elevated-sharp flex flex-row p-1 bg-dark br-2 reveal slide-down" style={popupStyle}>
           <div className="flex right-0 p-2 gap-2 bg-middark br-1 z-1">
             {/* Minus button */}
             <button

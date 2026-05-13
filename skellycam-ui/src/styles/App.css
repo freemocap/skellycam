@@ -815,6 +815,9 @@ a.link:hover {
 .pause-icon {
   background-image: var(--pause-icon);
 }
+.play-icon {
+  background-image: var(--play-icon);
+}
 .clear-icon {
   background-image: var(--clear-icon);
 }
