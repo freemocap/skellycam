@@ -42,7 +42,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                         <span className="icon icon-size-16 clear-icon" />
                     </button>
                     <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
-                        <p className="text md" style={{ color: 'var(--gray-900)' }}>Update</p>
+                        <p className="text md" style={{ color: 'var(--gray-900)' }}>{connectedCameras.length === 0 ? 'Connect' : 'Update'}</p>
                     </button>
                 </div>
                 {/* Row 2 — streaming chip */}
