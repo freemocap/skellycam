@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import ButtonSm from "./ButtonSm";
 import DropdownButton from "./DropdownButton";
 import { SettingsModal } from "./SettingsModal";
-import { ServerConnectionStatus } from "@/components/ServerConnectionStatus";
 import { EXTERNAL_URLS } from "@/constants/external-urls";
 
 export default function HeaderPanel() {
@@ -13,10 +12,6 @@ export default function HeaderPanel() {
   return (
     <>
       <div className="header-panel flex flex-row justify-content-space-between top-header br-2 h-25">
-        <div className="flex left-section">
-          <ServerConnectionStatus />
-        </div>
-
         <div className="flex right-section gap-2 items-center">
           <ButtonSm
             iconClass="settings-icon"

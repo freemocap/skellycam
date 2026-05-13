@@ -17,18 +17,16 @@ export const MainTabPanel: React.FC = () => {
 
     return (
         <div className="main-container gap-1 overflow-hidden flex flex-row flex-1 pos-rel">
-            {/* <div className="segmented-control-container br-1-1 gap-1 p-1 bg-middark flex main-segmented-control"> */}
-                <SegmentedControl
-                    options={[
-                        { label: t('home'), value: 'home' },
-                        { label: t('cameras'), value: 'cameras' },
-                        { label: t('videoPlayback'), value: 'playback' },
-                    ]}
-                    value={activeTab}
-                    onChange={(v) => navigate('/' + v)}
-                    size="md"
-                />
-            {/* </div> */}
+            <SegmentedControl
+                options={[
+                    { label: t('home'), value: 'home' },
+                    { label: t('cameras'), value: 'cameras' },
+                    { label: t('videoPlayback'), value: 'playback' },
+                ]}
+                value={activeTab}
+                onChange={(v) => navigate('/' + v)}
+                size="md"
+            />
             <div className="mode-container flex-5 br-2 bg-darkgray border-mid-black border-1 overflow-hidden flex flex-col flex-1 gap-1 p-1">
                 <BaseContentRouter />
             </div>

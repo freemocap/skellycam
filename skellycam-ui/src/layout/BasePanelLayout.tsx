@@ -3,7 +3,6 @@ import React, {useCallback, useRef, useState} from "react";
 import {ImperativePanelHandle, Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
-import HeaderPanel from "@/components/ui-components/HeaderPanel";
 import {useMenuActions} from "@/hooks/useMenuActions";
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts";
 
@@ -29,18 +28,11 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
     return (
         <div className="main-app-container" style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
-            <HeaderPanel />
             <PanelGroup className="app-container" direction="vertical" style={{flex: 1}}>
                 <Panel className="app-container-inner" defaultSize={87} minSize={20}>
                     <PanelGroup className="app-container-sub p-1" direction="horizontal" style={{direction: "ltr"}}>
 
 
-                        <Panel 
-                                className="right-side-panel"
-                                defaultSize={76} minSize={10}>
-                            {children}
-                        </Panel>
-                        <PanelResizeHandle className="resizable-component" style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
                         <Panel className="left-side-panel action-container bg-darkgray br-2 border-mid-black border-1"
                             ref={leftPanelRef}
                             collapsible
@@ -54,6 +46,12 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                                 isCollapsed={isCollapsed}
                                 onToggleCollapse={handleToggleCollapse}
                             />
+                        </Panel>
+                        <PanelResizeHandle className="resizable-component" style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
+                        <Panel
+                                className="right-side-panel"
+                                defaultSize={76} minSize={10}>
+                            {children}
                         </Panel>
                     </PanelGroup>
                 </Panel>

@@ -6,6 +6,7 @@ import {startRecording, stopRecording} from "@/store";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
+import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
@@ -97,12 +98,9 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     <span className="text sm">✕</span>
                 </button>
 
-                <span
-                    className="text bg flex-1 overflow-hidden"
-                    style={{textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0}}
-                >
-                    SkellyCam 💀📸
-                </span>
+                <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
+                    <ServerConnectionStatus />
+                </div>
             </div>
 
             {/* Main content */}
