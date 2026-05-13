@@ -257,6 +257,14 @@ button.rotate-button {
   transition: color var(--speed-1) ease-in-out;
 }
 
+.segmented-control-sm {
+  position: static;
+}
+
+.segmented-control-sm .segmented-control-button {
+  min-width: 50px;
+}
+
 .segmented-control-button>p.text.md {
   /* medium size */
   min-height: 25px;

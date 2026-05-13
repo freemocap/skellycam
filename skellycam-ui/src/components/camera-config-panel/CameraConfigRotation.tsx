@@ -24,6 +24,7 @@ export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
                 value={String(rotation)}
                 onChange={(v) => onChange(Number(v) as RotationValue)}
                 size="sm"
+                className="segmented-control-sm"
             />
         </div>
     );

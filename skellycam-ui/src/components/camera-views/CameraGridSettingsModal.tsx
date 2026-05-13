@@ -43,11 +43,20 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
     const dispatch = useAppDispatch();
     const [pos, setPos] = useState(initialPos);
     const dragRef = useRef<{ startX: number; startY: number; startTop: number; startRight: number } | null>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
+    }, [onClose]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose();
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [onClose]);
 
     const handleConfigChange = (patch: Partial<CameraConfig>) => {
@@ -81,6 +90,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
 
     return (
         <div
+            ref={modalRef}
             className="bg-dark border-1 border-black br-2 elevated-sharp flex flex-col reveal fadeIn"
             style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 300, width: 320, cursor: 'grab' }}
             onPointerDown={handlePointerDown}
@@ -106,6 +116,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
                     value={String(config.rotation ?? -1)}
                     onChange={(v) => handleConfigChange({ rotation: Number(v) as RotationValue })}
                     size="sm"
+                    className="segmented-control-sm"
                 />
             </Row>
 
