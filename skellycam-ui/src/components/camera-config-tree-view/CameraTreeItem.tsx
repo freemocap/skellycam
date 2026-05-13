@@ -29,7 +29,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [modalPos, setModalPos] = useState<{ top: number; right: number }>({ top: 80, right: 40 });
+    const [modalPos, setModalPos] = useState<{ top: number; left: number }>({ top: 80, left: 40 });
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
     const handleToggleSelection = (e: React.MouseEvent): void => {
@@ -41,7 +41,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
         e.stopPropagation();
         if (!settingsOpen && settingsBtnRef.current) {
             const rect = settingsBtnRef.current.getBoundingClientRect();
-            setModalPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+            setModalPos({ top: rect.bottom + 8, left: rect.right + 8 });
         }
         setSettingsOpen(prev => !prev);
     };
@@ -67,6 +67,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
                     ref={settingsBtnRef}
                     className={clsx("button icon-button", settingsOpen && "activated")}
                     onClick={handleOpenSettings}
+                    onMouseDown={e => e.stopPropagation()}
                     title={t('cameraSettings')}
                 >
                     <span className={clsx("icon icon-size-16", settingsOpen ? "close-icon" : "settings-icon")} />

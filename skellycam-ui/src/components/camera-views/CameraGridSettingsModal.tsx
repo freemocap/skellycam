@@ -10,7 +10,7 @@ import ValueSelector from '@/components/ui-components/ValueSelector';
 
 interface CameraGridSettingsModalProps {
     camera: Camera;
-    initialPos: { top: number; right: number };
+    initialPos: { top: number; left: number };
     onClose: () => void;
 }
 
@@ -46,7 +46,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
     const allCameras = useAppSelector(selectCameras);
     const otherCamerasCount = allCameras.length - 1;
     const [pos, setPos] = useState(initialPos);
-    const dragRef = useRef<{ startX: number; startY: number; startTop: number; startRight: number } | null>(null);
+    const dragRef = useRef<{ startX: number; startY: number; startTop: number; startLeft: number } | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -70,7 +70,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
     const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if ((e.target as HTMLElement).closest('button, input, select')) return;
         e.currentTarget.setPointerCapture(e.pointerId);
-        dragRef.current = { startX: e.clientX, startY: e.clientY, startTop: pos.top, startRight: pos.right };
+        dragRef.current = { startX: e.clientX, startY: e.clientY, startTop: pos.top, startLeft: pos.left };
         e.currentTarget.style.cursor = 'grabbing';
     };
 
@@ -78,7 +78,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
         if (!dragRef.current || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
         const dx = e.clientX - dragRef.current.startX;
         const dy = e.clientY - dragRef.current.startY;
-        setPos({ top: dragRef.current.startTop + dy, right: dragRef.current.startRight - dx });
+        setPos({ top: dragRef.current.startTop + dy, left: dragRef.current.startLeft + dx });
     };
 
     const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -96,7 +96,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
         <div
             ref={modalRef}
             className="bg-dark border-1 border-black br-2 elevated-sharp flex flex-col reveal fadeIn"
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 300, width: 320, cursor: 'grab' }}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 300, width: 320, cursor: 'grab' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

@@ -15,7 +15,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
     const dispatch = useAppDispatch();
     const camera = useAppSelector(state => selectCameraById(state, cameraId));
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [modalPos, setModalPos] = useState<{ top: number; right: number }>({ top: 80, right: 40 });
+    const [modalPos, setModalPos] = useState<{ top: number; left: number }>({ top: 80, left: 40 });
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
     if (!camera) return <CameraView cameraId={cameraId} />;
@@ -26,7 +26,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
             const rect = settingsBtnRef.current.getBoundingClientRect();
             setModalPos({
                 top: rect.bottom + 8,
-                right: window.innerWidth - rect.right,
+                left: rect.left - 320 - 8,
             });
         }
         setSettingsOpen(prev => !prev);
@@ -52,6 +52,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
                     ref={settingsBtnRef}
                     className={clsx('button icon-button camera-cell-toggle', settingsOpen && 'activated')}
                     onClick={handleOpenSettings}
+                    onMouseDown={e => e.stopPropagation()}
                     title="Camera settings"
                 >
                     <span className={clsx('icon icon-size-16', settingsOpen ? 'close-icon' : 'settings-icon')} />
