@@ -45,7 +45,7 @@ function saveToStorage(key: string, value: unknown): void {
     }
 }
 
-export const ServerConnectionStatus: React.FC = () => {
+export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
     const { isConnected, connect, disconnect, connectedCameraIds, updateServerConnection } = useServer();
     const { t } = useTranslation();
     const { isElectron, api } = useElectronIPC();
@@ -75,13 +75,14 @@ export const ServerConnectionStatus: React.FC = () => {
 
     // ── Persistence effects ──
 
-    useEffect(() => { saveToStorage(STORAGE_KEYS.SELECTED_EXE_PATH, selectedExePath); }, [selectedExePath]);
-    useEffect(() => { saveToStorage(STORAGE_KEYS.AUTO_LAUNCH_SERVER, autoLaunchServer); }, [autoLaunchServer]);
-    useEffect(() => { saveToStorage(STORAGE_KEYS.AUTO_CONNECT_WS, autoConnectWs); }, [autoConnectWs]);
-    useEffect(() => { saveToStorage(STORAGE_KEYS.SERVER_HOST, serverHost); }, [serverHost]);
-    useEffect(() => { saveToStorage(STORAGE_KEYS.SERVER_PORT, serverPort); }, [serverPort]);
+    useEffect(() => { if (compact) return; saveToStorage(STORAGE_KEYS.SELECTED_EXE_PATH, selectedExePath); }, [selectedExePath, compact]);
+    useEffect(() => { if (compact) return; saveToStorage(STORAGE_KEYS.AUTO_LAUNCH_SERVER, autoLaunchServer); }, [autoLaunchServer, compact]);
+    useEffect(() => { if (compact) return; saveToStorage(STORAGE_KEYS.AUTO_CONNECT_WS, autoConnectWs); }, [autoConnectWs, compact]);
+    useEffect(() => { if (compact) return; saveToStorage(STORAGE_KEYS.SERVER_HOST, serverHost); }, [serverHost, compact]);
+    useEffect(() => { if (compact) return; saveToStorage(STORAGE_KEYS.SERVER_PORT, serverPort); }, [serverPort, compact]);
 
     useEffect(() => {
+        if (compact) return;
         updateServerConnection(serverHost, serverPort);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -208,19 +209,22 @@ export const ServerConnectionStatus: React.FC = () => {
     // ── Effects ──
 
     useEffect(() => {
+        if (compact) return;
         if (isElectron && api) {
             pollServerStatus();
             loadCandidates();
         }
-    }, [isElectron, api, pollServerStatus, loadCandidates]);
+    }, [compact, isElectron, api, pollServerStatus, loadCandidates]);
 
     useEffect(() => {
+        if (compact) return;
         if (!isElectron || !api) return;
         const interval = setInterval(pollServerStatus, 5000);
         return () => clearInterval(interval);
-    }, [isElectron, api, pollServerStatus]);
+    }, [compact, isElectron, api, pollServerStatus]);
 
     useEffect(() => {
+        if (compact) return;
         if (!isElectron || !api) return;
         if (!autoLaunchServer) return;
         if (autoLaunchFiredRef.current) return;
@@ -229,9 +233,10 @@ export const ServerConnectionStatus: React.FC = () => {
         autoLaunchFiredRef.current = true;
         console.log('Auto-launching server...');
         startServer();
-    }, [isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
+    }, [compact, isElectron, api, autoLaunchServer, candidatesLoading, serverRunning, serverLoading, startServer]);
 
     useEffect(() => {
+        if (compact) return;
         if (!autoConnectWs) return;
         if (isConnected) return;
         connect();
@@ -239,7 +244,7 @@ export const ServerConnectionStatus: React.FC = () => {
             if (!isConnected) connect();
         }, WS_RECONNECT_INTERVAL_MS);
         return () => clearInterval(interval);
-    }, [autoConnectWs, isConnected, connect]);
+    }, [compact, autoConnectWs, isConnected, connect]);
 
     // ── Toggle handlers ──
 
@@ -307,6 +312,50 @@ export const ServerConnectionStatus: React.FC = () => {
     };
 
     // ── Render ──
+
+    if (compact) {
+        return (
+            <button
+                className="button icon-button"
+                onClick={() => setSettingsOpen(true)}
+                title={overallStatus.text + cameraCountSuffix}
+            >
+                <span className={`icon icon-size-16 ${overallStatus.iconClass}`} />
+                <ConnectionSettingsModal
+                    open={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    isElectron={isElectron}
+                    autoLaunchServer={autoLaunchServer}
+                    handleToggleAutoLaunch={handleToggleAutoLaunch}
+                    serverRunning={serverRunning}
+                    serverLoading={serverLoading}
+                    processInfo={processInfo}
+                    candidates={candidates}
+                    candidatesLoading={candidatesLoading}
+                    selectedExePath={selectedExePath}
+                    setSelectedExePath={setSelectedExePath}
+                    browseForExecutable={browseForExecutable}
+                    refreshCandidates={refreshCandidates}
+                    startServer={startServer}
+                    stopServer={stopServer}
+                    resetServer={resetServer}
+                    currentExePath={currentExePath}
+                    error={error}
+                    isConnected={isConnected}
+                    autoConnectWs={autoConnectWs}
+                    handleToggleAutoConnectWs={handleToggleAutoConnectWs}
+                    connectedCameraIds={connectedCameraIds}
+                    hostDraft={hostDraft}
+                    portDraft={portDraft}
+                    setHostDraft={setHostDraft}
+                    setPortDraft={setPortDraft}
+                    applyHostPort={applyHostPort}
+                    handleHostPortKeyDown={handleHostPortKeyDown}
+                    handleToggleWsConnected={handleToggleWsConnected}
+                />
+            </button>
+        );
+    }
 
     return (
         <>

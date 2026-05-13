@@ -31,6 +31,8 @@ const CollapsedToolbar: React.FC<{
                 <span className="text sm">☰</span>
             </button>
 
+            <ServerConnectionStatus compact />
+
             <button
                 className={`button icon-button record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
                 onClick={onRecordClick}
@@ -66,47 +68,48 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
         }
     };
 
-    if (isCollapsed) {
-        return (
-            <CollapsedToolbar
-                onToggleCollapse={onToggleCollapse}
-                isRecording={isRecording}
-                noCameras={noCameras}
-                onRecordClick={handleCollapsedRecordClick}
-            />
-        );
-    }
-
     return (
-        <div
-            className="inner flex flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
-           
-        >
-            {/* Header row */}
-            <div
-                className="flex items-center gap-1 px-1 py-1"
-                style={{
-                    borderBottom: '1px solid var(--gray-600)',
-                    minHeight: 40,
-                }}
-            >
-                <button
-                    className="button icon-button"
-                    onClick={onToggleCollapse}
-                    title={t('collapseSidebar')}
-                >
-                    <span className="text sm">✕</span>
-                </button>
+        <>
+            {isCollapsed && (
+                <CollapsedToolbar
+                    onToggleCollapse={onToggleCollapse}
+                    isRecording={isRecording}
+                    noCameras={noCameras}
+                    onRecordClick={handleCollapsedRecordClick}
+                />
+            )}
 
-                <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
-                    <ServerConnectionStatus />
+            {/* Always mounted — display:none preserves component state when collapsed */}
+            <div
+                className="inner flex flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
+                style={{ display: isCollapsed ? 'none' : 'flex' }}
+            >
+                {/* Header row */}
+                <div
+                    className="flex items-center gap-1 px-1 py-1"
+                    style={{
+                        borderBottom: '1px solid var(--gray-600)',
+                        minHeight: 40,
+                    }}
+                >
+                    <button
+                        className="button icon-button"
+                        onClick={onToggleCollapse}
+                        title={t('collapseSidebar')}
+                    >
+                        <span className="text sm">✕</span>
+                    </button>
+
+                    <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
+                        <ServerConnectionStatus />
+                    </div>
+                </div>
+
+                {/* Main content */}
+                <div className="flex flex-col gap-1 pt-1 pb-4">
+                    <RecordingInfoPanel/>
                 </div>
             </div>
-
-            {/* Main content */}
-            <div className="flex flex-col gap-1 pt-1 pb-4">
-                <RecordingInfoPanel/>
-            </div>
-        </div>
+        </>
     );
 };
