@@ -77,61 +77,48 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Right column — content */}
-            <div className="flex-1 flex flex-col gap-2 p-1 justify-content-space-between">
-                {/* Top actions */}
-                <div className="flex flex-col p-2 gap-3">
-                    <h1 className="title">
-                        <span className="text-white">{t('welcomeTitle')}</span>
-                        <br />
-                        <span className="text-gray">{t('welcomeSubtitle')}</span>
-                    </h1>
+            <div className="flex-1 flex flex-col gap-3 p-1 justify-center">
+                <h1 className="title">
+                    <span className="text-white">{t('welcomeTitle')}</span>
+                    <br />
+                    <span className="text-gray">{t('welcomeSubtitle')}</span>
+                </h1>
 
-                    {/* Primary navigation cards */}
-                    <div className="flex gap-2">
-                        <ButtonCard
-                            text={t('connectToCameras')}
-                            iconClass="live-icon icon-size-42"
-                            onClick={handleGoToCameras}
-                        />
-                        <ButtonCard
-                            text={t('videoPlayback')}
-                            iconClass="importVideos-icon icon-size-42"
-                            onClick={handleGoToPlayback}
-                        />
-                    </div>
-
-                    {/* Telemetry checkbox */}
-                    {telemetryLoaded && (
-                        <DesignerCheckbox
-                            label={t('sendAnonymousPings')}
-                            checked={telemetryEnabled}
-                            onChange={(e) => handleTelemetryToggle(e.target.checked)}
-                        />
-                    )}
-
-                    <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2">
-                        <LanguageSwitcher />
-                        <VersionChip variant="compact" />
-                    </div>
-                </div>
-
-                {/* Bottom links */}
-                <div className="flex flex-col gap-1">
-                    <ButtonSm
-                        iconClass="learn-icon"
-                        text={t('documentation')}
-                        rightSideIcon="externallink"
-                        textColor="text-gray"
-                        onClick={() => window.open(EXTERNAL_URLS.DOCS_INTRO, '_blank')}
+                <div className="flex gap-2">
+                    <ButtonCard
+                        text={t('connectToCameras')}
+                        iconClass="live-icon icon-size-42"
+                        onClick={handleGoToCameras}
                     />
-                    <ButtonSm
-                        iconClass="discord-icon"
-                        text="Join community"
-                        rightSideIcon="externallink"
-                        textColor="text-gray"
-                        onClick={() => window.open(EXTERNAL_URLS.DISCORD, '_blank')}
+                    <ButtonCard
+                        text={t('videoPlayback')}
+                        iconClass="importVideos-icon icon-size-42"
+                        onClick={handleGoToPlayback}
                     />
                 </div>
+
+                {telemetryLoaded && (
+                    <DesignerCheckbox
+                        label={t('sendAnonymousPings')}
+                        checked={telemetryEnabled}
+                        onChange={(e) => handleTelemetryToggle(e.target.checked)}
+                    />
+                )}
+
+                <ButtonSm
+                    iconClass="learn-icon"
+                    text={t('documentation')}
+                    rightSideIcon="externallink"
+                    textColor="text-gray"
+                    onClick={() => window.open(EXTERNAL_URLS.DOCS_INTRO, '_blank')}
+                />
+                <ButtonSm
+                    iconClass="discord-icon"
+                    text="Join community"
+                    rightSideIcon="externallink"
+                    textColor="text-gray"
+                    onClick={() => window.open(EXTERNAL_URLS.DISCORD, '_blank')}
+                />
             </div>
         </div>
     );
