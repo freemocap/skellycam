@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppDispatch, useAppSelector, selectCameras, selectConnectedCameras, selectIsLoading, detectCameras } from '@/store';
 import { camerasConnectOrUpdate } from '@/store/slices/cameras/cameras-thunks';
+import { savedSettingsCleared } from '@/store/slices/cameras/cameras-slice';
 import { CameraTreeItem } from './CameraTreeItem';
 import { NoCamerasPlaceholder } from './NoCamerasPlaceholder';
 import { useServer } from '@/services/server/ServerContextProvider';
@@ -61,11 +62,14 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                             {connectedCameras.length} Streaming
                         </p>
                     )}
+                    <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
+                        <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
+                    </button>
 
                     <div className="flex-1" />
 
-                    <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
-                        <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
+                    <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
+                        <span className="icon icon-size-16 clear-icon" />
                     </button>
 
                     <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>

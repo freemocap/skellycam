@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useAppDispatch } from '@/store';
-import { cameraDesiredConfigUpdated } from '@/store/slices/cameras/cameras-slice';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { cameraDesiredConfigUpdated, configCopiedToAll } from '@/store/slices/cameras/cameras-slice';
+import { selectCameras } from '@/store/slices/cameras';
+import ButtonSm from '@/components/ui-components/ButtonSm';
 import { Camera, CameraConfig, ExposureMode, RotationValue, ROTATION_OPTIONS, ROTATION_DEGREE_LABELS } from '@/store/slices/cameras/cameras-types';
 import NameDropdownSelector from '@/components/ui-components/NameDropdownSelector';
 import SegmentedControl from '@/components/ui-components/SegmentedControl';
@@ -41,6 +43,8 @@ const Row: React.FC<{ label: string; indent?: boolean; children: React.ReactNode
 
 export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = ({ camera, initialPos, onClose }) => {
     const dispatch = useAppDispatch();
+    const allCameras = useAppSelector(selectCameras);
+    const otherCamerasCount = allCameras.length - 1;
     const [pos, setPos] = useState(initialPos);
     const dragRef = useRef<{ startX: number; startY: number; startTop: number; startRight: number } | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
@@ -101,9 +105,14 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
             {/* Header */}
             <div className="flex items-center gap-1 p-1" style={{ borderBottom: '1px solid var(--gray-700)' }}>
                 <p className="text md text-white flex-1">Camera settings</p>
-                <button className="button icon-button" onClick={onClose}>
-                    <span className="icon close-icon icon-size-16" />
-                </button>
+                <ButtonSm
+                    text={otherCamerasCount > 0
+                        ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? 's' : ''}`
+                        : 'No other cameras'}
+                    iconClass="stream-icon"
+                    buttonType={otherCamerasCount === 0 ? 'disabled' : ''}
+                    onClick={() => { if (otherCamerasCount > 0) dispatch(configCopiedToAll(camera.id)); }}
+                />
             </div>
 
             {/* Rotate */}
@@ -145,13 +154,15 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
             {isManual && (
                 <Row label="Change exposure" indent>
                     <ValueSelector
-                        value={config.exposure ?? -7}
+                        value={Math.max(EXPOSURE_MIN, Math.min(EXPOSURE_MAX, config.exposure ?? -7))}
                         min={EXPOSURE_MIN}
                         max={EXPOSURE_MAX}
+                        unit=""
                         onChange={(v) => handleConfigChange({ exposure: v })}
                     />
                 </Row>
             )}
+
         </div>
     );
 };
