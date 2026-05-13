@@ -11,7 +11,7 @@ use std::thread;
 use crate::sync_utils::BreakableBarrier;
 
 use super::ffi::*;
-use super::types::{CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData, FramePacket};
+use super::types::{CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData, FramePacket, FrameLifecycleTimestamps};
 use crate::timestamps::performance::performance_counter_nanoseconds;
 
 const TARGET_EXPOSURE: i32 = -7;
@@ -108,6 +108,9 @@ fn run_camera_thread(
         let mut frame_number: i64 = 0;
 
         loop {
+            // ── loop_start_ns ──
+            let loop_start_ns = performance_counter_nanoseconds();
+
             // Check for shutdown at top of loop
             if check_shutdown(command_receiver) {
                 tracing::info!("Camera {label}: shutdown");
@@ -137,6 +140,9 @@ fn run_camera_thread(
                 }
             }
 
+            // ── frame_available_ns ──
+            let frame_available_ns = performance_counter_nanoseconds();
+
             // Check again right before committing to the barrier
             if check_shutdown(command_receiver) {
                 tracing::info!("Camera {label}: shutdown before barrier");
@@ -145,14 +151,19 @@ fn run_camera_thread(
                 return Ok(());
             }
 
+            // ── pre_barrier_ns ──
+            let pre_barrier_ns = performance_counter_nanoseconds();
+
             // Barrier: synchronize with other cameras + gatherer.
-            // Returns false if barrier was broken (shutdown in progress).
             if !barrier.wait() {
                 tracing::info!("Camera {label}: barrier broken (shutdown)");
                 Cap_closeStream(ctx, stream);
                 Cap_releaseContext(ctx);
                 return Ok(());
             }
+
+            // ── post_barrier_ns ──
+            let post_barrier_ns = performance_counter_nanoseconds();
 
             // Check one more time after barrier release
             if check_shutdown(command_receiver) {
@@ -162,8 +173,11 @@ fn run_camera_thread(
                 return Ok(());
             }
 
-            let grab_timestamp = performance_counter_nanoseconds();
+            // ── pre_capture_ns ──
+            let pre_capture_ns = performance_counter_nanoseconds();
             let result = Cap_captureFrame(ctx, stream, buffer.as_mut_ptr(), frame_bytes as u32);
+            // ── post_capture_ns ──
+            let post_capture_ns = performance_counter_nanoseconds();
 
             if result != CAPRESULT_OK {
                 let _ = event_sender.send(CameraEvent::Error(format!(
@@ -173,14 +187,28 @@ fn run_camera_thread(
                 break;
             }
 
-            let packet = FramePacket {
+            let mut packet = FramePacket {
                 data: FrameData::Rgb(buffer.clone()),
                 width: actual_width,
                 height: actual_height,
-                grab_timestamp_nanoseconds: grab_timestamp,
+                timestamps: FrameLifecycleTimestamps {
+                    loop_start_ns,
+                    frame_available_ns,
+                    pre_barrier_ns,
+                    post_barrier_ns,
+                    pre_capture_ns,
+                    post_capture_ns,
+                    pre_send_ns: 0,      // stamped right before send
+                    post_send_ns: 0,     // cannot stamp post-send (frame moved into channel)
+                    gatherer_received_ns: 0, // stamped by gatherer
+                },
                 identity: identity.clone(),
                 frame_number,
             };
+
+            // ── pre_send_ns ──
+            packet.timestamps.pre_send_ns = performance_counter_nanoseconds();
+
             frame_number += 1;
 
             if frame_sender.send(packet).is_err() {

@@ -17,6 +17,7 @@ use std::time::{Duration, Instant};
 
 use skellycam::camera::{self, enumerate_directshow_cameras, CameraEvent, CameraIdentity};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
+use skellycam::camera_group_manager::CameraGroupManager;
 use skellycam::recording::{finalize_recording, VideoRecorder};
 use skellycam::sync_utils::BreakableBarrier;
 use skellycam::timestamps::CsvWriter;
@@ -38,6 +39,13 @@ fn main() -> anyhow::Result<()> {
 
     if args.iter().any(|arg| arg == "--detect") {
         return run_detection();
+    }
+
+    // --manager N: test CameraGroupManager lifecycle with N cameras (defaults to all)
+    if let Some(manager_pos) = args.iter().position(|arg| arg == "--manager") {
+        let camera_count = args.get(manager_pos + 1)
+            .and_then(|s| s.parse::<u32>().ok());
+        return run_manager_test(camera_count);
     }
 
     // --record N: record N cameras for a fixed duration
@@ -78,6 +86,108 @@ fn run_detection() -> anyhow::Result<()> {
             if cameras.len() == 1 { "" } else { "s" }
         );
     }
+    Ok(())
+}
+
+fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
+    let all_cameras = enumerate_directshow_cameras()?;
+    if all_cameras.is_empty() {
+        anyhow::bail!("No cameras detected");
+    }
+
+    let camera_count = match requested_count {
+        Some(n) => {
+            if n as usize > all_cameras.len() {
+                anyhow::bail!(
+                    "Requested {} cameras but only {} available",
+                    n,
+                    all_cameras.len()
+                );
+            }
+            n as usize
+        }
+        None => all_cameras.len(),
+    };
+
+    eprintln!("══════════════════════════════════════════════════");
+    eprintln!("  CAMERA GROUP MANAGER TEST — {} camera{}", camera_count, if camera_count == 1 { "" } else { "s" });
+    eprintln!("══════════════════════════════════════════════════\n");
+
+    let mut manager = CameraGroupManager::new();
+
+    let configs: Vec<CameraGroupConfig> = all_cameras.iter()
+        .take(camera_count)
+        .map(|identity| CameraGroupConfig {
+            camera_index: identity.camera_index as u32,
+            requested_width: 1280,
+            requested_height: 720,
+            identity: identity.clone(),
+        })
+        .collect();
+
+    let group_id = manager.create_or_update_group(configs, None)?;
+    eprintln!("  Created group: {group_id}");
+    eprintln!("  Active groups: {:?}", manager.list_groups());
+    eprintln!("  Group count: {}\n", manager.group_count());
+
+    let state = manager.to_state_dict();
+    let state_json = serde_json::to_string_pretty(&state)?;
+    eprintln!("  ── Manager State ──\n{state_json}\n");
+
+    let group = manager.remove_group(&group_id)
+        .ok_or_else(|| anyhow::anyhow!("Group '{group_id}' not found after creation"))?;
+
+    let running = Arc::new(AtomicBool::new(true));
+    let running_consumer = running.clone();
+
+    let consumer_handle = std::thread::spawn(move || {
+        let mut count: u64 = 0;
+        let mut first_frame_time: Option<Instant> = None;
+        let mut last_frame_time: Option<Instant> = None;
+        while running_consumer.load(Ordering::SeqCst) {
+            match group.multi_frame_receiver.recv_timeout(Duration::from_millis(100)) {
+                Ok(_) => {
+                    let now = Instant::now();
+                    if first_frame_time.is_none() {
+                        first_frame_time = Some(now);
+                    }
+                    last_frame_time = Some(now);
+                    count += 1;
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            }
+        }
+        (group, count, first_frame_time, last_frame_time)
+    });
+
+    let run_duration_seconds = 5;
+    eprintln!("  Running for {run_duration_seconds} seconds...\n");
+    std::thread::sleep(Duration::from_secs(run_duration_seconds));
+    running.store(false, Ordering::SeqCst);
+
+    let (group, frame_count, first_frame_time, last_frame_time) = consumer_handle.join().unwrap();
+
+    eprintln!();
+    eprintln!("  ── Results ──");
+    eprintln!("  Multiframes received: {frame_count}");
+    eprintln!("  Cameras in group: {camera_count}");
+    if let (Some(first), Some(last)) = (first_frame_time, last_frame_time) {
+        let capture_duration = last.duration_since(first);
+        if frame_count > 1 {
+            let intervals = frame_count - 1;
+            let fps = intervals as f64 / capture_duration.as_secs_f64();
+            eprintln!("  Capture duration: {:.3} seconds (first frame to last frame)", capture_duration.as_secs_f64());
+            eprintln!("  Multiframe rate: {fps:.1} fps (from {} inter-frame intervals)", intervals);
+        }
+    }
+
+    eprintln!("\n  Shutting down...");
+    group.shutdown();
+    group.wait_for_shutdown();
+
+    eprintln!("  Shutdown complete.");
+    eprintln!("══════════════════════════════════════════════════\n");
     Ok(())
 }
 
@@ -182,7 +292,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
                 }
 
                 let frame_ts = payload.frames.first()
-                    .map(|f| f.grab_timestamp_nanoseconds)
+                    .map(|f| f.timestamps.pre_capture_ns)
                     .unwrap_or(0);
 
                 for (idx, frame) in payload.frames.iter().enumerate() {
@@ -193,13 +303,12 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
                         recorder.feed_frame(
                             rgb_data,
                             frame.frame_number,
-                            frame.grab_timestamp_nanoseconds,
+                            frame.timestamps.pre_capture_ns,
                             frame_ts,
                         )?;
                         csv_writer.write_row(
                             frame.frame_number,
-                            frame.grab_timestamp_nanoseconds,
-                            frame_ts,
+                            &frame.timestamps,
                         )?;
                     }
                 }
@@ -332,7 +441,7 @@ fn run_multi_camera(
         match group.multi_frame_receiver.recv_timeout(Duration::from_millis(500)) {
             Ok(payload) => {
                 multiframe_count += 1;
-                total_spread_ns += payload.inter_camera_grab_spread_nanoseconds() as f64;
+                total_spread_ns += payload.hardware_sync_spread_ns() as f64;
 
                 if multiframe_count >= max_multiframes {
                     eprintln!("\n  Reached {max_multiframes} multiframes, stopping.");

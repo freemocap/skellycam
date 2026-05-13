@@ -8,6 +8,8 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 
+use crate::camera::FrameLifecycleTimestamps;
+
 pub struct CsvWriter {
     writer: csv::Writer<File>,
     path: PathBuf,
@@ -16,7 +18,7 @@ pub struct CsvWriter {
 
 impl CsvWriter {
     /// Create a new CSV file at `path` and write the header row.
-    /// Column names use full words — no abbreviations.
+    /// Column names use full words with dot-separated hierarchy.
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
         let writer = csv::Writer::from_path(&path)
             .context("Failed to create timestamp CSV file")?;
@@ -25,8 +27,15 @@ impl CsvWriter {
         writer
             .write_record(&[
                 "frame_number",
-                "grab_timestamp_nanoseconds",
-                "recorded_timestamp_nanoseconds",
+                "timestamps.loop_start_ns",
+                "timestamps.frame_available_ns",
+                "timestamps.pre_barrier_ns",
+                "timestamps.post_barrier_ns",
+                "timestamps.pre_capture_ns",
+                "timestamps.post_capture_ns",
+                "timestamps.pre_send_ns",
+                "timestamps.post_send_ns",
+                "timestamps.gatherer_received_ns",
             ])
             .context("Failed to write CSV header")?;
         writer
@@ -46,14 +55,20 @@ impl CsvWriter {
     pub fn write_row(
         &mut self,
         frame_number: i64,
-        grab_timestamp_nanoseconds: i64,
-        recorded_timestamp_nanoseconds: i64,
+        timestamps: &FrameLifecycleTimestamps,
     ) -> anyhow::Result<()> {
         self.writer
             .write_record(&[
                 frame_number.to_string(),
-                grab_timestamp_nanoseconds.to_string(),
-                recorded_timestamp_nanoseconds.to_string(),
+                timestamps.loop_start_ns.to_string(),
+                timestamps.frame_available_ns.to_string(),
+                timestamps.pre_barrier_ns.to_string(),
+                timestamps.post_barrier_ns.to_string(),
+                timestamps.pre_capture_ns.to_string(),
+                timestamps.post_capture_ns.to_string(),
+                timestamps.pre_send_ns.to_string(),
+                timestamps.post_send_ns.to_string(),
+                timestamps.gatherer_received_ns.to_string(),
             ])
             .context("Failed to write CSV row")?;
         self.writer.flush().context("Failed to flush CSV row")?;
