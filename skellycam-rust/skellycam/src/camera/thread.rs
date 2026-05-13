@@ -1,7 +1,14 @@
 //! Camera thread: openpnp-capture DirectShow capture on a dedicated OS thread.
+//!
+//! Each camera thread creates its own CapContext (COM thread-affine), opens a
+//! stream with the requested MJPG format, configures manual exposure, then runs
+//! a capture loop synchronized by a BreakableBarrier shared with the gatherer.
 
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread;
+
+use crate::sync_utils::BreakableBarrier;
 
 use super::ffi::*;
 use super::types::{CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData, FramePacket};
@@ -15,6 +22,7 @@ pub fn spawn_camera_thread(
     requested_width: u32,
     requested_height: u32,
     identity: CameraIdentity,
+    barrier: Arc<BreakableBarrier>,
 ) -> (
     CameraHandle,
     mpsc::Receiver<CameraEvent>,
@@ -43,6 +51,7 @@ pub fn spawn_camera_thread(
             &command_receiver,
             &event_sender,
             &frame_sender,
+            &barrier,
         );
         if let Err(error) = result {
             let _ = event_sender.send(CameraEvent::Error(format!(
@@ -54,6 +63,15 @@ pub fn spawn_camera_thread(
     (handle, event_receiver, frame_receiver)
 }
 
+/// Check for shutdown on the command channel. Returns true if shutdown received.
+fn check_shutdown(command_receiver: &mpsc::Receiver<CameraCommand>) -> bool {
+    match command_receiver.try_recv() {
+        Ok(CameraCommand::Shutdown) => true,
+        Err(mpsc::TryRecvError::Empty) => false,
+        Err(mpsc::TryRecvError::Disconnected) => true,
+    }
+}
+
 fn run_camera_thread(
     index: u32,
     requested_width: u32,
@@ -63,6 +81,7 @@ fn run_camera_thread(
     command_receiver: &mpsc::Receiver<CameraCommand>,
     event_sender: &mpsc::Sender<CameraEvent>,
     frame_sender: &mpsc::SyncSender<FramePacket>,
+    barrier: &BreakableBarrier,
 ) -> anyhow::Result<()> {
     unsafe {
         let ctx = Cap_createContext();
@@ -82,32 +101,28 @@ fn run_camera_thread(
         configure_exposure(ctx, stream, label);
         stabilize(ctx, stream, actual_width, actual_height);
 
-        tracing::info!("Camera {label}: capture loop starting ({actual_width}x{actual_height})");
+        tracing::info!("Camera {label}: capture loop ({actual_width}x{actual_height})");
 
         let frame_bytes = (actual_width * actual_height * 3) as usize;
         let mut buffer: Vec<u8> = vec![0u8; frame_bytes];
         let mut frame_number: i64 = 0;
-        let mut previous_timestamp: i64 = 0;
-        let mut total_interval_ns: f64 = 0.0;
-        let mut total_read_ns: f64 = 0.0;
-        let mut total_wait_ns: f64 = 0.0;
-        let mut sample_count: u64 = 0;
 
         loop {
-            match command_receiver.try_recv() {
-                Ok(CameraCommand::Shutdown) => {
-                    tracing::info!("Camera {label}: shutdown command received");
-                    break;
-                }
-                Err(mpsc::TryRecvError::Empty) => {}
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    tracing::info!("Camera {label}: command channel disconnected");
-                    break;
-                }
+            // Check for shutdown at top of loop
+            if check_shutdown(command_receiver) {
+                tracing::info!("Camera {label}: shutdown");
+                break;
             }
 
+            // Wait for next hardware frame, checking for shutdown on every spin
             let wait_start = std::time::Instant::now();
             loop {
+                if check_shutdown(command_receiver) {
+                    tracing::info!("Camera {label}: shutdown during hasNewFrame");
+                    Cap_closeStream(ctx, stream);
+                    Cap_releaseContext(ctx);
+                    return Ok(());
+                }
                 if Cap_hasNewFrame(ctx, stream) != 0 {
                     break;
                 }
@@ -122,9 +137,33 @@ fn run_camera_thread(
                 }
             }
 
-            let pre_capture = performance_counter_nanoseconds();
+            // Check again right before committing to the barrier
+            if check_shutdown(command_receiver) {
+                tracing::info!("Camera {label}: shutdown before barrier");
+                Cap_closeStream(ctx, stream);
+                Cap_releaseContext(ctx);
+                return Ok(());
+            }
+
+            // Barrier: synchronize with other cameras + gatherer.
+            // Returns false if barrier was broken (shutdown in progress).
+            if !barrier.wait() {
+                tracing::info!("Camera {label}: barrier broken (shutdown)");
+                Cap_closeStream(ctx, stream);
+                Cap_releaseContext(ctx);
+                return Ok(());
+            }
+
+            // Check one more time after barrier release
+            if check_shutdown(command_receiver) {
+                tracing::info!("Camera {label}: shutdown after barrier");
+                Cap_closeStream(ctx, stream);
+                Cap_releaseContext(ctx);
+                return Ok(());
+            }
+
+            let grab_timestamp = performance_counter_nanoseconds();
             let result = Cap_captureFrame(ctx, stream, buffer.as_mut_ptr(), frame_bytes as u32);
-            let post_capture = performance_counter_nanoseconds();
 
             if result != CAPRESULT_OK {
                 let _ = event_sender.send(CameraEvent::Error(format!(
@@ -134,45 +173,17 @@ fn run_camera_thread(
                 break;
             }
 
-            total_read_ns += (post_capture - pre_capture) as f64;
-
-            if frame_number > 0 {
-                total_interval_ns += (pre_capture - previous_timestamp) as f64;
-                sample_count += 1;
-            }
-            previous_timestamp = pre_capture;
-
             let packet = FramePacket {
                 data: FrameData::Rgb(buffer.clone()),
                 width: actual_width,
                 height: actual_height,
-                grab_timestamp_nanoseconds: pre_capture,
+                grab_timestamp_nanoseconds: grab_timestamp,
                 identity: identity.clone(),
                 frame_number,
             };
             frame_number += 1;
 
-            let send_start = performance_counter_nanoseconds();
-            let send_result = frame_sender.send(packet);
-            let send_end = performance_counter_nanoseconds();
-            total_wait_ns += (send_end - send_start) as f64;
-
-            if frame_number % 60 == 0 && sample_count > 0 {
-                let fps = 1_000_000_000.0 / (total_interval_ns / sample_count as f64);
-                let read_us = total_read_ns / 60.0 / 1_000.0;
-                let wait_us = total_wait_ns / 60.0 / 1_000.0;
-                eprintln!(
-                    "[{id}] {fps:>5.1} fps | read {read_us:>6.0} µs | wait {wait_us:>5.0} µs",
-                    id = identity.unique_identifier,
-                );
-                total_interval_ns = 0.0;
-                total_read_ns = 0.0;
-                total_wait_ns = 0.0;
-                sample_count = 0;
-            }
-
-            if send_result.is_err() {
-                tracing::info!("Camera {label}: frame receiver dropped, exiting");
+            if frame_sender.send(packet).is_err() {
                 break;
             }
         }
@@ -235,7 +246,7 @@ unsafe fn open_camera_stream(
         .ok_or_else(|| anyhow::anyhow!("Camera {label}: no MJPG format found"))?;
 
     tracing::info!(
-        "Camera {label}: using format {format_id} ({}x{} @{}fps MJPG)",
+        "Camera {label}: format {format_id} ({}x{} @{}fps MJPG)",
         chosen_info.width,
         chosen_info.height,
         chosen_info.fps,
@@ -253,17 +264,14 @@ unsafe fn configure_exposure(ctx: CapContext, stream: CapStream, label: &str) {
     let mut min: i32 = 0;
     let mut max: i32 = 0;
     let mut default: i32 = 0;
-    let r = unsafe {
+    let _ = unsafe {
         Cap_getPropertyLimits(ctx, stream, CAPPROPID_EXPOSURE, &mut min, &mut max, &mut default)
     };
-    tracing::info!(
-        "Camera {label}: exposure limits min={min} max={max} default={default} ({})",
-        result_name(r)
-    );
+    tracing::info!("Camera {label}: exposure limits min={min} max={max} default={default}");
 
     unsafe { Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 0) };
-    let r = unsafe { Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, TARGET_EXPOSURE) };
-    tracing::info!("Camera {label}: exposure set to {TARGET_EXPOSURE} ({})", result_name(r));
+    unsafe { Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, TARGET_EXPOSURE) };
+    tracing::info!("Camera {label}: exposure set to {TARGET_EXPOSURE}");
 }
 
 unsafe fn stabilize(ctx: CapContext, stream: CapStream, width: u32, height: u32) {

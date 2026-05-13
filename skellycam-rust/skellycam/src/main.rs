@@ -1,20 +1,21 @@
-//! Phase 1/2: Camera test harness.
+//! SkellyCam Rust — camera test harness.
 //!
 //! IMPORTANT: Always use `cargo run --release` for real performance testing.
-//! Debug builds are significantly slower — frame rate may drop below 30fps
-//! and timing diagnostics will not reflect actual capture performance.
 //!
 //! Usage:
-//!   cargo run --release -- --detect    # enumerate cameras
-//!   cargo run --release                # single-camera test (index 0)
+//!   cargo run --release -- --detect              # enumerate cameras
+//!   cargo run --release                          # single-camera test (index 0)
+//!   cargo run --release -- --cameras 2           # multi-camera lockstep (first 2)
+//!   cargo run --release -- --cameras 6           # all 6 cameras
+//!   cargo run --release -- --indices 0,2,4       # specific camera indices
 
-use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use skellycam::camera::{self, enumerate_directshow_cameras, CameraEvent, CameraIdentity};
+use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
+use skellycam::sync_utils::BreakableBarrier;
 
 fn main() -> anyhow::Result<()> {
     if cfg!(debug_assertions) {
@@ -35,6 +36,20 @@ fn main() -> anyhow::Result<()> {
         return run_detection();
     }
 
+    let camera_count = args.iter()
+        .position(|arg| arg == "--cameras")
+        .and_then(|pos| args.get(pos + 1))
+        .and_then(|s| s.parse::<u32>().ok());
+
+    let explicit_indices: Option<Vec<u32>> = args.iter()
+        .position(|arg| arg == "--indices")
+        .and_then(|pos| args.get(pos + 1))
+        .map(|s| s.split(',').filter_map(|n| n.trim().parse().ok()).collect());
+
+    if camera_count.is_some() || explicit_indices.is_some() {
+        return run_multi_camera(camera_count, explicit_indices);
+    }
+
     run_single_camera()
 }
 
@@ -52,32 +67,137 @@ fn run_detection() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_single_camera() -> anyhow::Result<()> {
-    let index: u32 = 0;
-    let requested_width: u32 = 1280;
-    let requested_height: u32 = 720;
+fn run_multi_camera(
+    camera_count: Option<u32>,
+    explicit_indices: Option<Vec<u32>>,
+) -> anyhow::Result<()> {
+    let all_cameras = enumerate_directshow_cameras()?;
+    if all_cameras.is_empty() {
+        anyhow::bail!("No cameras detected");
+    }
 
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    format!("Camera {index}").hash(&mut hasher);
-    let unique_id = format!("{:016x}", hasher.finish())
-        .chars().rev().take(6).collect::<String>()
-        .chars().rev().collect::<String>();
-
-    let identity = CameraIdentity {
-        display_name: format!("Camera {index}"),
-        camera_index: index as i32,
-        unique_identifier: unique_id,
-        device_path: String::new(),
+    let indices: Vec<u32> = if let Some(explicit) = explicit_indices {
+        explicit
+    } else {
+        let count = camera_count.unwrap_or(2) as usize;
+        all_cameras.iter()
+            .take(count)
+            .map(|c| c.camera_index as u32)
+            .collect()
     };
 
-    println!("Camera {index}: {} at {requested_width}x{requested_height}", identity.label());
-    let (handle, event_receiver, frame_receiver) =
-        camera::spawn_camera_thread(index, requested_width, requested_height, identity);
+    let configs: Vec<CameraGroupConfig> = indices.iter().map(|&index| {
+        let identity = all_cameras.iter()
+            .find(|c| c.camera_index == index as i32)
+            .cloned()
+            .unwrap_or_else(|| CameraIdentity {
+                display_name: format!("Camera {index}"),
+                camera_index: index as i32,
+                unique_identifier: format!("{:06x}", index),
+                device_path: String::new(),
+            });
+        CameraGroupConfig {
+            camera_index: index,
+            requested_width: 1280,
+            requested_height: 720,
+            identity,
+        }
+    }).collect();
+
+    let num_cameras = configs.len();
+    eprintln!("\n  ── {num_cameras}-camera lockstep ── 600 multiframes (~20s) ──\n");
+
+    let group = CameraGroup::create(configs)?;
 
     let running = Arc::new(AtomicBool::new(true));
     let running_flag = running.clone();
+    let _ = ctrlc::set_handler(move || {
+        eprintln!("\nCtrl+C received, shutting down...");
+        running_flag.store(false, Ordering::SeqCst);
+    });
 
-    // Install CTRL+C handler — sets the flag so the loop can exit cleanly
+    let start = Instant::now();
+    let mut multiframe_count: u64 = 0;
+    let mut total_spread_ns: f64 = 0.0;
+    let max_multiframes: u64 = 600;
+
+    loop {
+        if !running.load(Ordering::SeqCst) {
+            break;
+        }
+
+        match group.multi_frame_receiver.recv_timeout(Duration::from_millis(500)) {
+            Ok(payload) => {
+                multiframe_count += 1;
+                total_spread_ns += payload.inter_camera_grab_spread_nanoseconds() as f64;
+
+                if multiframe_count >= max_multiframes {
+                    eprintln!("\n  Reached {max_multiframes} multiframes, stopping.");
+                    break;
+                }
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                eprintln!("  Gatherer disconnected.");
+                break;
+            }
+        }
+    }
+
+    let elapsed = start.elapsed().as_secs_f64();
+    let avg_spread_us = if multiframe_count > 0 {
+        total_spread_ns / multiframe_count as f64 / 1_000.0
+    } else {
+        0.0
+    };
+
+    eprintln!();
+    eprintln!("══════════════════════════════════════════════════");
+    eprintln!("  Multi-Camera Summary");
+    eprintln!("──────────────────────────────────────────────────");
+    eprintln!("  Cameras:          {num_cameras}");
+    eprintln!("  Multiframes:      {multiframe_count}");
+    eprintln!("  Elapsed:          {elapsed:.1}s");
+    if elapsed > 0.0 {
+        eprintln!("  Multiframe rate:  {:.1} fps", multiframe_count as f64 / elapsed);
+    }
+    eprintln!("  Avg spread:       {avg_spread_us:.0} µs");
+    eprintln!("══════════════════════════════════════════════════");
+    eprintln!();
+
+    eprintln!("Shutting down...");
+    group.shutdown();
+    group.wait_for_shutdown();
+    eprintln!("Done.");
+    Ok(())
+}
+
+fn run_single_camera() -> anyhow::Result<()> {
+    let index: u32 = std::env::args()
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let requested_width: u32 = 1280;
+    let requested_height: u32 = 720;
+
+    let cameras = enumerate_directshow_cameras().unwrap_or_default();
+    let identity = cameras.iter()
+        .find(|c| c.camera_index == index as i32)
+        .cloned()
+        .unwrap_or_else(|| CameraIdentity {
+            display_name: format!("Camera {index}"),
+            camera_index: index as i32,
+            unique_identifier: format!("{:06x}", index),
+            device_path: String::new(),
+        });
+
+    println!("Camera {index}: {} at {requested_width}x{requested_height}", identity.label());
+    let barrier = Arc::new(BreakableBarrier::new(1));
+    let (handle, event_receiver, frame_receiver) =
+        camera::spawn_camera_thread(index, requested_width, requested_height, identity, barrier);
+
+    let running = Arc::new(AtomicBool::new(true));
+    let running_flag = running.clone();
     let _ = ctrlc::set_handler(move || {
         eprintln!("\nCtrl+C received, shutting down...");
         running_flag.store(false, Ordering::SeqCst);
@@ -95,12 +215,10 @@ fn run_single_camera() -> anyhow::Result<()> {
 
         while let Ok(event) = event_receiver.try_recv() {
             match event {
-                CameraEvent::Error(msg) => eprintln!("ERROR: {msg}"),
+                CameraEvent::Error(message) => eprintln!("ERROR: {message}"),
             }
         }
 
-        // Use recv_timeout so the loop can periodically check the running flag
-        // and respond to CTRL+C instead of blocking indefinitely
         match frame_receiver.recv_timeout(Duration::from_millis(100)) {
             Ok(packet) => {
                 if start.is_none() {
@@ -134,11 +252,8 @@ fn run_single_camera() -> anyhow::Result<()> {
                     break;
                 }
             }
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                // No frame yet — loop back to check running flag and events
-                continue;
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                 eprintln!("Camera channel disconnected.");
                 break;
             }
