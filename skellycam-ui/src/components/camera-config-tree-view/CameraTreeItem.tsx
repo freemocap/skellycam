@@ -49,34 +49,38 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const configSummary = getConfigSummary(camera.desiredConfig);
 
     return (
-        <div className="camera-item-row br-1 flex items-center gap-1 p-1" style={{ borderBottom: '1px solid var(--gray-800)' }}>
-            {/* Selection toggle */}
-            <button className="button icon-button" onClick={handleToggleSelection}>
-                <span className={clsx("icon icon-size-16", camera.selected ? "connected-icon" : "warning-icon")} />
-            </button>
+        <div className="camera-item-row br-1 flex flex-col gap-1 p-1" style={{ borderBottom: '1px solid var(--gray-800)' }}>
+            {/* Row 1 — selection, name, settings */}
+            <div className="flex items-center gap-1">
+                <button className="button icon-button" onClick={handleToggleSelection}>
+                    <span className={clsx("icon icon-size-16", camera.selected ? "connected-icon" : "warning-icon")} />
+                </button>
 
-            {/* Camera name + device */}
-            <p className="text sm text-white text-nowrap" style={{ minWidth: 72 }}>Camera {camera.index}</p>
-            <p className="text sm text-gray text-nowrap" style={{ flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {camera.name}
-            </p>
+                <p className="text sm text-white text-nowrap" style={{ minWidth: 72 }}>Camera {camera.index}</p>
+                <p className="text sm text-gray text-nowrap" style={{ flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {camera.name}
+                </p>
 
-            <div className="flex-1" />
+                <div className="flex-1" />
 
-            {/* Inline config chips */}
-            {configSummary.map(item => (
-                <span key={item} className="camera-config-chip">{item}</span>
-            ))}
+                <button
+                    ref={settingsBtnRef}
+                    className={clsx("button icon-button", settingsOpen && "activated")}
+                    onClick={handleOpenSettings}
+                    title={t('cameraSettings')}
+                >
+                    <span className={clsx("icon icon-size-16", settingsOpen ? "close-icon" : "settings-icon")} />
+                </button>
+            </div>
 
-            {/* Settings button */}
-            <button
-                ref={settingsBtnRef}
-                className={clsx("button icon-button", settingsOpen && "activated")}
-                onClick={handleOpenSettings}
-                title={t('cameraSettings')}
-            >
-                <span className={clsx("icon icon-size-16", settingsOpen ? "close-icon" : "settings-icon")} />
-            </button>
+            {/* Row 2 — config chips */}
+            {configSummary.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                    {configSummary.map(item => (
+                        <span key={item} className="camera-config-chip">{item}</span>
+                    ))}
+                </div>
+            )}
 
             {settingsOpen && ReactDOM.createPortal(
                 <CameraGridSettingsModal

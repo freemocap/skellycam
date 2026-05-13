@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector, selectCameras } from '@/store';
 import { camerasConnectOrUpdate, detectCameras, pauseUnpauseCameras } from '@/store/slices/cameras/cameras-thunks';
 import { selectIsPaused } from '@/store/slices/cameras/cameras-selectors';
-import { CameraConfigModal } from '@/components/camera-config-tree-view/CameraConfigModal';
 
 interface CameraSettings { columns: number | null; }
 
@@ -37,7 +36,6 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         }
     }, [isConnected, cameras.length, dispatch]);
     const [isOpen, setIsOpen] = useState<boolean>(false);
-    const [isConfigModalOpen, setIsConfigModalOpen] = useState<boolean>(false);
     const [isAuto, setIsAuto] = useState<boolean>(true);
     const [manualColumns, setManualColumns] = useState<number>(2);
     const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
@@ -119,7 +117,6 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
 
     return (
       <>
-        <CameraConfigModal open={isConfigModalOpen} onClose={() => setIsConfigModalOpen(false)} />
         <div className="mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between">
           <div className="all-actions-components flex flex-row">
             <div className="stream-actions-container flex flex-row gap-1 items-center">
@@ -144,14 +141,6 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                         onClick={() => dispatch(camerasConnectOrUpdate())}>
                         <span className="icon icon-size-16 scan-icon" />
                     </button>
-                <ButtonSm
-                                text="Configure"
-                                rightSideIcon="dropdown"
-                                iconClass="settings-icon"
-                                textColor="text-white"
-                                onClick={() => setIsConfigModalOpen(true)}
-                            />
-
             </div>
           </div>
           <div className="settings-overlay-trigger"></div>

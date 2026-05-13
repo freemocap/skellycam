@@ -7,6 +7,7 @@ import {useServer} from "@/services/server/ServerContextProvider";
 import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
 import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
+import {CameraConfigSidebarPanel} from "@/components/camera-config-tree-view/CameraConfigSidebarPanel";
 
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
@@ -106,8 +107,9 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                 </div>
 
                 {/* Main content */}
-                <div className="flex flex-col gap-1 pt-1 pb-4">
+                <div className="flex flex-col gap-1 pt-1 pb-4 flex-1 overflow-hidden">
                     <RecordingInfoPanel/>
+                    <CameraConfigSidebarPanel/>
                 </div>
             </div>
         </>
