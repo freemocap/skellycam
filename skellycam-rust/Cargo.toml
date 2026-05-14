@@ -3,7 +3,18 @@ name = "skellycam"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
+# PyO3 — Python bindings
+pyo3 = { version = "0.28", features = ["extension-module"] }
+
+# Bridge Rust tracing/log to Python logging
+log = "0.4"
+tracing-log = "0.2"
+pyo3-log = "0.13"
+
 # Signal handling (Ctrl+C)
 ctrlc = "3"
 
@@ -39,6 +50,9 @@ uuid = { version = "1", features = ["v4"] }
 
 # Time
 chrono = "0.4"
+
+# Home directory lookup
+dirs = "6"
 
 # Streaming CSV
 csv = "1"

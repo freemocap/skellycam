@@ -10,8 +10,7 @@ use tokio::sync::broadcast;
 
 use crate::camera::enumerate_directshow_cameras;
 use crate::camera_group::{CameraGroup, CameraGroupConfig};
-use crate::frontend_payload::encode_payload;
-use crate::frontend_payload::image_pipeline::{jpeg_encode_rgb, resize_rgb, DEFAULT_DISPLAY_SCALE, DEFAULT_JPEG_QUALITY};
+use crate::frontend_payload::encode_multiframe;
 
 use super::application_state::AppState;
 use super::error::AppError;
@@ -166,22 +165,4 @@ fn relay_loop(
     group.shutdown();
     group.wait_for_shutdown();
     eprintln!("[frame-relay] exited");
-}
-
-/// Encode a MultiFramePayload into a frontend binary payload.
-fn encode_multiframe(payload: &crate::camera::MultiFramePayload) -> Result<Vec<u8>, String> {
-    let mut jpegs = Vec::new();
-    let mut display_widths = Vec::new();
-    let mut display_heights = Vec::new();
-
-    for frame in &payload.frames {
-        let rgb = frame.data.as_bytes();
-        let (resized, new_w, new_h) = resize_rgb(rgb, frame.width, frame.height, DEFAULT_DISPLAY_SCALE);
-        let jpeg = jpeg_encode_rgb(&resized, new_w, new_h, DEFAULT_JPEG_QUALITY)?;
-        jpegs.push(jpeg);
-        display_widths.push(new_w);
-        display_heights.push(new_h);
-    }
-
-    Ok(encode_payload(payload, &jpegs, &display_widths, &display_heights))
 }
