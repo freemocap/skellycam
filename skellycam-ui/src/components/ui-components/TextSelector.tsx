@@ -80,10 +80,10 @@ const TextSelector: React.FC<TextSelectorProps> = ({
       {/* Popup — fixed position so it escapes overflow clipping */}
       {open && (
         <div
-          className={`min-w-full border-1 border-black elevated-sharp pos-abs flex flex-row right-0 p-1 bg-dark br-2 z-1 reveal slide-down ${popupClassName}`}
+          className={`border-1 border-black elevated-sharp pos-abs flex flex-row right-0 p-1 bg-dark br-2 z-1 reveal slide-down ${popupClassName}`}
           
         >
-          <div className="flex p-2 gap-2 bg-middark br-1">
+          <div className="min-w-full  flex p-2 gap-2 bg-middark br-1">
             <div className="text-input">
               <input
                 ref={inputRef}
