@@ -15,7 +15,7 @@ export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
 }) => {
     const { t } = useTranslation();
     return (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1 flex-wrap align-end">
             <ToggleComponent
                 text={t("delayStart")}
                 isToggled={useDelay}

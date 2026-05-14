@@ -34,18 +34,18 @@ export const RecordingControlsSection: React.FC<RecordingControlsSectionProps> =
 
     return (
         <div className="file-directory-secondary-group flex flex-col gap-2">
-            <DelayRecordingStartControl
-                useDelay={useDelayStart}
-                delaySeconds={delaySeconds}
-                onDelayToggle={onDelayToggle}
-                onDelayChange={onDelayChange}
-            />
             <RecordingNamePreview
                 name={recordingName}
                 tag={recordingTag}
                 isRecording={isRecording}
                 onTagChange={onTagChange}
                 onNameChange={onNameChange}
+            />
+            <DelayRecordingStartControl
+                useDelay={useDelayStart}
+                delaySeconds={delaySeconds}
+                onDelayToggle={onDelayToggle}
+                onDelayChange={onDelayChange}
             />
             <RecordingSettingsSection
                 useTimestamp={useTimestamp}

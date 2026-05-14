@@ -23,7 +23,7 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
     const { t } = useTranslation();
 
     return (
-        <div className="flex flex-col gap-1 bg-middark br-1 p-1">
+        <div className="flex flex-col gap-1 bg-middark br-1">
             <SubactionHeader text={t('recordingSettings')} />
 
             {/* Timestamp toggle + base name input */}
