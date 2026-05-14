@@ -88,11 +88,15 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                 {/* Header row */}
                 <div
                     className="flex items-center gap-1 px-1 py-1"
-                    style={{
-                        borderBottom: '1px solid var(--gray-600)',
-                        minHeight: 40,
-                    }}
+                    // style={{
+                    //     borderBottom: '1px solid var(--gray-600)',
+                    //     minHeight: 40,
+                    // }}
                 >
+
+                    <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
+                        <ServerConnectionStatus />
+                    </div>
                     <button
                         className="button icon-button"
                         onClick={onToggleCollapse}
@@ -100,14 +104,10 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     >
                         <span className="text sm">✕</span>
                     </button>
-
-                    <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
-                        <ServerConnectionStatus />
-                    </div>
                 </div>
 
                 {/* Main content */}
-                <div className="flex flex-col gap-1 pt-1 pb-4 flex-1 overflow-hidden">
+                <div className="side-action-main-container flex flex-col gap-1 flex-1 overflow-hidden">
                     <RecordingInfoPanel/>
                     <CameraConfigSidebarPanel/>
                 </div>

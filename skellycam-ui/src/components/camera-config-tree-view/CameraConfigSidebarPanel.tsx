@@ -28,7 +28,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     }, [dispatch]);
 
     return (
-        <div className="flex flex-col flex-1 overflow-hidden bg-dark br-2 border-1 border-black p-1 m-1">
+        <div className="flex flex-col flex-1 overflow-hidden bg-middark br-2 p-1">
             {/* Header */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px', borderBottom: '1px solid var(--gray-700)' }}>
                 {/* Row 1 — actions */}

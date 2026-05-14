@@ -48,7 +48,7 @@ export const RecordingPathModal: React.FC<RecordingPathModalProps> = ({ open, on
 
     return (
         <div
-            className="splash-overlay inset-0 reveal fadeIn"
+            className="recording-path-modal overlay splash-overlay inset-0 reveal fadeIn"
             style={{ position: 'fixed', zIndex: 50 }}
             onClick={onClose}
         >

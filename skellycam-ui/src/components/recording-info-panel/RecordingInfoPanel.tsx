@@ -134,15 +134,62 @@ export const RecordingInfoPanel: React.FC = () => {
         : `${recordingInfo.recordingDirectory}/${recordingName}`;
 
     return (
-        <div className="flex flex-col gap-1 bg-dark br-2 border-1 border-black p-1 m-1">
+    <div className="main-side-actions flex flex-col gap-1">
+        <div className="file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
+            <p class="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
+                {/* Path & Settings button */}
+                <ButtonSm
+                    iconClass="subfolder-icon"
+                    text={displayPath ? displayPath : "Set recording path"}
+                    // rightSideIcon="externallink"
+                    textColor="text-gray"
+                    // className="text-nowrap"
+                    buttonType="full-width"
+                    onClick={() => setPathModalOpen(true)}
+                />
+                {/* <p className="recording-path-preview text-wrap p-1">
+                    {displayPath}
+                </p> */}
+
+                <RecordingCompleteDialog />
+
+                <RecordingPathModal
+                    open={pathModalOpen}
+                    onClose={() => setPathModalOpen(false)}
+                    recordingDirectory={recordingInfo.recordingDirectory}
+                    recordingName={recordingName}
+                    subfolder={subfolderName}
+                    countdown={countdown}
+                    recordingTag={recordingTag}
+                    useDelayStart={useDelayStart}
+                    delaySeconds={delaySeconds}
+                    useTimestamp={useTimestamp}
+                    baseName={baseName}
+                    useIncrement={useIncrement}
+                    currentIncrement={currentIncrement}
+                    createSubfolder={createSubfolder}
+                    customSubfolderName={customSubfolderName}
+                    isRecording={recordingInfo.isRecording}
+                    onDelayToggle={setUseDelayStart}
+                    onDelayChange={setDelaySeconds}
+                    onTagChange={setRecordingTag}
+                    onNameChange={(value) => { setUseTimestamp(false); setBaseName(value); }}
+                    onUseTimestampChange={setUseTimestamp}
+                    onBaseNameChange={setBaseName}
+                    onUseIncrementChange={setUseIncrement}
+                    onIncrementChange={setCurrentIncrement}
+                    onCreateSubfolderChange={setCreateSubfolder}
+                    onCustomSubfolderNameChange={setCustomSubfolderName}
+                />
+            </div>
             {/* Title */}
-            <div className="flex items-center gap-1 h-25">
+            {/* <div className="flex items-center gap-1 h-25">
                 <span className="icon stream-icon icon-size-16" />
                 <p className="text bg text-white">Record</p>
-            </div>
-
+            </div> */}
+        <div className="record-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-2 pb-2">
             {/* Record button — full width, its own row */}
-            <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="flex flex-row flex-1 items-center gap-1 fit-content w-full min-w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 <StartStopRecordingButton
                     isRecording={recordingInfo.isRecording}
                     isPending={pendingOperation !== null}
@@ -159,50 +206,8 @@ export const RecordingInfoPanel: React.FC = () => {
                 onMicSelected={setMicDeviceIndex}
                 disabled={recordingInfo.isRecording}
             />
-
-            {/* Path & Settings button */}
-            <ButtonSm
-                iconClass="subfolder-icon"
-                text="Recording Path &amp; Settings"
-                rightSideIcon="externallink"
-                textColor="text-gray"
-                buttonType="full-width"
-                onClick={() => setPathModalOpen(true)}
-            />
-            <p className="recording-path-preview text-wrap pl-1">
-                {displayPath}
-            </p>
-
-            <RecordingCompleteDialog />
-
-            <RecordingPathModal
-                open={pathModalOpen}
-                onClose={() => setPathModalOpen(false)}
-                recordingDirectory={recordingInfo.recordingDirectory}
-                recordingName={recordingName}
-                subfolder={subfolderName}
-                countdown={countdown}
-                recordingTag={recordingTag}
-                useDelayStart={useDelayStart}
-                delaySeconds={delaySeconds}
-                useTimestamp={useTimestamp}
-                baseName={baseName}
-                useIncrement={useIncrement}
-                currentIncrement={currentIncrement}
-                createSubfolder={createSubfolder}
-                customSubfolderName={customSubfolderName}
-                isRecording={recordingInfo.isRecording}
-                onDelayToggle={setUseDelayStart}
-                onDelayChange={setDelaySeconds}
-                onTagChange={setRecordingTag}
-                onNameChange={(value) => { setUseTimestamp(false); setBaseName(value); }}
-                onUseTimestampChange={setUseTimestamp}
-                onBaseNameChange={setBaseName}
-                onUseIncrementChange={setUseIncrement}
-                onIncrementChange={setCurrentIncrement}
-                onCreateSubfolderChange={setCreateSubfolder}
-                onCustomSubfolderNameChange={setCustomSubfolderName}
-            />
         </div>
+        
+     </div>
     );
 };

@@ -145,7 +145,7 @@
 
 .button.sm,
 button.rotate-button {
-  padding: 4px 6px;
+  padding: 4px 4px;
   min-height: 25px;
   width: auto;
   /* to fit its content */
@@ -157,6 +157,11 @@ button.rotate-button {
 
 .fit-content {
   max-width: max-content;
+  /* min-width: max-content; */
+}
+.min-w-fit-content {
+  /* max-width: max-content; */
+  min-width: max-content;
 }
 
 .button.sm:not(.primary, .secondary, .activated):hover {
@@ -494,6 +499,9 @@ a.link:hover {
 .align-end {
   align-items: flex-end;
 }
+.flex-end {
+  justify-content: flex-end;
+}
 
 .justify-content-space-between {
   justify-content: space-between;
@@ -502,7 +510,10 @@ a.link:hover {
 .align-items-end {
   align-items: flex-end;
 }
-
+/* display / block */
+.block {
+  display: block;
+}
 /* flex (proportions) */
 .flex-1 {
   flex: 1;
@@ -628,6 +639,9 @@ a.link:hover {
 .mt-1 {
   margin-top: 4px;
 }
+.mt-2 {
+  margin-top: 8px;
+}
 .mt-3 {
   margin-top: 12px;
 }
@@ -639,6 +653,9 @@ a.link:hover {
 /* widths/heights */
 .w-full {
   width: 100%;
+}
+.min-w-full {
+  min-width: 100%;
 }
 
 .h-full {
@@ -762,8 +779,8 @@ a.link:hover {
    ========================= */
 
 .icon-size-16 {
-  width: 16px;
-  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
 }
 
 .icon-size-32 {
@@ -1707,4 +1724,7 @@ input[type="checkbox"]:disabled {
   background-color: var(--gray-800);
   border-bottom: 1px solid var(--gray-700);
   display: flex;
+}
+.mic-dropdown-container {
+  width: 218px;
 }

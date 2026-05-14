@@ -7,6 +7,7 @@ import { Camera, CameraConfig, ExposureMode, RotationValue, ROTATION_OPTIONS, RO
 import NameDropdownSelector from '@/components/ui-components/NameDropdownSelector';
 import SegmentedControl from '@/components/ui-components/SegmentedControl';
 import ValueSelector from '@/components/ui-components/ValueSelector';
+import SubactionHeader from '@/components/ui-components/SubactionHeader';
 
 interface CameraGridSettingsModalProps {
     camera: Camera;
@@ -30,12 +31,23 @@ const resolutionLabel = (config: CameraConfig): string => {
     return preset?.label ?? `${config.resolution.width} × ${config.resolution.height}`;
 };
 
-const Row: React.FC<{ label: string; indent?: boolean; children: React.ReactNode }> = ({ label, indent, children }) => (
-    <div className="flex items-center gap-2 p-1" style={{ paddingLeft: indent ? '1.5rem' : undefined }}>
-        <p className="text md text-gray text-nowrap" style={{ minWidth: 80 }}>
-            {indent ? '└ ' : ''}{label}
+const Row:React.FC<{ label: string; indent?: boolean; children: React.ReactNode }> = ({
+    label,
+    indent,
+    children,
+}) => (
+    <div
+        className="text-input-container gap-1 p-1 br-1 flex justify-content-space-between items-center"
+        // style={{ paddingLeft: indent ? '1.5rem' : undefined }}
+    >
+        <p
+            className="text md text-gray text-nowrap flex items-center gap-1"
+            style={{ minWidth: 80 }}
+        >
+            {indent && <span className="icon icon-size-16 subcat-icon"></span>}
+            {label}
         </p>
-        <div className="flex-1 flex justify-content-flex-end">
+        <div className="flex-1 flex justify-content-flex-end flex-end">
             {children}
         </div>
     </div>
@@ -93,76 +105,113 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
     const isManual = config.exposure_mode === 'MANUAL';
 
     return (
-        <div
-            ref={modalRef}
-            className="bg-dark border-1 border-black br-2 elevated-sharp flex flex-col reveal fadeIn"
-            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 300, width: 320, cursor: 'grab' }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onClick={(e) => e.stopPropagation()}
+   
+    <div
+          className="camera-settings-container fit-content reveal slide-down camera-settings-modal modal draggable border-1 border-black elevated-sharp flex flex-col p-1 bg-dark br-2 reveal fadeIn gap-1 z-2"
+          ref={modalRef}
+          style={{
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            zIndex: 300,
+            // width: 320,
+            cursor: "grab",
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onClick={(e) => e.stopPropagation()}
         >
-            {/* Header */}
-            <div className="flex items-center gap-1 p-1" style={{ borderBottom: '1px solid var(--gray-700)' }}>
-                <p className="text md text-white flex-1">Camera settings</p>
-                <ButtonSm
-                    text={otherCamerasCount > 0
-                        ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? 's' : ''}`
-                        : 'No other cameras'}
-                    iconClass="stream-icon"
-                    buttonType={otherCamerasCount === 0 ? 'disabled' : ''}
-                    onClick={() => { if (otherCamerasCount > 0) dispatch(configCopiedToAll(camera.id)); }}
-                />
-            </div>
+        <div className='fit-content flex flex-col right-0 p-2 gap-1 bg-middark br-1 z-1'>
+          {/* Header */}
+          <div
+            className="subaction-header-container justify-content-space-between gap-1 br-1 flex justify-between items-center h-25 p-1"
+            // style={{ borderBottom: "1px solid var(--gray-700)" }}
+          >
+            <p className="text-nowrap text-left bg-md text-darkgray">Camera settings</p>
+            <ButtonSm
+              text={
+                otherCamerasCount > 0
+                  ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? "s" : ""}`
+                  : "No other cameras"
+              }
+              iconClass="stream-icon"
+              buttonType={otherCamerasCount === 0 ? "disabled" : ""}
+              onClick={() => {
+                if (otherCamerasCount > 0)
+                  dispatch(configCopiedToAll(camera.id));
+              }}
+            />
+          </div>
 
-            {/* Rotate */}
-            <Row label="Rotate">
-                <SegmentedControl
-                    options={ROTATION_OPTIONS.map((o: RotationValue) => ({
-                        label: ROTATION_DEGREE_LABELS[o],
-                        value: String(o),
-                    }))}
-                    value={String(config.rotation ?? -1)}
-                    onChange={(v) => handleConfigChange({ rotation: Number(v) as RotationValue })}
-                    size="sm"
-                    className="segmented-control-sm"
-                />
+          {/* Rotate */}
+          <Row label="Rotate">
+            <SegmentedControl
+              options={ROTATION_OPTIONS.map((o: RotationValue) => ({
+                label: ROTATION_DEGREE_LABELS[o],
+                value: String(o),
+              }))}
+              value={String(config.rotation ?? -1)}
+              onChange={(v) =>
+                handleConfigChange({ rotation: Number(v) as RotationValue })
+              }
+              size="sm"
+              className="segmented-control-sm"
+            />
+          </Row>
+
+          {/* Resolution */}
+          <Row label="Resolution">
+            <NameDropdownSelector
+              options={PRESET_RESOLUTIONS.map((p) => p.label)}
+              initialValue={resolutionLabel(config)}
+              onChange={(label) => {
+                const preset = PRESET_RESOLUTIONS.find(
+                  (p) => p.label === label,
+                );
+                if (preset)
+                  handleConfigChange({
+                    resolution: { width: preset.width, height: preset.height },
+                  });
+              }}
+            />
+          </Row>
+
+          {/* Exposure mode */}
+          <Row label="Exposure">
+            <NameDropdownSelector
+              options={["Manual", "Auto"]}
+              initialValue={
+                config.exposure_mode === "MANUAL" ? "Manual" : "Auto"
+              }
+              onChange={(v) =>
+                handleConfigChange({
+                  exposure_mode: (v === "Manual"
+                    ? "MANUAL"
+                    : "AUTO") as ExposureMode,
+                })
+              }
+            />
+          </Row>
+
+          {/* Exposure value — only when manual */}
+          {isManual && (
+            
+            <Row label="Change exposure" indent>
+              <ValueSelector
+                value={Math.max(
+                  EXPOSURE_MIN,
+                  Math.min(EXPOSURE_MAX, config.exposure ?? -7),
+                )}
+                min={EXPOSURE_MIN}
+                max={EXPOSURE_MAX}
+                unit=""
+                onChange={(v) => handleConfigChange({ exposure: v })}
+              />
             </Row>
-
-            {/* Resolution */}
-            <Row label="Resolution">
-                <NameDropdownSelector
-                    options={PRESET_RESOLUTIONS.map(p => p.label)}
-                    initialValue={resolutionLabel(config)}
-                    onChange={(label) => {
-                        const preset = PRESET_RESOLUTIONS.find(p => p.label === label);
-                        if (preset) handleConfigChange({ resolution: { width: preset.width, height: preset.height } });
-                    }}
-                />
-            </Row>
-
-            {/* Exposure mode */}
-            <Row label="Exposure">
-                <NameDropdownSelector
-                    options={['Manual', 'Auto']}
-                    initialValue={config.exposure_mode === 'MANUAL' ? 'Manual' : 'Auto'}
-                    onChange={(v) => handleConfigChange({ exposure_mode: (v === 'Manual' ? 'MANUAL' : 'AUTO') as ExposureMode })}
-                />
-            </Row>
-
-            {/* Exposure value — only when manual */}
-            {isManual && (
-                <Row label="Change exposure" indent>
-                    <ValueSelector
-                        value={Math.max(EXPOSURE_MIN, Math.min(EXPOSURE_MAX, config.exposure ?? -7))}
-                        min={EXPOSURE_MIN}
-                        max={EXPOSURE_MAX}
-                        unit=""
-                        onChange={(v) => handleConfigChange({ exposure: v })}
-                    />
-                </Row>
-            )}
-
+          )}
+          </div>
         </div>
+    
     );
 };
