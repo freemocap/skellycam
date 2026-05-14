@@ -52,6 +52,8 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --calibrated-icon: url("../assets/icons/calibrated_icon.svg");
   --camera-icon: url("../assets/icons/camera_icon.svg");
   --explainer-icon: url("../assets/icons/explainer_icon.svg");
+  --expand-icon: url("../assets/icons/expand_icon.svg");
+  --collapse-icon: url("../assets/icons/collapse_icon.svg");
 
   --processmocap-icon: url("../assets/icons/processmocap_icon.svg");
   --video-icon: url("../assets/icons/video_icon.svg");

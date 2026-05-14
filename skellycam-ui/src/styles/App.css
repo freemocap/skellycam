@@ -826,6 +826,13 @@ a.link:hover {
   background-image: var(--close-icon);
 }
 
+.expand-icon {
+  background-image: var(--expand-icon);
+}
+.collapse-icon {
+  background-image: var(--collapse-icon);
+}
+
 .rotate-icon {
   background-image: var(--rotate-icon);
 }

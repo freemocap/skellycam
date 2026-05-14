@@ -50,7 +50,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                         <PanelResizeHandle className="resizable-component" style={{width: "4px", cursor: "col-resize", backgroundColor: "var(--gray-600)"}} />
                         <Panel
                                 className="right-side-panel"
-                                defaultSize={76} minSize={10}>
+                                defaultSize={60} minSize={10}>
                             {children}
                         </Panel>
                     </PanelGroup>

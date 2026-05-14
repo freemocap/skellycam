@@ -23,19 +23,19 @@ const CollapsedToolbar: React.FC<{
     const {t} = useTranslation();
 
     return (
-        <div className="flex flex-col items-center w-full h-full pt-1 gap-1" style={{backgroundColor: 'var(--gray-800)'}}>
+        <div className="collapsed-sidebar items-center flex flex-col items-center w-full h-full pt-1 gap-1"       >
             <button
                 className="button icon-button"
                 onClick={onToggleCollapse}
                 title={t('expandSidebar')}
             >
-                <span className="text sm">☰</span>
+                <span className="icon icon-size-16 expand-icon text sm"></span>
             </button>
 
             <ServerConnectionStatus compact />
 
             <button
-                className={`button icon-button record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
+                className={`collapsed-start-recording-btn br-1 button icon-button record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
                 onClick={onRecordClick}
                 disabled={noCameras && !isRecording}
                 title={isRecording ? t('stopRecording') : t('startRecording')}
@@ -82,7 +82,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
 
             {/* Always mounted — display:none preserves component state when collapsed */}
             <div
-                className="inner flex flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
+                className="inner flex gap-1 flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
                 style={{ display: isCollapsed ? 'none' : 'flex' }}
             >
                 {/* Header row */}
@@ -102,7 +102,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                         onClick={onToggleCollapse}
                         title={t('collapseSidebar')}
                     >
-                        <span className="text sm">✕</span>
+                        <span className="icon icon-size-16 collapse-icon"></span>
                     </button>
                 </div>
 
