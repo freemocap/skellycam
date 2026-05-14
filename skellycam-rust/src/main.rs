@@ -492,105 +492,10 @@ fn run_multi_camera(
 }
 
 fn run_single_camera() -> anyhow::Result<()> {
-    let index: u32 = std::env::args()
-        .nth(1)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
-    let requested_width: u32 = 1280;
-    let requested_height: u32 = 720;
-
-    let cameras = enumerate_directshow_cameras().unwrap_or_default();
-    let identity = cameras.iter()
-        .find(|c| c.camera_index == index as i32)
-        .cloned()
-        .unwrap_or_else(|| CameraIdentity {
-            display_name: format!("Camera {index}"),
-            camera_index: index as i32,
-            unique_identifier: format!("{:06x}", index),
-            device_path: String::new(),
-        });
-
-    println!("Camera {index}: {} at {requested_width}x{requested_height}", identity.label());
-    let barrier = Arc::new(BreakableBarrier::new(1));
-    let (handle, event_receiver, frame_receiver) =
-        camera::spawn_camera_thread(index, requested_width, requested_height, identity, barrier);
-
-    let running = Arc::new(AtomicBool::new(true));
-    let running_flag = running.clone();
-    let _ = ctrlc::set_handler(move || {
-        eprintln!("\nCtrl+C received, shutting down...");
-        running_flag.store(false, Ordering::SeqCst);
-    });
-
-    let mut start: Option<Instant> = None;
-    let mut frame_count: u64 = 0;
-    let mut last_report = Instant::now();
-
-    loop {
-        if !running.load(Ordering::SeqCst) {
-            eprintln!("Shutdown requested, exiting loop.");
-            break;
-        }
-
-        while let Ok(event) = event_receiver.try_recv() {
-            match event {
-                CameraEvent::Error(message) => eprintln!("ERROR: {message}"),
-            }
-        }
-
-        match frame_receiver.recv_timeout(Duration::from_millis(100)) {
-            Ok(packet) => {
-                if start.is_none() {
-                    start = Some(Instant::now());
-                    last_report = Instant::now();
-                }
-                frame_count += 1;
-
-                if frame_count <= 3 {
-                    println!(
-                        "Frame {}: {}x{} ({} KB)",
-                        packet.frame_number,
-                        packet.width,
-                        packet.height,
-                        packet.data.len() / 1024,
-                    );
-                }
-
-                if frame_count % 30 == 0 {
-                    let elapsed = last_report.elapsed();
-                    let fps = 30.0_f64 / elapsed.as_secs_f64();
-                    println!(
-                        "Frame {:>5} | {:>5.1} fps | {}x{}",
-                        packet.frame_number, fps, packet.width, packet.height,
-                    );
-                    last_report = Instant::now();
-                }
-
-                if frame_count >= 500 {
-                    println!("\nReached 500 frames, stopping.");
-                    break;
-                }
-            }
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                eprintln!("Camera channel disconnected.");
-                break;
-            }
-        }
-    }
-
-    if let Some(s) = start {
-        let total = s.elapsed();
-        println!(
-            "\n{frame_count} frames in {:.1}s ({:.1} fps avg).",
-            total.as_secs_f64(),
-            frame_count as f64 / total.as_secs_f64(),
-        );
-    }
-    eprintln!("Shutting down camera...");
-    drop(handle);
-    eprintln!("Done.");
-    Ok(())
+    // Single-camera mode uses CameraGroup with one camera — same barrier,
+    // same gatherer, same pipeline as multi-camera. The degenerate case
+    // should exercise the identical code path.
+    run_multi_camera(Some(1), None)
 }
 
 fn run_server() -> anyhow::Result<()> {

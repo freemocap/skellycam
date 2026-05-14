@@ -1,2 +1,2 @@
-# No special environment variables needed.
-# openpnp-capture is linked via build.rs.
+[term]
+color = "always"

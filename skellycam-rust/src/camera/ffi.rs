@@ -91,6 +91,48 @@ unsafe extern "C" {
         property_id: u32,
         out_value: *mut u32,
     ) -> CapResult;
+
+    // ── Raw MJPEG API (no RGB decode in capture loop) ──────────────
+
+    /// Open a stream in raw MJPEG mode. Takes a format_id (same as Cap_openStream)
+    /// so the caller can select the exact resolution/framerate/MJPG format.
+    /// Returns -1 if the format isn't MJPEG.
+    pub fn Cap_openStreamRaw(
+        ctx: CapContext,
+        index: CapDeviceID,
+        format_id: CapFormatID,
+    ) -> CapStream;
+
+    /// Copy the latest raw JPEG frame into `buf`. `buf_size` is the capacity;
+    /// the actual byte count is written to `*out_bytes`. Returns CAPRESULT_ERR
+    /// if the caller's buffer is too small (and sets `*out_bytes` to the
+    /// required size).
+    pub fn Cap_captureFrameRaw(
+        ctx: CapContext,
+        stream: CapStream,
+        buf: *mut u8,
+        buf_size: u32,
+        out_bytes: *mut u32,
+    ) -> CapResult;
+
+    /// Get the byte size of the current raw frame without copying.
+    /// Writes the size to `*out_bytes`. Returns CAPRESULT_OK on success.
+    pub fn Cap_getFrameSize(
+        ctx: CapContext,
+        stream: CapStream,
+        out_bytes: *mut u32,
+    ) -> CapResult;
+
+    /// Decode a raw JPEG frame into 24-bit RGB on demand.
+    /// `dst_size` must be at least `width * height * 3` bytes.
+    pub fn Cap_decodeFrame(
+        ctx: CapContext,
+        stream: CapStream,
+        src: *const u8,
+        src_size: u32,
+        dst: *mut u8,
+        dst_size: u32,
+    ) -> CapResult;
 }
 
 pub unsafe fn cstr_to_string(ptr: *const c_char) -> Option<String> {

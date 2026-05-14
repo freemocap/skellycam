@@ -36,6 +36,7 @@ impl CameraGroup {
                 config.requested_height,
                 config.identity,
                 barrier.clone(),
+                true, // use raw MJPEG
             );
             camera_handles.push(handle);
             frame_receivers.push(frame_receiver);

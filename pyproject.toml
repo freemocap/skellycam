@@ -190,6 +190,7 @@ dev = [
 # =============================================================================
 
 [tool.poe.tasks]
+rebuild  = { cmd = "uv sync -v --reinstall-package skellycam", help = "Rebuild Rust engine with full cargo output" }
 tc-check = { cmd = "ruff check --select TC skellycam/", help = "Preview type-only imports that can move behind TYPE_CHECKING" }
 tc-fix   = { cmd = "ruff check --select TC --fix skellycam/", help = "Move type-only imports behind TYPE_CHECKING" }
 tc       = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests to verify" }

@@ -81,6 +81,27 @@ sudo apt update && sudo apt install clang portaudio19-dev
 
 ---
 
+## Building
+
+Skellycam's Rust engine links pre-built static libraries from the
+[jonmatthis/openpnp-capture](https://github.com/jonmatthis/openpnp-capture/releases)
+fork. No CMake or C toolchain required — `build.rs` downloads the correct
+archive for your platform automatically.
+
+**First build:** `uv sync`
+
+**Rebuild with full cargo output visible:**
+```bash
+uv run poe rebuild
+```
+
+**Force clean rebuild:**
+```bash
+cd skellycam-rust && cargo clean && cd .. && uv sync
+```
+
+---
+
 ## How It Works
 
 Each camera runs in its own OS process to avoid the GIL. The `CameraOrchestrator` enforces synchronization through a two-phase capture protocol:
@@ -137,9 +158,9 @@ Full details in the [API Reference](https://freemocap.github.io/skellycam/docs/t
 
 ```bash
 uv sync --group dev                     # Install dev dependencies
-uv run pytest skellycam/tests/ -v       # Run tests
-uv run ruff check skellycam/            # Lint
-uv run poe test                         # Via task runner
+uv run poe rebuild                      # Rebuild Rust engine (with cargo output)
+uv run poe test                         # Run tests
+uv run poe lint                         # Lint
 ```
 
 See the [Development guide](https://freemocap.github.io/skellycam/docs/development/) for the full setup.

@@ -3,6 +3,12 @@
 //! Each camera thread creates its own CapContext (COM thread-affine), opens a
 //! stream with the requested MJPG format, configures manual exposure, then runs
 //! a capture loop synchronized by a BreakableBarrier shared with the gatherer.
+//!
+//! Two capture modes:
+//!   - Raw MJPEG (default): `Cap_openStreamRaw` + `Cap_captureFrameRaw`
+//!     produces `FrameData::Mjpg` — JPEG bytes pass through without decode.
+//!   - RGB (fallback): `Cap_openStream` + `Cap_captureFrame` produces
+//!     `FrameData::Rgb` — openpnp-capture decodes MJPEG→RGB internally.
 
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -23,6 +29,7 @@ pub fn spawn_camera_thread(
     requested_height: u32,
     identity: CameraIdentity,
     barrier: Arc<BreakableBarrier>,
+    use_raw: bool,
 ) -> (
     CameraHandle,
     mpsc::Receiver<CameraEvent>,
@@ -46,6 +53,7 @@ pub fn spawn_camera_thread(
             index,
             requested_width,
             requested_height,
+            use_raw,
             &identity,
             &label,
             &command_receiver,
@@ -76,6 +84,7 @@ fn run_camera_thread(
     index: u32,
     requested_width: u32,
     requested_height: u32,
+    use_raw: bool,
     identity: &CameraIdentity,
     label: &str,
     command_receiver: &mpsc::Receiver<CameraCommand>,
@@ -89,35 +98,49 @@ fn run_camera_thread(
             anyhow::bail!("Cap_createContext returned null");
         }
 
-        let open_result = open_camera_stream(ctx, index, requested_width, requested_height, label);
-        let (stream, actual_width, actual_height) = match open_result {
-            Ok(v) => v,
-            Err(error) => {
-                Cap_releaseContext(ctx);
-                return Err(error);
-            }
+        // Enumerate formats to get width/height metadata (needed for handle,
+        // even in raw mode where the stream is opened without a format_id).
+        let format_info = find_best_mjpg(ctx, index, requested_width, requested_height, label)?;
+
+        let stream = if use_raw {
+            open_stream_raw(ctx, index, label, &format_info)?
+        } else {
+            open_stream_rgb(ctx, index, label, &format_info)?
         };
 
         configure_exposure(ctx, stream, label);
-        stabilize(ctx, stream, actual_width, actual_height);
 
-        tracing::info!("Camera {label}: capture loop ({actual_width}x{actual_height})");
+        if use_raw {
+            stabilize_raw(ctx, stream, label);
+        } else {
+            stabilize_rgb(ctx, stream, format_info.width, format_info.height);
+        }
 
-        let frame_bytes = (actual_width * actual_height * 3) as usize;
-        let mut buffer: Vec<u8> = vec![0u8; frame_bytes];
+        let actual_width = format_info.width;
+        let actual_height = format_info.height;
+
+        tracing::info!(
+            "Camera {label}: capture loop {} ({actual_width}x{actual_height})",
+            if use_raw { "raw-MJPEG" } else { "RGB-decoded" },
+        );
+
         let mut frame_number: i64 = 0;
+
+        // Buffer reused across frames — sized dynamically for raw, fixed for RGB.
+        let rgb_buffer_size = (actual_width * actual_height * 3) as usize;
+        let mut rgb_buffer: Vec<u8> = if !use_raw { vec![0u8; rgb_buffer_size] } else { Vec::new() };
+        let mut raw_buffer: Vec<u8> = Vec::new();
 
         loop {
             // ── loop_start_ns ──
             let loop_start_ns = performance_counter_nanoseconds();
 
-            // Check for shutdown at top of loop
             if check_shutdown(command_receiver) {
                 tracing::info!("Camera {label}: shutdown");
                 break;
             }
 
-            // Wait for next hardware frame, checking for shutdown on every spin
+            // Wait for next hardware frame
             let wait_start = std::time::Instant::now();
             loop {
                 if check_shutdown(command_receiver) {
@@ -140,10 +163,8 @@ fn run_camera_thread(
                 }
             }
 
-            // ── frame_available_ns ──
             let frame_available_ns = performance_counter_nanoseconds();
 
-            // Check again right before committing to the barrier
             if check_shutdown(command_receiver) {
                 tracing::info!("Camera {label}: shutdown before barrier");
                 Cap_closeStream(ctx, stream);
@@ -151,10 +172,8 @@ fn run_camera_thread(
                 return Ok(());
             }
 
-            // ── pre_barrier_ns ──
             let pre_barrier_ns = performance_counter_nanoseconds();
 
-            // Barrier: synchronize with other cameras + gatherer.
             if !barrier.wait() {
                 tracing::info!("Camera {label}: barrier broken (shutdown)");
                 Cap_closeStream(ctx, stream);
@@ -162,10 +181,8 @@ fn run_camera_thread(
                 return Ok(());
             }
 
-            // ── post_barrier_ns ──
             let post_barrier_ns = performance_counter_nanoseconds();
 
-            // Check one more time after barrier release
             if check_shutdown(command_receiver) {
                 tracing::info!("Camera {label}: shutdown after barrier");
                 Cap_closeStream(ctx, stream);
@@ -173,22 +190,67 @@ fn run_camera_thread(
                 return Ok(());
             }
 
-            // ── pre_capture_ns ──
             let pre_capture_ns = performance_counter_nanoseconds();
-            let result = Cap_captureFrame(ctx, stream, buffer.as_mut_ptr(), frame_bytes as u32);
-            // ── post_capture_ns ──
+
+            let frame_data = if use_raw {
+                // Raw MJPEG: get frame size, ensure buffer, capture
+                let mut frame_size: u32 = 0;
+                if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK || frame_size == 0 {
+                    let _ = event_sender.send(CameraEvent::Error(format!(
+                        "Camera {label}: getFrameSize failed or returned 0 at frame {frame_number}"
+                    )));
+                    break;
+                }
+                if raw_buffer.len() < frame_size as usize {
+                    raw_buffer.resize(frame_size as usize, 0);
+                }
+                let mut out_bytes: u32 = 0;
+                let result = Cap_captureFrameRaw(
+                    ctx, stream,
+                    raw_buffer.as_mut_ptr(), frame_size,
+                    &mut out_bytes,
+                );
+                if result != CAPRESULT_OK {
+                    let _ = event_sender.send(CameraEvent::Error(format!(
+                        "Camera {label}: captureFrameRaw failed at frame {frame_number} ({})",
+                        result_name(result)
+                    )));
+                    break;
+                }
+                FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec())
+            } else {
+                let result = Cap_captureFrame(ctx, stream, rgb_buffer.as_mut_ptr(), rgb_buffer_size as u32);
+                if result != CAPRESULT_OK {
+                    let _ = event_sender.send(CameraEvent::Error(format!(
+                        "Camera {label}: captureFrame failed at frame {frame_number} ({})",
+                        result_name(result)
+                    )));
+                    break;
+                }
+                FrameData::Rgb(rgb_buffer.clone())
+            };
+
             let post_capture_ns = performance_counter_nanoseconds();
 
-            if result != CAPRESULT_OK {
-                let _ = event_sender.send(CameraEvent::Error(format!(
-                    "Camera {label}: captureFrame failed at frame {frame_number} ({})",
-                    result_name(result)
-                )));
-                break;
+            // Log capture details + hex-dump first bytes
+            {
+                let data_kb = frame_data.len() as f64 / 1024.0;
+                let first_bytes = &frame_data.as_bytes()[..frame_data.len().min(16)];
+                let is_jpeg = frame_data.as_bytes().len() >= 2
+                    && frame_data.as_bytes()[0] == 0xFF
+                    && frame_data.as_bytes()[1] == 0xD8;
+                let jpeg_flag = if is_jpeg { "VALID-JPEG" } else { "NO-JPEG-MAGIC" };
+                if frame_number % 30 == 0 || !is_jpeg {
+                    let capture_us = (post_capture_ns - pre_capture_ns) as f64 / 1000.0;
+                    let wait_ms = (frame_available_ns - loop_start_ns) as f64 / 1_000_000.0;
+                    tracing::warn!(
+                        "Camera {label}: frame {frame_number} | {data_kb:.0}KB | {jpeg_flag} | wait={wait_ms:.1}ms capture={capture_us:.0}µs | first_16={first_bytes:02X?}",
+                    );
+                }
             }
 
             let mut packet = FramePacket {
-                data: FrameData::Rgb(buffer.clone()),
+                data: frame_data,
                 width: actual_width,
                 height: actual_height,
                 timestamps: FrameLifecycleTimestamps {
@@ -198,17 +260,15 @@ fn run_camera_thread(
                     post_barrier_ns,
                     pre_capture_ns,
                     post_capture_ns,
-                    pre_send_ns: 0,      // stamped right before send
-                    post_send_ns: 0,     // cannot stamp post-send (frame moved into channel)
-                    gatherer_received_ns: 0, // stamped by gatherer
+                    pre_send_ns: 0,
+                    post_send_ns: 0,
+                    gatherer_received_ns: 0,
                 },
                 identity: identity.clone(),
                 frame_number,
             };
 
-            // ── pre_send_ns ──
             packet.timestamps.pre_send_ns = performance_counter_nanoseconds();
-
             frame_number += 1;
 
             if frame_sender.send(packet).is_err() {
@@ -223,13 +283,15 @@ fn run_camera_thread(
     Ok(())
 }
 
-unsafe fn open_camera_stream(
+/// Find the best MJPG format matching the requested dimensions.
+/// Returns format info; does NOT open the stream.
+unsafe fn find_best_mjpg(
     ctx: CapContext,
     index: u32,
     requested_width: u32,
     requested_height: u32,
     label: &str,
-) -> anyhow::Result<(CapStream, u32, u32)> {
+) -> anyhow::Result<CapFormatInfo> {
     let device_count = unsafe { Cap_getDeviceCount(ctx) };
     if index >= device_count {
         anyhow::bail!("Camera index {index} not found (only {device_count} devices)");
@@ -240,9 +302,7 @@ unsafe fn open_camera_stream(
         anyhow::bail!("Camera {label}: no formats available");
     }
 
-    let mut chosen_format: Option<CapFormatID> = None;
-    let mut chosen_info = CapFormatInfo::default();
-
+    // First pass: exact match
     for f in 0..num_formats {
         let mut info = CapFormatInfo::default();
         if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK {
@@ -250,42 +310,98 @@ unsafe fn open_camera_stream(
                 && info.width == requested_width
                 && info.height == requested_height
             {
-                chosen_format = Some(f as CapFormatID);
-                chosen_info = info;
-                break;
+                tracing::info!(
+                    "Camera {label}: format {f} ({}x{} @{}fps MJPG) — exact match",
+                    info.width, info.height, info.fps,
+                );
+                return Ok(info);
             }
         }
     }
 
-    if chosen_format.is_none() {
-        for f in 0..num_formats {
-            let mut info = CapFormatInfo::default();
-            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
-                && info.fourcc == FOURCC_MJPG
-            {
-                chosen_format = Some(f as CapFormatID);
-                chosen_info = info;
-                break;
-            }
+    // Second pass: any MJPG
+    for f in 0..num_formats {
+        let mut info = CapFormatInfo::default();
+        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
+            && info.fourcc == FOURCC_MJPG
+        {
+            tracing::info!(
+                "Camera {label}: format {f} ({}x{} @{}fps MJPG) — best available",
+                info.width, info.height, info.fps,
+            );
+            return Ok(info);
         }
     }
 
-    let format_id = chosen_format
-        .ok_or_else(|| anyhow::anyhow!("Camera {label}: no MJPG format found"))?;
+    anyhow::bail!("Camera {label}: no MJPG format found")
+}
 
+unsafe fn open_stream_raw(
+    ctx: CapContext,
+    index: u32,
+    label: &str,
+    info: &CapFormatInfo,
+) -> anyhow::Result<CapStream> {
+    // Re-find the matching format_id (same approach as open_stream_rgb)
+    let num_formats = unsafe { Cap_getNumFormats(ctx, index) };
+    let mut format_id: Option<CapFormatID> = None;
+    for f in 0..num_formats {
+        let mut check = CapFormatInfo::default();
+        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut check) } == CAPRESULT_OK
+            && check.fourcc == info.fourcc
+            && check.width == info.width
+            && check.height == info.height
+            && check.fps == info.fps
+        {
+            format_id = Some(f as CapFormatID);
+            break;
+        }
+    }
+    let format_id = format_id
+        .ok_or_else(|| anyhow::anyhow!("Camera {label}: could not re-find matching format_id for raw stream"))?;
+
+    let stream = unsafe { Cap_openStreamRaw(ctx, index, format_id) };
+    if stream < 0 {
+        anyhow::bail!("Camera {label}: Cap_openStreamRaw returned {stream} (camera may not support raw MJPEG)");
+    }
     tracing::info!(
-        "Camera {label}: format {format_id} ({}x{} @{}fps MJPG)",
-        chosen_info.width,
-        chosen_info.height,
-        chosen_info.fps,
+        "Camera {label}: raw MJPEG stream opened (format={format_id} stream={stream} {}x{})",
+        info.width, info.height,
     );
+    Ok(stream)
+}
+
+unsafe fn open_stream_rgb(
+    ctx: CapContext,
+    index: u32,
+    label: &str,
+    info: &CapFormatInfo,
+) -> anyhow::Result<CapStream> {
+    // We need the format_id that corresponds to the chosen info.
+    // Re-enumerate to find it (cheap — just integer lookups).
+    let num_formats = unsafe { Cap_getNumFormats(ctx, index) };
+    let mut format_id: Option<CapFormatID> = None;
+    for f in 0..num_formats {
+        let mut check = CapFormatInfo::default();
+        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut check) } == CAPRESULT_OK
+            && check.fourcc == info.fourcc
+            && check.width == info.width
+            && check.height == info.height
+            && check.fps == info.fps
+        {
+            format_id = Some(f as CapFormatID);
+            break;
+        }
+    }
+    let format_id = format_id
+        .ok_or_else(|| anyhow::anyhow!("Camera {label}: could not re-find matching format_id"))?;
 
     let stream = unsafe { Cap_openStream(ctx, index, format_id) };
     if stream < 0 {
         anyhow::bail!("Camera {label}: Cap_openStream returned {stream}");
     }
-
-    Ok((stream, chosen_info.width, chosen_info.height))
+    tracing::info!("Camera {label}: RGB stream opened (format={format_id} stream={stream})");
+    Ok(stream)
 }
 
 unsafe fn configure_exposure(ctx: CapContext, stream: CapStream, label: &str) {
@@ -302,7 +418,7 @@ unsafe fn configure_exposure(ctx: CapContext, stream: CapStream, label: &str) {
     tracing::info!("Camera {label}: exposure set to {TARGET_EXPOSURE}");
 }
 
-unsafe fn stabilize(ctx: CapContext, stream: CapStream, width: u32, height: u32) {
+unsafe fn stabilize_rgb(ctx: CapContext, stream: CapStream, width: u32, height: u32) {
     let frame_bytes = (width * height * 3) as usize;
     let mut buffer: Vec<u8> = vec![0u8; frame_bytes];
     for _ in 0..STABILIZATION_FRAMES {
@@ -314,4 +430,42 @@ unsafe fn stabilize(ctx: CapContext, stream: CapStream, width: u32, height: u32)
         }
         unsafe { Cap_captureFrame(ctx, stream, buffer.as_mut_ptr(), frame_bytes as u32) };
     }
+}
+
+fn stabilize_raw(ctx: CapContext, stream: CapStream, label: &str) {
+    let mut buffer: Vec<u8> = Vec::new();
+    for i in 0..STABILIZATION_FRAMES {
+        loop {
+            if check_shutdown_for_stabilize() {
+                return;
+            }
+            if unsafe { Cap_hasNewFrame(ctx, stream) } != 0 {
+                break;
+            }
+            std::thread::yield_now();
+        }
+        let mut frame_size: u32 = 0;
+        if unsafe { Cap_getFrameSize(ctx, stream, &mut frame_size) } != CAPRESULT_OK || frame_size == 0 {
+            tracing::warn!("Camera {label}: raw stabilize frame {i} getFrameSize failed or size=0, skipping");
+            continue;
+        }
+        if buffer.len() < frame_size as usize {
+            buffer.resize(frame_size as usize, 0);
+        }
+        let mut out_bytes: u32 = 0;
+        unsafe {
+            Cap_captureFrameRaw(ctx, stream, buffer.as_mut_ptr(), frame_size, &mut out_bytes);
+        }
+        let first_bytes = &buffer[..(out_bytes as usize).min(16)];
+        tracing::debug!(
+            "Camera {label}: raw stabilize frame {i}: {out_bytes}B  first_16={first_bytes:02X?}"
+        );
+    }
+    tracing::info!("Camera {label}: raw stabilization complete ({STABILIZATION_FRAMES} frames)");
+}
+
+/// No-op in raw mode — shutdown handling is done in the main loop.
+/// This exists so we can add per-frame checks during stabilization if needed.
+fn check_shutdown_for_stabilize() -> bool {
+    false
 }

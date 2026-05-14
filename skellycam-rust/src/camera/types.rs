@@ -50,20 +50,29 @@ impl FrameLifecycleTimestamps {
 /// Frame pixel data format.
 #[derive(Debug, Clone)]
 pub enum FrameData {
+    /// Decoded 24-bit RGB (width * height * 3 bytes).
     Rgb(Vec<u8>),
+    /// Raw MJPEG bytes — each frame is a valid JPEG.
+    Mjpg(Vec<u8>),
 }
 
 impl FrameData {
     pub fn len(&self) -> usize {
         match self {
             Self::Rgb(bytes) => bytes.len(),
+            Self::Mjpg(bytes) => bytes.len(),
         }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             Self::Rgb(bytes) => bytes,
+            Self::Mjpg(bytes) => bytes,
         }
+    }
+
+    pub fn is_jpeg(&self) -> bool {
+        matches!(self, Self::Mjpg(_))
     }
 }
 
