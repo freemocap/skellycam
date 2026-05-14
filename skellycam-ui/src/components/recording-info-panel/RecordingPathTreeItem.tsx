@@ -59,7 +59,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
         <SubactionHeader text="Recording Folder" />
 
         {/* Base folder row */}
-        <div className="flex items-center gap-1">
+        <div className=" 12 flex items-center gap-1">
             <button
                 className="button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
                 onClick={handleSelectDirectory}

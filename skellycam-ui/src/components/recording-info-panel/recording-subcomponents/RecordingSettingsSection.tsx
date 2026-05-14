@@ -27,7 +27,7 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
             <SubactionHeader text={t('recordingSettings')} />
 
             {/* Timestamp toggle + base name input */}
-            <div className="flex items-center gap-1">
+            <div className="flex flex-col gap-1">
                 <ToggleComponent
                     text={t("timestamp")}
                     isToggled={useTimestamp}
@@ -43,7 +43,7 @@ export const RecordingSettingsSection: React.FC<RecordingSettingsProps> = ({
             </div>
 
             {/* Auto-increment toggle + number */}
-            <div className="flex items-center gap-1">
+            <div className="flex flex-col gap-1 align-end">
                 <ToggleComponent
                     text={t("increment")}
                     isToggled={useIncrement}

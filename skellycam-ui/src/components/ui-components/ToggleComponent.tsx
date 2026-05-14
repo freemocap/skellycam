@@ -33,7 +33,7 @@ const ToggleComponent: React.FC<ToggleProps> = ({
 
   return (
     <div
-      className={`button toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25 ${className} ${
+      className={`min-w-full button toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25 ${className} ${
         disabled ? "disabled" : ""
       }`}
       onClick={handleToggle}

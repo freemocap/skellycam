@@ -33,7 +33,7 @@ export const RecordingControlsSection: React.FC<RecordingControlsSectionProps> =
     } = props;
 
     return (
-        <div className="flex flex-col gap-2 p-2 pl-3">
+        <div className="file-directory-secondary-group flex flex-col gap-2">
             <DelayRecordingStartControl
                 useDelay={useDelayStart}
                 delaySeconds={delaySeconds}
