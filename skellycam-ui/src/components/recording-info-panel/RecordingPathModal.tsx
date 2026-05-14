@@ -48,13 +48,13 @@ export const RecordingPathModal: React.FC<RecordingPathModalProps> = ({ open, on
 
     return (
         <div
-            className="recording-path-modal overlay splash-overlay inset-0 reveal fadeIn"
-            style={{ position: 'fixed', zIndex: 50 }}
+            className="overlay inset-0"
+            style={{ position: 'fixed', inset: 0, zIndex: 50 }}
             onClick={onClose}
         >
             <div
-                className="draggable bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-2"
-                style={{ minWidth: 380, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto' }}
+                className="path-drectory-modal draggable bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-2"
+            
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-content-space-between items-center">
