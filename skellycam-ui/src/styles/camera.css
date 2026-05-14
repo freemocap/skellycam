@@ -375,13 +375,13 @@
 }
 
 /* Popup overlay for long values like directory paths */
-.directory-input-popup {
+/* .directory-input-popup {
   min-width: 320px;
-}
+} */
 
 .directory-input-popup input.input-field {
   width: 100%;
-  min-width: 280px;
+  /* min-width: 280px; */
 }
 
 .recording-countdown {

@@ -59,7 +59,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
         <SubactionHeader text="Recording Folder" />
 
         {/* Base folder row */}
-        <div className=" 12 flex items-center gap-1">
+        <div className="flex items-center gap-1">
             <button
                 className="button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
                 onClick={handleSelectDirectory}
@@ -67,7 +67,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
                 disabled={!isElectron}
             >
                 <span className="icon subfolder-icon icon-size-16" />
-                <p className="recording-path-preview text-wrap flex-1">
+                <p className="recording-path-preview text-wrap flex-1 text md">
                     {recordingDirectory}
                 </p>
             </button>
