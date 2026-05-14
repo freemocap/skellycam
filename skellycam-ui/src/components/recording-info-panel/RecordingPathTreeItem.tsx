@@ -55,57 +55,69 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
     } = controlProps;
 
     return (
-        <div className="flex flex-col gap-1" onKeyDown={(e) => e.stopPropagation()}>
-            <SubactionHeader text="Recording Folder" />
+    <div className="flex flex-col gap-1" onKeyDown={(e) => e.stopPropagation()}>
+        <SubactionHeader text="Recording Folder" />
 
-            {/* Base folder row */}
-            <div className="flex items-center gap-1">
-                <button
-                    className="button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
-                    onClick={handleSelectDirectory}
-                    title="Click to select recording folder"
-                    disabled={!isElectron}
-                >
-                    <span className="icon subfolder-icon icon-size-16" />
-                    <p className="recording-path-preview text-wrap flex-1">{recordingDirectory}</p>
-                </button>
+        {/* Base folder row */}
+        <div className="flex items-center gap-1">
+            <button
+                className="button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
+                onClick={handleSelectDirectory}
+                title="Click to select recording folder"
+                disabled={!isElectron}
+            >
+                <span className="icon subfolder-icon icon-size-16" />
+                <p className="recording-path-preview text-wrap flex-1">
+                    {recordingDirectory}
+                </p>
+            </button>
+
+            {/* Add Subfolder Button */}
+            <button
+                className={`button icon-button ${createSubfolder ? 'vanished' : ''}`}
+                onClick={() => {
+                    onCreateSubfolderChange(true);
+                    onCustomSubfolderNameChange('NewSubfolder');
+                }}
+                title="Add subfolder"
+            >
+                <span className="icon addsubfolder-icon icon-size-16" />
+            </button>
+        </div>
+
+        {/* Subfolder row */}
+        {createSubfolder && (
+            <div className="flex items-center gap-1 pl-2">
+                <span className="icon icon-size-16 subcat-icon"></span>
+
+                <TextSelector
+                    value={customSubfolderName}
+                    onChange={onCustomSubfolderNameChange}
+                    placeholder="subfolder name"
+                    popupClassName="directory-input-popup"
+                />
+
                 <button
                     className="button icon-button"
-                    onClick={() => { onCreateSubfolderChange(true); onCustomSubfolderNameChange('NewSubfolder'); }}
-                    title="Add subfolder"
+                    onClick={() => {
+                        onCreateSubfolderChange(false);
+                        onCustomSubfolderNameChange('');
+                    }}
+                    title="Remove subfolder"
                 >
-                    <span className="icon addsubfolder-icon icon-size-16" />
+                    <span className="icon minus-icon icon-size-16" />
                 </button>
             </div>
+        )}
 
-            {/* Subfolder row */}
-            {createSubfolder && (
-                <div className="flex items-center gap-1 pl-2">
-                    <span className="text sm text-gray">└</span>
-                    <TextSelector
-                        value={customSubfolderName}
-                        onChange={onCustomSubfolderNameChange}
-                        placeholder="subfolder name"
-                        popupClassName="directory-input-popup"
-                    />
-                    <button
-                        className="button icon-button"
-                        onClick={() => { onCreateSubfolderChange(false); onCustomSubfolderNameChange(''); }}
-                        title="Remove subfolder"
-                    >
-                        <span className="icon close-icon icon-size-16" />
-                    </button>
-                </div>
-            )}
+        {countdown !== null && (
+            <p className="recording-countdown">{`Starting in ${countdown}...`}</p>
+        )}
 
-            {countdown !== null && (
-                <p className="recording-countdown">{`Starting in ${countdown}...`}</p>
-            )}
-
-            <RecordingControlsSection
-                recordingName={recordingName}
-                {...sectionProps}
-            />
-        </div>
-    );
+        <RecordingControlsSection
+            recordingName={recordingName}
+            {...sectionProps}
+        />
+    </div>
+);
 };
