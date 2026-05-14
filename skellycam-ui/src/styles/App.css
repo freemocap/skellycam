@@ -1718,15 +1718,15 @@ input[type="checkbox"]:disabled {
   margin-top: 4px;
 }
 
-.path-drectory-modal {
-                min-width: 380px;
-                top: 60px;
-                right: 232px;
-                max-width: 520px;
-                max-height: 80vh; 
-                overflow-y: auto;
-                position: fixed;
-                z-index: 9999;
+.file-directory-settings-container {
+  min-width: 280px;
+  top: 56px;
+  left: 132px;
+  max-width: 520px;
+  max-height: 80vh;
+
+  position: fixed;
+  z-index: 9999;
 }
 
 .update-progress-fill {

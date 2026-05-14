@@ -55,7 +55,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
     } = controlProps;
 
     return (
-    <div className="flex flex-col gap-1" onKeyDown={(e) => e.stopPropagation()}>
+    <div className="file-directory-settings-item flex flex-col gap-1" onKeyDown={(e) => e.stopPropagation()}>
         <SubactionHeader text="Recording Folder" />
 
         {/* Base folder row */}
@@ -74,7 +74,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
 
             {/* Add Subfolder Button */}
             <button
-                className={`button icon-button ${createSubfolder ? 'vanished' : ''}`}
+                className={`button icon-button ${createSubfolder ? 'invisible' : ''}`}
                 onClick={() => {
                     onCreateSubfolderChange(true);
                     onCustomSubfolderNameChange('NewSubfolder');

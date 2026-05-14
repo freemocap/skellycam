@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import useDraggableTooltips from '@/hooks/useDraggableTooltips';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
 import { RecordingPathTreeItem } from './RecordingPathTreeItem';
@@ -35,28 +35,39 @@ interface RecordingPathModalProps {
 export const RecordingPathModal: React.FC<RecordingPathModalProps> = ({ open, onClose, ...itemProps }) => {
     useDraggableTooltips();
 
+    const modalRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         if (!open) return;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
         };
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, [open, onClose]);
 
     if (!open) return null;
 
     return (
         <div
-            className="overlay inset-0"
-            style={{ position: 'fixed', inset: 0, zIndex: 50 }}
-            onClick={onClose}
+            ref={modalRef}
+            className="file-directory-settings-container draggable border-1 border-black elevated-sharp flex flex-col p-1 bg-dark br-2 reveal fadeIn gap-1"
+            // style={{ position: 'fixed', zIndex: 50 }}
         >
-            <div
-                className="path-drectory-modal draggable bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-2"
-            
-                onClick={(e) => e.stopPropagation()}
-            >
+            <div className="flex flex-col right-0 p-2 gap-1 bg-middark br-1 z-1">
                 <div className="flex justify-content-space-between items-center">
                     <SubactionHeader text="Recording Path &amp; Settings" />
                     <button className="button icon-button" onClick={onClose}>
