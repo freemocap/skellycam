@@ -62,3 +62,6 @@ ffmpeg-sidecar = "2"
 
 # DataFrames (Phase 3 — recording)
 # polars = { version = "0.41", features = ["lazy", "csv-file"] }
+
+[build-dependencies]
+ureq = { version = "3" }

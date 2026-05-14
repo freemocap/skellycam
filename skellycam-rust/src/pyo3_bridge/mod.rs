@@ -9,6 +9,7 @@ mod camera_group_manager;
 mod types;
 
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
 use types::{
     CameraConfig, CameraStatusDict, FramerateData, ImageResolution, RecordingInfo,
@@ -46,8 +47,31 @@ fn _skellycam_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // ── Engine ──
     m.add_class::<camera_group_manager::CameraGroupManager>()?;
 
+    // ── Functions ──
+    m.add_function(wrap_pyfunction!(detect_cameras, m)?)?;
+
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("__doc__", "SkellyCam Rust camera engine (Rust + openpnp-capture)")?;
 
     Ok(())
+}
+
+/// Detect all available cameras and return a list of dicts with
+/// `camera_index`, `display_name`, `unique_identifier`, and `device_path`.
+#[pyfunction]
+fn detect_cameras(py: Python<'_>) -> pyo3::PyResult<Vec<Py<PyDict>>> {
+    let cameras = crate::camera::enumerate_directshow_cameras()
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Camera detection failed: {e}")))?;
+
+    let mut result = Vec::with_capacity(cameras.len());
+    for cam in cameras {
+        let d = PyDict::new(py);
+        d.set_item("camera_index", cam.camera_index)?;
+        d.set_item("display_name", cam.display_name)?;
+        d.set_item("unique_identifier", cam.unique_identifier)?;
+        d.set_item("device_path", cam.device_path)?;
+        result.push(d.into());
+    }
+
+    Ok(result)
 }
