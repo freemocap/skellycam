@@ -147,14 +147,14 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
 
     if (sortedConnectedCameraIds.length === 0) {
         return (
-            <div ref={containerRef} className="camera-grid-custom camera-grid-container">
+            <div ref={containerRef} className="camera-grid-empty-state-container camera-grid-container">
                 <CameraEmptyState />
             </div>
         );
     }
 
     return (
-        <div ref={containerRef} className="camera-grid-custom camera-grid-container">
+        <div ref={containerRef} className="camera-grid-custom mt-1 br-2 camera-grid-container">
             <ReactGridLayout
                 width={containerWidth}
                 layout={layout}

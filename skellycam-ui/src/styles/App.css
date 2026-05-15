@@ -1343,7 +1343,9 @@ animation: fadeIn, scaleIn;
   /* animation: scaleIn 0.3s ease forwards; */
   animation: fadeIn, scaleIn;
 }
-
+.camera-cell {
+  border-radius: 8px;
+}
 .conection-container {
   width: 255px;
 }
