@@ -82,3 +82,37 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
     --grid3_icon: url("../assets/icons/grid3_icon.svg");
     --grid2_icon: url("../assets/icons/grid2_icon.svg");
   }
+
+
+  /* =========================
+   icons buttons
+   ========================= */
+
+.icon-size-16 {
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.icon-size-32 {
+  width: 32px;
+  height: 32px;
+}
+
+.icon-size-42 {
+  width: 42px;
+  height: 42px;
+}
+
+.icon-button {
+  width: 25px;
+  height: 25px;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.icon-button:hover>.icon {
+  filter: brightness(2);
+  /* filter animation out */
+  transition: filter var(--speed-1) ease-in-out;
+}

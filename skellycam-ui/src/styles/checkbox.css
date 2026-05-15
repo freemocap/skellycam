@@ -1,0 +1,108 @@
+/* Base checkbox reset */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  transform-origin: center center;
+  /* Safari/old iOS */
+  appearance: none;
+  background-color: black;
+  /* ensure clean background */
+  margin: 0;
+
+  /* Inherit sizing + color */
+  font: inherit;
+  color: var(--gray-600);
+
+  /* min-width: 8px;
+  min-height: 8px; */
+  border: 0.15em solid var(--gray-400);
+  border-radius: 2px;
+
+  transform: translateY(-0.035em);
+
+  /* For custom indicator */
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+/* Base streamingcheckbox reset */
+input.streaming[type="checkbox"] {
+  
+  border: 0.15em solid var(--green-100);
+
+}
+
+/* Pseudo-element for checkmark indicator */
+input[type="checkbox"]::before {
+  content: "";
+  min-width: 8px;
+  min-height: 8px;
+  transform: scale(0.7);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em var(--gray-900);
+  /* Checkmark shape */
+  /* clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  box-shadow: inset 1em 1em var(--form-control-color); */
+
+  /* Forced-colors (High Contrast mode) */
+  background-color: var(--gray-900);
+  transform-origin: center center;
+}
+
+/* Checked state */
+input[type="checkbox"]:checked::before {
+  transform: scale(0.6);
+  box-shadow: inset 1em 1em var(--blue-800);
+  transform-origin: center center;
+}
+/* Checked state */
+input.streaming[type="checkbox"]:checked::before {
+
+  box-shadow: inset 1em 1em var(--green-100);
+  
+}
+
+/* Focus state */
+input[type="checkbox"]:focus {
+  /* outline: max(2px, 0.15em) solid currentColor;
+  outline-offset: max(2px, 0.15em); */
+}
+
+/* Disabled checkbox */
+input[type="checkbox"]:disabled {
+  --form-control-color: var(--form-control-disabled);
+  color: var(--form-control-disabled);
+  cursor: not-allowed;
+}
+
+
+/* Example CSS */
+/* Style the container */
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--gray-600);
+  border-radius: 4px;
+  padding: 4px 8px;
+  height: 25px;
+  width: 77px;
+  transition: border var(--speed-2);
+}
+
+.input-with-string {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--gray-600);
+  border-radius: 4px;
+  padding: 4px 8px;
+  height: 25px;
+  width: 100%;
+  transition: border var(--speed-2);
+}
+
+
+/* Style the input */
+.input-field {
+
+  flex: 1;
+  min-width: 0;
+}
