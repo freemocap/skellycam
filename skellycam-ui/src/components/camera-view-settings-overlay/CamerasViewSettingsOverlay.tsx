@@ -115,8 +115,8 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
 
     return (
       <>
-        <div className="mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between">
-          <div className="all-actions-components flex flex-row">
+        <div className="mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex-row flex flex-end">
+          {/* <div className="all-actions-components flex flex-row">
             <div className="stream-actions-container flex flex-row gap-1 items-center">
               <ButtonSm
                 text="Stream"
@@ -133,7 +133,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                         <span className="icon icon-size-16 scan-icon" />
                     </button>
             </div>
-          </div>
+          </div> */}
           <div className="settings-overlay-trigger"></div>
           <button
             className="button icon-button br-1"
