@@ -40,11 +40,15 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                 {/* Row 1 — actions */}
                 <div className="text-nowrap flex items-center gap-1">
                     <p className="text md text-gray">{cameras.length} Cameras</p>
-                    {connectedCameras.length > 0 && (
-                        <span className="text md tag" style={{ color: 'var(--green-400, #4ade80)' }}>
-                            {connectedCameras.length} Streaming
-                        </span>
-                    )}
+{connectedCameras.length > 0 && (
+    <span
+        className="text md"
+        style={{ color: 'var(--green-400, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+    >
+        {/* <span className="icon icon-size-16 streaming-icon" /> */}
+        {connectedCameras.length} Streaming
+    </span>
+)}
                     <div className="flex-1" />
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
                     <div className="button-group text-nowrap flex items-center gap-1">
@@ -56,7 +60,8 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                               text={isLoading ? 'Checking...' : 'Stream Cameras'}
                               iconClass="stream-icon"
                               onClick={handleUpdate}
-                              className="br-1"
+                              textColor = "text-black"
+                              className="secondary"
                             />
                         ) : (
                             <>

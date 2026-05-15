@@ -10,6 +10,7 @@ interface ButtonSmProps {
   textColor?: string;
   title?: string;
   disabled?: boolean;
+  className?: string; // <-- new prop for extra classes
 }
 
 const ButtonSm: React.FC<ButtonSmProps> = ({
@@ -21,6 +22,7 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
   textColor = "text-gray",
   title,
   disabled = false,
+  className = "", // <-- default empty
 }) => {
   return (
     <button
@@ -29,15 +31,18 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
       disabled={disabled}
       className={clsx(
         "gap-1 br-1 button sm fit-content flex-inline text-left items-center", // base styles
-        buttonType, // multiple classes supported here
-        rightSideIcon // this is being treated as classes, same as before
+        buttonType, // existing classes
+        rightSideIcon, // existing icon-based classes (can leave as is)
+        className // <-- new extra classes
       )}
     >
       {/* LEFT ICON */}
       {iconClass && <span className={clsx("icon icon-size-16", iconClass)} />}
 
       {/* TEXT */}
-      <p className={clsx(textColor, "text-nowrap text md text-align-left ")}>{text}</p>
+      <p className={clsx(textColor, "text-nowrap text md text-align-left")}>
+        {text}
+      </p>
     </button>
   );
 };
