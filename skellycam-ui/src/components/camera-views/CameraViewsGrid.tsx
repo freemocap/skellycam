@@ -154,7 +154,7 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
     }
 
     return (
-        <div ref={containerRef} className="camera-grid-container">
+        <div ref={containerRef} className="camera-grid-custom camera-grid-container">
             <ReactGridLayout
                 width={containerWidth}
                 layout={layout}
