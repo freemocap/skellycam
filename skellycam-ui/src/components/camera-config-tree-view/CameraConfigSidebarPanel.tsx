@@ -1,7 +1,7 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { useAppDispatch, useAppSelector, selectCameras, selectConnectedCameras, selectIsLoading, detectCameras } from '@/store';
-import { camerasConnectOrUpdate, pauseUnpauseCameras } from '@/store/slices/cameras/cameras-thunks';
+import { camerasConnectOrUpdate, pauseUnpauseCameras, closeCameras } from '@/store/slices/cameras/cameras-thunks';
 import { savedSettingsCleared } from '@/store/slices/cameras/cameras-slice';
 import { selectIsPaused } from '@/store/slices/cameras/cameras-selectors';
 import { CameraTreeItem } from './CameraTreeItem';
@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 
 export const CameraConfigSidebarPanel: React.FC = () => {
+    const [isStoppingCameras, setIsStoppingCameras] = useState(false);
     const dispatch = useAppDispatch();
     const { isConnected } = useServer();
     const { t } = useTranslation();
@@ -25,12 +26,23 @@ export const CameraConfigSidebarPanel: React.FC = () => {
         }
     }, [isConnected, cameras.length, dispatch]);
 
+    useEffect(() => {
+        if (isStoppingCameras && connectedCameras.length === 0) {
+            setIsStoppingCameras(false);
+        }
+    }, [isStoppingCameras, connectedCameras.length]);
+
     const handleUpdate = useCallback(() => {
         dispatch(camerasConnectOrUpdate());
     }, [dispatch]);
 
     const handleDetect = useCallback(() => {
         dispatch(detectCameras({ filterVirtual: true }));
+    }, [dispatch]);
+
+    const handleStop = useCallback(() => {
+        setIsStoppingCameras(true);
+        dispatch(closeCameras());
     }, [dispatch]);
 
     return (
@@ -53,12 +65,12 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
                     <div className="button-group text-nowrap flex items-center gap-1">
                         <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
-                            <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
+                            {!isLoading && <span className={`icon icon-size-16 scan-icon`} />}
                         </button>
                         {connectedCameras.length === 0 ? (
                             <ButtonSm
                               text={isLoading ? 'Checking...' : 'Stream Cameras'}
-                              iconClass="stream-icon"
+                              iconClass={isLoading ? 'loader-icon' : 'stream-icon'}
                               onClick={handleUpdate}
                               textColor = "text-black"
                               className="secondary"
@@ -72,8 +84,8 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                                 >
                                     <span className={clsx('icon icon-size-16', isPaused ? 'play-icon' : 'pause-icon')} />
                                 </button>
-                                <button className="button icon-button" title="Stop streaming">
-                                    <span className="icon icon-size-16 stop-streaming-icon" />
+                                <button className="button icon-button" onClick={handleStop} title="Stop streaming" disabled={isStoppingCameras}>
+                                    <span className={`icon icon-size-16 ${isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}`} />
                                 </button>
                             </>
                         )}

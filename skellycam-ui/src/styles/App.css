@@ -860,6 +860,9 @@ a.link:hover {
 .stream-icon {
   background-image: var(--stream-icon);
 }
+.stopstreaming-icon {
+  background-image: var(--stopstreaming-icon);
+}
 .streaming-icon {
   background-image: var(--streaming-icon);
 }
