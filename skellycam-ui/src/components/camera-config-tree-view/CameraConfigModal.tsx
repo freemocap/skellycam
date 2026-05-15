@@ -82,7 +82,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                 </div>
 
                 {/* Camera list */}
-                <div className="flex flex-col overflow-y-auto">
+                <div className="flex flex-col overflow-y">
                     {cameras.length === 0 ? (
                         <NoCamerasPlaceholder />
                     ) : (

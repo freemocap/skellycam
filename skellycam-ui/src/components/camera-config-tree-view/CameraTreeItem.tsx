@@ -50,42 +50,59 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const configSummary = getConfigSummary(camera.desiredConfig);
 
     return (
-        <div className="camera-item-row br-1 flex flex-col gap-1 p-1"
+        <div className="camera-item-row br-1 flex flex-col gap-1 m-1"
         >
             {/* Row 1 — selection, name, settings */}
-            <div className="flex items-center gap-1">
-                <DesignerCheckbox
-                    label=""
-                    checked={camera.selected}
-                    onChange={handleToggleSelection}
-                />
+            <div className="camera-row-group flex flex-row gap-1 items-center">
+                {/* Left group — checkbox */}
+                <div className="flex flex-row checkbox-group">
+                    <DesignerCheckbox
+                        label=""
+                        checked={camera.selected}
+                        onChange={handleToggleSelection}
+                    />
+                </div>
 
-                <p className="text sm text-white text-nowrap" style={{ minWidth: 72 }}>Camera {camera.index}</p>
-                <p className="text sm text-gray text-nowrap" style={{ flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {camera.name}
-                </p>
-
-                <div className="flex-1" />
-
-                <button
-                    ref={settingsBtnRef}
-                    className={clsx("button icon-button", settingsOpen && "activated")}
+                {/* Right group — camera info and settings */}
+                <div
+                    className="camera-settings-button button sm br-1 flex flex-col gap-1 flex-1 cursor-pointer p-1"
                     onClick={handleOpenSettings}
                     onMouseDown={e => e.stopPropagation()}
                     title={t('cameraSettings')}
                 >
-                    <span className={clsx("icon icon-size-16", settingsOpen ? "close-icon" : "settings-icon")} />
-                </button>
-            </div>
+                    {/* Camera info row */}
+                    <div className="flex flex-row items-center gap-1">
+                        <p className="text sm text-white text-nowrap" style={{ minWidth: 72 }}>Camera {camera.index}</p>
+                        <p className="text sm text-gray text-nowrap" style={{ flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {camera.name}
+                        </p>
 
-            {/* Row 2 — config chips */}
-            {configSummary.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                    {configSummary.map(item => (
-                        <span key={item} className="camera-config-chip">{item}</span>
-                    ))}
+                        <div className="flex-1" />
+
+                        <button
+                            ref={settingsBtnRef}
+                            className={clsx("button icon-button", settingsOpen && "activated")}
+                            onClick={e => {
+                                e.stopPropagation();
+                                handleOpenSettings(e);
+                            }}
+                            onMouseDown={e => e.stopPropagation()}
+                            title={t('cameraSettings')}
+                        >
+                            <span className={clsx("icon icon-size-16", settingsOpen ? "close-icon" : "settings-icon")} />
+                        </button>
+                    </div>
+
+                    {/* Config chips */}
+                    {configSummary.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                            {configSummary.map(item => (
+                                <span key={item} className="camera-config-chip">{item}</span>
+                            ))}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
 
             {settingsOpen && ReactDOM.createPortal(
                 <CameraGridSettingsModal

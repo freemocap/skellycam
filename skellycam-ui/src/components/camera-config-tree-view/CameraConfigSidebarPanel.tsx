@@ -59,7 +59,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
             </div>
 
             {/* Camera list */}
-            <div className="flex flex-col overflow-y-auto">
+            <div className="camera-list-container flex flex-col overflow-y">
                 {cameras.length === 0 ? (
                     <NoCamerasPlaceholder />
                 ) : (
