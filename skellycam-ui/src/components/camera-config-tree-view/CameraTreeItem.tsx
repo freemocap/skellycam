@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import { CameraGridSettingsModal } from "@/components/camera-views/CameraGridSettingsModal";
+import DesignerCheckbox from "@/components/ui-components/Checkbox";
 import { ROTATION_DEGREE_LABELS, RotationValue, useAppDispatch } from "@/store";
 import { cameraSelectionToggled } from "@/store/slices/cameras/cameras-slice";
 import { Camera } from "@/store/slices/cameras/cameras-types";
@@ -32,7 +33,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const [modalPos, setModalPos] = useState<{ top: number; left: number }>({ top: 80, left: 40 });
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
 
-    const handleToggleSelection = (e: React.MouseEvent): void => {
+    const handleToggleSelection = (e: React.ChangeEvent<HTMLInputElement>): void => {
         e.stopPropagation();
         dispatch(cameraSelectionToggled(camera.id));
     };
@@ -49,12 +50,15 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const configSummary = getConfigSummary(camera.desiredConfig);
 
     return (
-        <div className="camera-item-row br-1 flex flex-col gap-1 p-1" style={{ borderBottom: '1px solid var(--gray-800)' }}>
+        <div className="camera-item-row br-1 flex flex-col gap-1 p-1"
+        >
             {/* Row 1 — selection, name, settings */}
             <div className="flex items-center gap-1">
-                <button className="button icon-button" onClick={handleToggleSelection}>
-                    <span className={clsx("icon icon-size-16", camera.selected ? "connected-icon" : "warning-icon")} />
-                </button>
+                <DesignerCheckbox
+                    label=""
+                    checked={camera.selected}
+                    onChange={handleToggleSelection}
+                />
 
                 <p className="text sm text-white text-nowrap" style={{ minWidth: 72 }}>Camera {camera.index}</p>
                 <p className="text sm text-gray text-nowrap" style={{ flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis' }}>

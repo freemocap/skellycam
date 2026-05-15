@@ -237,9 +237,9 @@
   transition: background-color var(--speed-1);
 }
 
-.camera-item-row:hover {
+/* .camera-item-row:hover {
   background-color: var(--gray-700);
-}
+} */
 
 .camera-item-row.expanded {
   background-color: var(--gray-700);

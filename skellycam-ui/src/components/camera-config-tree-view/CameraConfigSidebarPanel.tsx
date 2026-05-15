@@ -33,26 +33,29 @@ export const CameraConfigSidebarPanel: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px', borderBottom: '1px solid var(--gray-700)' }}>
                 {/* Row 1 — actions */}
                 <div className="flex items-center gap-1">
-                    <p className="text bg text-white">{cameras.length} Cameras</p>
-                    <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
-                        <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
-                    </button>
-                    <div className="flex-1" />
-                    <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
-                        <span className="icon icon-size-16 clear-icon" />
-                    </button>
-                    <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
-                        <p className="text md" style={{ color: 'var(--gray-900)' }}>{connectedCameras.length === 0 ? 'Connect' : 'Update'}</p>
-                    </button>
-                </div>
-                {/* Row 2 — streaming chip */}
-                {connectedCameras.length > 0 && (
+                    {/* Group 1: Camera count + Scan + Streaming */}
                     <div className="flex items-center gap-1">
-                        <span className="tag" style={{ color: 'var(--green-400, #4ade80)' }}>
-                            {connectedCameras.length} Streaming
-                        </span>
+                        <p className="text bg text-white">{cameras.length} Cameras</p>
+                        <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
+                            <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
+                        </button>
+                        {connectedCameras.length > 0 && (
+                            <span className="tag" style={{ color: 'var(--green-400, #4ade80)' }}>
+                                {connectedCameras.length} Streaming
+                            </span>
+                        )}
                     </div>
-                )}
+                    <div className="flex-1" />
+                    {/* Group 2: Clear + Connect */}
+                    <div className="flex items-center gap-1">
+                        <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
+                            <span className="icon icon-size-16 clear-icon" />
+                        </button>
+                        <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
+                            <p className="text md" style={{ color: 'var(--gray-900)' }}>{connectedCameras.length === 0 ? 'Connect' : 'Update'}</p>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Camera list */}
