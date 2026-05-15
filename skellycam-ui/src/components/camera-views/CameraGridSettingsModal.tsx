@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { cameraDesiredConfigUpdated, configCopiedToAll } from '@/store/slices/cameras/cameras-slice';
+import { savedSettingsCleared } from '@/store/slices/cameras/cameras-slice';
+import { camerasConnectOrUpdate } from '@/store/slices/cameras/cameras-thunks';
 import { selectCameras } from '@/store/slices/cameras';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import { Camera, CameraConfig, ExposureMode, RotationValue, ROTATION_OPTIONS, ROTATION_DEGREE_LABELS } from '@/store/slices/cameras/cameras-types';
@@ -129,7 +131,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
             // style={{ borderBottom: "1px solid var(--gray-700)" }}
           >
             <p className="text-nowrap text-left bg-md text-darkgray">Camera settings</p>
-            <ButtonSm
+            <div className='flex flex-row gap-1'><ButtonSm
               text={
                 otherCamerasCount > 0
                   ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? "s" : ""}`
@@ -142,6 +144,14 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
                   dispatch(configCopiedToAll(camera.id));
               }}
             />
+            <button
+              className="icon-button gap-1 br-1 button sm fit-content flex-inline text-left items-center"
+              onClick={() => dispatch(savedSettingsCleared())}
+              title="Reset all cameras to default settings"
+            >
+              <span className="icon icon-size-16 clear-icon"></span>
+            </button>
+            </div>
           </div>
 
           {/* Rotate */}
@@ -210,6 +220,19 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
               />
             </Row>
           )}
+          
+          {/* Footer: Update and Clear buttons */}
+          <div className="flex flex-col gap-1 pt-1">
+            <button
+              className="button sm br-1 flex-1"
+              style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}
+              onClick={() => dispatch(camerasConnectOrUpdate())}
+              title="Update camera settings"
+            >
+              <p className="text md" style={{ color: 'var(--gray-900)' }}>Update Settings</p>
+            </button>
+            
+          </div>
           </div>
         </div>
     
