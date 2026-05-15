@@ -1469,6 +1469,12 @@ input[type="checkbox"] {
   place-content: center;
   cursor: pointer;
 }
+/* Base streamingcheckbox reset */
+input.streaming[type="checkbox"] {
+  
+  border: 0.15em solid var(--green-100);
+
+}
 
 /* Pseudo-element for checkmark indicator */
 input[type="checkbox"]::before {
@@ -1492,6 +1498,12 @@ input[type="checkbox"]:checked::before {
   transform: scale(0.6);
   box-shadow: inset 1em 1em var(--blue-800);
   transform-origin: center center;
+}
+/* Checked state */
+input.streaming[type="checkbox"]:checked::before {
+
+  box-shadow: inset 1em 1em var(--green-100);
+  
 }
 
 /* Focus state */

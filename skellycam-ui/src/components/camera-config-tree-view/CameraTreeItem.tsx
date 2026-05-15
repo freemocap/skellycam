@@ -7,6 +7,7 @@ import DesignerCheckbox from "@/components/ui-components/Checkbox";
 import { ROTATION_DEGREE_LABELS, RotationValue, useAppDispatch } from "@/store";
 import { cameraSelectionToggled } from "@/store/slices/cameras/cameras-slice";
 import { Camera } from "@/store/slices/cameras/cameras-types";
+import { useServer } from "@/services/server";
 
 interface CameraTreeItemProps {
     camera: Camera;
@@ -29,9 +30,12 @@ const getConfigSummary = (config: any): string[] => {
 export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
+    const { connectedCameraIds } = useServer();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [modalPos, setModalPos] = useState<{ top: number; left: number }>({ top: 80, left: 40 });
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
+
+    const isStreaming = connectedCameraIds.includes(camera.id);
 
     const handleToggleSelection = (e: React.ChangeEvent<HTMLInputElement>): void => {
         e.stopPropagation();
@@ -60,6 +64,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
                         label=""
                         checked={camera.selected}
                         onChange={handleToggleSelection}
+                        inputClassName={isStreaming ? "streaming" : ""}
                     />
                 </div>
 
