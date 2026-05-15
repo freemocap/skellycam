@@ -44,7 +44,7 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
     return (
         <button
             className={clsx(
-                "flex flex-1 gap-1 br-1 button sm min-w-fit-content flex-inline text-left items-center full-width primary justify-center",
+                "record-button text-nowrapflex flex-row flex-1 gap-1 br-1 button sm min-w-fit-content flex-inline text-left items-center full-width primary justify-center",
                 isRecording ? "record-button-active" : isPending ? "record-button-pending" : "record-button-idle",
             )}
             onClick={onClick}
@@ -61,12 +61,12 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
                     <p className="text bg text-white">{isRecording ? t('stopping') : t('starting')}</p>
                 </div>
             ) : isRecording ? (
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-row items-center gap-1">
                     <div className="flex items-center gap-1">
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon stop-icon icon-size-16" />
                         <p className="text bg text-white">{t('stopRecordingButton')}</p>
                     </div>
-                    <p className="record-button-duration">{formatDuration(recordingDuration)}</p>
+                    <p className="record-button-duration text bg text-white items-center">{formatDuration(recordingDuration)}</p>
                 </div>
             ) : (
                 <div className="flex items-center gap-1">
