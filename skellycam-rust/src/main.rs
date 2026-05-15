@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 
 use skellycam::api::AppState;
 use skellycam::api::build_router;
-use skellycam::camera::{self, enumerate_directshow_cameras, CameraEvent, CameraIdentity};
+use skellycam::camera::{self, enumerate_directshow_cameras, CameraCaptureConfig, CameraEvent, CameraIdentity};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
 use skellycam::camera_group_manager::CameraGroupManager;
 use skellycam::recording::{finalize_recording, VideoRecorder};
@@ -125,9 +125,16 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     let configs: Vec<CameraGroupConfig> = all_cameras.iter()
         .take(camera_count)
         .map(|identity| CameraGroupConfig {
-            camera_index: identity.camera_index as u32,
-            requested_width: 1280,
-            requested_height: 720,
+            capture_config: CameraCaptureConfig {
+                camera_id: identity.unique_identifier.clone(),
+                camera_index: identity.camera_index as u32,
+                width: 1280,
+                height: 720,
+                exposure: -7,
+                exposure_mode: "MANUAL".to_string(),
+                framerate: -1.0,
+                rotation: -1,
+            },
             identity: identity.clone(),
         })
         .collect();
@@ -214,11 +221,19 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
                 camera_index: index as i32,
                 unique_identifier: format!("{:06x}", index),
                 device_path: String::new(),
+                formats: vec![],
             });
         CameraGroupConfig {
-            camera_index: index,
-            requested_width: 1280,
-            requested_height: 720,
+            capture_config: CameraCaptureConfig {
+                camera_id: identity.unique_identifier.clone(),
+                camera_index: index,
+                width: 1280,
+                height: 720,
+                exposure: -7,
+                exposure_mode: "MANUAL".to_string(),
+                framerate: -1.0,
+                rotation: -1,
+            },
             identity,
         }
     }).collect();
@@ -256,8 +271,8 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         let recorder = VideoRecorder::new(
             video_path.clone(),
             &handle.identity,
-            handle.width,
-            handle.height,
+            handle.config.width,
+            handle.config.height,
             30.0,
         )?;
         let csv_writer = CsvWriter::new(csv_path.clone())?;
@@ -347,7 +362,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
 
     // Collect camera metadata BEFORE wait_for_shutdown consumes group
     let camera_infos: Vec<(CameraIdentity, u32, u32)> = group.camera_handles.iter().map(|h| {
-        (h.identity.clone(), h.width, h.height)
+        (h.identity.clone(), h.config.width, h.config.height)
     }).collect();
 
     eprintln!("  Shutting down...");
@@ -414,11 +429,19 @@ fn run_multi_camera(
                 camera_index: index as i32,
                 unique_identifier: format!("{:06x}", index),
                 device_path: String::new(),
+                formats: vec![],
             });
         CameraGroupConfig {
-            camera_index: index,
-            requested_width: 1280,
-            requested_height: 720,
+            capture_config: CameraCaptureConfig {
+                camera_id: identity.unique_identifier.clone(),
+                camera_index: index,
+                width: 1280,
+                height: 720,
+                exposure: -7,
+                exposure_mode: "MANUAL".to_string(),
+                framerate: -1.0,
+                rotation: -1,
+            },
             identity,
         }
     }).collect();

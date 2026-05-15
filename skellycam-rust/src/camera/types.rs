@@ -82,18 +82,31 @@ pub struct FramePacket {
     pub data: FrameData,
     pub width: u32,
     pub height: u32,
+    pub rotation: i32,
     pub timestamps: FrameLifecycleTimestamps,
     pub identity: CameraIdentity,
     pub frame_number: i64,
 }
 
-/// Three-part camera identification.
+/// A single format entry as reported by openpnp-capture.
+/// Mirrors `CapFormatInfo` but with a friendly FOURCC string.
+#[derive(Debug, Clone)]
+pub struct CameraFormatInfo {
+    pub width: u32,
+    pub height: u32,
+    pub fps: u32,
+    pub fourcc: u32,
+    pub fourcc_str: String,
+}
+
+/// Camera identification with available format list.
 #[derive(Debug, Clone)]
 pub struct CameraIdentity {
     pub display_name: String,
     pub camera_index: i32,
     pub unique_identifier: String,
     pub device_path: String,
+    pub formats: Vec<CameraFormatInfo>,
 }
 
 impl CameraIdentity {
@@ -178,6 +191,23 @@ impl MultiFramePayload {
     }
 }
 
+/// Per-camera capture configuration — the Rust equivalent of the Python
+/// Per-camera capture configuration — the Rust equivalent of the Python
+/// `CameraConfig`. Passed as a single object everywhere. `camera_id` is the
+/// primary identifier (matches the Python-generated SHA-256 hex ID).
+/// Adding a new setting only means adding one field here.
+#[derive(Debug, Clone)]
+pub struct CameraCaptureConfig {
+    pub camera_id: String,
+    pub camera_index: u32,
+    pub width: u32,
+    pub height: u32,
+    pub exposure: i32,
+    pub exposure_mode: String,
+    pub framerate: f64,
+    pub rotation: i32,
+}
+
 #[derive(Debug)]
 pub enum CameraCommand {
     Shutdown,
@@ -192,8 +222,7 @@ pub enum CameraEvent {
 pub struct CameraHandle {
     pub command_sender: mpsc::Sender<CameraCommand>,
     pub identity: CameraIdentity,
-    pub width: u32,
-    pub height: u32,
+    pub config: CameraCaptureConfig,
 }
 
 impl CameraHandle {

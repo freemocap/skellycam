@@ -13,7 +13,7 @@ from skellylogs import LogRecordModel, LogLevels
 from skellylogs.handlers.websocket_log_queue_handler import get_websocket_log_queue
 
 from skellycam.api.websocket.websocket_message_types import WebsocketMessageType
-from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, get_or_create_camera_group_manager
+from skellycam.core.camera_group.camera_group_manager import CameraGroupManager, RustCameraGroupManager, get_or_create_camera_group_manager
 from skellycam.core.recorders.framerate_tracker import FramerateTracker, CurrentFramerate
 from skellycam.utilities.wait_functions import await_10ms
 from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
@@ -79,7 +79,7 @@ class WebsocketServer:
     def __init__(self, app: FastAPI, websocket: WebSocket):
         self.websocket = websocket
         self.global_kill_flag = app.state.global_kill_flag
-        self._cgm: CameraGroupManager = get_or_create_camera_group_manager(app=app)
+        self._cgm: CameraGroupManager | RustCameraGroupManager = get_or_create_camera_group_manager(app=app)
 
         self._websocket_should_continue = True
         self.ws_tasks: list[asyncio.Task] = []

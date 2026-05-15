@@ -8,7 +8,7 @@ use axum::routing::post;
 use axum::{Json, Router};
 use tokio::sync::broadcast;
 
-use crate::camera::enumerate_directshow_cameras;
+use crate::camera::{enumerate_directshow_cameras, CameraCaptureConfig};
 use crate::camera_group::{CameraGroup, CameraGroupConfig};
 use crate::frontend_payload::encode_multiframe;
 
@@ -41,6 +41,17 @@ async fn detect_cameras(
             display_name: c.display_name,
             unique_identifier: c.unique_identifier,
             device_path: c.device_path,
+            formats: c
+                .formats
+                .iter()
+                .map(|f| DetectedFormat {
+                    width: f.width,
+                    height: f.height,
+                    fps: f.fps,
+                    fourcc: f.fourcc,
+                    fourcc_str: f.fourcc_str.clone(),
+                })
+                .collect(),
         })
         .collect();
 
@@ -76,9 +87,16 @@ async fn create_or_update_group(
             .ok_or_else(|| AppError::BadRequest(format!("Camera index {index} not found")))?;
 
         configs.push(CameraGroupConfig {
-            camera_index: index,
-            requested_width: 1280,
-            requested_height: 720,
+            capture_config: CameraCaptureConfig {
+                camera_id: identity.unique_identifier.clone(),
+                camera_index: index,
+                width: 1280,
+                height: 720,
+                exposure: -7,
+                exposure_mode: "MANUAL".to_string(),
+                framerate: -1.0,
+                rotation: -1,
+            },
             identity,
         });
     }

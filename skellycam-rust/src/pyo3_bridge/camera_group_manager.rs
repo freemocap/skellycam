@@ -19,7 +19,7 @@ use std::time::Duration;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
-use crate::camera::{enumerate_directshow_cameras, CameraHandle};
+use crate::camera::{enumerate_directshow_cameras, CameraCaptureConfig, CameraHandle};
 use crate::camera_group::{CameraGroup, CameraGroupConfig};
 use crate::frontend_payload::encode_multiframe;
 
@@ -72,7 +72,7 @@ impl CameraGroupManager {
         let mut rust_configs: Vec<CameraGroupConfig> = Vec::new();
 
         for (key, value) in configs.iter() {
-            let _camera_id: String = key.extract()?;
+            let python_camera_id: String = key.extract()?;
 
             let camera_index: i32 = value
                 .getattr("get")
@@ -84,10 +84,15 @@ impl CameraGroupManager {
                     value.get_item("camera_index")?.extract()
                 })?;
 
-            let width: i32 = get_field_i32(&value, "width", 1280);
-            let height: i32 = get_field_i32(&value, "height", 720);
+            let camera_id: String = get_field_string(&value, "camera_id", &python_camera_id);
+            let width: u32 = get_field_i32(&value, "width", 1280) as u32;
+            let height: u32 = get_field_i32(&value, "height", 720) as u32;
+            let exposure: i32 = get_field_i32(&value, "exposure", -7);
+            let exposure_mode: String = get_field_string(&value, "exposure_mode", "MANUAL");
+            let framerate: f64 = get_field_f64(&value, "framerate", -1.0);
+            let rotation: i32 = get_field_i32(&value, "rotation", -1);
 
-            let identity = all_cameras
+            let mut identity = all_cameras
                 .iter()
                 .find(|c| c.camera_index == camera_index)
                 .cloned()
@@ -102,10 +107,22 @@ impl CameraGroupManager {
                     ))
                 })?;
 
+            // Override the openpnp-generated unique_identifier with the Python-provided
+            // camera_id. This is the SINGLE source of truth for camera identity —
+            // generated once during Python camera/detect and used everywhere.
+            identity.unique_identifier = python_camera_id;
+
             rust_configs.push(CameraGroupConfig {
-                camera_index: camera_index as u32,
-                requested_width: width as u32,
-                requested_height: height as u32,
+                capture_config: CameraCaptureConfig {
+                    camera_id,
+                    camera_index: camera_index as u32,
+                    width,
+                    height,
+                    exposure,
+                    exposure_mode,
+                    framerate,
+                    rotation,
+                },
                 identity,
             });
         }
@@ -220,8 +237,8 @@ impl CameraGroupManager {
                     cam.set_item("camera_index", handle.identity.camera_index)?;
                     cam.set_item("display_name", &handle.identity.display_name)?;
                     cam.set_item("unique_identifier", &handle.identity.unique_identifier)?;
-                    cam.set_item("width", handle.width as i32)?;
-                    cam.set_item("height", handle.height as i32)?;
+                    cam.set_item("width", handle.config.width as i32)?;
+                    cam.set_item("height", handle.config.height as i32)?;
                     Ok(cam.into())
                 })
                 .collect::<PyResult<Vec<_>>>()?;
@@ -324,6 +341,22 @@ fn get_field_i32(value: &Bound<'_, PyAny>, name: &str, default: i32) -> i32 {
         .and_then(|v| v.extract())
         .or_else(|_| value.get_item(name)?.extract())
         .unwrap_or(default)
+}
+
+fn get_field_f64(value: &Bound<'_, PyAny>, name: &str, default: f64) -> f64 {
+    value
+        .getattr(name)
+        .and_then(|v| v.extract())
+        .or_else(|_| value.get_item(name)?.extract())
+        .unwrap_or(default)
+}
+
+fn get_field_string(value: &Bound<'_, PyAny>, name: &str, default: &str) -> String {
+    value
+        .getattr(name)
+        .and_then(|v| v.extract::<String>())
+        .or_else(|_| value.get_item(name)?.extract::<String>())
+        .unwrap_or_else(|_| default.to_string())
 }
 
 use pyo3::exceptions::{PyRuntimeError, PyValueError};

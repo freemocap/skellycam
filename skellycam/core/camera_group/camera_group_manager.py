@@ -348,9 +348,14 @@ class RustCameraGroupManager:
         for camera_id, config in camera_configs.items():
             resolution = config.resolution
             configs_dict[camera_id] = {
+                "camera_id": camera_id,
                 "camera_index": config.camera_index,
                 "width": resolution.width,
                 "height": resolution.height,
+                "exposure": config.exposure,
+                "exposure_mode": config.exposure_mode,
+                "framerate": config.framerate,
+                "rotation": config.rotation.value,
             }
         group_id = self._native.create_or_update_group(configs_dict)
         group = RustCameraGroup(

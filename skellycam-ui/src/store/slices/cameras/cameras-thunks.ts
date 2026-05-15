@@ -92,6 +92,7 @@ export const detectCameras = createAsyncThunk<
                     vendorId: serverCamera.vendor_id,
                     productId: serverCamera.product_id,
                 },
+                formats: serverCamera.formats,
                 metrics: existing?.metrics,
             };
         });

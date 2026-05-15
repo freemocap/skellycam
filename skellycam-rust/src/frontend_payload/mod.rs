@@ -24,10 +24,7 @@ pub fn encode_multiframe(payload: &MultiFramePayload) -> Result<Vec<u8>, String>
         match &frame.data {
             FrameData::Mjpg(jpeg_bytes) => {
                 // Camera-original JPEG — pass through (with optional lossless rotation).
-                // Rotation is read from the existing camera group config; for now
-                // we hardcode NO_ROTATION (-1) since per-camera rotation config
-                // arrives in the gatherer command channel phase.
-                let output = if let Some(rotated) = jpeg_transform::rotate_jpeg_lossless(jpeg_bytes, -1) {
+                let output = if let Some(rotated) = jpeg_transform::rotate_jpeg_lossless(jpeg_bytes, frame.rotation) {
                     rotated
                 } else {
                     jpeg_bytes.clone()

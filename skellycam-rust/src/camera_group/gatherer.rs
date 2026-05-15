@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -102,14 +101,9 @@ pub fn spawn_gatherer(
     barrier: Arc<BreakableBarrier>,
 ) -> JoinHandle<()> {
     let camera_count = frame_receivers.len();
-    let camera_labels: Vec<String> = camera_handles.iter()
-        .map(|h| format!("{}:{}", h.identity.camera_index, h.identity.unique_identifier))
-        .collect();
 
     thread::spawn(move || {
         let mut step: i64 = 0;
-        let mut prev_timestamps: HashMap<String, i64> = HashMap::new();
-        let mut per_camera_fps: HashMap<String, f64> = HashMap::new();
         let mut hardware_spread_values: Vec<f64> = Vec::new();
         let mut software_spread_values: Vec<f64> = Vec::new();
         let mut multiframe_interval_ns: Vec<f64> = Vec::new();
@@ -197,17 +191,8 @@ pub fn spawn_gatherer(
             hardware_spread_values.push(hardware_spread_ns);
             software_spread_values.push(software_spread_ns);
 
-            // Compute per-camera FPS and track intervals
+            // Track per-frame lifecycle timings for the shutdown statistics dump
             for frame in &payload.frames {
-                let label = format!("{}:{}", frame.identity.camera_index, frame.identity.unique_identifier);
-                if let Some(&prev_ts) = prev_timestamps.get(&label) {
-                    let dt_ns = (frame.timestamps.frame_available_ns - prev_ts) as f64;
-                    if dt_ns > 0.0 {
-                        let fps = 1_000_000_000.0 / dt_ns;
-                        per_camera_fps.insert(label.clone(), fps);
-                    }
-                }
-                prev_timestamps.insert(label, frame.timestamps.frame_available_ns);
                 let ts = &frame.timestamps;
                 if ts.loop_start_ns > 0 && ts.frame_available_ns > 0 {
                     duration_hardware_wait.push((ts.frame_available_ns - ts.loop_start_ns) as f64);
@@ -224,20 +209,6 @@ pub fn spawn_gatherer(
                 if ts.loop_start_ns > 0 && ts.gatherer_received_ns > 0 {
                     duration_total_iteration.push((ts.gatherer_received_ns - ts.loop_start_ns) as f64);
                 }
-            }
-
-            if step > 0 && step % 30 == 0 {
-                let hw_spread_us = hardware_spread_ns / 1_000.0;
-                let sw_spread_us = software_spread_ns / 1_000.0;
-                let fps_list: Vec<String> = camera_labels.iter()
-                    .filter_map(|label| {
-                        per_camera_fps.get(label).map(|fps| format!("[{label}]={fps:.1}fps"))
-                    })
-                    .collect();
-                eprintln!(
-                    "  step {step:>5} | hw={hw_spread_us:>7.1}µs sw={sw_spread_us:>7.1}µs | {}",
-                    fps_list.join(" | "),
-                );
             }
 
             step += 1;

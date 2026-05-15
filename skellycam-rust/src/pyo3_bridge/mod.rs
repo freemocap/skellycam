@@ -9,7 +9,8 @@ mod camera_group_manager;
 mod types;
 
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::Py;
+use pyo3::types::{PyDict, PyList};
 
 use types::{
     CameraConfig, CameraStatusDict, FramerateData, ImageResolution, RecordingInfo,
@@ -66,10 +67,23 @@ fn detect_cameras(py: Python<'_>) -> pyo3::PyResult<Vec<Py<PyDict>>> {
     let mut result = Vec::with_capacity(cameras.len());
     for cam in cameras {
         let d = PyDict::new(py);
+
+        let format_dicts: Vec<Py<PyDict>> = cam.formats.iter().map(|f| {
+            let fd = PyDict::new(py);
+            fd.set_item("width", f.width).unwrap();
+            fd.set_item("height", f.height).unwrap();
+            fd.set_item("fps", f.fps).unwrap();
+            fd.set_item("fourcc", f.fourcc).unwrap();
+            fd.set_item("fourcc_str", &f.fourcc_str).unwrap();
+            fd.into()
+        }).collect();
+        let formats_list = PyList::new(py, format_dicts)?;
+
         d.set_item("camera_index", cam.camera_index)?;
         d.set_item("display_name", cam.display_name)?;
         d.set_item("unique_identifier", cam.unique_identifier)?;
         d.set_item("device_path", cam.device_path)?;
+        d.set_item("formats", formats_list)?;
         result.push(d.into());
     }
 

@@ -9,6 +9,7 @@ import {
 import MediationIcon from "@mui/icons-material/Mediation";
 import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
+import { CameraConfigFramerate } from "./CameraConfigFramerate";
 import { CameraConfigRotation } from "./CameraConfigRotation";
 import { CameraConfig, ExposureMode, RotationValue } from "@/store/slices/cameras/cameras-types";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -60,6 +61,10 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
 
     const handleExposureValueChange = (value: number): void => {
         handleChange("exposure", value);
+    };
+
+    const handleFramerateChange = (value: number | null): void => {
+        handleChange("framerate", value ?? -1);
     };
 
     return (
@@ -135,6 +140,14 @@ export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
                         exposure={config.exposure}
                         onExposureModeChange={handleExposureModeChange}
                         onExposureValueChange={handleExposureValueChange}
+                    />
+                </Box>
+
+                {/* Framerate controls */}
+                <Box sx={{pt: 0.5, borderTop: `1px solid ${theme.palette.divider}`}}>
+                    <CameraConfigFramerate
+                        framerate={config.framerate}
+                        onChange={handleFramerateChange}
                     />
                 </Box>
             </Box>

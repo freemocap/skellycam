@@ -3,11 +3,22 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct DetectedFormat {
+    pub width: u32,
+    pub height: u32,
+    pub fps: u32,
+    pub fourcc: u32,
+    pub fourcc_str: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DetectedCamera {
     pub camera_index: i32,
     pub display_name: String,
     pub unique_identifier: String,
     pub device_path: String,
+    pub formats: Vec<DetectedFormat>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

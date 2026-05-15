@@ -130,8 +130,8 @@ impl CameraGroupManager {
                         camera_index: handle.identity.camera_index,
                         display_name: handle.identity.display_name.clone(),
                         unique_identifier: handle.identity.unique_identifier.clone(),
-                        width: handle.width,
-                        height: handle.height,
+                        width: handle.config.width,
+                        height: handle.config.height,
                     })
                     .collect(),
             })

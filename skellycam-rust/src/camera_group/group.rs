@@ -31,12 +31,9 @@ impl CameraGroup {
 
         for config in configs {
             let (handle, event_receiver, frame_receiver) = camera::spawn_camera_thread(
-                config.camera_index,
-                config.requested_width,
-                config.requested_height,
+                &config.capture_config,
                 config.identity,
                 barrier.clone(),
-                true, // use raw MJPEG
             );
             camera_handles.push(handle);
             frame_receivers.push(frame_receiver);

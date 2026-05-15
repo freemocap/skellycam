@@ -35,26 +35,38 @@ fn main() {
     };
 
     // ── Resolve latest release tag ──────────────────────────────────────
-    let tag = get_latest_tag().unwrap_or_else(|_| {
-        // Fallback if no network or API issue — the highest known tag
-        // should be updated when a new build is published.
-        eprintln!("  [build.rs] WARNING: could not reach GitHub API, using fallback tag");
-        "build.2".to_string()
+    let tag = get_latest_tag().unwrap_or_else(|e| {
+        panic!(
+            "\n\n\
+             ╔══════════════════════════════════════════════════════════════╗\n\
+             ║  FAILED to resolve latest openpnp-capture release tag       ║\n\
+             ║                                                              ║\n\
+             ║  The build requires network access to determine the latest   ║\n\
+             ║  release from GitHub. Ensure you have internet connectivity. ║\n\
+             ║                                                              ║\n\
+             ║  Releases: https://github.com/{}/releases  \n\
+             ║  Error: {e:<50}║\n\
+             ╚══════════════════════════════════════════════════════════════╝\n",
+            OPENPNP_REPO
+        );
     });
     eprintln!("  [build.rs] openpnp-capture release: {tag}");
 
     // ── Download ────────────────────────────────────────────────────────
+    // Paths embed the tag so you can always see which build is cached:
+    //   target/build-artifacts/{tag}/{archive_name}
+    //   target/build-artifacts/{tag}/{target_triple}/lib/
     let artifact_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let build_artifacts = artifact_dir
         .parent().unwrap()  // out/
         .parent().unwrap()  // build/
         .parent().unwrap()  // target/debug|release/
-        .join("build-artifacts");
+        .join("build-artifacts")
+        .join(&tag);
 
-    let download_dir = build_artifacts.join("downloads");
-    fs::create_dir_all(&download_dir).unwrap();
+    fs::create_dir_all(&build_artifacts).unwrap();
 
-    let archive_file = download_dir.join(&archive_name);
+    let archive_file = build_artifacts.join(&archive_name);
 
     if !archive_file.exists() {
         let url = format!(
@@ -161,7 +173,7 @@ fn get_latest_tag() -> Result<String, String> {
         .map_err(|e| format!("Failed to read response: {e}"))?;
 
     // Extract "tag_name":"build.N" from the JSON response.
-    // The JSON looks like: {...,"tag_name":"build.2","name":...}
+    // The JSON looks like: {...,"tag_name":"build.7","name":...}
     // Split on the key, take the second piece (everything after the key),
     // then extract the value before the closing quote.
     for part in body.split("\"tag_name\":\"") {

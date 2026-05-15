@@ -80,6 +80,9 @@ export interface Camera {
         productId?: string;
     };
 
+    // Available formats from detection (optional, populated from openpnp-capture enumeration)
+    formats?: DetectedFormat[];
+
     // Performance metrics (optional, updated from websocket)
     metrics?: {
         fps: number;
@@ -101,6 +104,14 @@ export interface DetectCamerasRequest {
     filterVirtual?: boolean;
 }
 
+export interface DetectedFormat {
+    width: number;
+    height: number;
+    fps: number;
+    fourcc: number;
+    fourcc_str: string;
+}
+
 export interface DetectCamerasResponse {
     cameras: Array<{
         camera_id: string;
@@ -108,6 +119,7 @@ export interface DetectCamerasResponse {
         name: string;
         vendor_id?: string;
         product_id?: string;
+        formats?: DetectedFormat[];
     }>;
 }
 

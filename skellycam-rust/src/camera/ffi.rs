@@ -123,15 +123,14 @@ unsafe extern "C" {
         out_bytes: *mut u32,
     ) -> CapResult;
 
-    /// Decode a raw JPEG frame into 24-bit RGB on demand.
-    /// `dst_size` must be at least `width * height * 3` bytes.
+    /// Decode the current raw JPEG frame into 24-bit RGB on demand.
+    /// `RGBbufferBytes` must be at least `width * height * 3` bytes.
+    /// Only valid on streams opened with `Cap_openStreamRaw`.
     pub fn Cap_decodeFrame(
         ctx: CapContext,
         stream: CapStream,
-        src: *const u8,
-        src_size: u32,
-        dst: *mut u8,
-        dst_size: u32,
+        RGBbufferPtr: *mut u8,
+        RGBbufferBytes: u32,
     ) -> CapResult;
 }
 

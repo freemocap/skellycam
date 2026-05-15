@@ -32,6 +32,13 @@ def find_camera(
     return None
 
 
+class CameraFormatInfo(BaseModel):
+    width: int
+    height: int
+    fps: int
+    fourcc: int
+    fourcc_str: str
+
 class CameraDeviceInfo(BaseModel):
     index: CameraIndexInt
     name: CameraNameString
@@ -40,6 +47,7 @@ class CameraDeviceInfo(BaseModel):
     path: CameraDevicePathString | None = None
     backend_id: CameraBackendInt | None = None
     backend_name: CameraBackendNameString | None = None
+    formats: list[CameraFormatInfo] = []
 
     @computed_field
     @property
