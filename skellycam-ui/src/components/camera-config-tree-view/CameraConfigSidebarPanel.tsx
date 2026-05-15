@@ -33,26 +33,23 @@ export const CameraConfigSidebarPanel: React.FC = () => {
             <div className="camera-group-header flex flex-col gap-1 p-1">
                 {/* Row 1 — actions */}
                 <div className="text-nowrap flex items-center gap-1">
-                    {/* Group 1: Camera count + Scan + Streaming */}
-                    <div className="flex items-center gap-1">
-                        <p className="text bg text-white">{cameras.length} Cameras</p>
+                    <p className="text md text-white">{cameras.length} Cameras</p>
+                    {connectedCameras.length > 0 && (
+                        <span className="text md tag" style={{ color: 'var(--green-400, #4ade80)' }}>
+                            {connectedCameras.length} Streaming
+                        </span>
+                    )}
+                    <div className="flex-1" />
+                    {/* Buttons: Detect + Connect + Clear */}
+                    <div className="button-group text-nowrap flex items-center gap-1">
                         <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
                             <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
                         </button>
-                        {connectedCameras.length > 0 && (
-                            <span className="tag" style={{ color: 'var(--green-400, #4ade80)' }}>
-                                {connectedCameras.length} Streaming
-                            </span>
-                        )}
-                    </div>
-                    <div className="flex-1" />
-                    {/* Group 2: Clear + Connect */}
-                    <div className="button-group text-nowrap flex items-center gap-1">
-                        <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
-                            <span className="icon icon-size-16 clear-icon" />
-                        </button>
                         <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
                             <p className="text md" style={{ color: 'var(--gray-900)' }}>{connectedCameras.length === 0 ? 'Connect Cameras' : 'Update settings'}</p>
+                        </button>
+                        <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
+                            <span className="icon icon-size-16 clear-icon" />
                         </button>
                     </div>
                 </div>
