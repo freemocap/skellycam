@@ -39,7 +39,7 @@ const Checkbox: React.FC<CheckboxProps> = ({
 
   return (
     <div
-      className="text-nowrap button checkbox gap-1 flex flex-row items-center"
+      className="text-nowrap button checkbox gap-1 flex flex-row items-center p-2"
       onClick={handleContainerClick}
     >
       <input
