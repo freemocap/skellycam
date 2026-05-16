@@ -4,8 +4,9 @@ import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 import { CameraGridSettingsModal } from "@/components/camera-views/CameraGridSettingsModal";
 import DesignerCheckbox from "@/components/ui-components/Checkbox";
-import { ROTATION_DEGREE_LABELS, RotationValue, useAppDispatch } from "@/store";
+import { ROTATION_DEGREE_LABELS, RotationValue, useAppDispatch, useAppSelector } from "@/store";
 import { cameraSelectionToggled } from "@/store/slices/cameras/cameras-slice";
+import { openCameraSettings, closeCameraSettings } from "@/store/slices/ui/ui-slice";
 import { Camera } from "@/store/slices/cameras/cameras-types";
 import { useServer } from "@/services/server";
 
@@ -31,9 +32,11 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
     const { connectedCameraIds } = useServer();
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const [modalPos, setModalPos] = useState<{ top: number; left: number }>({ top: 80, left: 40 });
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
+    
+    const openCameraSettingsId = useAppSelector(state => state.ui.openCameraSettingsId);
+    const settingsOpen = openCameraSettingsId === camera.id;
 
     const isStreaming = connectedCameraIds.includes(camera.id);
 
@@ -44,11 +47,21 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
 
     const handleOpenSettings = (e: React.MouseEvent): void => {
         e.stopPropagation();
-        if (!settingsOpen && settingsBtnRef.current) {
-            const rect = settingsBtnRef.current.getBoundingClientRect();
-            setModalPos({ top: rect.bottom + 8, left: rect.right + 8 });
+        if (settingsOpen) {
+            // Close if already open
+            dispatch(closeCameraSettings());
+        } else {
+            // Close any other open modal and open this one
+            dispatch(openCameraSettings(camera.id));
+            if (settingsBtnRef.current) {
+                const rect = settingsBtnRef.current.getBoundingClientRect();
+                setModalPos({ top: rect.bottom + 8, left: rect.right + 8 });
+            }
         }
-        setSettingsOpen(prev => !prev);
+    };
+
+    const handleModalClose = () => {
+        dispatch(closeCameraSettings());
     };
 
     const configSummary = getConfigSummary(camera.desiredConfig);
@@ -70,7 +83,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
 
                 {/* Right group — camera info and settings */}
                 <div
-                    className="camera-settings-button button sm br-1 flex flex-col gap-1 flex-1 cursor-pointer p-1"
+                    className={clsx("camera-settings-button button sm br-1 flex flex-col gap-1 flex-1 cursor-pointer p-1", settingsOpen && "selected-camera-settings")}
                     onClick={handleOpenSettings}
                     onMouseDown={e => e.stopPropagation()}
                     title={t('cameraSettings')}
@@ -113,7 +126,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
                 <CameraGridSettingsModal
                     camera={camera}
                     initialPos={modalPos}
-                    onClose={() => setSettingsOpen(false)}
+                    onClose={handleModalClose}
                 />,
                 document.body
             )}

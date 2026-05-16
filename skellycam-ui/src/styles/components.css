@@ -693,7 +693,7 @@ animation: fadeIn, scaleIn;
   /* max-width: 300px; */
 }
 
-.selected-camera-feed::before {
+.selected-camera-feed::before, .selected-camera-settings::before {
 
   outline: 1.5px solid var(--gray-500);
   content: "";
