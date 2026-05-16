@@ -55,15 +55,8 @@
   background-color: var(--blue-800);
 }
 
-.text-nowrap {
-  text-wrap: nowrap;
-  text-overflow: ellipsis;
 
-  overflow: hidden;
-}
-.text-wrap {
-  overflow-wrap: break-word;
-}
+
 .tag {
   background-color: var(--gray-600);
   padding: 2px 5px 2px 5px;
@@ -87,6 +80,12 @@
 /* Primary fullwidth button */
 .primary {
   background-color: var(--red-500);
+}
+.tertiary {
+  background-color: var(--gray-500);
+}
+.tertiary > p {
+  color: var(--gray-100);
 }
 
 .primary:hover {
@@ -834,21 +833,29 @@ animation: fadeIn, scaleIn;
    TOOLTIP BASE
 ========================================= */
 
-.tooltip-container {
+.tooltip-container, .prompt-tooltip-container {
   position: absolute;
   z-index: 9999;
+  min-width: max-content;
 
+}
+.prompt-tooltip-container {
+  min-width: 248px;
+  max-width: 248px;
+}
+.tooltip-container:not(.prompt-tooltip-container) {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-
-  min-width: max-content;
-
-  transition:
+    transition:
     opacity 0.18s ease,
     visibility 0.18s ease,
     transform 0.18s ease;
 }
+
+
+
+
 
 /* =========================================
    SHOW TOOLTIP ON HOVER
@@ -882,7 +889,7 @@ animation: fadeIn, scaleIn;
     translateX(-50%)
     translateY(-8px);
 
-  opacity: 0;
+  /* opacity: 0; */
 }
 
 .button-sm-group:hover .tooltip-container.pos-bottom,
@@ -891,7 +898,7 @@ animation: fadeIn, scaleIn;
     translateX(-50%)
     translateY(-4px);
 
-  opacity: 1;
+  /* opacity: 1; */
 }
 
 /* TRIANGLE */
@@ -900,7 +907,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  top: -2px;
+  top: -6px;
   left: 50%;
 
   transform: translateX(-50%);
@@ -925,7 +932,7 @@ animation: fadeIn, scaleIn;
     translateX(-50%)
     translateY(6px);
 
-  opacity: 0;
+  /* opacity: 0; */
 }
 
 .button-sm-group:hover .tooltip-container.pos-top,
@@ -934,7 +941,7 @@ animation: fadeIn, scaleIn;
     translateX(-50%)
     translateY(0);
 
-  opacity: 1;
+  /* opacity: 1; */
 }
 
 /* TRIANGLE */
@@ -943,7 +950,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  bottom: -2px;
+  bottom: -6px;
   left: 50%;
 
   transform: translateX(-50%);
@@ -968,7 +975,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(6px);
 
-  opacity: 0;
+  /* opacity: 0; */
 }
 
 .button-sm-group:hover .tooltip-container.pos-left,
@@ -977,7 +984,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(0);
 
-  opacity: 1;
+  /* opacity: 1; */
 }
 
 /* TRIANGLE */
@@ -986,7 +993,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  right: -2px;
+  right: -6px;
   top: 50%;
 
   transform: translateY(-50%);
@@ -1011,7 +1018,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(-6px);
 
-  opacity: 0;
+  /* opacity: 0; */
 }
 
 .button-sm-group:hover .tooltip-container.pos-right,
@@ -1020,7 +1027,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(0);
 
-  opacity: 1;
+  /* opacity: 1; */ 
 }
 
 /* TRIANGLE */
@@ -1029,7 +1036,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  left: -2px;
+  left: -6px;
   top: 50%;
 
   transform: translateY(-50%);

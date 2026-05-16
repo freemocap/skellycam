@@ -477,39 +477,7 @@ a.link:hover {
   border-style: solid;
 }
 
-/* =========================
-   BORDER COLORS
-   ========================= */
-.border-black {
-  border-color: var(--gray-500);
-}
 
-.border-mid-black {
-  border-color: var(--gray-600);
-}
-
-.border-red {
-  border-color: var(--red-500);
-}
-
-.border-blue {
-  border-color: var(--red-500-500);
-}
-
-.border-pink {
-  border-color: var(--green-100);
-}
-
-.border-white {
-  border-color: var(--gray-100);
-}
-
-
-
-.button.card:hover {
-  background-color: var(--gray-700);
-  transition: background-color var(--speed-1) ease-in-out;
-}
 
 
 
@@ -666,3 +634,13 @@ body,
   box-shadow: 0px 7px 15px rgba(0, 0, 0, 0.5);
 }
 
+.text-nowrap {
+  text-wrap: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.text-wrap {
+  overflow-wrap: break-word;
+  text-wrap: wrap;
+  text-wrap-mode: wrap;
+}

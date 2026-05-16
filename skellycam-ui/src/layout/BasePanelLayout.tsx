@@ -30,8 +30,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
         <div className="main-app-container" style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
             <PanelGroup className="app-container" direction="vertical" style={{flex: 1}}>
                 <Panel className="app-container-inner" defaultSize={87} minSize={20}>
-                    <PanelGroup className="app-container-sub pr-1 pl-1 pt-1 pb-0" direction="horizontal" style={{direction: "ltr"}}>
-
+                    <PanelGroup className="pos-rel app-container-sub pr-1 pl-1 pt-1 pb-0" direction="horizontal" style={{direction: "ltr"}}>
 
                         <Panel className="left-side-panel p-1 action-container bg-darkgray br-2 border-mid-black border-1"
                             ref={leftPanelRef}

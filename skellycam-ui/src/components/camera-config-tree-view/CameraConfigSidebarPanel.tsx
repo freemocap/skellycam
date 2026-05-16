@@ -10,6 +10,8 @@ import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import IconButton from "@/components/ui-components/IconButton";
+import PromptTooltip from '@/components/ui-components/promptTooltip';
+
 
 export const CameraConfigSidebarPanel: React.FC = () => {
     const [isStoppingCameras, setIsStoppingCameras] = useState(false);
@@ -51,7 +53,22 @@ export const CameraConfigSidebarPanel: React.FC = () => {
             {/* Header */}
             <div className="camera-group-header flex flex-col gap-1 p-1 pos-rel z-2">
                 {/* Row 1 — actions */}
-                <div className="text-nowrap flex items-center gap-1 overflow-visible">
+              
+                <div className="flex items-center gap-1 overflow-visible">
+                    
+                     <PromptTooltip
+  show={true}
+
+title="Connect Cameras"
+
+text="Make sure you have at least one camera connected, then hit Connect to start streaming."
+  position="pos-bottom"
+  variant="boarding"
+
+  onClose={() => {
+    console.log("Tooltip closed");
+  }}
+/>
                     <p className="text md text-gray">{cameras.length} Cameras</p>
 {connectedCameras.length > 0 && (
     <span
@@ -64,7 +81,11 @@ export const CameraConfigSidebarPanel: React.FC = () => {
 )}
                     <div className="flex-1" />
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
-                    <div className="button-group flex items-center gap-1">
+                    <div className="button-group flex items-center gap-1 pos-rel">
+                           
+                           
+                        
+                     
                      <IconButton
                         icon="scan-icon"
                         onClick={handleDetect}
