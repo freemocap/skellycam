@@ -53,7 +53,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
     if (!version) return null;
 
     return (
-        <div className={`version-button-container pos-abs flex flex-row items-center gap-2${className ? ` ${className}` : ''}`} style={style}>
+        <div className={`version-button-container pos-abs flex flex-row items-center gap-4${className ? ` ${className}` : ''}`} style={style}>
             <ButtonSm
                 text={`v${version}`}
                 onClick={checkForUpdate}
