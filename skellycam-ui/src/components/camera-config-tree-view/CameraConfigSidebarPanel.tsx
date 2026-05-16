@@ -69,7 +69,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                         </button>
                         {connectedCameras.length === 0 ? (
                             <ButtonSm
-                              text={isLoading ? 'Checking...' : 'Stream Cameras'}
+                              text={isLoading ? 'Connecting...' : 'Connect Cameras'}
                               iconClass={isLoading ? 'loader-icon' : 'stream-icon'}
                               onClick={handleUpdate}
                               textColor = "text-black"
