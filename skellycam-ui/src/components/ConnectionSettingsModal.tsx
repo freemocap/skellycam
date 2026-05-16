@@ -5,6 +5,7 @@ import NameDropdownSelector from './ui-components/NameDropdownSelector';
 import SubactionHeader from './ui-components/SubactionHeader';
 import useDraggableTooltips from '@/hooks/useDraggableTooltips';
 import type { ExecutableCandidate } from './ServerConnectionStatus';
+import type iconButton from './ui-components/iconButton';
 
 interface ConnectionSettingsModalProps {
     open: boolean;
@@ -100,9 +101,11 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                 {/* Header */}
                 <div className="flex justify-content-space-between items-center">
                     <p className="text bg text-white">Connection Settings</p>
-                    <button className="button icon-button" onClick={onClose}>
-                        <span className="icon close-icon icon-size-20" />
-                    </button>
+                    <IconButton
+                        icon="close-icon"
+                        onClick={onClose}
+                     
+/>
                 </div>
 
                 {/* ── Server Process Section (Electron only) ── */}

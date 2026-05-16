@@ -275,15 +275,24 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 
 .icon-button {
-  width: 25px;
-  height: 25px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   align-items: center;
   display: flex;
   justify-content: center;
 }
 
 .icon-button:hover>.icon {
-  filter: brightness(2);
+  filter: brightness(1);
+ 
+
+  transition: filter var(--speed-1) ease-in-out;
+}
+.icon-button:hover {
+ 
+  background-color: var(--gray-600);
   /* filter animation out */
   transition: filter var(--speed-1) ease-in-out;
 }

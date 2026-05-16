@@ -48,7 +48,7 @@ const Checkbox: React.FC<CheckboxProps> = ({
         onChange={onChange}
         className={`button ${inputClassName}`.trim()} // merge default + extra classes
       />
-      <p className="text-gray text sm text-align-left">{label}</p>
+      <p className="text-gray text md text-align-left">{label}</p>
     </div>
   );
 };

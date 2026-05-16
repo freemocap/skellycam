@@ -103,7 +103,7 @@
 }
 
 .secondary:hover {
-  filter:brightness(0.7)
+  background-color: color-mix(in srgb, var(--gray-100) 70%, black);
 }
 
 /* card button */
@@ -850,9 +850,12 @@ animation: fadeIn, scaleIn;
     transform 0.18s ease;
 }
 
-/* SHOW TOOLTIP ON BUTTON HOVER */
+/* =========================================
+   SHOW TOOLTIP ON HOVER
+========================================= */
 
-.button-sm-group:hover .tooltip-container {
+.button-sm-group:hover .tooltip-container,
+.icon-button:hover .tooltip-container {
   opacity: 1;
   visibility: visible;
 }
@@ -869,7 +872,6 @@ animation: fadeIn, scaleIn;
 
 /* =========================================
    POSITION : BOTTOM
-   SLIDE DOWN
 ========================================= */
 
 .tooltip-container.pos-bottom {
@@ -878,15 +880,16 @@ animation: fadeIn, scaleIn;
 
   transform:
     translateX(-50%)
-    translateY(-6px);
+    translateY(-8px);
 
   opacity: 0;
 }
 
-.button-sm-group:hover .tooltip-container.pos-bottom {
+.button-sm-group:hover .tooltip-container.pos-bottom,
+.icon-button:hover .tooltip-container.pos-bottom {
   transform:
     translateX(-50%)
-    translateY(0);
+    translateY(-4px);
 
   opacity: 1;
 }
@@ -897,7 +900,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  top: -4px;
+  top: -2px;
   left: 50%;
 
   transform: translateX(-50%);
@@ -912,7 +915,6 @@ animation: fadeIn, scaleIn;
 
 /* =========================================
    POSITION : TOP
-   SLIDE UP
 ========================================= */
 
 .tooltip-container.pos-top {
@@ -926,7 +928,8 @@ animation: fadeIn, scaleIn;
   opacity: 0;
 }
 
-.button-sm-group:hover .tooltip-container.pos-top {
+.button-sm-group:hover .tooltip-container.pos-top,
+.icon-button:hover .tooltip-container.pos-top {
   transform:
     translateX(-50%)
     translateY(0);
@@ -940,7 +943,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  bottom: -4px;
+  bottom: -2px;
   left: 50%;
 
   transform: translateX(-50%);
@@ -955,7 +958,6 @@ animation: fadeIn, scaleIn;
 
 /* =========================================
    POSITION : LEFT
-   SLIDE LEFT
 ========================================= */
 
 .tooltip-container.pos-left {
@@ -969,7 +971,8 @@ animation: fadeIn, scaleIn;
   opacity: 0;
 }
 
-.button-sm-group:hover .tooltip-container.pos-left {
+.button-sm-group:hover .tooltip-container.pos-left,
+.icon-button:hover .tooltip-container.pos-left {
   transform:
     translateY(-50%)
     translateX(0);
@@ -983,7 +986,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  right: -4px;
+  right: -2px;
   top: 50%;
 
   transform: translateY(-50%);
@@ -998,7 +1001,6 @@ animation: fadeIn, scaleIn;
 
 /* =========================================
    POSITION : RIGHT
-   SLIDE RIGHT
 ========================================= */
 
 .tooltip-container.pos-right {
@@ -1012,7 +1014,8 @@ animation: fadeIn, scaleIn;
   opacity: 0;
 }
 
-.button-sm-group:hover .tooltip-container.pos-right {
+.button-sm-group:hover .tooltip-container.pos-right,
+.icon-button:hover .tooltip-container.pos-right {
   transform:
     translateY(-50%)
     translateX(0);
@@ -1026,7 +1029,7 @@ animation: fadeIn, scaleIn;
   content: "";
   position: absolute;
 
-  left: -4px;
+  left: -2px;
   top: 50%;
 
   transform: translateY(-50%);

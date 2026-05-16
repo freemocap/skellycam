@@ -9,6 +9,7 @@ import { NoCamerasPlaceholder } from './NoCamerasPlaceholder';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import ButtonSm from '@/components/ui-components/ButtonSm';
+import IconButton from "@/components/ui-components/IconButton";
 
 export const CameraConfigSidebarPanel: React.FC = () => {
     const [isStoppingCameras, setIsStoppingCameras] = useState(false);
@@ -64,9 +65,13 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                     <div className="overflow-visible flex-1" />
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
                     <div className="overflow-visible button-group text-nowrap flex items-center gap-1">
-                        <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
-                            {!isLoading && <span className={`icon icon-size-20 scan-icon`} />}
-                        </button>
+                     <IconButton
+                        icon="scan-icon"
+                        onClick={handleDetect}
+                        tooltip={true}
+                        tooltipText="Detect cameras"
+                        tooltipPosition="pos-bottom"
+                    />
                         {connectedCameras.length === 0 ? (
                             <ButtonSm
                               text={isLoading ? 'Connecting...' : 'Connect Cameras'}
