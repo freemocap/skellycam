@@ -144,13 +144,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
                   dispatch(configCopiedToAll(camera.id));
               }}
             />
-            <button
-              className="icon-button gap-1 br-1 button sm fit-content flex-inline text-left items-center"
-              onClick={() => dispatch(savedSettingsCleared())}
-              title="Reset all cameras to default settings"
-            >
-              <span className="icon icon-size-16 clear-icon"></span>
-            </button>
+       
             </div>
           </div>
 
@@ -222,7 +216,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
           )}
           
           {/* Footer: Update and Clear buttons */}
-          <div className="flex flex-col gap-1 pt-1">
+          <div className="flex flex-row gap-1 pt-1">
             <button
               className="button sm br-1 flex-1"
               style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}
@@ -230,6 +224,13 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
               title="Update camera settings"
             >
               <p className="text md" style={{ color: 'var(--gray-900)' }}>Update Settings</p>
+            </button>
+                 <button
+              className="icon-button gap-1 br-1 button sm fit-content flex-inline text-left items-center"
+              onClick={() => dispatch(savedSettingsCleared())}
+              title="Reset all cameras to default settings"
+            >
+              <span className="icon icon-size-16 clear-icon"></span>
             </button>
             
           </div>
