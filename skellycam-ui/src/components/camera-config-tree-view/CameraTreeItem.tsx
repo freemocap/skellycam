@@ -99,7 +99,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
 
                         <button
                             ref={settingsBtnRef}
-                            className={clsx("button icon-button", settingsOpen && "activated")}
+                            className={clsx("pos-abs top-0 right-0 button icon-button", settingsOpen && "activated")}
                             onClick={e => {
                                 e.stopPropagation();
                                 handleOpenSettings(e);
