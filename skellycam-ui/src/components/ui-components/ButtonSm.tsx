@@ -1,6 +1,157 @@
 import React from "react";
 import clsx from "clsx";
 
+
+/**
+ * =========================================
+ * BUTTON SM COMPONENT
+ * =========================================
+ *
+ * Small reusable button component with:
+ *
+ * - Left icon support
+ * - Custom button styles
+ * - Right side icon classes
+ * - Disabled state
+ * - Tooltip system
+ * - Tooltip position support
+ * - Custom className extension
+ *
+ * -----------------------------------------
+ * BASIC USAGE
+ * -----------------------------------------
+ *
+ * <ButtonSm
+ *   text="Save"
+ * />
+ *
+ * -----------------------------------------
+ * WITH ICON
+ * -----------------------------------------
+ *
+ * <ButtonSm
+ *   text="Delete"
+ *   iconClass="icon-trash"
+ * />
+ *
+ * -----------------------------------------
+ * WITH CUSTOM BUTTON STYLE
+ * -----------------------------------------
+ *
+ * <ButtonSm
+ *   text="Primary"
+ *   buttonType="btn-primary"
+ * />
+ *
+ * -----------------------------------------
+ * WITH CLICK EVENT
+ * -----------------------------------------
+ *
+ * <ButtonSm
+ *   text="Submit"
+ *   onClick={handleSubmit}
+ * />
+ *
+ * -----------------------------------------
+ * DISABLED BUTTON
+ * -----------------------------------------
+ *
+ * <ButtonSm
+ *   text="Disabled"
+ *   disabled={true}
+ * />
+ *
+ * -----------------------------------------
+ * TOOLTIP USAGE
+ * -----------------------------------------
+ *
+ * Enable tooltip:
+ *
+ * tooltip={true}
+ *
+ * Set tooltip text:
+ *
+ * tooltipText="Save changes"
+ *
+ * Set tooltip position:
+ *
+ * tooltipPosition="pos-top"
+ *
+ * Available positions:
+ *
+ * - pos-bottom (default)
+ * - pos-top
+ * - pos-left
+ * - pos-right
+ *
+ * -----------------------------------------
+ * FULL TOOLTIP EXAMPLE
+ * -----------------------------------------
+ *
+ * <ButtonSm
+ *   text="Delete"
+ *   iconClass="icon-trash"
+ *   tooltip={true}
+ *   tooltipText="Delete this item permanently"
+ *   tooltipPosition="pos-right"
+ * />
+ *
+ * -----------------------------------------
+ * TOOLTIP ANIMATIONS
+ * -----------------------------------------
+ *
+ * pos-bottom -> slides down
+ * pos-top    -> slides up
+ * pos-left   -> slides left
+ * pos-right  -> slides right
+ *
+ * -----------------------------------------
+ * IMPORTANT
+ * -----------------------------------------
+ *
+ * Required CSS:
+ *
+ * - .button-sm-group
+ * - .tooltip-container
+ * - .tooltip-inner
+ * - .pos-top
+ * - .pos-bottom
+ * - .pos-left
+ * - .pos-right
+ *
+ * The button root already contains:
+ *
+ * className="button-sm-group"
+ *
+ * so no wrapper div is needed.
+ *
+ * -----------------------------------------
+ * CUSTOMIZATION
+ * -----------------------------------------
+ *
+ * Developers can fully customize:
+ *
+ * - colors
+ * - borders
+ * - animations
+ * - tooltip spacing
+ * - typography
+ * - icon sizes
+ * - tooltip arrow sizes
+ *
+ * using external CSS utility classes.
+ *
+ * =========================================
+ */
+
+
+
+type TooltipPosition =
+  | "pos-top"
+  | "pos-bottom"
+  | "pos-left"
+  | "pos-right";
+
 interface ButtonSmProps {
   iconClass?: string;
   buttonType?: string;
@@ -10,7 +161,12 @@ interface ButtonSmProps {
   textColor?: string;
   title?: string;
   disabled?: boolean;
-  className?: string; // <-- new prop for extra classes
+  className?: string;
+
+  // TOOLTIP
+  tooltip?: boolean;
+  tooltipText?: string;
+  tooltipPosition?: TooltipPosition;
 }
 
 const ButtonSm: React.FC<ButtonSmProps> = ({
@@ -22,7 +178,12 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
   textColor = "text-gray",
   title,
   disabled = false,
-  className = "", // <-- default empty
+  className = "",
+
+  // TOOLTIP
+  tooltip = false,
+  tooltipText = "",
+  tooltipPosition = "pos-bottom",
 }) => {
   return (
     <button
@@ -30,21 +191,39 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
       title={title}
       disabled={disabled}
       className={clsx(
-        "gap-1 br-1 button sm fit-content flex-inline text-left items-center", // base styles
-        buttonType, // existing classes
-        rightSideIcon, // existing icon-based classes (can leave as is)
-        className // <-- new extra classes
+        "button-sm-group",
+        "gap-1 br-1 button sm fit-content flex-inline text-left items-center",
+        buttonType,
+        rightSideIcon,
+        className
       )}
     >
       {/* LEFT ICON */}
-      {iconClass && <span className={clsx("icon icon-size-16", iconClass)} />}
+      {iconClass && (
+        <span className={clsx("icon icon-size-16", iconClass)} />
+      )}
 
       {/* TEXT */}
       <p className={clsx(textColor, "text-nowrap text md text-align-left")}>
         {text}
       </p>
+
+      {/* TOOLTIP */}
+      {tooltip && tooltipText && (
+        <div
+          className={clsx(
+            "tooltip-container",
+            tooltipPosition,
+            "p-01 br-2 bg-dark"
+          )}
+        >
+          <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
+            <p className="text-white text md">{tooltipText}</p>
+          </div>
+        </div>
+      )}
     </button>
   );
 };
 
-export default ButtonSm;
+export default ButtonSm;  

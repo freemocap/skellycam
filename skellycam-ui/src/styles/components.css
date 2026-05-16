@@ -983,3 +983,222 @@ animation: fadeIn, scaleIn;
 .mic-dropdown-container {
   width: 218px;
 }
+
+
+/* =========================================
+   BUTTON GROUP
+========================================= */
+
+.button-sm-group {
+  position: relative;
+  overflow: visible;
+}
+
+/* =========================================
+   TOOLTIP BASE
+========================================= */
+
+.tooltip-container {
+  position: absolute;
+  z-index: 9999;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  min-width: max-content;
+
+  transition:
+    opacity 0.18s ease,
+    visibility 0.18s ease,
+    transform 0.18s ease;
+}
+
+/* SHOW TOOLTIP ON BUTTON HOVER */
+
+.button-sm-group:hover .tooltip-container {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* =========================================
+   TOOLTIP INNER
+========================================= */
+
+.tooltip-inner {
+  position: relative;
+  background: black;
+  will-change: transform, opacity;
+}
+
+/* =========================================
+   POSITION : BOTTOM
+   SLIDE DOWN
+========================================= */
+
+.tooltip-container.pos-bottom {
+  top: calc(100% + 10px);
+  left: 50%;
+
+  transform:
+    translateX(-50%)
+    translateY(-6px);
+
+  opacity: 0;
+}
+
+.button-sm-group:hover .tooltip-container.pos-bottom {
+  transform:
+    translateX(-50%)
+    translateY(0);
+
+  opacity: 1;
+}
+
+/* TRIANGLE */
+
+.tooltip-container.pos-bottom::before {
+  content: "";
+  position: absolute;
+
+  top: -4px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 0;
+  height: 0;
+
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid black;
+}
+
+/* =========================================
+   POSITION : TOP
+   SLIDE UP
+========================================= */
+
+.tooltip-container.pos-top {
+  bottom: calc(100% + 10px);
+  left: 50%;
+
+  transform:
+    translateX(-50%)
+    translateY(6px);
+
+  opacity: 0;
+}
+
+.button-sm-group:hover .tooltip-container.pos-top {
+  transform:
+    translateX(-50%)
+    translateY(0);
+
+  opacity: 1;
+}
+
+/* TRIANGLE */
+
+.tooltip-container.pos-top::before {
+  content: "";
+  position: absolute;
+
+  bottom: -4px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 0;
+  height: 0;
+
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid black;
+}
+
+/* =========================================
+   POSITION : LEFT
+   SLIDE LEFT
+========================================= */
+
+.tooltip-container.pos-left {
+  right: calc(100% + 10px);
+  top: 50%;
+
+  transform:
+    translateY(-50%)
+    translateX(6px);
+
+  opacity: 0;
+}
+
+.button-sm-group:hover .tooltip-container.pos-left {
+  transform:
+    translateY(-50%)
+    translateX(0);
+
+  opacity: 1;
+}
+
+/* TRIANGLE */
+
+.tooltip-container.pos-left::before {
+  content: "";
+  position: absolute;
+
+  right: -4px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 0;
+  height: 0;
+
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid black;
+}
+
+/* =========================================
+   POSITION : RIGHT
+   SLIDE RIGHT
+========================================= */
+
+.tooltip-container.pos-right {
+  left: calc(100% + 10px);
+  top: 50%;
+
+  transform:
+    translateY(-50%)
+    translateX(-6px);
+
+  opacity: 0;
+}
+
+.button-sm-group:hover .tooltip-container.pos-right {
+  transform:
+    translateY(-50%)
+    translateX(0);
+
+  opacity: 1;
+}
+
+/* TRIANGLE */
+
+.tooltip-container.pos-right::before {
+  content: "";
+  position: absolute;
+
+  left: -4px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 0;
+  height: 0;
+
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid black;
+}
