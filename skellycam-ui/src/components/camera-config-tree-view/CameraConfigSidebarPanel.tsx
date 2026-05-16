@@ -47,9 +47,9 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     }, [dispatch]);
 
     return (
-        <div className="camera-config-sidebar-panelflex flex-col flex-1 overflow-visible bg-middark br-2 p-1">
+        <div className="camera-config-sidebar-panel h-full flex flex-col flex-1 bg-middark br-2 p-1">
             {/* Header */}
-            <div className="camera-group-header flex flex-col gap-1 p-1 overflow-visible pos-rel z-2">
+            <div className="camera-group-header flex flex-col gap-1 p-1 pos-rel z-2">
                 {/* Row 1 — actions */}
                 <div className="text-nowrap flex items-center gap-1 overflow-visible">
                     <p className="text md text-gray">{cameras.length} Cameras</p>
@@ -62,14 +62,14 @@ export const CameraConfigSidebarPanel: React.FC = () => {
         {connectedCameras.length} Streaming
     </span>
 )}
-                    <div className="overflow-visible flex-1" />
+                    <div className="flex-1" />
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
-                    <div className="overflow-visible button-group text-nowrap flex items-center gap-1">
+                    <div className="button-group flex items-center gap-1">
                      <IconButton
                         icon="scan-icon"
                         onClick={handleDetect}
                         tooltip={true}
-                        tooltipText="Detect cameras"
+                        tooltipText="Detect new cameras"
                         tooltipPosition="pos-bottom"
                     />
                         {connectedCameras.length === 0 ? (
@@ -80,7 +80,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                               textColor = "text-black"
                               className="secondary"
                             tooltip={true}
-                            tooltipText="Start Streaming"
+                            tooltipText="Connect to Cameras"
                             tooltipPosition="pos-bottom"
 
                             />

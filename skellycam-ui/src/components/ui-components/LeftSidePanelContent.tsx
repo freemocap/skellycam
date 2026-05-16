@@ -82,7 +82,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
 
             {/* Always mounted — display:none preserves component state when collapsed */}
             <div
-                className="inner flex gap-1 flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
+                className="inner flex gap-1 flex-col bg-darkgray br-2 w-full h-full"
                 style={{ display: isCollapsed ? 'none' : 'flex' }}
             >
                 {/* Header row */}
@@ -107,7 +107,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                 </div>
 
                 {/* Main content */}
-                <div className="side-action-main-container flex flex-col gap-1 flex-1 overflow-hidden">
+                <div className="side-action-main-container h-full flex flex-col gap-1 flex-1 overflow-hidden">
                     <RecordingInfoPanel/>
                     <CameraConfigSidebarPanel/>
                 </div>
