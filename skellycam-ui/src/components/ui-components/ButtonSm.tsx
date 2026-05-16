@@ -212,7 +212,7 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
       {tooltip && tooltipText && (
         <div
           className={clsx(
-            "tooltip-container",
+            "tooltip-container elevated-sharp",
             tooltipPosition,
             "p-01 br-2 bg-dark"
           )}
