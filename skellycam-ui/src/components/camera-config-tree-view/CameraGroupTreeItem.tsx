@@ -22,7 +22,7 @@ export const CameraGroupTreeItem: React.FC<CameraGroupTreeItemProps> = ({
                 onClick={() => setExpanded(prev => !prev)}
             >
                 <p className="text bg text-gray">{title} ({cameras.length})</p>
-                <span className={`icon icon-size-16 ${expanded ? 'close-icon' : 'dropdown-icon'}`} />
+                <span className={`icon icon-size-20 ${expanded ? 'close-icon' : 'dropdown-icon'}`} />
             </div>
 
             {expanded && (

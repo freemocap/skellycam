@@ -17,7 +17,7 @@ export const Footer = function () {
                 class="flex flex-row gap-1 "
             >
             {t('footerWith') + ' '}
-            <span class="flex-inline icon icon-size-16 donate-icon"></span>
+            <span class="flex-inline icon icon-size-20 donate-icon"></span>
             {/* <a
                 className="text-gray"
                 href={EXTERNAL_URLS.GITHUB_ORG}
@@ -32,7 +32,7 @@ export const Footer = function () {
                 {t('footerOrgName')}
             
             {' '}{new Date().getFullYear()}
-            <span class="flex-inline icon icon-size-16 externallink-icon"></span>
+            <span class="flex-inline icon icon-size-20 externallink-icon"></span>
             </a>
         </p>
         

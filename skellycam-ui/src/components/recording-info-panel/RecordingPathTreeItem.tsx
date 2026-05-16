@@ -66,7 +66,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
                 title="Click to select recording folder"
                 disabled={!isElectron}
             >
-                <span className="icon subfolder-icon icon-size-16" />
+                <span className="icon subfolder-icon icon-size-20" />
                 <p className="recording-path-preview text-wrap flex-1 text md">
                     {recordingDirectory}
                 </p>
@@ -81,14 +81,14 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
                 }}
                 title="Add subfolder"
             >
-                <span className="icon addsubfolder-icon icon-size-16" />
+                <span className="icon addsubfolder-icon icon-size-20" />
             </button>
         </div>
 
         {/* Subfolder row */}
         {createSubfolder && (
             <div className="flex items-center gap-1 pl-2">
-                <span className="icon icon-size-16 subcat-icon"></span>
+                <span className="icon icon-size-20 subcat-icon"></span>
 
                 <TextSelector
                     value={customSubfolderName}
@@ -105,7 +105,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
                     }}
                     title="Remove subfolder"
                 >
-                    <span className="icon minus-icon icon-size-16" />
+                    <span className="icon minus-icon icon-size-20" />
                 </button>
             </div>
         )}

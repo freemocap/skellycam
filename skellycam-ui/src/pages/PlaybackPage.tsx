@@ -142,7 +142,7 @@ const PlaybackPage: React.FC = () => {
                                     onClick={handleOpenFolder}
                                     title={t('openFolder')}
                                 >
-                                    <span className="icon import-icon icon-size-16" />
+                                    <span className="icon import-icon icon-size-20" />
                                 </button>
 
                                 <span className="camera-config-chip" title={t('cameraStreams')}>

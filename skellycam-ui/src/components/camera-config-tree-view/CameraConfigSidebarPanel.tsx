@@ -57,7 +57,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
         className="text md"
         style={{ color: 'var(--green-400, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
     >
-        {/* <span className="icon icon-size-16 streaming-icon" /> */}
+        {/* <span className="icon icon-size-20 streaming-icon" /> */}
         {connectedCameras.length} Streaming
     </span>
 )}
@@ -65,7 +65,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
                     <div className="overflow-visible button-group text-nowrap flex items-center gap-1">
                         <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
-                            {!isLoading && <span className={`icon icon-size-16 scan-icon`} />}
+                            {!isLoading && <span className={`icon icon-size-20 scan-icon`} />}
                         </button>
                         {connectedCameras.length === 0 ? (
                             <ButtonSm
@@ -86,10 +86,10 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                                     onClick={() => dispatch(pauseUnpauseCameras())}
                                     title={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
                                 >
-                                    <span className={clsx('icon icon-size-16', isPaused ? 'play-icon' : 'pause-icon')} />
+                                    <span className={clsx('icon icon-size-20', isPaused ? 'play-icon' : 'pause-icon')} />
                                 </button>
                                 <button className="button icon-button" onClick={handleStop} title="Stop streaming" disabled={isStoppingCameras}>
-                                    <span className={`icon icon-size-16 ${isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}`} />
+                                    <span className={`icon icon-size-20 ${isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}`} />
                                 </button>
                             </>
                         )}

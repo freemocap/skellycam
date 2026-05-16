@@ -57,7 +57,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
                     onMouseDown={e => e.stopPropagation()}
                     title="Camera settings"
                 >
-                    <span className={clsx('icon icon-size-16', settingsOpen ? 'close-icon' : 'settings-icon')} />
+                    <span className={clsx('icon icon-size-20', settingsOpen ? 'close-icon' : 'settings-icon')} />
                 </button>
             </div>
 

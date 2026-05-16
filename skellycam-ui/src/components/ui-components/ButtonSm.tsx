@@ -200,7 +200,7 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
     >
       {/* LEFT ICON */}
       {iconClass && (
-        <span className={clsx("icon icon-size-16", iconClass)} />
+        <span className={clsx("icon icon-size-20", iconClass)} />
       )}
 
       {/* TEXT */}

@@ -116,7 +116,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                         onClick={onClose}
                         className="button icon-button close-button pos-abs top-0 right-0 m-1"
                     >
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon close-icon icon-size-20" />
                     </button>
 
                     {/* Left column — logo */}

@@ -341,8 +341,8 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     disabled={!manualPath.trim() || isLoadingRecording}
                 >
                     {isLoadingRecording && !loadingPath
-                        ? <span className="icon loader-icon icon-size-16" />
-                        : <span className="icon stream-icon icon-size-16" />}
+                        ? <span className="icon loader-icon icon-size-20" />
+                        : <span className="icon stream-icon icon-size-20" />}
                     {t('load')}
                 </button>
             </div>
@@ -392,7 +392,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                         onClick={fetchRecordings}
                         disabled={isLoadingList}
                     >
-                        <span className="icon rotate-icon icon-size-16" />{t('refresh')}
+                        <span className="icon rotate-icon icon-size-20" />{t('refresh')}
                     </button>
                 </div>
             </div>
@@ -400,7 +400,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
             {/* List */}
             {isLoadingList ? (
                 <div className="flex items-center justify-center py-4">
-                    <span className="icon loader-icon icon-size-16" />
+                    <span className="icon loader-icon icon-size-20" />
                 </div>
             ) : filteredSorted.length === 0 ? (
                 <p className="text sm text-gray text-center p-4">
@@ -448,8 +448,8 @@ const RecordingRow: React.FC<RecordingRowProps> = React.memo(
             >
                 <div className="flex items-center gap-1">
                     {isLoading
-                        ? <span className="icon loader-icon icon-size-16" />
-                        : <span className="icon import-icon icon-size-16" />}
+                        ? <span className="icon loader-icon icon-size-20" />
+                        : <span className="icon import-icon icon-size-20" />}
                     <p className="text sm recording-name">{rec.name}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">

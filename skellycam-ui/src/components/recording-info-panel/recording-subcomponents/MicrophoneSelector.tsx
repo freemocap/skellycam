@@ -61,7 +61,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
     return (
         <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1">
-                <span className={clsx("icon icon-size-16", selectedMicIndex >= 0 ? "connected-icon" : "warning-icon")} />
+                <span className={clsx("icon icon-size-20", selectedMicIndex >= 0 ? "connected-icon" : "warning-icon")} />
                 <div className={clsx("flex-1", (disabled || loading) && "disabled")}>
                     <NameDropdownSelector
                         options={options}

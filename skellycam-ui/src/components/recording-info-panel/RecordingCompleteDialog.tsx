@@ -102,7 +102,7 @@ export const RecordingCompleteDialog: React.FC = () => {
                 <div className="flex justify-content-space-between items-center">
                     <p className="text bg text-white">Recording Complete!</p>
                     <button className="button icon-button" onClick={handleClose}>
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon close-icon icon-size-20" />
                     </button>
                 </div>
 

@@ -94,7 +94,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
                             onMouseDown={e => e.stopPropagation()}
                             title={t('cameraSettings')}
                         >
-                            <span className={clsx("icon icon-size-16", settingsOpen ? "close-icon" : "settings-icon")} />
+                            <span className={clsx("icon icon-size-20", settingsOpen ? "close-icon" : "settings-icon")} />
                         </button>
                     </div>
 

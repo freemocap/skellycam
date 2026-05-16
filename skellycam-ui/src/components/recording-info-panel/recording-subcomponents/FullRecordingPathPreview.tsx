@@ -36,7 +36,7 @@ export const FullRecordingPathPreview: React.FC<FullPathPreviewProps> = ({
             {parts.map((part, i) => (
                 <React.Fragment key={i}>
                     <div className="recording-path-part">
-                        <span className="icon subfolder-icon icon-size-16" />
+                        <span className="icon subfolder-icon icon-size-20" />
                         <p className="text sm text-gray">{part.text}</p>
                     </div>
                     {i < parts.length - 1 && (

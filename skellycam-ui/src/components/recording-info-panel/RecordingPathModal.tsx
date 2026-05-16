@@ -71,7 +71,7 @@ export const RecordingPathModal: React.FC<RecordingPathModalProps> = ({ open, on
                 <div className="flex justify-content-space-between items-center">
                     <SubactionHeader text="Recording Path &amp; Settings" />
                     <button className="button icon-button" onClick={onClose}>
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon close-icon icon-size-20" />
                     </button>
                 </div>
 

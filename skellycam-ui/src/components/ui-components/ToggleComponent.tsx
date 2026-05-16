@@ -40,7 +40,7 @@ const ToggleComponent: React.FC<ToggleProps> = ({
     >
       <div className="text-container overflow-hidden flex items-center gap-1">
         {iconClass && (
-          <span className={`icon icon-size-16 ${iconClass}`}></span>
+          <span className={`icon icon-size-20 ${iconClass}`}></span>
         )}
         <p
           className={clsx(

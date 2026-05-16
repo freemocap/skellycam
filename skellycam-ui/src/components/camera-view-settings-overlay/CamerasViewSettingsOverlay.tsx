@@ -106,7 +106,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                     onClick={handleToggle}
                     title={isOpen ? t("closeSettings") : t("gridSettings")}
                 >
-                    <span className={clsx("icon icon-size-16", isOpen ? "close-icon" : "settings-icon")} />
+                    <span className={clsx("icon icon-size-20", isOpen ? "close-icon" : "settings-icon")} />
                 </button>
                 {isOpen && panel}
             </>
@@ -130,7 +130,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                    
                    <button className="button icon-button"
                         onClick={() => dispatch(camerasConnectOrUpdate())}>
-                        <span className="icon icon-size-16 scan-icon" />
+                        <span className="icon icon-size-20 scan-icon" />
                     </button>
             </div>
           </div> */}
@@ -142,7 +142,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
           >
             <span
               className={clsx(
-                "icon icon-size-16",
+                "icon icon-size-20",
                 isOpen ? "close-icon" : "grid2-icon",
               )}
             />

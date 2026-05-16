@@ -64,7 +64,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
                 tooltipPosition="pos-top"
                 className={clsx("version-badge", showSuccess && "success")}
                 iconClass={clsx(
-                    "icon icon-size-16",
+                    "icon icon-size-20",
                     isChecking
                         ? "updateAvailable-icon"
                         : showSuccess

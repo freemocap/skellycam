@@ -147,7 +147,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
                 currentValue <= min ? "deactivated" : ""
               }`}
             >
-              <span className="icon minus-icon icon-size-16"></span>
+              <span className="icon minus-icon icon-size-20"></span>
             </button>
 
             {/* Input */}
@@ -167,7 +167,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
                 currentValue >= max ? "deactivated" : ""
               }`}
             >
-              <span className="icon plus-icon icon-size-16"></span>
+              <span className="icon plus-icon icon-size-20"></span>
             </button>
           </div>
         </div>

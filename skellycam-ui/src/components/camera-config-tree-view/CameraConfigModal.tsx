@@ -63,13 +63,13 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                         </p>
                     )}
                     <button className="button icon-button" onClick={handleDetect} title="Detect cameras">
-                        <span className={`icon icon-size-16 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
+                        <span className={`icon icon-size-20 ${isLoading ? 'loader-icon' : 'scan-icon'}`} />
                     </button>
 
                     <div className="flex-1" />
 
                     <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
-                        <span className="icon icon-size-16 clear-icon" />
+                        <span className="icon icon-size-20 clear-icon" />
                     </button>
 
                     <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
@@ -77,7 +77,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                     </button>
 
                     <button className="button icon-button" onClick={onClose}>
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon close-icon icon-size-20" />
                     </button>
                 </div>
 

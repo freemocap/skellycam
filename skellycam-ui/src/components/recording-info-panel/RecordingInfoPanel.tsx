@@ -184,7 +184,7 @@ export const RecordingInfoPanel: React.FC = () => {
             </div>
             {/* Title */}
             {/* <div className="flex items-center gap-1 h-25">
-                <span className="icon stream-icon icon-size-16" />
+                <span className="icon stream-icon icon-size-20" />
                 <p className="text bg text-white">Record</p>
             </div> */}
         <div className="record-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-2 pb-2">

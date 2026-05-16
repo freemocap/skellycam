@@ -29,7 +29,7 @@ const CollapsedToolbar: React.FC<{
                 onClick={onToggleCollapse}
                 title={t('expandSidebar')}
             >
-                <span className="icon icon-size-16 expand-icon text sm"></span>
+                <span className="icon icon-size-20 expand-icon text sm"></span>
             </button>
 
             <ServerConnectionStatus compact />
@@ -40,7 +40,7 @@ const CollapsedToolbar: React.FC<{
                 disabled={noCameras && !isRecording}
                 title={isRecording ? t('stopRecording') : t('startRecording')}
             >
-                <span className={`icon icon-size-16 ${isRecording ? 'close-icon' : 'record-icon'}`} />
+                <span className={`icon icon-size-20 ${isRecording ? 'close-icon' : 'record-icon'}`} />
             </button>
         </div>
     );
@@ -102,7 +102,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                         onClick={onToggleCollapse}
                         title={t('collapseSidebar')}
                     >
-                        <span className="icon icon-size-16 collapse-icon"></span>
+                        <span className="icon icon-size-20 collapse-icon"></span>
                     </button>
                 </div>
 

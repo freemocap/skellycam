@@ -46,7 +46,7 @@ const Row:React.FC<{ label: string; indent?: boolean; children: React.ReactNode 
             className="text md text-gray text-nowrap flex items-center gap-1"
             style={{ minWidth: 80 }}
         >
-            {indent && <span className="icon icon-size-16 subcat-icon"></span>}
+            {indent && <span className="icon icon-size-20 subcat-icon"></span>}
             {label}
         </p>
         <div className="flex-1 flex justify-content-flex-end flex-end">
@@ -231,7 +231,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
               onClick={() => dispatch(savedSettingsCleared())}
               title="Reset all cameras to default settings"
             >
-              <span className="icon icon-size-16 clear-icon"></span>
+              <span className="icon icon-size-20 clear-icon"></span>
             </button>
             
           </div>

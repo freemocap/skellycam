@@ -52,25 +52,25 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
         >
             {countdown !== null && countdown > 0 ? (
                 <div className="flex items-center gap-1">
-                    <span className="icon loader-icon icon-size-16" />
+                    <span className="icon loader-icon icon-size-20" />
                     <p className="text bg text-white">{t('startingIn', { countdown })}</p>
                 </div>
             ) : isPending ? (
                 <div className="flex items-center gap-1">
-                    <span className="icon loader-icon icon-size-16" />
+                    <span className="icon loader-icon icon-size-20" />
                     <p className="text bg text-white">{isRecording ? t('stopping') : t('starting')}</p>
                 </div>
             ) : isRecording ? (
                 <div className="flex flex-row items-center gap-1">
                     <div className="flex items-center gap-1">
-                        <span className="icon stop-icon icon-size-16" />
+                        <span className="icon stop-icon icon-size-20" />
                         <p className="text bg text-white">{t('stopRecordingButton')}</p>
                     </div>
                     <p className="record-button-duration text bg text-white items-center">{formatDuration(recordingDuration)}</p>
                 </div>
             ) : (
                 <div className="flex items-center gap-1">
-                    <span className="icon record-icon icon-size-16" />
+                    <span className="icon record-icon icon-size-20" />
                     <p className="text bg text-white">{t('startRecordingButton')}</p>
                 </div>
             )}

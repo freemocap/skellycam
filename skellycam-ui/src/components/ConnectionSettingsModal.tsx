@@ -101,7 +101,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                 <div className="flex justify-content-space-between items-center">
                     <p className="text bg text-white">Connection Settings</p>
                     <button className="button icon-button" onClick={onClose}>
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon close-icon icon-size-20" />
                     </button>
                 </div>
 
@@ -146,7 +146,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                                 disabled={serverRunning || serverLoading}
                                 title={t('browseForExecutable')}
                             >
-                                <span className="icon import-icon icon-size-16" />
+                                <span className="icon import-icon icon-size-20" />
                             </button>
                             <button
                                 className="button icon-button br-1 border-1 border-black"
@@ -154,7 +154,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                                 disabled={serverRunning || candidatesLoading}
                                 title={t('refreshCandidates')}
                             >
-                                <span className={`icon rotate-icon icon-size-16 ${candidatesLoading ? 'loader-icon' : ''}`} />
+                                <span className={`icon rotate-icon icon-size-20 ${candidatesLoading ? 'loader-icon' : ''}`} />
                             </button>
                         </div>
 

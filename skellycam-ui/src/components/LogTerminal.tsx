@@ -303,7 +303,7 @@ export const LogTerminal = () => {
                 <p className="text bg text-gray">{t('serverLogs')}</p>
 
                 {snapshot.hasErrors && (
-                    <span className="icon warning-icon icon-size-16" title={t("errorsDetected")} />
+                    <span className="icon warning-icon icon-size-20" title={t("errorsDetected")} />
                 )}
 
                 {/* Level filter buttons */}
