@@ -47,7 +47,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     }, [dispatch]);
 
     return (
-        <div className="camera-config-sidebar-panel h-full flex flex-col flex-1 bg-middark br-2 p-1">
+        <div className="camera-config-sidebar-panel flex flex-col flex-1 bg-middark br-2 p-1 min-h-0">
             {/* Header */}
             <div className="camera-group-header flex flex-col gap-1 p-1 pos-rel z-2">
                 {/* Row 1 — actions */}
