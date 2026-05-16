@@ -131,13 +131,14 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
             // style={{ borderBottom: "1px solid var(--gray-700)" }}
           >
             <p className="text-nowrap text-left bg-md text-darkgray">Camera settings</p>
-            <div className='flex flex-row gap-1'><ButtonSm
-              text={
+            <div className='flex flex-row gap-1'>
+              <ButtonSm
+                  text={
                 otherCamerasCount > 0
                   ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? "s" : ""}`
                   : "No other cameras"
               }
-              iconClass="stream-icon"
+              iconClass="copy-icon"
               buttonType={otherCamerasCount === 0 ? "disabled" : ""}
               onClick={() => {
                 if (otherCamerasCount > 0)

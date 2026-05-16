@@ -55,6 +55,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --explainer-icon: url("../assets/icons/explainer_icon.svg");
   --expand-icon: url("../assets/icons/expand_icon.svg");
   --collapse-icon: url("../assets/icons/collapse_icon.svg");
+  --copy-icon: url("../assets/icons/copy_icon.svg");
 
   --processmocap-icon: url("../assets/icons/processmocap_icon.svg");
   --video-icon: url("../assets/icons/video_icon.svg");
@@ -78,11 +79,181 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --importproject_icon: url("../assets/icons/importproject_icon.svg");
   --settings_icon: url("../assets/icons/settings_icon.svg");
 
+
     --grid4_icon: url("../assets/icons/grid4_icon.svg");
     --grid3_icon: url("../assets/icons/grid3_icon.svg");
     --grid2_icon: url("../assets/icons/grid2_icon.svg");
   }
 
+
+  /* icon type */
+.close-icon {
+  background-image: var(--close-icon);
+}
+
+.expand-icon {
+  background-image: var(--expand-icon);
+}
+.collapse-icon {
+  background-image: var(--collapse-icon);
+}
+
+.rotate-icon {
+  background-image: var(--rotate-icon);
+}
+.pause-icon {
+  background-image: var(--pause-icon);
+}
+.play-icon {
+  background-image: var(--play-icon);
+}
+.clear-icon {
+  background-image: var(--clear-icon);
+}
+.load-icon {
+  background-image: var(--load-icon);
+}
+.home-icon {
+  background-image: var(--home-icon);
+}
+.scan-icon {
+  background-image: var(--scan-icon);
+}
+.externallink-icon {
+  background-image: var(--externallink-icon);
+}
+.stream-icon {
+  background-image: var(--stream-icon);
+}
+.stopstreaming-icon {
+  background-image: var(--stopstreaming-icon);
+}
+.streaming-icon {
+  background-image: var(--streaming-icon);
+}
+.calibrate-icon {
+  background-image: var(--calibrate-icon);
+}
+.explainer-icon {
+  background-image: var(--explainer-icon);
+}
+.calibrated-icon {
+  background-image: var(--calibrated-icon);
+}
+.subfolder-icon {
+  background-image: var(--subfolder_icon);
+}
+
+.file-icon {
+  background-image: var(--file_icon);
+}
+
+.grid4-icon {
+  background-image: var(--grid4_icon);
+}
+
+.grid3-icon {
+  background-image: var(--grid3_icon);
+}
+
+.grid2-icon {
+  background-image: var(--grid2_icon);
+}
+
+.settings-icon {
+  background-image: var(--settings_icon);
+}
+
+.plus-icon {
+  background-image: var(--plus-icon);
+}
+
+.checkUpdate-icon {
+  background-image: var(--checkUpdate-icon);
+}
+
+.upToDate-icon {
+  background-image: var(--upToDate-icon);
+}
+
+.updateAvailable-icon {
+  background-image: var(--updateAvailable-icon);
+}
+
+.addsubfolder-icon {
+  background-image: var(--addsubfolder_icon);
+}
+
+
+.minus-icon {
+  background-image: var(--minus-icon);
+}
+
+/* icon types */
+.live-icon {
+  background-image: var(--live-icon);
+}
+
+.import-icon {
+  background-image: var(--import-icon);
+}
+
+.importVideos-icon {
+  background-image: var(--importVideos-icon);
+}
+
+.github-icon {
+  background-image: var(--github-icon);
+}
+
+.discord-icon {
+  background-image: var(--discord-icon);
+}
+
+.connected-icon {
+  background-image: var(--connected-icon);
+}
+.copy-icon {
+  background-image: var(--copy-icon);
+}
+
+.loader-icon {
+  background-image: var(--loader-icon);
+  animation: spin-ramp 2s infinite;
+  animation-timing-function: cubic-bezier(0.95, 0.17, 0.37, 0.72);
+}
+
+.warning-icon {
+  background-image: var(--warning-icon);
+}
+
+.donate-icon {
+  background-image: var(--donate-icon);
+}
+
+.record-icon {
+  background-image: var(--record-icon);
+}
+
+.calibrate-icon {
+  background-image: var(--calibrate-icon);
+}
+
+.learn-icon {
+  background-image: var(--learn-icon);
+}
+
+.subcat-icon {
+  background-image: var(--subcat-icon);
+}
+
+.download-icon {
+  background-image: var(--download-icon);
+}
+
+.processmocap-icon {
+  background-image: var(--processmocap-icon);
+}
 
   /* =========================
    icons buttons
