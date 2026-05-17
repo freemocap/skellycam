@@ -10,7 +10,6 @@ import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import IconButton from "@/components/ui-components/IconButton";
-import PromptTooltip from '@/components/ui-components/promptTooltip';
 
 
 export const CameraConfigSidebarPanel: React.FC = () => {
@@ -56,19 +55,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
               
                 <div className="flex items-center gap-1 overflow-visible">
                     
-                     <PromptTooltip
-  show={true}
-
-title="Connect Cameras"
-
-text="Make sure you have at least one camera connected, then hit Connect to start streaming."
-  position="pos-bottom"
-  variant="boarding"
-
-  onClose={() => {
-    console.log("Tooltip closed");
-  }}
-/>
+                     
                     <p className="text md text-gray">{cameras.length} Cameras</p>
 {connectedCameras.length > 0 && (
     <span
@@ -81,7 +68,7 @@ text="Make sure you have at least one camera connected, then hit Connect to star
 )}
                     <div className="flex-1" />
                     {/* Buttons: Detect + Connect OR Pause/Stop (when connected) */}
-                    <div className="button-group flex items-center gap-1 pos-rel">
+                    <div data-onboarding="connect-cameras" className="button-group flex items-center gap-1 pos-rel">
                            
                            
                         
@@ -100,9 +87,9 @@ text="Make sure you have at least one camera connected, then hit Connect to star
                               onClick={handleUpdate}
                               textColor = "text-black"
                               className="secondary"
-                            tooltip={true}
-                            tooltipText="Connect to Cameras"
-                            tooltipPosition="pos-bottom"
+                                tooltip={true}
+                                tooltipText="Connect to Cameras"
+                                tooltipPosition="pos-bottom"
 
                             />
                         ) : (

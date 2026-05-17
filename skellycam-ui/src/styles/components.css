@@ -842,6 +842,18 @@ animation: fadeIn, scaleIn;
 .prompt-tooltip-container {
   min-width: 248px;
   max-width: 248px;
+    /* Allow mouse/touch interaction */
+  pointer-events: auto;
+
+  /* Allow text selection */
+  user-select: text;
+  -webkit-user-select: text;
+
+  /* Enable normal touch behavior */
+  touch-action: auto;
+
+  /* Enable iOS touch callout */
+  -webkit-touch-callout: default;
 }
 .tooltip-container:not(.prompt-tooltip-container) {
   opacity: 0;
