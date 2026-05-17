@@ -23,7 +23,7 @@
     letter-spacing: -.43px
 }
 
-.text.md {
+.text.md, .input-field, input {
     font-size: 12px;
     font-weight: 500;
     line-height: 14px

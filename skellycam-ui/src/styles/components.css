@@ -99,6 +99,10 @@
 /* Primary fullwidth button */
 .secondary {
   background-color: var(--gray-100);
+  
+}
+.secondary > p {
+  color: var(--gray-800);
 }
 
 .secondary:hover {

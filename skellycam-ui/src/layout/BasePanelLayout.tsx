@@ -62,7 +62,9 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
           
         >
                     <PromptTooltip
-                        show={true} // add condition when to show the prompt tooltip
+                        show={
+                          true
+                        } // add condition when to show the prompt tooltip
                         title="Connect Cameras"
                         text="Make sure you have at least one camera plugged in, then hit Connect to start streaming."
                         position="pos-right"

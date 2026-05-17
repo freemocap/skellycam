@@ -9,6 +9,8 @@ import clsx from 'clsx';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { useTranslation } from 'react-i18next';
+import ButtonSm from '../ui-components/ButtonSm';
+import SubactionHeader from '../ui-components/SubactionHeader';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -320,9 +322,9 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
     // Render
     // -----------------------------------------------------------------------
     return (
-        <div className="flex flex-col gap-2 p-2 h-full overflow-hidden">
+        <div className="flex playback-page-content has-videos flex flex-col gap-2 p-2 h-full overflow-hidden">
             {/* Manual path row */}
-            <div className="flex gap-1 items-center">
+            <div className="load-group flex flex-row flex-wrap gap-1 items-center">
                 <div className="input-with-string flex-1">
                     <input
                         className="input-field"
@@ -335,31 +337,30 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                         disabled={isLoadingRecording}
                     />
                 </div>
-                <button
-                    className="button sm"
+                <ButtonSm
+                    className='secondary'
+                    text={t('load')}
                     onClick={handleLoadManualPath}
                     disabled={!manualPath.trim() || isLoadingRecording}
-                >
-                    {isLoadingRecording && !loadingPath
-                        ? <span className="icon loader-icon icon-size-20" />
-                        : <span className="icon stream-icon icon-size-20" />}
-                    {t('load')}
-                </button>
+                    iconClass={isLoadingRecording && !loadingPath ? 'loader-icon' : ''}
+                    
+                />
             </div>
 
             {/* Error */}
-            {error && <p className="text sm text-error">{error}</p>}
+            {error && <p className="flex flex-row text sm text-error">{error}</p>}
 
             {/* Header bar */}
-            <div className="flex items-center justify-content-space-between gap-1 flex-wrap">
-                <div className="flex items-center gap-1">
-                    <p className="text bg text-white">{t('recordings')}</p>
+            <div className="recording-group flex flex-col mt-3 flex-wrap flex-start items-center justify-content-space-between gap-1 ">
+                
+                    <SubactionHeader text={t('recordings')} />
+                   
                     {recordings.length > 0 && (
                         <span className="camera-status-badge">
                             {filterText ? `${filteredSorted.length} / ${recordings.length}` : recordings.length}
                         </span>
                     )}
-                </div>
+                
                 <div className="flex items-center gap-1">
                     <div className="input-with-string">
                         <input
@@ -380,20 +381,17 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                             </option>
                         ))}
                     </select>
-                    <button
-                        className="button icon-button"
+                    <ButtonSm
+                        text={sortDir === 'desc' ? '↓' : '↑'}
                         onClick={toggleSortDir}
                         title="Toggle sort direction"
-                    >
-                        {sortDir === 'desc' ? '↓' : '↑'}
-                    </button>
-                    <button
-                        className="button sm"
+                    />
+                    <ButtonSm
+                        text={t('refresh')}
                         onClick={fetchRecordings}
                         disabled={isLoadingList}
-                    >
-                        <span className="icon rotate-icon icon-size-20" />{t('refresh')}
-                    </button>
+                        iconClass="rotate-icon"
+                    />
                 </div>
             </div>
 

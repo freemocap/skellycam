@@ -113,13 +113,13 @@ const PlaybackPage: React.FC = () => {
     const recordingName = recordingPath ? recordingPath.split(/[\\/]/).pop() || recordingPath : '';
 
     return (
-        <div className="playback-page flex flex-col h-full" style={{ borderLeft: '1px solid var(--gray-700)' }}>
+        <div className="playback-page flex flex-col" style={{ borderLeft: '1px solid var(--gray-700)' }}>
             <div className='mode-header playback-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between'>
                 
-            </div><div className="flex flex-col flex-1 overflow-hidden">
+            </div><div className="playback-page-content-main flex flex-col flex-1 overflow-hidden p-2 bg-middark rounded mt-1 br-2">
                 <ErrorBoundary>
                     {hasVideos ? (
-                        <div className="flex flex-col h-full">
+                        <div className="playback-page-content no-videos empty-state flex flex-col h-full">
                             {/* Recording header bar */}
                             <div
                                 className="flex items-center gap-2 px-2 py-1 flex-wrap"
