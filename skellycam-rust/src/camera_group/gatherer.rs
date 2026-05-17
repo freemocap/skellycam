@@ -191,7 +191,7 @@ pub fn spawn_gatherer(
 
             let mut payload = MultiFramePayload {
                 frames,
-                step,
+                frame_number: step,
                 all_frames_received_ns: gatherer_sm.timestamps.all_frames_received_ns,
                 payload_assembled_ns: 0,
                 pre_send_downstream_ns: 0,

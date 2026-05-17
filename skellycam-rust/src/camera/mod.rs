@@ -5,7 +5,7 @@ pub mod enumerate;
 pub mod state_machine;
 
 pub use types::{
-    CameraCaptureConfig, CameraCommand, CameraEvent, CameraFormatInfo, CameraHandle,
+    CameraConfig, CameraCommand, CameraEvent, CameraFormatInfo, CameraHandle,
     CameraIdentity, FrameData, FrameLifecycleTimestamps, FramePacket, MultiFramePayload,
 };
 pub use thread::spawn_camera_thread;

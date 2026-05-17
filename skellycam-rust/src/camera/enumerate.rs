@@ -1,12 +1,7 @@
 //! Camera enumeration via openpnp-capture.
 //!
 //! Each camera gets a unique 4-character hex identifier that matches the Python
-//! `CameraDeviceInfo.camera_id` algorithm: SHA-256 of the USB device path,
-//! first 2 bytes of the digest formatted as 4-char lowercase hex.
-//!
-//! This MUST match the algorithm in:
-//!   skellycam/core/device_detection/detect_cameras_devices.py:CameraDeviceInfo.camera_id
-
+//! `CameraDeviceInfo.camera_id` algorithm: SHA-256 of the device identity
 use sha2::{Digest, Sha256};
 
 use super::ffi::*;
@@ -114,9 +109,9 @@ pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
             eprintln!("           → id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats}{mjpg_flag}");
 
             cameras.push(CameraIdentity {
-                display_name,
+                camera_name: display_name,
                 camera_index: index as i32,
-                unique_identifier: short_id,
+                camera_id: short_id,
                 device_path,
                 formats,
             });

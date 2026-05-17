@@ -17,7 +17,7 @@ use std::thread::{self, JoinHandle};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
-use crate::camera::{enumerate_directshow_cameras, CameraCaptureConfig, CameraHandle};
+use crate::camera::{enumerate_directshow_cameras, CameraConfig, CameraHandle};
 use crate::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty, Streaming as GroupStreaming};
 use crate::frontend_payload::encode_multiframe;
 
@@ -108,10 +108,10 @@ impl CameraGroupManager {
             // Override the openpnp-generated unique_identifier with the Python-provided
             // camera_id. This is the SINGLE source of truth for camera identity —
             // generated once during Python camera/detect and used everywhere.
-            identity.unique_identifier = python_camera_id;
+            identity.camera_id = python_camera_id;
 
             rust_configs.push(CameraGroupConfig {
-                capture_config: CameraCaptureConfig {
+                capture_config: CameraConfig {
                     camera_id,
                     camera_index: camera_index as u32,
                     width,
@@ -233,8 +233,8 @@ impl CameraGroupManager {
                 .map(|handle| {
                     let cam = PyDict::new(py);
                     cam.set_item("camera_index", handle.identity.camera_index)?;
-                    cam.set_item("display_name", &handle.identity.display_name)?;
-                    cam.set_item("unique_identifier", &handle.identity.unique_identifier)?;
+                    cam.set_item("display_name", &handle.identity.camera_name)?;
+                    cam.set_item("unique_identifier", &handle.identity.camera_id)?;
                     cam.set_item("width", handle.config.width as i32)?;
                     cam.set_item("height", handle.config.height as i32)?;
                     Ok(cam.into())

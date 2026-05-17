@@ -116,7 +116,7 @@ pub fn encode_payload(
             message_type: 1,
             _padding1: [0u8; 7],
             frame_number: frame.frame_number,
-            camera_identifier: make_camera_id(&frame.identity.unique_identifier),
+            camera_identifier: make_camera_id(&frame.identity.camera_id),
             camera_index: frame.identity.camera_index,
             image_width: display_w as i32,
             image_height: display_h as i32,

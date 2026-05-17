@@ -1,4 +1,4 @@
-//! Raw FFI bindings for the openpnp-capture C library.
+//! Raw FFI (Foreign Function Interface) bindings for the openpnp-capture C library.
 //!
 //! Safety contract: CapContext and CapStream wrap DirectShow COM objects.
 //! They must be created, used, and destroyed on the same OS thread.

@@ -27,7 +27,7 @@ use crate::camera_group::sync_utils::BreakableBarrier;
 use crate::timestamps::performance::performance_counter_nanoseconds;
 
 use super::types::{
-    CameraCaptureConfig, CameraCommand, CameraEvent, CameraIdentity, FrameLifecycleTimestamps,
+    CameraConfig, CameraCommand, CameraEvent, CameraIdentity, FrameLifecycleTimestamps,
     FramePacket,
 };
 
@@ -69,7 +69,7 @@ pub struct Enumerated {
 #[derive(Debug)]
 pub struct Configuring {
     pub identity: CameraIdentity,
-    pub config: CameraCaptureConfig,
+    pub config: CameraConfig,
 }
 
 /// Stream open, capture thread running, frames flowing.
@@ -80,7 +80,7 @@ pub struct Configuring {
 #[derive(Debug)]
 pub struct Streaming {
     pub identity: CameraIdentity,
-    pub config: CameraCaptureConfig,
+    pub config: CameraConfig,
     pub frame_receiver: mpsc::Receiver<FramePacket>,
     pub event_receiver: mpsc::Receiver<CameraEvent>,
     pub command_sender: mpsc::Sender<CameraCommand>,
@@ -363,7 +363,7 @@ impl Camera<Enumerated> {
     ///
     /// Transitions to `Configuring`, which does the active work of opening
     /// the stream, setting exposure, and running stabilization.
-    pub fn configure(mut self, config: CameraCaptureConfig) -> Camera<Configuring> {
+    pub fn configure(mut self, config: CameraConfig) -> Camera<Configuring> {
         let identity = self.state.identity;
         let timestamp_ns = performance_counter_nanoseconds();
         self.transition_log.push(LifecycleTransition {
@@ -478,7 +478,7 @@ impl Camera<Streaming> {
     /// closing and reopening the stream if resolution/framerate changed,
     /// or just updating properties on the live stream if only exposure
     /// changed — `Configuring` handles both).
-    pub fn reconfigure(mut self, config: CameraCaptureConfig) -> Camera<Configuring> {
+    pub fn reconfigure(mut self, config: CameraConfig) -> Camera<Configuring> {
         let identity = self.state.identity;
         let timestamp_ns = performance_counter_nanoseconds();
         self.transition_log.push(LifecycleTransition {
@@ -508,7 +508,7 @@ impl Camera<Streaming> {
     }
 
     /// The camera's active configuration.
-    pub fn config(&self) -> &CameraCaptureConfig {
+    pub fn config(&self) -> &CameraConfig {
         &self.state.config
     }
 
@@ -571,7 +571,7 @@ impl Camera<Faulted> {
         self,
         barrier: Arc<BreakableBarrier>,
         identity: CameraIdentity,
-        config: CameraCaptureConfig,
+        config: CameraConfig,
     ) -> Result<Camera<Streaming>, Camera<Faulted>> {
         match self.state.source_state {
             "Configuring" | "Streaming" | "Enumerated" => {
@@ -725,16 +725,16 @@ mod tests {
 
     fn make_test_identity() -> CameraIdentity {
         CameraIdentity {
-            display_name: "Test Camera".into(),
+            camera_name: "Test Camera".into(),
             camera_index: 0,
-            unique_identifier: "abcd".into(),
+            camera_id: "abcd".into(),
             device_path: String::new(),
             formats: Vec::new(),
         }
     }
 
-    fn make_test_config() -> CameraCaptureConfig {
-        CameraCaptureConfig {
+    fn make_test_config() -> CameraConfig {
+        CameraConfig {
             camera_id: "abcd".into(),
             camera_index: 0,
             width: 640,

@@ -73,8 +73,8 @@ pub fn finalize_recording(
 
         cameras.push(CameraRecordingInfo {
             camera_index: identity.camera_index,
-            display_name: identity.display_name.clone(),
-            unique_identifier: identity.unique_identifier.clone(),
+            display_name: identity.camera_name.clone(),
+            unique_identifier: identity.camera_id.clone(),
             width: *width,
             height: *height,
             frame_count,

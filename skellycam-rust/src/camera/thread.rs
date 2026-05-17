@@ -19,7 +19,7 @@ use crate::camera_group::sync_utils::BreakableBarrier;
 use super::ffi::*;
 use super::state_machine::{FrameState, FrameStateMachine};
 use super::types::{
-    CameraCaptureConfig, CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData,
+    CameraConfig, CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData,
     FramePacket,
 };
 
@@ -36,7 +36,7 @@ const STABILIZATION_FRAMES: u32 = 30;
 /// configure, stabilize).
 pub fn spawn_camera_thread(
     identity: &CameraIdentity,
-    config: &CameraCaptureConfig,
+    config: &CameraConfig,
     barrier: Arc<BreakableBarrier>,
 ) -> anyhow::Result<(
     CameraHandle,
@@ -81,7 +81,7 @@ pub fn spawn_camera_thread(
 enum CommandResult {
     None,
     Shutdown,
-    Reconfigure(CameraCaptureConfig),
+    Reconfigure(CameraConfig),
 }
 
 /// Check the command channel. Returns the first pending command, or None if empty.
@@ -95,7 +95,7 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
 }
 
 fn run_camera_thread(
-    config: CameraCaptureConfig,
+    config: CameraConfig,
     identity: &CameraIdentity,
     label: &str,
     command_receiver: &mpsc::Receiver<CameraCommand>,

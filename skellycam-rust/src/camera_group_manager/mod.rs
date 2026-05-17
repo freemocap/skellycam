@@ -125,8 +125,8 @@ impl CameraGroupManager {
                     .iter()
                     .map(|handle| CameraState {
                         camera_index: handle.identity.camera_index,
-                        display_name: handle.identity.display_name.clone(),
-                        unique_identifier: handle.identity.unique_identifier.clone(),
+                        display_name: handle.identity.camera_name.clone(),
+                        unique_identifier: handle.identity.camera_id.clone(),
                         width: handle.config.width,
                         height: handle.config.height,
                     })

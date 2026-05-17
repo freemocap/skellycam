@@ -1,6 +1,5 @@
 //! Integration tests for the CameraGroup state machine and GathererStateMachine.
 
-use skellycam::camera::state_machine::StateDiagram;
 use skellycam::camera_group::state_machine::{
     CameraGroup, CaptureState, Empty, GathererInvalidTransition, GathererState,
     GathererStateMachine, RecordingState,
@@ -89,18 +88,7 @@ fn streaming_state_has_correct_defaults() {
     assert_ne!(RecordingState::NotRecording, RecordingState::Recording);
 }
 
-// ── StateDiagram test ──────────────────────────────────────────────────────
 
-#[test]
-fn state_diagram_output_is_non_empty() {
-    let diagram = CameraGroup::<Empty>::mermaid_state_diagram();
-    assert!(!diagram.is_empty());
-    assert!(diagram.contains("stateDiagram-v2"));
-    assert!(diagram.contains("Empty"));
-    assert!(diagram.contains("Streaming"));
-    assert!(diagram.contains("Paused"));
-    assert!(diagram.contains("Recording"));
-}
 
 // ── GathererTimestamps default ─────────────────────────────────────────────
 

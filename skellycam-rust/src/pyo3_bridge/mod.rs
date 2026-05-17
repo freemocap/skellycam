@@ -80,8 +80,8 @@ fn detect_cameras(py: Python<'_>) -> pyo3::PyResult<Vec<Py<PyDict>>> {
         let formats_list = PyList::new(py, format_dicts)?;
 
         d.set_item("camera_index", cam.camera_index)?;
-        d.set_item("display_name", cam.display_name)?;
-        d.set_item("unique_identifier", cam.unique_identifier)?;
+        d.set_item("display_name", cam.camera_name)?;
+        d.set_item("unique_identifier", cam.camera_id)?;
         d.set_item("device_path", cam.device_path)?;
         d.set_item("formats", formats_list)?;
         result.push(d.into());

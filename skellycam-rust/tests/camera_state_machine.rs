@@ -5,23 +5,23 @@
 //! Faulted and recovery via retry.
 
 use skellycam::camera::state_machine::{
-    Camera, Disconnected, FrameState, FrameStateMachine, StateDiagram,
+    Camera, Disconnected, FrameState, FrameStateMachine
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 fn make_test_identity() -> skellycam::camera::CameraIdentity {
     skellycam::camera::CameraIdentity {
-        display_name: "Test Camera".into(),
+        camera_name: "Test Camera".into(),
         camera_index: 0,
-        unique_identifier: "abcd".into(),
+        camera_id: "abcd".into(),
         device_path: String::new(),
         formats: Vec::new(),
     }
 }
 
-fn make_test_config() -> skellycam::camera::CameraCaptureConfig {
-    skellycam::camera::CameraCaptureConfig {
+fn make_test_config() -> skellycam::camera::CameraConfig {
+    skellycam::camera::CameraConfig {
         camera_id: "abcd".into(),
         camera_index: 0,
         width: 640,
@@ -125,14 +125,6 @@ fn frame_state_machine_all_invalid_skips_rejected() {
     assert!(fsm.transition_to(FrameState::Capturing).is_err());
 }
 
-// ── StateDiagram test ──────────────────────────────────────────────────────
-
-#[test]
-fn state_diagram_output_is_non_empty() {
-    let diagram = Camera::<Disconnected>::mermaid_state_diagram();
-    assert!(!diagram.is_empty());
-    assert!(diagram.contains("stateDiagram-v2"));
-}
 
 // ── Transition log accumulation ────────────────────────────────────────────
 

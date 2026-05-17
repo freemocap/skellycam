@@ -104,16 +104,16 @@ pub struct CameraFormatInfo {
 /// Camera identification with available format list.
 #[derive(Debug, Clone)]
 pub struct CameraIdentity {
-    pub display_name: String,
+    pub camera_name: String,
     pub camera_index: i32,
-    pub unique_identifier: String,
+    pub camera_id: String,
     pub device_path: String,
     pub formats: Vec<CameraFormatInfo>,
 }
 
 impl CameraIdentity {
     pub fn label(&self) -> String {
-        format!("{} [{}]", self.display_name, self.unique_identifier)
+        format!("{} #{} [id: {}]", self.camera_name, self.camera_index, self.camera_id)
     }
 }
 
@@ -121,7 +121,7 @@ impl CameraIdentity {
 #[derive(Debug)]
 pub struct MultiFramePayload {
     pub frames: Vec<FramePacket>,
-    pub step: i64,
+    pub frame_number: i64,
     /// Stamped when the last camera's `recv()` completes.
     pub all_frames_received_ns: i64,
     /// Stamped after the `MultiFramePayload` struct is assembled.
@@ -138,9 +138,8 @@ impl MultiFramePayload {
     /// delivered its frame — sensor exposure timing + USB bus scheduling +
     /// driver buffering + decode. This is bounded by roughly one frame
     /// period (33ms at 30fps) because all threads start waiting after the
-    /// same barrier release. The camera whose next frame arrives soonest
-    /// gets a low value; the camera whose phase offset puts it furthest
-    /// gets a high value.
+    /// same barrier release. In the typical case, we expect the spread to 
+    /// be roughly +/1 0.5*frame_duration. 
     pub fn hardware_sync_spread_ns(&self) -> i64 {
         if self.frames.len() < 2 {
             return 0;
@@ -198,7 +197,7 @@ impl MultiFramePayload {
 /// primary identifier (matches the Python-generated SHA-256 hex ID).
 /// Adding a new setting only means adding one field here.
 #[derive(Debug, Clone)]
-pub struct CameraCaptureConfig {
+pub struct CameraConfig {
     pub camera_id: String,
     pub camera_index: u32,
     pub width: u32,
@@ -212,7 +211,7 @@ pub struct CameraCaptureConfig {
 #[derive(Debug)]
 pub enum CameraCommand {
     Shutdown,
-    Reconfigure { config: CameraCaptureConfig },
+    Reconfigure { config: CameraConfig },
 }
 
 #[derive(Debug)]
@@ -224,7 +223,7 @@ pub enum CameraEvent {
 pub struct CameraHandle {
     pub command_sender: mpsc::Sender<CameraCommand>,
     pub identity: CameraIdentity,
-    pub config: CameraCaptureConfig,
+    pub config: CameraConfig,
 }
 
 impl CameraHandle {

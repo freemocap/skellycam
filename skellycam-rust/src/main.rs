@@ -15,9 +15,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use skellycam::api::AppState;
-use skellycam::api::build_router;
-use skellycam::camera::{enumerate_directshow_cameras, CameraCaptureConfig, CameraIdentity};
+use skellycam::camera::{enumerate_directshow_cameras, CameraConfig, CameraIdentity};
 use skellycam::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty};
 use skellycam::camera_group_manager::CameraGroupManager;
 use skellycam::recording::{finalize_recording, VideoRecorder};
@@ -37,11 +35,7 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     let args: Vec<String> = std::env::args().collect();
-
-    // --serve: Start HTTP/WebSocket server with test page
-    if args.iter().any(|arg| arg == "--serve") {
-        return run_server();
-    }
+    
 
     if args.iter().any(|arg| arg == "--detect") {
         return run_detection();
@@ -124,8 +118,8 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     let configs: Vec<CameraGroupConfig> = all_cameras.iter()
         .take(camera_count)
         .map(|identity| CameraGroupConfig {
-            capture_config: CameraCaptureConfig {
-                camera_id: identity.unique_identifier.clone(),
+            capture_config: CameraConfig {
+                camera_id: identity.camera_id.clone(),
                 camera_index: identity.camera_index as u32,
                 width: 1280,
                 height: 720,
@@ -211,15 +205,15 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
             .find(|c| c.camera_index == index as i32)
             .cloned()
             .unwrap_or_else(|| CameraIdentity {
-                display_name: format!("Camera {index}"),
+                camera_name: format!("Camera {index}"),
                 camera_index: index as i32,
-                unique_identifier: format!("{:06x}", index),
+                camera_id: format!("{:06x}", index),
                 device_path: String::new(),
                 formats: vec![],
             });
         CameraGroupConfig {
-            capture_config: CameraCaptureConfig {
-                camera_id: identity.unique_identifier.clone(),
+            capture_config: CameraConfig {
+                camera_id: identity.camera_id.clone(),
                 camera_index: index,
                 width: 1280,
                 height: 720,
@@ -257,7 +251,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         let base = format!(
             "camera_{}_{}",
             handle.identity.camera_index,
-            handle.identity.unique_identifier,
+            handle.identity.camera_id,
         );
         let video_path = output_dir.join(format!("{base}.mp4"));
         let csv_path = output_dir.join(format!("{base}_timestamps.csv"));
@@ -423,15 +417,15 @@ fn run_multi_camera(
             .find(|c| c.camera_index == index as i32)
             .cloned()
             .unwrap_or_else(|| CameraIdentity {
-                display_name: format!("Camera {index}"),
+                camera_name: format!("Camera {index}"),
                 camera_index: index as i32,
-                unique_identifier: format!("{:06x}", index),
+                camera_id: format!("{:06x}", index),
                 device_path: String::new(),
                 formats: vec![],
             });
         CameraGroupConfig {
-            capture_config: CameraCaptureConfig {
-                camera_id: identity.unique_identifier.clone(),
+            capture_config: CameraConfig {
+                camera_id: identity.camera_id.clone(),
                 camera_index: index,
                 width: 1280,
                 height: 720,
@@ -505,45 +499,4 @@ fn run_single_camera() -> anyhow::Result<()> {
     // same gatherer, same pipeline as multi-camera. The degenerate case
     // should exercise the identical code path.
     run_multi_camera(Some(1), None)
-}
-
-fn run_server() -> anyhow::Result<()> {
-    let state = Arc::new(AppState::new());
-    let router = build_router(state.clone());
-
-    let addr = "0.0.0.0:53117";
-    eprintln!("══════════════════════════════════════════════════");
-    eprintln!("  Skellycam Server");
-    eprintln!("  http://localhost:53117");
-    eprintln!("  Swagger docs: http://localhost:53117/docs");
-    eprintln!("  Test page:    http://localhost:53117/test");
-    eprintln!("  Press Ctrl+C to stop");
-    eprintln!("══════════════════════════════════════════════════");
-
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(4)
-        .enable_all()
-        .build()?;
-
-    rt.block_on(async {
-        let listener = tokio::net::TcpListener::bind(addr).await?;
-
-        axum::serve(listener, router)
-            .with_graceful_shutdown(async {
-                let _ = tokio::signal::ctrl_c().await;
-                eprintln!("\nShutting down...");
-            })
-            .await?;
-
-        Ok::<_, anyhow::Error>(())
-    })?;
-
-    // Clean shutdown: stop relay thread, close cameras
-    state.running.store(false, Ordering::SeqCst);
-    if let Some(handle) = state.relay_thread.blocking_lock().take() {
-        let _ = handle.join();
-    }
-
-    eprintln!("Server stopped.");
-    Ok(())
 }

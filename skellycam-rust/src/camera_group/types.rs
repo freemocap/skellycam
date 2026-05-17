@@ -1,7 +1,7 @@
-use crate::camera::{CameraCaptureConfig, CameraIdentity};
+use crate::camera::{CameraConfig, CameraIdentity};
 
 #[derive(Debug, Clone)]
 pub struct CameraGroupConfig {
-    pub capture_config: CameraCaptureConfig,
+    pub capture_config: CameraConfig,
     pub identity: CameraIdentity,
 }
