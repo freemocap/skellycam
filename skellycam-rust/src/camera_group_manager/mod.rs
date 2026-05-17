@@ -1,12 +1,12 @@
 //! CameraGroupManager: lifecycle management for multiple camera groups.
 //!
-//! Wraps a `HashMap<String, CameraGroup<Streaming>>` registry keyed by short
-//! UUID (first 6 hex characters of a UUIDv4). Provides create/close/list/state
-//! operations.
+//! Wraps a `HashMap<String, CameraGroup>` registry keyed by short UUID
+//! (first 6 hex characters of a UUIDv4). Provides create/close/list/state
+//! operations. Pure Rust — no Python, no PyO3.
 
 use std::collections::HashMap;
 
-use crate::camera_group::{CameraGroup, CameraGroupConfig, Empty, Streaming as GroupStreaming};
+use crate::camera_group::{CameraGroup, CameraGroupConfig, CameraStatus};
 
 /// Serializable snapshot of the manager's current state.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -18,20 +18,11 @@ pub struct ManagerState {
 pub struct GroupState {
     pub group_id: String,
     pub camera_count: usize,
-    pub cameras: Vec<CameraState>,
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct CameraState {
-    pub camera_index: i32,
-    pub display_name: String,
-    pub unique_identifier: String,
-    pub width: u32,
-    pub height: u32,
+    pub cameras: Vec<CameraStatus>,
 }
 
 pub struct CameraGroupManager {
-    groups: HashMap<String, CameraGroup<GroupStreaming>>,
+    groups: HashMap<String, CameraGroup>,
 }
 
 impl CameraGroupManager {
@@ -57,12 +48,21 @@ impl CameraGroupManager {
 
         // If a group with this ID already exists, shut it down first
         if let Some(existing) = self.groups.remove(&group_id) {
-            tracing::info!("CameraGroupManager: replacing existing group {group_id}");
-            let shutting = existing.shutdown();
-            let _ = shutting.wait();
+            tracing::info!(
+                "CameraGroupManager: replacing existing group {group_id}"
+            );
+            // Call shutdown on the old group — consumes it
+            let mut old_group = existing;
+            let _ = old_group.shutdown();
         }
 
-        let group = CameraGroup::<Empty>::new().configure(configs).start()?;
+        let mut group = CameraGroup::new(
+            configs
+                .into_iter()
+                .map(|cfg| (cfg.identity.camera_id.clone(), cfg))
+                .collect(),
+        );
+        group.start()?;
         self.groups.insert(group_id.clone(), group);
 
         tracing::info!("CameraGroupManager: created group {group_id}");
@@ -70,18 +70,17 @@ impl CameraGroupManager {
     }
 
     /// Remove a camera group from the registry without shutting it down.
-    /// Returns `Some(CameraGroup<Streaming>)` if the group existed.
+    /// Returns `Some(CameraGroup)` if the group existed.
     /// The caller is responsible for shutting down the returned group.
-    pub fn remove_group(&mut self, group_id: &str) -> Option<CameraGroup<GroupStreaming>> {
+    pub fn remove_group(&mut self, group_id: &str) -> Option<CameraGroup> {
         self.groups.remove(group_id)
     }
 
     /// Shut down and remove a single camera group by its identifier.
     pub fn close_group(&mut self, group_id: &str) -> anyhow::Result<()> {
-        if let Some(group) = self.groups.remove(group_id) {
+        if let Some(mut group) = self.groups.remove(group_id) {
             tracing::info!("CameraGroupManager: closing group {group_id}");
-            let shutting = group.shutdown();
-            let _ = shutting.wait();
+            let _ = group.shutdown();
             Ok(())
         } else {
             anyhow::bail!("Group '{group_id}' not found");
@@ -94,10 +93,9 @@ impl CameraGroupManager {
             "CameraGroupManager: closing all {} group(s)",
             self.groups.len()
         );
-        for (id, group) in self.groups.drain() {
+        for (id, mut group) in self.groups.drain() {
             tracing::info!("CameraGroupManager: closing group {id}");
-            let shutting = group.shutdown();
-            let _ = shutting.wait();
+            let _ = group.shutdown();
         }
     }
 
@@ -116,21 +114,13 @@ impl CameraGroupManager {
         let groups: Vec<GroupState> = self
             .groups
             .iter()
-            .map(|(id, group)| GroupState {
-                group_id: id.clone(),
-                camera_count: group.state.camera_handles.len(),
-                cameras: group
-                    .state
-                    .camera_handles
-                    .iter()
-                    .map(|handle| CameraState {
-                        camera_index: handle.identity.camera_index,
-                        display_name: handle.identity.camera_name.clone(),
-                        unique_identifier: handle.identity.camera_id.clone(),
-                        width: handle.config.width,
-                        height: handle.config.height,
-                    })
-                    .collect(),
+            .map(|(id, group)| {
+                let cameras = group.camera_statuses();
+                GroupState {
+                    group_id: id.clone(),
+                    camera_count: cameras.len(),
+                    cameras,
+                }
             })
             .collect();
 

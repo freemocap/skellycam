@@ -15,8 +15,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use skellycam::camera::{enumerate_directshow_cameras, CameraConfig, CameraIdentity};
-use skellycam::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty};
+use skellycam::camera::{detect_cameras, CameraConfig, CameraIdentity};
+use skellycam::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig};
 use skellycam::camera_group_manager::CameraGroupManager;
 use skellycam::recording::{finalize_recording, VideoRecorder};
 use skellycam::timestamps::CsvWriter;
@@ -76,7 +76,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run_detection() -> anyhow::Result<()> {
-    let cameras = enumerate_directshow_cameras()?;
+    let cameras = detect_cameras()?;
     if cameras.is_empty() {
         eprintln!("No cameras found.");
     } else {
@@ -90,7 +90,7 @@ fn run_detection() -> anyhow::Result<()> {
 }
 
 fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
-    let all_cameras = enumerate_directshow_cameras()?;
+    let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
@@ -148,10 +148,12 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     let running_consumer = running.clone();
 
     let consumer_handle = std::thread::spawn(move || {
+        let mut group = group;
         let mut count: u64 = 0;
         let mut first_frame_time: Option<Instant> = None;
         let mut last_frame_time: Option<Instant> = None;
-        consume_multiframe_loop(&group.state.multi_frame_receiver, &running_consumer, 100, |_| {
+        let receiver = group.take_multiframe_receiver();
+        consume_multiframe_loop(&receiver, &running_consumer, 100, |_| {
             let now = Instant::now();
             if first_frame_time.is_none() {
                 first_frame_time = Some(now);
@@ -168,7 +170,7 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     std::thread::sleep(Duration::from_secs(run_duration_seconds));
     running.store(false, Ordering::SeqCst);
 
-    let (group, frame_count, first_frame_time, last_frame_time) = consumer_handle.join().unwrap();
+    let (mut group, frame_count, first_frame_time, last_frame_time) = consumer_handle.join().unwrap();
 
     eprintln!();
     eprintln!("  ── Results ──");
@@ -185,8 +187,7 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     }
 
     eprintln!("\n  Shutting down...");
-    let shutting = group.shutdown();
-    let _ = shutting.wait();
+    let _ = group.shutdown();
 
     eprintln!("  Shutdown complete.");
     eprintln!("══════════════════════════════════════════════════\n");
@@ -194,7 +195,7 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
 }
 
 fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
-    let all_cameras = enumerate_directshow_cameras()?;
+    let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
@@ -239,7 +240,13 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         dir
     };
 
-    let group = CameraGroup::<Empty>::new().configure(configs).start()?;
+    let mut group = CameraGroup::new(
+        configs
+            .into_iter()
+            .map(|cfg: CameraGroupConfig| (cfg.identity.camera_id.clone(), cfg))
+            .collect(),
+    );
+    group.start()?;
 
     // Create one VideoRecorder + CsvWriter per camera
     let mut recorders: Vec<VideoRecorder> = Vec::with_capacity(num_cameras);
@@ -247,20 +254,23 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
     let mut video_paths: Vec<PathBuf> = Vec::with_capacity(num_cameras);
     let mut csv_paths: Vec<PathBuf> = Vec::with_capacity(num_cameras);
 
-    for handle in &group.state.camera_handles {
+    let identities = group.camera_identities();
+    let statuses = group.camera_statuses();
+    for (idx, identity) in identities.iter().enumerate() {
+        let status = &statuses[idx];
         let base = format!(
             "camera_{}_{}",
-            handle.identity.camera_index,
-            handle.identity.camera_id,
+            status.camera_index,
+            status.camera_id,
         );
         let video_path = output_dir.join(format!("{base}.mp4"));
         let csv_path = output_dir.join(format!("{base}_timestamps.csv"));
 
         let recorder = VideoRecorder::new(
             video_path.clone(),
-            &handle.identity,
-            handle.config.width,
-            handle.config.height,
+            identity,
+            status.width,
+            status.height,
             30.0,
         )?;
         let csv_writer = CsvWriter::new(csv_path.clone())?;
@@ -288,7 +298,8 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         Arc::new(std::sync::Mutex::new(None));
     let record_error_ref = record_error.clone();
 
-    consume_multiframe_loop(&group.state.multi_frame_receiver, &running, 500, |payload| {
+    let receiver = group.take_multiframe_receiver();
+    consume_multiframe_loop(&receiver, &running, 500, |payload| {
         if capture_start.is_none() {
             capture_start = Some(Instant::now());
             eprintln!("  (first frame received, starting {}s recording timer)\n", max_duration.as_secs());
@@ -352,14 +363,16 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         "\n  Recording complete: {multiframe_count} multiframes in {elapsed:.1}s ({capture_fps:.1} fps capture)\n"
     );
 
-    // Collect camera metadata BEFORE wait_for_shutdown consumes group
-    let camera_infos: Vec<(CameraIdentity, u32, u32)> = group.state.camera_handles.iter().map(|h| {
-        (h.identity.clone(), h.config.width, h.config.height)
-    }).collect();
+    // Collect camera metadata BEFORE shutdown consumes group
+    let camera_infos: Vec<(CameraIdentity, u32, u32)> = group
+        .camera_identities()
+        .iter()
+        .zip(group.camera_statuses().iter())
+        .map(|(identity, status)| ((*identity).clone(), status.width, status.height))
+        .collect();
 
     eprintln!("  Shutting down...");
-    let shutting = group.shutdown();
-    let _ = shutting.wait();
+    let _ = group.shutdown();
 
     // Finalize all recorders and CSV writers
     let mut frame_counts: Vec<u64> = Vec::new();
@@ -397,7 +410,7 @@ fn run_multi_camera(
     camera_count: Option<u32>,
     explicit_indices: Option<Vec<u32>>,
 ) -> anyhow::Result<()> {
-    let all_cameras = enumerate_directshow_cameras()?;
+    let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
@@ -441,7 +454,13 @@ fn run_multi_camera(
     let num_cameras = configs.len();
     eprintln!("\n  ── {num_cameras}-camera lockstep ── 600 multiframes (~20s) ──\n");
 
-    let group = CameraGroup::<Empty>::new().configure(configs).start()?;
+    let mut group = CameraGroup::new(
+        configs
+            .into_iter()
+            .map(|cfg: CameraGroupConfig| (cfg.identity.camera_id.clone(), cfg))
+            .collect(),
+    );
+    group.start()?;
 
     let running = Arc::new(AtomicBool::new(true));
     let running_flag = running.clone();
@@ -455,7 +474,8 @@ fn run_multi_camera(
     let mut total_spread_ns: f64 = 0.0;
     let max_multiframes: u64 = 600;
 
-    consume_multiframe_loop(&group.state.multi_frame_receiver, &running, 500, |payload| {
+    let receiver = group.take_multiframe_receiver();
+    consume_multiframe_loop(&receiver, &running, 500, |payload| {
         multiframe_count += 1;
         total_spread_ns += payload.hardware_sync_spread_ns() as f64;
 
@@ -488,8 +508,7 @@ fn run_multi_camera(
     eprintln!();
 
     eprintln!("Shutting down...");
-    let shutting = group.shutdown();
-    let _ = shutting.wait();
+    let _ = group.shutdown();
     eprintln!("Done.");
     Ok(())
 }

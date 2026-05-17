@@ -1,6 +1,6 @@
 pub mod types;
+pub mod camera_group;
 pub mod gatherer;
-pub mod state_machine;
 pub mod sync_utils;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -9,10 +9,10 @@ use std::time::Duration;
 
 use crate::camera::MultiFramePayload;
 
-pub use types::CameraGroupConfig;
-pub use state_machine::{
-    CameraGroup, CaptureState, Empty, GathererState, GathererStateMachine, RecordingState,
-    Streaming,
+pub use types::{CameraGroupConfig, GathererUpdate, RecordingInfo};
+pub use camera_group::{
+    CameraGroup, CameraGroupState, CameraStatus, GathererInvalidTransition,
+    GathererState, GathererStateMachine, GathererTimestamps,
 };
 
 /// Block on `receiver` until `shutdown` is set or the channel disconnects.
@@ -32,7 +32,7 @@ pub fn consume_multiframe_loop<F>(
 ) where
     F: FnMut(MultiFramePayload) -> bool,
 {
-    while shutdown.load(Ordering::SeqCst) {
+    while !shutdown.load(Ordering::SeqCst) {
         match receiver.recv_timeout(Duration::from_millis(timeout_ms)) {
             Ok(payload) => {
                 if !on_frame(payload) {

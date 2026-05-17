@@ -34,7 +34,7 @@ use super::types::{CameraCommand, CameraConfig, CameraEvent, CameraIdentity, Fra
 /// (it continues running until it encounters a channel error).
 pub struct Camera {
     command_sender: mpsc::Sender<CameraCommand>,
-    frame_receiver: mpsc::Receiver<FramePacket>,
+    frame_receiver: Option<mpsc::Receiver<FramePacket>>,
     event_receiver: mpsc::Receiver<CameraEvent>,
     thread_handle: Option<JoinHandle<()>>,
     identity: CameraIdentity,
@@ -57,7 +57,7 @@ impl Camera {
 
         Ok(Self {
             command_sender,
-            frame_receiver,
+            frame_receiver: Some(frame_receiver),
             event_receiver,
             thread_handle: Some(thread_handle),
             identity,
@@ -88,7 +88,10 @@ impl Camera {
     /// is full (capacity 1), so each frame must be consumed before the next
     /// one is produced.
     pub fn try_recv_frame(&self) -> Result<FramePacket, mpsc::TryRecvError> {
-        self.frame_receiver.try_recv()
+        match &self.frame_receiver {
+            Some(rx) => rx.try_recv(),
+            None => Err(mpsc::TryRecvError::Disconnected),
+        }
     }
 
     /// Non-blocking event poll.
@@ -127,8 +130,26 @@ impl Camera {
     }
 
     /// The frame receiver, for use in select!/polling multiplexed with other cameras.
-    pub fn frame_receiver(&self) -> &mpsc::Receiver<FramePacket> {
-        &self.frame_receiver
+    ///
+    /// Returns `None` after `take_frame_receiver()` has been called (i.e., when
+    /// the receiver has been moved to a gatherer thread in group operation).
+    pub fn frame_receiver(&self) -> Option<&mpsc::Receiver<FramePacket>> {
+        self.frame_receiver.as_ref()
+    }
+
+    /// Take ownership of the frame receiver.
+    ///
+    /// After this call, `try_recv_frame()` returns `Disconnected` and
+    /// `frame_receiver()` returns `None`. Used by `CameraGroup` to hand
+    /// the receiver to the gatherer thread.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called more than once.
+    pub fn take_frame_receiver(&mut self) -> mpsc::Receiver<FramePacket> {
+        self.frame_receiver
+            .take()
+            .expect("frame_receiver already taken — gatherer owns it")
     }
 }
 

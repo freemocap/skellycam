@@ -1,8 +1,8 @@
-//! Integration tests for the CameraGroup state machine and GathererStateMachine.
+//! Integration tests for the CameraGroup and GathererStateMachine.
 
-use skellycam::camera_group::state_machine::{
-    CameraGroup, CaptureState, Empty, GathererInvalidTransition, GathererState,
-    GathererStateMachine, RecordingState,
+use skellycam::camera_group::{
+    CameraGroup, CameraGroupState, GathererInvalidTransition, GathererState,
+    GathererStateMachine, GathererTimestamps,
 };
 
 // ── GathererStateMachine tests ──────────────────────────────────────────────
@@ -10,8 +10,6 @@ use skellycam::camera_group::state_machine::{
 #[test]
 fn gatherer_full_cycle_and_back() {
     let mut gsm = GathererStateMachine::new();
-    // Starts in CollectingFrames. New cycle order: collect → AllFramesReceived →
-    // barrier → assemble → send → back to collect.
     assert_eq!(gsm.current_state(), GathererState::CollectingFrames);
 
     gsm.transition_to(GathererState::AllFramesReceived).unwrap();
@@ -54,49 +52,58 @@ fn gatherer_invalid_transition_error_is_displayable() {
     assert!(msg.contains("SendingDownstream"));
 }
 
-// ── CameraGroup lifecycle tests (no hardware) ──────────────────────────────
-
-#[test]
-fn empty_to_configured_and_clear() {
-    let group = CameraGroup::<Empty>::new();
-    assert!(!group.group_id.is_empty());
-    assert_eq!(group.group_id.len(), 6);
-
-    let group = group.configure(Vec::new());
-    assert!(group.state.configs.is_empty());
-
-    let _group = group.clear(); // Back to Empty
-}
-
-#[test]
-fn configured_start_requires_at_least_one_config() {
-    let group = CameraGroup::<Empty>::new();
-    let group = group.configure(Vec::new());
-
-    let result = group.start();
-    assert!(result.is_err());
-}
-
-#[test]
-fn streaming_state_has_correct_defaults() {
-    // This test verifies the struct initial values — we can't actually
-    // start cameras without hardware, but we can test the type system.
-    // Verify that CaptureState and RecordingState are correctly defaulted.
-    assert_eq!(CaptureState::Active as u8, CaptureState::Active as u8);
-    assert_ne!(CaptureState::Active, CaptureState::Paused);
-    assert_eq!(RecordingState::NotRecording as u8, RecordingState::NotRecording as u8);
-    assert_ne!(RecordingState::NotRecording, RecordingState::Recording);
-}
-
-
-
 // ── GathererTimestamps default ─────────────────────────────────────────────
 
 #[test]
 fn gatherer_timestamps_default_all_zeros() {
-    let ts = skellycam::camera_group::state_machine::GathererTimestamps::new();
+    let ts = GathererTimestamps::new();
     assert_eq!(ts.post_barrier_ns, 0);
     assert_eq!(ts.all_frames_received_ns, 0);
     assert_eq!(ts.payload_assembled_ns, 0);
     assert_eq!(ts.pre_send_downstream_ns, 0);
+}
+
+// ── CameraGroup lifecycle (no hardware) ────────────────────────────────────
+
+#[test]
+fn camera_group_new_requires_configs() {
+    let configs = std::collections::HashMap::new();
+    let result = std::panic::catch_unwind(|| CameraGroup::new(configs));
+    assert!(result.is_err()); // panics on empty configs
+}
+
+#[test]
+fn camera_group_new_creates_in_created_state() {
+    use skellycam::camera::{CameraConfig, CameraIdentity};
+    use skellycam::camera_group::CameraGroupConfig;
+
+    let mut configs = std::collections::HashMap::new();
+    configs.insert(
+        "cam_1".to_string(),
+        CameraGroupConfig {
+            identity: CameraIdentity {
+                camera_name: "Test".into(),
+                camera_index: 0,
+                camera_id: "cam_1".into(),
+                device_path: String::new(),
+                formats: Vec::new(),
+            },
+            capture_config: CameraConfig {
+                camera_id: "cam_1".into(),
+                camera_index: 0,
+                width: 640,
+                height: 480,
+                exposure: -7,
+                exposure_mode: "MANUAL".into(),
+                framerate: 30.0,
+                rotation: -1,
+            },
+        },
+    );
+
+    let group = CameraGroup::new(configs);
+    assert_eq!(group.state(), CameraGroupState::Created);
+    assert!(!group.is_paused());
+    assert!(!group.is_recording());
+    assert_eq!(group.camera_count(), 0); // no cameras until start()
 }

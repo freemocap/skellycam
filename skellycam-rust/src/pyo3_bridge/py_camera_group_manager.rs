@@ -1,8 +1,8 @@
-//! PyO3 CameraGroupManager — the main bridge class that replaces the Python
-//! `skellycam.core.camera_group.camera_group_manager.CameraGroupManager`.
+//! PyO3CameraGroupManager — Python-facing wrapper for the Rust camera group
+//! manager. Handles PyDict → CameraGroupConfig conversion and runs a JPEG
+//! pipeline thread for Python frame polling.
 //!
-//! Manages camera group lifecycle (create/close) and provides JPEG frame payloads
-//! to the Python WebSocket relay loop via synchronous polling.
+//! Delegates all lifecycle logic to the pure Rust `CameraGroupManager`.
 //!
 //! Thread model:
 //!   Camera threads (N) — openpnp-capture, blocked at barrier each cycle
@@ -10,21 +10,19 @@
 //!   Pipeline thread (1) — reads sync_channel, JPEG encodes, stores result
 //!   Python asyncio — polls get_latest_frame_payloads() every ~10ms
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
-use crate::camera::{enumerate_directshow_cameras, CameraConfig, CameraHandle};
-use crate::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty, Streaming as GroupStreaming};
-use crate::frontend_payload::encode_multiframe;
+use crate::camera::{detect_cameras, CameraConfig};
+use crate::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, CameraStatus};
 
 // ── Internal state per camera group ────────────────────────────────────────
 
 struct GroupState {
-    camera_handles: Vec<CameraHandle>,
+    camera_statuses: Vec<CameraStatus>,
     pipeline_handle: Option<JoinHandle<()>>,
     latest_payload: Arc<Mutex<Option<(i64, f64, Vec<u8>)>>>,
     running: Arc<AtomicBool>,
@@ -33,16 +31,16 @@ struct GroupState {
 // ── PyO3 class ─────────────────────────────────────────────────────────────
 
 #[pyclass]
-pub struct CameraGroupManager {
-    groups: HashMap<String, GroupState>,
+pub struct PyO3CameraGroupManager {
+    groups: std::collections::HashMap<String, GroupState>,
 }
 
 #[pymethods]
-impl CameraGroupManager {
+impl PyO3CameraGroupManager {
     #[new]
     fn new() -> Self {
         Self {
-            groups: HashMap::new(),
+            groups: std::collections::HashMap::new(),
         }
     }
 
@@ -59,15 +57,18 @@ impl CameraGroupManager {
         // Close any existing groups first
         self.close_all_groups_inner();
 
-        // Enumerate cameras once (COM — keep GIL-free to not block Python)
-        let all_cameras = enumerate_directshow_cameras()
-            .map_err(|e| PyRuntimeError::new_err(format!("Camera enumeration failed: {e}")))?;
+        // Enumerate cameras once
+        let all_cameras = detect_cameras()
+            .map_err(|e| {
+                PyRuntimeError::new_err(format!("Camera detection failed: {e}"))
+            })?;
 
         if all_cameras.is_empty() {
             return Err(PyRuntimeError::new_err("No cameras detected"));
         }
 
-        let mut rust_configs: Vec<CameraGroupConfig> = Vec::new();
+        let mut rust_configs: std::collections::HashMap<String, CameraGroupConfig> =
+            std::collections::HashMap::new();
 
         for (key, value) in configs.iter() {
             let python_camera_id: String = key.extract()?;
@@ -78,15 +79,16 @@ impl CameraGroupManager {
                 .or_else(|_| value.getattr("camera_index"))
                 .and_then(|v| v.extract())
                 .or_else(|_| {
-                    // Fall back to __getitem__ for plain dicts
                     value.get_item("camera_index")?.extract()
                 })?;
 
-            let camera_id: String = get_field_string(&value, "camera_id", &python_camera_id);
+            let camera_id: String =
+                get_field_string(&value, "camera_id", &python_camera_id);
             let width: u32 = get_field_i32(&value, "width", 1280) as u32;
             let height: u32 = get_field_i32(&value, "height", 720) as u32;
             let exposure: i32 = get_field_i32(&value, "exposure", -7);
-            let exposure_mode: String = get_field_string(&value, "exposure_mode", "MANUAL");
+            let exposure_mode: String =
+                get_field_string(&value, "exposure_mode", "MANUAL");
             let framerate: f64 = get_field_f64(&value, "framerate", -1.0);
             let rotation: i32 = get_field_i32(&value, "rotation", -1);
 
@@ -105,43 +107,53 @@ impl CameraGroupManager {
                     ))
                 })?;
 
-            // Override the openpnp-generated unique_identifier with the Python-provided
-            // camera_id. This is the SINGLE source of truth for camera identity —
-            // generated once during Python camera/detect and used everywhere.
+            // Override the openpnp-generated unique_identifier with the
+            // Python-provided camera_id.
             identity.camera_id = python_camera_id;
 
-            rust_configs.push(CameraGroupConfig {
-                capture_config: CameraConfig {
-                    camera_id,
-                    camera_index: camera_index as u32,
-                    width,
-                    height,
-                    exposure,
-                    exposure_mode,
-                    framerate,
-                    rotation,
+            rust_configs.insert(
+                camera_id.clone(),
+                CameraGroupConfig {
+                    capture_config: CameraConfig {
+                        camera_id,
+                        camera_index: camera_index as u32,
+                        width,
+                        height,
+                        exposure,
+                        exposure_mode,
+                        framerate,
+                        rotation,
+                    },
+                    identity,
                 },
-                identity,
-            });
+            );
         }
 
         if rust_configs.is_empty() {
-            return Err(PyValueError::new_err("No valid camera configs provided"));
+            return Err(PyValueError::new_err(
+                "No valid camera configs provided",
+            ));
         }
 
-        // Create the CameraGroup
-        let group = CameraGroup::<Empty>::new().configure(rust_configs).start()
-            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create camera group: {e}")))?;
+        // Create and start the CameraGroup
+        let mut group = CameraGroup::new(rust_configs);
+        group
+            .start()
+            .map_err(|e| {
+                PyRuntimeError::new_err(format!(
+                    "Failed to start camera group: {e}"
+                ))
+            })?;
 
-        let camera_handles: Vec<CameraHandle> = group.state.camera_handles.clone();
+        let camera_statuses = group.camera_statuses();
 
-        let latest_payload = Arc::new(Mutex::new(None::<(i64, f64, Vec<u8>)>));
+        let latest_payload =
+            Arc::new(Mutex::new(None::<(i64, f64, Vec<u8>)>));
         let running = Arc::new(AtomicBool::new(true));
 
         let latest_payload_clone = latest_payload.clone();
         let running_clone = running.clone();
 
-        // Generate a group ID
         let group_id = uuid::Uuid::new_v4()
             .as_simple()
             .to_string()[..6]
@@ -152,16 +164,22 @@ impl CameraGroupManager {
         let pipeline_handle = thread::Builder::new()
             .name(thread_name)
             .spawn(move || {
-                pipeline_loop(group, latest_payload_clone, running_clone);
+                pipeline_loop(
+                    group,
+                    latest_payload_clone,
+                    running_clone,
+                );
             })
             .map_err(|e| {
-                PyRuntimeError::new_err(format!("Failed to spawn pipeline thread: {e}"))
+                PyRuntimeError::new_err(format!(
+                    "Failed to spawn pipeline thread: {e}"
+                ))
             })?;
 
         self.groups.insert(
             group_id.clone(),
             GroupState {
-                camera_handles,
+                camera_statuses,
                 pipeline_handle: Some(pipeline_handle),
                 latest_payload,
                 running,
@@ -185,13 +203,15 @@ impl CameraGroupManager {
         let threshold = if_newer_than.unwrap_or(-1);
         let result = PyDict::new(py);
 
-        for (group_id, state) in &self.groups {
+        for (_group_id, state) in &self.groups {
             if let Ok(guard) = state.latest_payload.lock() {
-                if let Some((frame_number, timestamp, bytes)) = guard.as_ref() {
+                if let Some((frame_number, timestamp, bytes)) =
+                    guard.as_ref()
+                {
                     if *frame_number > threshold {
                         let py_bytes = PyBytes::new(py, bytes);
                         let _ = result.set_item(
-                            group_id,
+                            _group_id,
                             (*frame_number, *timestamp, py_bytes),
                         );
                     }
@@ -225,19 +245,25 @@ impl CameraGroupManager {
         for (group_id, state) in &self.groups {
             let group_state = PyDict::new(py);
             group_state.set_item("group_id", group_id)?;
-            group_state.set_item("camera_count", state.camera_handles.len())?;
+            group_state.set_item(
+                "camera_count",
+                state.camera_statuses.len(),
+            )?;
 
             let cameras_list: Vec<Py<PyDict>> = state
-                .camera_handles
+                .camera_statuses
                 .iter()
-                .map(|handle| {
-                    let cam = PyDict::new(py);
-                    cam.set_item("camera_index", handle.identity.camera_index)?;
-                    cam.set_item("display_name", &handle.identity.camera_name)?;
-                    cam.set_item("unique_identifier", &handle.identity.camera_id)?;
-                    cam.set_item("width", handle.config.width as i32)?;
-                    cam.set_item("height", handle.config.height as i32)?;
-                    Ok(cam.into())
+                .map(|cam| {
+                    let d = PyDict::new(py);
+                    d.set_item("camera_index", cam.camera_index)?;
+                    d.set_item("display_name", &cam.camera_name)?;
+                    d.set_item(
+                        "unique_identifier",
+                        &cam.camera_id,
+                    )?;
+                    d.set_item("width", cam.width as i32)?;
+                    d.set_item("height", cam.height as i32)?;
+                    Ok(d.into())
                 })
                 .collect::<PyResult<Vec<_>>>()?;
 
@@ -251,31 +277,33 @@ impl CameraGroupManager {
 
     fn __repr__(&self) -> String {
         format!(
-            "CameraGroupManager(groups={})",
+            "PyO3CameraGroupManager(groups={})",
             self.groups.len()
         )
     }
 }
 
-impl CameraGroupManager {
+impl PyO3CameraGroupManager {
     fn close_all_groups_inner(&mut self) {
         for (group_id, mut state) in self.groups.drain() {
             state.running.store(false, Ordering::SeqCst);
             if let Some(handle) = state.pipeline_handle.take() {
                 let _ = handle.join();
             }
-            tracing::info!("CameraGroupManager: closed group {group_id}");
+            tracing::info!(
+                "PyO3CameraGroupManager: closed group {group_id}"
+            );
         }
     }
 }
 
-impl Default for CameraGroupManager {
+impl Default for PyO3CameraGroupManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Drop for CameraGroupManager {
+impl Drop for PyO3CameraGroupManager {
     fn drop(&mut self) {
         self.close_all_groups_inner();
     }
@@ -284,12 +312,14 @@ impl Drop for CameraGroupManager {
 // ── Pipeline thread ────────────────────────────────────────────────────────
 
 fn pipeline_loop(
-    group: CameraGroup<GroupStreaming>,
+    mut group: CameraGroup,
     latest_payload: Arc<Mutex<Option<(i64, f64, Vec<u8>)>>>,
     running: Arc<AtomicBool>,
 ) {
-    consume_multiframe_loop(&group.state.multi_frame_receiver, &running, 100, |payload| {
-        match encode_multiframe(&payload) {
+    let receiver = group.take_multiframe_receiver();
+
+    consume_multiframe_loop(&receiver, &running, 100, |payload| {
+        match crate::frontend_payload::encode_multiframe(&payload) {
             Ok(binary) => {
                 let timestamp_ns = if payload.frames.is_empty() {
                     0.0
@@ -317,8 +347,8 @@ fn pipeline_loop(
         }
         true
     });
-    let shutting = group.shutdown();
-    let _ = shutting.wait();
+
+    let _ = group.shutdown();
     tracing::info!("Pipeline thread exited");
 }
 
@@ -340,7 +370,11 @@ fn get_field_f64(value: &Bound<'_, PyAny>, name: &str, default: f64) -> f64 {
         .unwrap_or(default)
 }
 
-fn get_field_string(value: &Bound<'_, PyAny>, name: &str, default: &str) -> String {
+fn get_field_string(
+    value: &Bound<'_, PyAny>,
+    name: &str,
+    default: &str,
+) -> String {
     value
         .getattr(name)
         .and_then(|v| v.extract::<String>())
