@@ -94,7 +94,9 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     // }}
                 >
 
-                    <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
+                    <div 
+                    data-warning="service-unavailable"
+                    className="flex-1 overflow-hidden" style={{minWidth: 0}}>
                         <ServerConnectionStatus />
                     </div>
                     <button

@@ -34,9 +34,32 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
         style={{ display: "flex", flexDirection: "column", height: "100vh" }}
       >
         <FloatingOnboarding
+          target='[data-warning="service-unavailable"]'
+          
+        
+        >
+                    <PromptTooltip
+                        show={
+                          false
+                        } // add condition when to show the prompt tooltip
+                        title="Service Unavailable"
+                        text="Make sure you have the service running"
+                        
+                        button={true}
+                        buttonText="Learn how to set up"
+                        onButtonClick={() => window.open("https://github.com/freemocap/freemocap", "_blank")}
+
+                        position="pos-bottom"
+                        variant="warning"
+                        onClose={() => {
+                        // console.log("Tooltip closed");
+                        }}
+                    />
+        </FloatingOnboarding>
+        <FloatingOnboarding
           target='[data-onboarding="connect-cameras"]'
           
-          offset={16}
+          
         >
                     <PromptTooltip
                         show={true} // add condition when to show the prompt tooltip

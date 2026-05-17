@@ -44,6 +44,9 @@ interface FloatingOnboardingProps {
   // CSS selector of target element
   target: string;
 
+  offsetTop?: number;
+  offsetLeft?: number;
+
   // Tooltip / overlay content
   children: ReactNode;
 
@@ -60,6 +63,10 @@ export function FloatingOnboarding({
   target,
   children,
   show = true,
+
+  
+  offsetTop = 0,
+  offsetLeft = 0,
 }: FloatingOnboardingProps) {
   // =========================================================
   // REFS
@@ -95,9 +102,9 @@ export function FloatingOnboarding({
 
   const VIEWPORT_PADDING = 12;
 
-  const OFFSET_X = 0;
+  // const OFFSET_X = 0;
 
-  const OFFSET_Y = 0;
+  // const OFFSET_Y = 0;
 
   const Z_INDEX = 999999;
 
@@ -208,41 +215,41 @@ export function FloatingOnboarding({
     // OPTIONAL CUSTOM OFFSETS
     // =====================================================
 
-    left += OFFSET_X;
-    top += OFFSET_Y;
+   left += offsetLeft;
+    top += offsetTop;
 
     // =====================================================
     // EDGE DETECTION
     // =====================================================
 
-    if (left < VIEWPORT_PADDING) {
-      left = VIEWPORT_PADDING;
-    }
+    // if (left < VIEWPORT_PADDING) {
+    //   left = VIEWPORT_PADDING;
+    // }
 
-    if (
-      left + tooltipRect.width >
-      window.innerWidth - VIEWPORT_PADDING
-    ) {
-      left =
-        window.innerWidth -
-        tooltipRect.width -
-        VIEWPORT_PADDING;
-    }
+    // if (
+    //   left + tooltipRect.width >
+    //   window.innerWidth - VIEWPORT_PADDING
+    // ) {
+    //   left =
+    //     window.innerWidth -
+    //     tooltipRect.width -
+    //     VIEWPORT_PADDING;
+    // }
 
-    if (top < VIEWPORT_PADDING) {
-      top = VIEWPORT_PADDING;
-    }
+    // if (top < VIEWPORT_PADDING) {
+    //   top = VIEWPORT_PADDING;
+    // }
 
-    if (
-      top + tooltipRect.height >
-      window.innerHeight -
-        VIEWPORT_PADDING
-    ) {
-      top =
-        window.innerHeight -
-        tooltipRect.height -
-        VIEWPORT_PADDING;
-    }
+    // if (
+    //   top + tooltipRect.height >
+    //   window.innerHeight -
+    //     VIEWPORT_PADDING
+    // ) {
+    //   top =
+    //     window.innerHeight -
+    //     tooltipRect.height -
+    //     VIEWPORT_PADDING;
+    // }
 
     // =====================================================
     // APPLY POSITION
