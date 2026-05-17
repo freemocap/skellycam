@@ -361,7 +361,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                         </span>
                     )}
                 
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap flex-row items-center gap-1 justify-content-space-between min-w-full">
                     <div className="input-with-string">
                         <input
                             className="input-field"
@@ -401,11 +401,15 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     <span className="icon loader-icon icon-size-20" />
                 </div>
             ) : filteredSorted.length === 0 ? (
-                <p className="text sm text-gray text-center p-4">
-                    {recordings.length === 0
-                        ? t('noRecordingsFound')
-                        : 'No recordings match your filter.'}
-                </p>
+                
+                <div className='recording-warning-container flex flex-col flex-wrap p-2 m-4 text-center gap-1 items-center justify-center br-2 '>
+                    <span className="icon warning-icon icon-size-32" />
+                    <p className="text md text-white text-center">
+                        {recordings.length === 0
+                            ? t('noRecordingsFound')
+                            : 'No recordings match your filter.'}
+                    </p>
+                </div>
             ) : (
                 <div className="recording-list flex-1 overflow-y border-1 border-black br-1">
                     {filteredSorted.map((rec) => (
