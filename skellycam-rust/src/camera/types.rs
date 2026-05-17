@@ -144,19 +144,19 @@ impl MultiFramePayload {
         if self.frames.len() < 2 {
             return 0;
         }
-        let min = self
-            .frames
-            .iter()
-            .map(|f| f.timestamps.frame_available_ns)
-            .min()
-            .unwrap();
-        let max = self
-            .frames
-            .iter()
-            .map(|f| f.timestamps.frame_available_ns)
-            .max()
-            .unwrap();
-        max - min
+        let avail: Vec<i64> = self.frames.iter().map(|f| f.timestamps.frame_available_ns).collect();
+        let min = *avail.iter().min().unwrap();
+        let max = *avail.iter().max().unwrap();
+        let spread = max - min;
+        if self.frame_number < 5 {
+            eprintln!(
+                "  [SPREAD mf#{}] hardware_sync: raw_avail={:?}  min={min}  max={max}  spread={spread} ns = {:.1} µs",
+                self.frame_number,
+                avail,
+                spread as f64 / 1000.0,
+            );
+        }
+        spread
     }
 
     /// Post-barrier-to-capture spread: max - min of `post_barrier_to_capture_ns`
@@ -175,19 +175,19 @@ impl MultiFramePayload {
         if self.frames.len() < 2 {
             return 0;
         }
-        let min = self
-            .frames
-            .iter()
-            .map(|f| f.timestamps.post_barrier_to_capture_ns)
-            .min()
-            .unwrap();
-        let max = self
-            .frames
-            .iter()
-            .map(|f| f.timestamps.post_barrier_to_capture_ns)
-            .max()
-            .unwrap();
-        max - min
+        let pbtc: Vec<i64> = self.frames.iter().map(|f| f.timestamps.post_barrier_to_capture_ns).collect();
+        let min = *pbtc.iter().min().unwrap();
+        let max = *pbtc.iter().max().unwrap();
+        let spread = max - min;
+        if self.frame_number < 5 {
+            eprintln!(
+                "  [SPREAD mf#{}] software_sync: raw_pbtc={:?}  min={min}  max={max}  spread={spread} ns = {:.1} µs",
+                self.frame_number,
+                pbtc,
+                spread as f64 / 1000.0,
+            );
+        }
+        spread
     }
 }
 
@@ -196,7 +196,7 @@ impl MultiFramePayload {
 /// `CameraConfig`. Passed as a single object everywhere. `camera_id` is the
 /// primary identifier (matches the Python-generated SHA-256 hex ID).
 /// Adding a new setting only means adding one field here.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CameraConfig {
     pub camera_id: String,
     pub camera_index: u32,

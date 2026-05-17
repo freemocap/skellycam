@@ -1,4 +1,5 @@
 use crate::camera::{CameraConfig, CameraIdentity, FramePacket};
+use crate::recording::finalizer::RecordingSummary;
 use std::sync::mpsc;
 
 /// Configuration for a single camera within the group.
@@ -11,24 +12,19 @@ pub struct CameraGroupConfig {
     pub capture_config: CameraConfig,
 }
 
-/// Recording parameters — placeholder for future recording functionality.
+/// Parameters for starting a recording session.
 ///
-/// The actual recording pipeline (writing frames to disk, codec selection,
-/// file format) will be added in a later iteration. For now, this struct
-/// marks the recording intent and carries the output directory.
+/// Carries the output directory and an optional label. The dispatcher
+/// thread creates per-camera VideoRecorders and CsvWriters when it
+/// receives a `StartRecording` command.
 #[derive(Debug, Clone)]
-pub struct RecordingInfo {
-    /// Directory where recording output will be written.
+pub struct RecordingParams {
     pub output_dir: String,
-    /// Optional human-readable label for the recording session.
     pub label: Option<String>,
 }
 
 /// Command sent from the `CameraGroup` handle to the gatherer thread to
 /// add or remove cameras at runtime.
-///
-/// The gatherer checks for these between frame cycles via `try_recv()`.
-/// This is a channel-based approach — no locks, no shared mutable state.
 pub enum GathererUpdate {
     AddCamera {
         camera_id: String,
@@ -37,4 +33,11 @@ pub enum GathererUpdate {
     RemoveCamera {
         camera_id: String,
     },
+}
+
+/// Command sent from the `CameraGroup` handle to the dispatcher thread.
+pub enum DispatcherCommand {
+    StartRecording { params: RecordingParams },
+    StopRecording { response_tx: mpsc::Sender<RecordingSummary> },
+    Shutdown,
 }

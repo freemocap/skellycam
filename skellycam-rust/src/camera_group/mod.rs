@@ -1,7 +1,10 @@
 pub mod types;
 pub mod camera_group;
 pub mod gatherer;
+pub mod dispatcher;
 pub mod sync_utils;
+pub mod frontend_encoder;
+pub mod jpeg_transform;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
@@ -9,11 +12,14 @@ use std::time::Duration;
 
 use crate::camera::MultiFramePayload;
 
-pub use types::{CameraGroupConfig, GathererUpdate, RecordingInfo};
+pub use types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingParams};
 pub use camera_group::{
     CameraGroup, CameraGroupState, CameraStatus, GathererInvalidTransition,
     GathererState, GathererStateMachine, GathererTimestamps,
 };
+pub use dispatcher::FrontendPayload;
+pub use frontend_encoder::{encode_multiframe, encode_payload, FrameHeader, PayloadHeader};
+pub use jpeg_transform::rotate_jpeg_lossless;
 
 /// Block on `receiver` until `shutdown` is set or the channel disconnects.
 ///

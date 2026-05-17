@@ -206,8 +206,8 @@ mod tests {
         CameraConfig {
             camera_id: identity.camera_id.clone(),
             camera_index: identity.camera_index as u32,
-            width: 640,
-            height: 480,
+            width: 1280,
+            height: 720,
             exposure: -7,
             exposure_mode: "MANUAL".into(),
             framerate: 30.0,

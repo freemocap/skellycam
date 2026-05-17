@@ -5,7 +5,7 @@
 //! Also computes and prints per-cycle and aggregate timing statistics on exit.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Receiver, SyncSender};
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
@@ -114,7 +114,7 @@ fn print_separator(widths: &[usize]) {
 /// * `paused` — Shared flag; when true, the gatherer skips the downstream send.
 pub fn spawn_gatherer(
     frame_receivers: Vec<(String, Receiver<FramePacket>)>,
-    multi_frame_sender: SyncSender<MultiFramePayload>,
+    multi_frame_sender: Sender<MultiFramePayload>,
     update_receiver: Receiver<super::types::GathererUpdate>,
     barrier: Arc<BreakableBarrier>,
     paused: Arc<AtomicBool>,

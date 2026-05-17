@@ -79,7 +79,9 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
         eprintln!("  openpnp-capture reports {device_count} device(s)\n");
 
         let mut cameras: Vec<CameraIdentity> = Vec::new();
-        let mut filtered_count: u32 = 0;
+        let mut filtered_no_formats: u32 = 0;
+        let mut filtered_virtual: u32 = 0;
+        let mut filtered_no_mjpg: u32 = 0;
 
         for index in 0..device_count {
             let display_name = cstr_to_string(Cap_getDeviceName(ctx, index))
@@ -88,9 +90,21 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
                 .unwrap_or_default();
             let num_formats = Cap_getNumFormats(ctx, index);
 
+            // ── Filter: virtual cameras ──
+            if display_name.to_lowercase().contains("virtual") {
+                eprintln!(
+                    "    [{index}] \"{display_name}\" — VIRTUAL CAMERA, skipping"
+                );
+                filtered_virtual += 1;
+                continue;
+            }
+
+            // ── Filter: no formats ──
             if num_formats <= 0 {
-                eprintln!("    [{index}] \"{display_name}\" — no formats, skipping");
-                filtered_count += 1;
+                eprintln!(
+                    "    [{index}] \"{display_name}\" — NO FORMATS, skipping"
+                );
+                filtered_no_formats += 1;
                 continue;
             }
 
@@ -116,14 +130,23 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
                 }
             }
 
-            let mjpg_flag = if has_mjpg { " MJPG" } else { "" };
+            // ── Filter: no MJPG format ──
+            if !has_mjpg {
+                eprintln!(
+                    "    [{index}] \"{display_name}\" — NO MJPG FORMAT, skipping (has {} formats: {:?})",
+                    num_formats,
+                    formats.iter().map(|f| f.fourcc_str.as_str()).collect::<Vec<_>>()
+                );
+                filtered_no_mjpg += 1;
+                continue;
+            }
 
             let vid_str = vid.map_or("????".to_string(), |v| format!("{v:04x}"));
             let pid_str = pid.map_or("????".to_string(), |p| format!("{p:04x}"));
 
             eprintln!("    [{index}] \"{display_name}\"");
             eprintln!(
-                "           -> id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats}{mjpg_flag}"
+                "           -> id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats} MJPG"
             );
 
             cameras.push(CameraIdentity {
@@ -137,11 +160,22 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
 
         Cap_releaseContext(ctx);
 
-        if filtered_count > 0 {
-            eprintln!("\n  -- {filtered_count} virtual camera(s) filtered --");
+        // ── Summary ──
+        let total_filtered = filtered_virtual + filtered_no_formats + filtered_no_mjpg;
+        if total_filtered > 0 {
+            eprintln!();
+            if filtered_virtual > 0 {
+                eprintln!("  -- {filtered_virtual} virtual camera(s) filtered --");
+            }
+            if filtered_no_formats > 0 {
+                eprintln!("  -- {filtered_no_formats} camera(s) filtered (no formats) --");
+            }
+            if filtered_no_mjpg > 0 {
+                eprintln!("  -- {filtered_no_mjpg} camera(s) filtered (no MJPG format) --");
+            }
         }
         eprintln!(
-            "\n  = {} physical camera(s) ready =\n",
+            "\n  = {} camera(s) ready (all MJPG) =\n",
             cameras.len()
         );
 

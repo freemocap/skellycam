@@ -22,15 +22,16 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
 
-use crate::camera::{Camera, CameraConfig, FramePacket, MultiFramePayload};
+use crate::camera::{Camera, CameraConfig, FramePacket};
 use crate::camera_group::sync_utils::BreakableBarrier;
 use crate::timestamps::performance::performance_counter_nanoseconds;
 
-use super::types::{CameraGroupConfig, GathererUpdate, RecordingInfo};
+use super::dispatcher::FrontendPayload;
+use super::types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingParams};
+use crate::recording::finalizer::RecordingSummary;
 
 // ── Runtime state enum ────────────────────────────────────────────────────────
 
@@ -55,13 +56,16 @@ pub enum CameraGroupState {
 ///
 /// Lightweight — no channel handles, no thread handles. Just the fields
 /// that downstream consumers (frontend, CLI, recording) need to display.
+/// Snapshot of a camera's identity and current config for status reporting.
+///
+/// Holds the full `CameraConfig` (source of truth) plus identity fields.
+/// The `camera_id` is the HashMap key — not duplicated here.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CameraStatus {
-    pub camera_id: String,
-    pub camera_index: i32,
     pub camera_name: String,
-    pub width: u32,
-    pub height: u32,
+    pub camera_index: i32,
+    pub device_path: String,
+    pub config: CameraConfig,
 }
 
 // ── CameraGroup handle ────────────────────────────────────────────────────────
@@ -83,12 +87,18 @@ pub struct CameraGroup {
     state: CameraGroupState,
     cameras: HashMap<String, Camera>,
     configs: HashMap<String, CameraGroupConfig>,
-    gatherer_handle: Option<JoinHandle<()>>,
-    gatherer_update_sender: Option<mpsc::Sender<GathererUpdate>>,
-    multi_frame_receiver: Option<mpsc::Receiver<MultiFramePayload>>,
     barrier: Arc<BreakableBarrier>,
     paused: Arc<AtomicBool>,
-    recording: Option<RecordingInfo>,
+
+    // Gatherer
+    gatherer_handle: Option<JoinHandle<()>>,
+    gatherer_update_sender: Option<mpsc::Sender<GathererUpdate>>,
+
+    // Dispatcher
+    dispatcher_handle: Option<JoinHandle<()>>,
+    dispatcher_control_sender: Option<mpsc::Sender<DispatcherCommand>>,
+    latest_frontend_payload: Arc<Mutex<Option<FrontendPayload>>>,
+    recording_active: Arc<AtomicBool>,
 }
 
 impl CameraGroup {
@@ -116,10 +126,12 @@ impl CameraGroup {
             configs,
             gatherer_handle: None,
             gatherer_update_sender: None,
-            multi_frame_receiver: None,
+            dispatcher_handle: None,
+            dispatcher_control_sender: None,
+            latest_frontend_payload: Arc::new(Mutex::new(None)),
+            recording_active: Arc::new(AtomicBool::new(false)),
             barrier,
             paused: Arc::new(AtomicBool::new(false)),
-            recording: None,
         }
     }
 
@@ -179,8 +191,10 @@ impl CameraGroup {
             frame_receivers.push((id.clone(), camera.take_frame_receiver()));
         }
 
-        let (multi_frame_sender, multi_frame_receiver) = mpsc::sync_channel(1);
+        // Unbounded channel — gatherer never blocks on send
+        let (multi_frame_sender, multi_frame_receiver) = mpsc::channel();
         let (update_sender, update_receiver) = mpsc::channel::<GathererUpdate>();
+        let (control_sender, control_receiver) = mpsc::channel::<DispatcherCommand>();
 
         let gatherer_handle = super::gatherer::spawn_gatherer(
             frame_receivers,
@@ -190,9 +204,17 @@ impl CameraGroup {
             self.paused.clone(),
         );
 
+        let dispatcher_handle = super::dispatcher::spawn_dispatcher(
+            multi_frame_receiver,
+            control_receiver,
+            self.latest_frontend_payload.clone(),
+            self.recording_active.clone(),
+        );
+
         self.gatherer_handle = Some(gatherer_handle);
         self.gatherer_update_sender = Some(update_sender);
-        self.multi_frame_receiver = Some(multi_frame_receiver);
+        self.dispatcher_handle = Some(dispatcher_handle);
+        self.dispatcher_control_sender = Some(control_sender);
         self.state = CameraGroupState::Streaming;
 
         eprintln!(
@@ -303,6 +325,11 @@ impl CameraGroup {
             }
         }
 
+        // Send shutdown to dispatcher
+        if let Some(sender) = &self.dispatcher_control_sender {
+            let _ = sender.send(DispatcherCommand::Shutdown);
+        }
+
         // Break the barrier to release the gatherer
         self.barrier.break_barrier();
 
@@ -317,34 +344,34 @@ impl CameraGroup {
             }
         }
 
+        // Join the dispatcher thread
+        if let Some(handle) = self.dispatcher_handle.take() {
+            if let Err(e) = handle.join() {
+                eprintln!(
+                    "[CameraGroup {}] dispatcher thread panicked: {:?}",
+                    self.group_id,
+                    e.downcast_ref::<&str>().unwrap_or(&"unknown panic message")
+                );
+            }
+        }
+
         self.state = CameraGroupState::Stopped;
         eprintln!("[CameraGroup {}] shutdown complete", self.group_id);
         Ok(())
     }
 
-    // ── Frame reception ───────────────────────────────────────────────────
+    // ── Frontend polling ──────────────────────────────────────────────────
 
-    /// Non-blocking multiframe poll.
+    /// Return the latest encoded frontend payload, if any.
     ///
-    /// Returns the next available `MultiFramePayload`, or `TryRecvError::Empty`
-    /// if no payload is ready. The gatherer blocks on send when the channel
-    /// is full (capacity 1), providing natural backpressure.
-    pub fn try_recv_multiframe(&self) -> Result<MultiFramePayload, mpsc::TryRecvError> {
-        self.multi_frame_receiver
-            .as_ref()
-            .ok_or(mpsc::TryRecvError::Disconnected)?
-            .try_recv()
-    }
-
-    /// Blocking multiframe receive with timeout.
-    pub fn recv_multiframe_timeout(
-        &self,
-        timeout: Duration,
-    ) -> Result<MultiFramePayload, mpsc::RecvTimeoutError> {
-        self.multi_frame_receiver
-            .as_ref()
-            .ok_or(mpsc::RecvTimeoutError::Disconnected)?
-            .recv_timeout(timeout)
+    /// The dispatcher thread encodes every multiframe and stores the result
+    /// in a shared slot. This method returns a clone of the latest one.
+    /// Returns `None` if no payload has been produced yet.
+    pub fn latest_frontend_payload(&self) -> Option<FrontendPayload> {
+        self.latest_frontend_payload
+            .lock()
+            .ok()
+            .and_then(|guard| guard.clone())
     }
 
     // ── Capture control ───────────────────────────────────────────────────
@@ -374,30 +401,40 @@ impl CameraGroup {
         self.paused.load(Ordering::SeqCst)
     }
 
-    // ── Recording (placeholders) ──────────────────────────────────────────
+    // ── Recording ────────────────────────────────────────────────────────
 
     /// Begin recording frames to disk.
     ///
-    /// This is a placeholder — the actual recording pipeline will be
-    /// implemented in a future iteration.
-    pub fn start_recording(&mut self, info: RecordingInfo) {
-        eprintln!(
-            "[CameraGroup {}] recording started → {}",
-            self.group_id,
-            info.output_dir
-        );
-        self.recording = Some(info);
+    /// Sends a `StartRecording` command to the dispatcher thread. The dispatcher
+    /// will create per-camera VideoRecorders and CsvWriters.
+    pub fn start_recording(&mut self, params: RecordingParams) -> anyhow::Result<()> {
+        let sender = self
+            .dispatcher_control_sender
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Dispatcher not running"))?;
+        sender
+            .send(DispatcherCommand::StartRecording { params })
+            .map_err(|_| anyhow::anyhow!("Dispatcher disconnected"))?;
+        Ok(())
     }
 
-    /// Stop recording and finalize the recording file.
-    pub fn stop_recording(&mut self) {
-        eprintln!("[CameraGroup {}] recording stopped", self.group_id);
-        self.recording = None;
+    /// Stop recording and return a summary of the recording session.
+    pub fn stop_recording(&mut self) -> anyhow::Result<RecordingSummary> {
+        let (tx, rx) = mpsc::channel();
+        let sender = self
+            .dispatcher_control_sender
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Dispatcher not running"))?;
+        sender
+            .send(DispatcherCommand::StopRecording { response_tx: tx })
+            .map_err(|_| anyhow::anyhow!("Dispatcher disconnected"))?;
+        rx.recv()
+            .map_err(|_| anyhow::anyhow!("Dispatcher did not respond"))
     }
 
     /// Whether the group is currently recording.
     pub fn is_recording(&self) -> bool {
-        self.recording.is_some()
+        self.recording_active.load(Ordering::SeqCst)
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────
@@ -428,32 +465,16 @@ impl CameraGroup {
     pub fn camera_statuses(&self) -> Vec<CameraStatus> {
         self.cameras
             .iter()
-            .map(|(id, camera)| {
+            .map(|(_id, camera)| {
                 let identity = camera.identity();
-                let config = camera.config();
                 CameraStatus {
-                    camera_id: id.clone(),
-                    camera_index: identity.camera_index,
                     camera_name: identity.camera_name.clone(),
-                    width: config.width,
-                    height: config.height,
+                    camera_index: identity.camera_index,
+                    device_path: identity.device_path.clone(),
+                    config: camera.config().clone(),
                 }
             })
             .collect()
-    }
-
-    /// Take ownership of the multiframe receiver.
-    ///
-    /// After this call, `try_recv_multiframe()` returns `Disconnected`.
-    /// Used by the pipeline thread to consume multiframes independently.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called more than once.
-    pub fn take_multiframe_receiver(&mut self) -> mpsc::Receiver<MultiFramePayload> {
-        self.multi_frame_receiver
-            .take()
-            .expect("multi_frame_receiver already taken")
     }
 
     // ── Private helpers ───────────────────────────────────────────────────
@@ -933,7 +954,7 @@ mod tests {
         let mut group = CameraGroup::new(configs);
         assert!(!group.is_recording());
 
-        group.start_recording(RecordingInfo {
+        group.start_recording(RecordingParams {
             output_dir: "/tmp/test".into(),
             label: Some("test_session".into()),
         });

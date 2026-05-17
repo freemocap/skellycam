@@ -1,13 +1,9 @@
-//! Per-camera video recorder: ffmpeg subprocess fed raw RGB frames via stdin.
+//! Per-camera video recorder: ffmpeg subprocess fed MJPEG frames via stdin.
 //!
-//! Each VideoRecorder spawns an ffmpeg child process that encodes raw 24-bit RGB
-//! frames from `pipe:0` into H.264 video. Frames are fed via `feed_frame()`.
-//! `finish()` closes stdin (EOF to ffmpeg) and returns per-frame timestamps.
-//!
-//! Future: the returned `Vec<FrameTimestamp>` will feed into `RecordingFinalizer`
-//! (3.2) and streaming CSV writer (3.3). The `FrameTimestamp` struct is designed
-//! to carry all fields needed for per-camera CSV output and cross-camera
-//! DataFrame joins.
+//! Each VideoRecorder spawns an ffmpeg child process that reads MJPEG frames
+//! from `pipe:0`, decodes them, and re-encodes to H.264. Frames are fed via
+//! `feed_frame()`. `finish()` closes stdin (EOF to ffmpeg) and returns
+//! per-frame timestamps.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -17,6 +13,39 @@ use anyhow::Context;
 use ffmpeg_sidecar::command::FfmpegCommand;
 
 use crate::camera::CameraIdentity;
+
+/// Parameters controlling ffmpeg encode settings.
+///
+/// All fields have sensible defaults. In the future these will be
+/// user-configurable via the frontend.
+#[derive(Debug, Clone)]
+pub struct VideoRecorderConfig {
+    /// ffmpeg input format (`-f`). "image2pipe" means one image per write.
+    pub input_format: String,
+    /// Input codec (`-c:v` on the input side). "mjpeg" for MJPEG frames.
+    pub input_codec: String,
+    /// Output codec (`-c:v` on the output side).
+    pub output_codec: String,
+    /// libx264 preset: "ultrafast", "medium", "veryslow", etc.
+    pub preset: String,
+    /// Constant Rate Factor (0-51). 18 = visually lossless, 23 = default.
+    pub crf: u32,
+    /// Output pixel format. "yuv420p" for maximum compatibility.
+    pub pix_fmt: String,
+}
+
+impl Default for VideoRecorderConfig {
+    fn default() -> Self {
+        Self {
+            input_format: "image2pipe".into(),
+            input_codec: "mjpeg".into(),
+            output_codec: "libx264".into(),
+            preset: "medium".into(),
+            crf: 18,
+            pix_fmt: "yuv420p".into(),
+        }
+    }
+}
 
 /// Timestamp record for a single frame written to video.
 ///
@@ -33,11 +62,11 @@ pub struct FrameTimestamp {
     pub recorded_timestamp_ns: i64,
 }
 
-/// Manages an ffmpeg subprocess that encodes raw RGB frames to H.264 video.
+/// Manages an ffmpeg subprocess that encodes MJPEG frames to H.264 video.
 ///
-/// On construction, spawns `ffmpeg` with `rawvideo rgb24` input from `pipe:0`.
-/// Call `feed_frame()` for each frame. Call `finish()` to finalize the video
-/// and return all timestamps.
+/// On construction, spawns `ffmpeg` reading MJPEG from `pipe:0`.
+/// Call `feed_frame()` for each frame. Call `finish()` to finalize the
+/// video and return all timestamps.
 ///
 /// If `VideoRecorder` is dropped without calling `finish()`, the ffmpeg
 /// process is killed and the partial video file is left on disk.
@@ -62,6 +91,7 @@ impl VideoRecorder {
         width: u32,
         height: u32,
         target_fps: f32,
+        config: &VideoRecorderConfig,
     ) -> anyhow::Result<Self> {
         let even_width = width & !1;
         let even_height = height & !1;
@@ -76,16 +106,15 @@ impl VideoRecorder {
 
         let mut child = FfmpegCommand::new()
             .overwrite()
-            .format("rawvideo")
-            .codec_video("rawvideo")
+            .format(&config.input_format)
+            .codec_video(&config.input_codec)
             .size(even_width, even_height)
-            .pix_fmt("rgb24")
             .rate(target_fps)
             .input("pipe:0")
-            .codec_video("libx264")
-            .preset("ultrafast")
-            .crf(23)
-            .pix_fmt("yuv420p")
+            .codec_video(&config.output_codec)
+            .preset(&config.preset)
+            .crf(config.crf)
+            .pix_fmt(&config.pix_fmt)
             .no_audio()
             .output(output_path.to_string_lossy().as_ref())
             .spawn()
@@ -96,9 +125,12 @@ impl VideoRecorder {
             .context("ffmpeg stdin not available")?;
 
         tracing::info!(
-            "Camera {}: recording to {}",
+            "Camera {}: recording to {} ({}, {}, CRF {})",
             identity.label(),
             output_path.display(),
+            config.output_codec,
+            config.preset,
+            config.crf,
         );
 
         Ok(Self {
@@ -112,9 +144,10 @@ impl VideoRecorder {
         })
     }
 
-    /// Write one raw RGB frame to ffmpeg's stdin.
+    /// Write one MJPEG frame to ffmpeg's stdin.
     ///
-    /// `data` must be `width * height * 3` bytes of 24-bit RGB pixel data.
+    /// `data` is raw JPEG bytes. The frame is piped directly —
+    /// ffmpeg decodes and re-encodes it.
     pub fn feed_frame(
         &mut self,
         data: &[u8],
@@ -122,19 +155,10 @@ impl VideoRecorder {
         grab_timestamp_ns: i64,
         recorded_timestamp_ns: i64,
     ) -> anyhow::Result<()> {
-        let expected = self.width as usize * self.height as usize * 3;
-        if data.len() != expected {
-            anyhow::bail!(
-                "Frame size mismatch: expected {expected} bytes, got {} bytes ({}x{}). \
-                 Did you forget to round dimensions to even numbers?",
-                data.len(),
-                self.width,
-                self.height,
-            );
-        }
-
         if let Some(ref mut stdin) = self.stdin {
-            stdin.write_all(data).context("Failed to write frame to ffmpeg stdin")?;
+            stdin
+                .write_all(data)
+                .context("Failed to write frame to ffmpeg stdin")?;
         } else {
             anyhow::bail!("VideoRecorder: stdin already closed (finish was called?)");
         }
@@ -163,7 +187,9 @@ impl VideoRecorder {
 
         // Drain stderr internally (ffmpeg_sidecar's wait() handles this),
         // then block until ffmpeg exits
-        self.ffmpeg_child.wait().context("ffmpeg process failed")?;
+        self.ffmpeg_child
+            .wait()
+            .context("ffmpeg process failed")?;
 
         tracing::info!(
             "Recording complete: {} frames written to {}",
@@ -171,8 +197,7 @@ impl VideoRecorder {
             self.output_path.display(),
         );
 
-        // Prevent Drop from killing an already-exited ffmpeg.
-        // Take the timestamps and reset frame_count so the Drop guard is a no-op.
+        // Prevent Drop from killing an already-exited ffmpeg
         self.frame_count = 0;
         Ok(std::mem::take(&mut self.timestamps))
     }

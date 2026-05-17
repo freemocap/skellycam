@@ -107,7 +107,8 @@ impl FrameStateMachine {
     pub fn begin_capture(&mut self, frame_available_ns: i64) -> Result<(), InvalidTransition> {
         self.validate(FrameState::Capturing)?;
         self.timestamps.frame_available_ns = frame_available_ns;
-        self.timestamps.post_barrier_to_capture_ns = frame_available_ns;
+        self.timestamps.post_barrier_to_capture_ns =
+            frame_available_ns - self.timestamps.post_barrier_ns;
         self.state = FrameState::Capturing;
         Ok(())
     }
@@ -150,11 +151,10 @@ impl FrameStateMachine {
     fn record_timestamp(&mut self, next: FrameState, now: i64) {
         match next {
             FrameState::Capturing => {
-                // Fallback: use the current timestamp. In production code,
-                // begin_capture(frame_available_ns) is called instead, which
-                // passes the hardware-ready timestamp captured before captureFrameRaw().
+                // Fallback path — production code uses begin_capture() instead.
                 self.timestamps.frame_available_ns = now;
-                self.timestamps.post_barrier_to_capture_ns = now;
+                self.timestamps.post_barrier_to_capture_ns =
+                    now - self.timestamps.post_barrier_ns;
             }
             FrameState::Sending => {
                 self.timestamps.post_capture_ns = now;
