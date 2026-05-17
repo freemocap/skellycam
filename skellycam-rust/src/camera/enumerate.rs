@@ -1,7 +1,8 @@
 //! Camera enumeration via openpnp-capture.
 //!
-//! Each camera gets a unique 4-character hex identifier that matches the Python
-//! `CameraDeviceInfo.camera_id` algorithm: SHA-256 of the device identity
+//! Each camera gets a unique 4-character hex identifier by SHA-256 hashing all
+//! available identity fields (index, camera name, device path, VID/PID) and
+//! taking the last 4 hex characters of the digest.
 use sha2::{Digest, Sha256};
 
 use super::ffi::*;
@@ -30,25 +31,27 @@ fn parse_vid_pid(device_path: &str) -> (Option<u16>, Option<u16>) {
     (vid, pid)
 }
 
-/// Generate a 4-character hex ID matching the Python `CameraDeviceInfo.camera_id` algorithm.
+/// Generate a 4-character hex camera ID from all available identity fields.
 ///
-/// Algorithm (must match detect_cameras_devices.py exactly):
-///   1. If device_path is non-empty → raw = device_path
-///   2. Else if VID/PID available → raw = "vid_pid_index" (4-char hex each)
-///   3. Else → return "{index:04x}"
-///   4. SHA-256(raw) → take bytes [0:2] → format as 4-char lowercase hex
-fn make_unique_id(device_path: &str, vendor_id: Option<u16>, product_id: Option<u16>, index: u32) -> String {
-    let raw = if !device_path.is_empty() {
-        device_path.to_string()
-    } else if let (Some(vid), Some(pid)) = (vendor_id, product_id) {
-        format!("{vid:04x}_{pid:04x}_{index}")
-    } else {
-        return format!("{index:04x}");
-    };
+/// Concatenates index, camera name, device path, and VID/PID (when available)
+/// into a single string, SHA-256 hashes it, and returns the last 4 hex
+/// characters. Every field the OS reports contributes to the fingerprint —
+/// maximally stable across Mac, Windows, and Linux.
+fn make_unique_id(
+    index: u32,
+    camera_name: &str,
+    device_path: &str,
+    vendor_id: Option<u16>,
+    product_id: Option<u16>,
+) -> String {
+    let mut raw = format!("index:{index}|name:{camera_name}|path:{device_path}|");
+    if let (Some(vid), Some(pid)) = (vendor_id, product_id) {
+        raw.push_str(&format!("vid:{vid:04x}|pid:{pid:04x}"));
+    }
 
     let digest: [u8; 32] = Sha256::digest(raw.as_bytes()).into();
-    let short = u16::from_be_bytes([digest[0], digest[1]]);
-    format!("{short:04x}")
+    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    hex[hex.len() - 4..].to_string()
 }
 
 pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
@@ -79,7 +82,7 @@ pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
             }
 
             let (vid, pid) = parse_vid_pid(&device_path);
-            let short_id = make_unique_id(&device_path, vid, pid, index as u32);
+            let short_id = make_unique_id(index, &display_name, &device_path, vid, pid);
 
             // Collect all format info for this camera
             let mut formats: Vec<CameraFormatInfo> = Vec::with_capacity(num_formats as usize);
