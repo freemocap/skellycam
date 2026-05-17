@@ -5,7 +5,7 @@ import NameDropdownSelector from './ui-components/NameDropdownSelector';
 import SubactionHeader from './ui-components/SubactionHeader';
 import useDraggableTooltips from '@/hooks/useDraggableTooltips';
 import type { ExecutableCandidate } from './ServerConnectionStatus';
-import type iconButton from './ui-components/iconButton';
+import IconButton from './ui-components/iconButton';
 
 interface ConnectionSettingsModalProps {
     open: boolean;
