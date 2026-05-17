@@ -1,4 +1,32 @@
-// FloatingOnboarding.tsx
+// FloatingOnboarding.tsx ::::: Pooya Moradi M. 2026  <poamrd@gmail.com> :::::
+/*
+EXAMPLE USAGE: WITH PROMPTTOOLTIP
+
+IMPORT BOTH
+import {FloatingOnboarding} from "@/hooks/floatingOnboarding";
+import PromptTooltip from "@/components/ui-components/promptTooltip";
+ADD [data-onboarding="XXXXXX"] TO THE REFERENCE DOM DELEMENT TO ANCHOR TO
+
+
+
+<FloatingOnboarding
+          target='[data-onboarding="connect-cameras"]'
+          
+          offset={16}
+        >
+                    <PromptTooltip
+                        show={true} // add condition when to show the prompt tooltip
+                        title="Connect Cameras"
+                        text="Make sure you have at least one camera plugged in, then hit Connect to start streaming."
+                        position="pos-right"
+                        variant="boarding"
+                        onClose={() => {
+                        // console.log("Tooltip closed");
+                        }}
+                    />
+        </FloatingOnboarding>
+
+        */
 
 import React, {
   ReactNode,
