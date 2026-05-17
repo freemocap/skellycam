@@ -1,0 +1,26 @@
+<h2>How should the state machine visualization work?</h2>
+<p class="subtitle">Pick the interaction model that feels most useful — each has a different strength</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Interactive Stepper</h3>
+      <p>States laid out left-to-right as connected cards. Click event buttons to advance through the lifecycle. Current state pulses green. Transition log builds up below. Best for <strong>learning the lifecycle flow</strong> and stepping through transitions one at a time.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Full Graph Diagram</h3>
+      <p>Every state and transition visible at once as an interactive node graph. Click any transition arrow to fire it. Current state highlights, error paths shown in red. Resembles the Mermaid diagram but clickable. Best for <strong>seeing the complete architecture</strong> at a glance.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — Stepper + Diagram</h3>
+      <p>Stepper on top for interactive walkthrough, full Mermaid diagram below for reference. The stepper drives the XState machine; the diagram is static reference rendered by mermaid.js. Best of both — <strong>interactive learning + complete reference</strong> in one page.</p>
+    </div>
+  </div>
+</div>

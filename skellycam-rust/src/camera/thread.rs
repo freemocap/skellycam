@@ -4,33 +4,46 @@
 //! stream with the requested MJPG format, configures manual exposure, then runs
 //! a capture loop synchronized by a BreakableBarrier shared with the gatherer.
 //!
-//! Two capture modes:
-//!   - Raw MJPEG (default): `Cap_openStreamRaw` + `Cap_captureFrameRaw`
-//!     produces `FrameData::Mjpg` — JPEG bytes pass through without decode.
-//!   - RGB (fallback): `Cap_openStream` + `Cap_captureFrame` produces
-//!     `FrameData::Rgb` — openpnp-capture decodes MJPEG→RGB internally.
+//! The capture loop uses a `FrameStateMachine` to track frame-level substates
+//! (WaitingForFrame → Capturing → Sending → AtBarrier).
+//! Every substate transition automatically records a nanosecond-precision
+//! monotonic timestamp — the state machine IS the timestamp system.
 
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
+use std::thread::JoinHandle;
 
-use crate::sync_utils::BreakableBarrier;
+use crate::camera_group::sync_utils::BreakableBarrier;
 
 use super::ffi::*;
-use super::types::{CameraCaptureConfig, CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData, FramePacket, FrameLifecycleTimestamps};
-use crate::timestamps::performance::performance_counter_nanoseconds;
+use super::state_machine::{FrameState, FrameStateMachine};
+use super::types::{
+    CameraCaptureConfig, CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData,
+    FramePacket,
+};
 
 const STABILIZATION_FRAMES: u32 = 30;
 
+/// Spawn a camera capture thread and return the communication channels plus
+/// the join handle.
+///
+/// On success, the camera is streaming — the thread is running the capture
+/// loop, synchronized via the shared barrier.
+///
+/// On failure, the error is returned before any thread is spawned (all
+/// failures happen during setup: create context, find format, open stream,
+/// configure, stabilize).
 pub fn spawn_camera_thread(
+    identity: &CameraIdentity,
     config: &CameraCaptureConfig,
-    identity: CameraIdentity,
     barrier: Arc<BreakableBarrier>,
-) -> (
+) -> anyhow::Result<(
     CameraHandle,
     mpsc::Receiver<CameraEvent>,
     mpsc::Receiver<FramePacket>,
-) {
+    JoinHandle<()>,
+)> {
     let (command_sender, command_receiver) = mpsc::channel::<CameraCommand>();
     let (event_sender, event_receiver) = mpsc::channel::<CameraEvent>();
     let (frame_sender, frame_receiver) = mpsc::sync_channel::<FramePacket>(1);
@@ -43,8 +56,9 @@ pub fn spawn_camera_thread(
 
     let label = identity.label();
     let config = config.clone();
+    let identity = identity.clone();
 
-    thread::spawn(move || {
+    let thread_handle = thread::spawn(move || {
         let result = run_camera_thread(
             config,
             &identity,
@@ -61,15 +75,22 @@ pub fn spawn_camera_thread(
         }
     });
 
-    (handle, event_receiver, frame_receiver)
+    Ok((handle, event_receiver, frame_receiver, thread_handle))
 }
 
-/// Check for shutdown on the command channel. Returns true if shutdown received.
-fn check_shutdown(command_receiver: &mpsc::Receiver<CameraCommand>) -> bool {
+enum CommandResult {
+    None,
+    Shutdown,
+    Reconfigure(CameraCaptureConfig),
+}
+
+/// Check the command channel. Returns the first pending command, or None if empty.
+fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandResult {
     match command_receiver.try_recv() {
-        Ok(CameraCommand::Shutdown) => true,
-        Err(mpsc::TryRecvError::Empty) => false,
-        Err(mpsc::TryRecvError::Disconnected) => true,
+        Ok(CameraCommand::Shutdown) => CommandResult::Shutdown,
+        Ok(CameraCommand::Reconfigure { config }) => CommandResult::Reconfigure(config),
+        Err(mpsc::TryRecvError::Empty) => CommandResult::None,
+        Err(mpsc::TryRecvError::Disconnected) => CommandResult::Shutdown,
     }
 }
 
@@ -88,8 +109,16 @@ fn run_camera_thread(
             anyhow::bail!("Cap_createContext returned null");
         }
 
-        let format_info = find_best_mjpg(ctx, config.camera_index, config.width, config.height, config.framerate, label)?;
-        let stream = open_stream_raw(ctx, config.camera_index, label, &format_info)?;
+        let format_info = find_best_mjpg(
+            ctx,
+            config.camera_index,
+            config.width,
+            config.height,
+            config.framerate,
+            label,
+        )?;
+        let stream =
+            open_stream_raw(ctx, config.camera_index, label, &format_info)?;
 
         configure_exposure(ctx, stream, label, &config.exposure_mode, config.exposure);
         stabilize_raw(ctx, stream, label);
@@ -101,26 +130,32 @@ fn run_camera_thread(
             "Camera {label}: capture loop raw-MJPEG ({actual_width}x{actual_height})",
         );
 
-        let mut frame_number: i64 = 0;
+        // ── FrameStateMachine drives the capture loop and records all timestamps ──
+        let mut frame_sm = FrameStateMachine::new(0);
         let mut raw_buffer: Vec<u8> = Vec::new();
 
         loop {
-            // ── loop_start_ns ──
-            let loop_start_ns = performance_counter_nanoseconds();
-
-            if check_shutdown(command_receiver) {
-                tracing::info!("Camera {label}: shutdown");
-                break;
+            // ── WaitingForFrame → check for shutdown, spin on hasNewFrame ──
+            match check_commands(command_receiver) {
+                CommandResult::Shutdown => {
+                    tracing::info!("Camera {label}: shutdown");
+                    break;
+                }
+                CommandResult::None => {}
+                CommandResult::Reconfigure(_) => {}
             }
 
-            // Wait for next hardware frame
             let wait_start = std::time::Instant::now();
             loop {
-                if check_shutdown(command_receiver) {
-                    tracing::info!("Camera {label}: shutdown during hasNewFrame");
-                    Cap_closeStream(ctx, stream);
-                    Cap_releaseContext(ctx);
-                    return Ok(());
+                match check_commands(command_receiver) {
+                    CommandResult::Shutdown => {
+                        tracing::info!("Camera {label}: shutdown during hasNewFrame");
+                        Cap_closeStream(ctx, stream);
+                        Cap_releaseContext(ctx);
+                        return Ok(());
+                    }
+                    CommandResult::None => {}
+                    CommandResult::Reconfigure(_) => {}
                 }
                 if Cap_hasNewFrame(ctx, stream) != 0 {
                     break;
@@ -128,47 +163,25 @@ fn run_camera_thread(
                 std::thread::yield_now();
                 if wait_start.elapsed().as_secs() > 5 {
                     let _ = event_sender.send(CameraEvent::Error(format!(
-                        "Camera {label}: timeout waiting for frame {frame_number}"
+                        "Camera {label}: timeout waiting for frame {}",
+                        frame_sm.frame_number()
                     )));
                     Cap_closeStream(ctx, stream);
                     Cap_releaseContext(ctx);
                     return Ok(());
                 }
             }
+            // ── Hardware frame is ready. Stamp NOW — before any capture work.
+            //    This is the "hardware available" timestamp used by both
+            //    frame_available_ns and post_barrier_to_capture_ns.
+            let frame_available_ns = crate::timestamps::performance::performance_counter_nanoseconds();
 
-            let frame_available_ns = performance_counter_nanoseconds();
-
-            if check_shutdown(command_receiver) {
-                tracing::info!("Camera {label}: shutdown before barrier");
-                Cap_closeStream(ctx, stream);
-                Cap_releaseContext(ctx);
-                return Ok(());
-            }
-
-            let pre_barrier_ns = performance_counter_nanoseconds();
-
-            if !barrier.wait() {
-                tracing::info!("Camera {label}: barrier broken (shutdown)");
-                Cap_closeStream(ctx, stream);
-                Cap_releaseContext(ctx);
-                return Ok(());
-            }
-
-            let post_barrier_ns = performance_counter_nanoseconds();
-
-            if check_shutdown(command_receiver) {
-                tracing::info!("Camera {label}: shutdown after barrier");
-                Cap_closeStream(ctx, stream);
-                Cap_releaseContext(ctx);
-                return Ok(());
-            }
-
-            let pre_capture_ns = performance_counter_nanoseconds();
-
+            // ── Capture the frame immediately (before barrier) ──
             let mut frame_size: u32 = 0;
             if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK || frame_size == 0 {
                 let _ = event_sender.send(CameraEvent::Error(format!(
-                    "Camera {label}: getFrameSize failed or returned 0 at frame {frame_number}"
+                    "Camera {label}: getFrameSize failed or returned 0 at frame {}",
+                    frame_sm.frame_number()
                 )));
                 break;
             }
@@ -183,41 +196,61 @@ fn run_camera_thread(
             );
             if result != CAPRESULT_OK {
                 let _ = event_sender.send(CameraEvent::Error(format!(
-                    "Camera {label}: captureFrameRaw failed at frame {frame_number} ({})",
+                    "Camera {label}: captureFrameRaw failed at frame {} ({})",
+                    frame_sm.frame_number(),
                     result_name(result)
                 )));
                 break;
             }
             let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());
 
-            let post_capture_ns = performance_counter_nanoseconds();
+            // ── WaitingForFrame → Capturing: use the pre-recorded hardware-ready timestamp ──
+            // begin_capture() writes frame_available_ns and post_barrier_to_capture_ns
+            // both to the moment hasNewFrame() returned true — before Cap_captureFrameRaw.
+            if let Err(e) = frame_sm.begin_capture(frame_available_ns) {
+                tracing::error!("Camera {label}: invalid frame state transition: {e}");
+            }
 
-            let mut packet = FramePacket {
+            // ── Capturing → Sending (stamps post_capture_ns, pre_send_ns) ──
+            if let Err(e) = frame_sm.transition_to(FrameState::Sending) {
+                tracing::error!("Camera {label}: invalid frame state transition: {e}");
+            }
+
+            let packet = FramePacket {
                 data: frame_data,
                 width: actual_width,
                 height: actual_height,
                 rotation: config.rotation,
-                timestamps: FrameLifecycleTimestamps {
-                    loop_start_ns,
-                    frame_available_ns,
-                    pre_barrier_ns,
-                    post_barrier_ns,
-                    pre_capture_ns,
-                    post_capture_ns,
-                    pre_send_ns: 0,
-                    post_send_ns: 0,
-                    gatherer_received_ns: 0,
-                },
+                timestamps: frame_sm.timestamps.clone(),
                 identity: identity.clone(),
-                frame_number,
+                frame_number: frame_sm.frame_number(),
             };
 
-            packet.timestamps.pre_send_ns = performance_counter_nanoseconds();
-            frame_number += 1;
-
+            // ── Send the packet; if the channel is disconnected, exit. ──
             if frame_sender.send(packet).is_err() {
                 break;
             }
+
+            // ── Sending → AtBarrier (stamps post_send_ns, pre_barrier_ns) ──
+            // C7a FIX: no command check here. The send→barrier path is uninterruptible.
+            // Any pending command will be drained in the next iteration's spin-wait loop.
+            if let Err(e) = frame_sm.transition_to(FrameState::AtBarrier) {
+                tracing::error!("Camera {label}: invalid frame state transition: {e}");
+            }
+
+            if !barrier.wait() {
+                tracing::info!("Camera {label}: barrier broken (shutdown)");
+                Cap_closeStream(ctx, stream);
+                Cap_releaseContext(ctx);
+                return Ok(());
+            }
+
+            // ── Sending → WaitingForFrame (stamps post_send_ns after send completes,
+            //     and loop_start_ns for the next iteration) ──
+            if let Err(e) = frame_sm.transition_to(FrameState::WaitingForFrame) {
+                tracing::error!("Camera {label}: invalid frame state transition: {e}");
+            }
+            frame_sm.increment_frame();
         }
 
         Cap_closeStream(ctx, stream);
@@ -265,7 +298,6 @@ unsafe fn find_best_mjpg(
                     );
                     return Ok(info);
                 }
-                // Keep looking — maybe another format at same res has matching FPS
             }
         }
     }
@@ -322,7 +354,6 @@ unsafe fn open_stream_raw(
     label: &str,
     info: &CapFormatInfo,
 ) -> anyhow::Result<CapStream> {
-    // Re-find the matching format_id (same approach as open_stream_rgb)
     let num_formats = unsafe { Cap_getNumFormats(ctx, index) };
     let mut format_id: Option<CapFormatID> = None;
     for f in 0..num_formats {
@@ -402,8 +433,6 @@ fn stabilize_raw(ctx: CapContext, stream: CapStream, label: &str) {
     tracing::info!("Camera {label}: raw stabilization complete ({STABILIZATION_FRAMES} frames)");
 }
 
-/// No-op in raw mode — shutdown handling is done in the main loop.
-/// This exists so we can add per-frame checks during stabilization if needed.
 fn check_shutdown_for_stabilize() -> bool {
     false
 }

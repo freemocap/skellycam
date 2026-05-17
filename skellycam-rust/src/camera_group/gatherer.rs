@@ -3,8 +3,9 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
 use crate::camera::{CameraEvent, CameraHandle, FramePacket, MultiFramePayload};
-use crate::sync_utils::BreakableBarrier;
-use crate::timestamps::performance::performance_counter_nanoseconds;
+use crate::camera_group::sync_utils::BreakableBarrier;
+
+use super::state_machine::{GathererState, GathererStateMachine};
 
 /// Computed summary statistics for a set of values.
 struct Stats {
@@ -114,17 +115,13 @@ pub fn spawn_gatherer(
         let mut duration_channel_backpressure: Vec<f64> = Vec::new();
         let mut duration_total_iteration: Vec<f64> = Vec::new();
 
-        loop {
-            // Synchronize with all cameras — all capture simultaneously
-            if !barrier.wait() {
-                eprintln!("[gatherer] barrier broken, shutting down");
-                for handle in &camera_handles {
-                    handle.send_shutdown();
-                }
-                break;
-            }
+        let mut gatherer_sm = GathererStateMachine::new();
 
-            // Drain event channels
+        loop {
+            // ── Drain CameraEvent::Error reports from each camera. ──
+            // This is camera-to-gatherer error reporting only — NOT command
+            // processing. Top-level commands (pause/resume/recording, reconfigure,
+            // shutdown) take other paths and do not flow through this drain.
             for event_receiver in &event_receivers {
                 while let Ok(event) = event_receiver.try_recv() {
                     match event {
@@ -135,17 +132,17 @@ pub fn spawn_gatherer(
                 }
             }
 
-            // Collect frames, stamp gatherer_received_ns on each
+            // ── CollectingFrames: recv() one frame from each camera in sequence. ──
+            // This is the primary synchronization point: the gatherer waits for
+            // every camera to capture and send before continuing.
             let mut frames: Vec<FramePacket> = Vec::with_capacity(camera_count);
             let mut disconnected = false;
-            let mut all_frames_received_ns: i64 = 0;
 
             for (index, receiver) in frame_receivers.iter().enumerate() {
                 match receiver.recv() {
                     Ok(mut packet) => {
-                        let recv_ns = performance_counter_nanoseconds();
-                        packet.timestamps.gatherer_received_ns = recv_ns;
-                        all_frames_received_ns = recv_ns;
+                        packet.timestamps.gatherer_received_ns =
+                            crate::timestamps::performance::performance_counter_nanoseconds();
                         frames.push(packet);
                     }
                     Err(_) => {
@@ -160,19 +157,52 @@ pub fn spawn_gatherer(
                 for handle in &camera_handles {
                     handle.send_shutdown();
                 }
+                barrier.break_barrier();
                 break;
             }
 
-            let payload_assembled_ns = performance_counter_nanoseconds();
+            // ── CollectingFrames → AllFramesReceived (stamps all_frames_received_ns) ──
+            if let Err(e) = gatherer_sm.transition_to(GathererState::AllFramesReceived) {
+                eprintln!("[gatherer] invalid gatherer state transition: {e}");
+            }
+
+            // ── AllFramesReceived → WaitingAtBarrier ──
+            if let Err(e) = gatherer_sm.transition_to(GathererState::WaitingAtBarrier) {
+                eprintln!("[gatherer] invalid gatherer state transition: {e}");
+            }
+
+            // ── Hit the barrier IMMEDIATELY. ──
+            // All cameras are at barrier.wait(); calling barrier.wait() here
+            // releases them simultaneously. Cameras now spin for their next
+            // hardware frame IN PARALLEL with the payload assembly and
+            // downstream send that happen below.
+            if !barrier.wait() {
+                eprintln!("[gatherer] barrier broken, shutting down");
+                for handle in &camera_handles {
+                    handle.send_shutdown();
+                }
+                break;
+            }
+
+            // ── WaitingAtBarrier → AssemblingPayload (stamps post_barrier_ns) ──
+            if let Err(e) = gatherer_sm.transition_to(GathererState::AssemblingPayload) {
+                eprintln!("[gatherer] invalid gatherer state transition: {e}");
+            }
 
             let mut payload = MultiFramePayload {
                 frames,
                 step,
-                all_frames_received_ns,
-                payload_assembled_ns,
+                all_frames_received_ns: gatherer_sm.timestamps.all_frames_received_ns,
+                payload_assembled_ns: 0,
                 pre_send_downstream_ns: 0,
-                post_send_downstream_ns: 0,
             };
+
+            // ── AssemblingPayload → SendingDownstream (stamps payload_assembled_ns, pre_send_downstream_ns) ──
+            if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
+                eprintln!("[gatherer] invalid gatherer state transition: {e}");
+            }
+            payload.payload_assembled_ns = gatherer_sm.timestamps.payload_assembled_ns;
+            payload.pre_send_downstream_ns = gatherer_sm.timestamps.pre_send_downstream_ns;
 
             // Track inter-multiframe interval
             if let Some(prev_ts) = prev_multiframe_ts {
@@ -187,7 +217,7 @@ pub fn spawn_gatherer(
 
             // Track both hardware and software sync spreads
             let hardware_spread_ns = payload.hardware_sync_spread_ns() as f64;
-            let software_spread_ns = payload.software_sync_spread_ns() as f64;
+            let software_spread_ns = payload.post_barrier_to_capture_spread_ns() as f64;
             hardware_spread_values.push(hardware_spread_ns);
             software_spread_values.push(software_spread_ns);
 
@@ -200,8 +230,8 @@ pub fn spawn_gatherer(
                 if ts.pre_barrier_ns > 0 && ts.post_barrier_ns > 0 {
                     duration_barrier_sync.push((ts.post_barrier_ns - ts.pre_barrier_ns) as f64);
                 }
-                if ts.pre_capture_ns > 0 && ts.post_capture_ns > 0 {
-                    duration_capture.push((ts.post_capture_ns - ts.pre_capture_ns) as f64);
+                if ts.post_capture_ns > 0 && ts.pre_send_ns > 0 {
+                    duration_capture.push((ts.pre_send_ns - ts.post_capture_ns) as f64);
                 }
                 if ts.pre_send_ns > 0 && ts.gatherer_received_ns > 0 {
                     duration_channel_backpressure.push((ts.gatherer_received_ns - ts.pre_send_ns) as f64);
@@ -213,15 +243,18 @@ pub fn spawn_gatherer(
 
             step += 1;
 
-            let pre_send_downstream_ns = performance_counter_nanoseconds();
-            payload.pre_send_downstream_ns = pre_send_downstream_ns;
-
             if multi_frame_sender.send(payload).is_err() {
                 eprintln!("[gatherer] downstream disconnected, shutting down");
                 for handle in &camera_handles {
                     handle.send_shutdown();
                 }
+                barrier.break_barrier();
                 break;
+            }
+
+            // ── SendingDownstream → CollectingFrames ──
+            if let Err(e) = gatherer_sm.transition_to(GathererState::CollectingFrames) {
+                eprintln!("[gatherer] invalid gatherer state transition: {e}");
             }
         }
 
@@ -359,7 +392,7 @@ pub fn spawn_gatherer(
             }
 
             eprintln!();
-            eprintln!("  Spread legend: hardware = frame_available | software = pre_capture (post-barrier)");
+            eprintln!("  Spread legend: hardware = frame_available | software = post_barrier_to_capture");
             eprintln!("  % of total is each stage's median divided by total iteration median.");
             eprintln!("══════════════════════════════════════════════════════════════════════");
             eprintln!();

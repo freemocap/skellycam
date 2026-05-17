@@ -1,7 +1,6 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
 
 use axum::extract::State;
 use axum::routing::post;
@@ -9,7 +8,7 @@ use axum::{Json, Router};
 use tokio::sync::broadcast;
 
 use crate::camera::{enumerate_directshow_cameras, CameraCaptureConfig};
-use crate::camera_group::{CameraGroup, CameraGroupConfig};
+use crate::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty, Streaming as GroupStreaming};
 use crate::frontend_payload::encode_multiframe;
 
 use super::application_state::AppState;
@@ -104,7 +103,7 @@ async fn create_or_update_group(
     let camera_count = configs.len();
 
     // Create the camera group
-    let group = CameraGroup::create(configs)
+    let group = CameraGroup::<Empty>::new().configure(configs).start()
         .map_err(|e| AppError::Internal(format!("Failed to create camera group: {e}")))?;
 
     // Create broadcast channel for encoded frames
@@ -159,28 +158,22 @@ async fn close_active_group(state: &Arc<AppState>) {
 
 /// Blocking loop: receive multiframes, encode to JPEG, broadcast to WebSocket clients.
 fn relay_loop(
-    group: CameraGroup,
+    group: CameraGroup<GroupStreaming>,
     tx: broadcast::Sender<Vec<u8>>,
     shutdown: Arc<std::sync::atomic::AtomicBool>,
 ) {
-    while shutdown.load(Ordering::SeqCst) {
-        match group.multi_frame_receiver.recv_timeout(Duration::from_millis(100)) {
-            Ok(payload) => {
-                match encode_multiframe(&payload) {
-                    Ok(binary) => {
-                        let _ = tx.send(binary);
-                    }
-                    Err(e) => {
-                        eprintln!("[frame-relay] encode error: {e}");
-                    }
-                }
+    consume_multiframe_loop(&group.state.multi_frame_receiver, &shutdown, 100, |payload| {
+        match encode_multiframe(&payload) {
+            Ok(binary) => {
+                let _ = tx.send(binary);
             }
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(e) => {
+                eprintln!("[frame-relay] encode error: {e}");
+            }
         }
-    }
-    // CameraGroup is dropped here → shutdown sent to all cameras
-    group.shutdown();
-    group.wait_for_shutdown();
+        true
+    });
+    let shutting = group.shutdown();
+    let _ = shutting.wait();
     eprintln!("[frame-relay] exited");
 }

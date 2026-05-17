@@ -1,0 +1,44 @@
+<h2>How should nested substates within Streaming be displayed?</h2>
+<p class="subtitle">Both machines have substates inside Streaming — the Camera has 5 frame-level states, the CameraGroup has 3 parallel regions</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Expand In-Place</h3>
+      <p>When the stepper reaches <strong>Streaming</strong>, the card expands downward to reveal the substates as a nested mini-flow. The top-level flow stays visible above. Feels like "zooming in" on the active state.</p>
+      <div style="margin-top:12px;background:#1a1a2e;border-radius:8px;padding:16px;font-family:monospace;font-size:13px;color:#a0ffa0">
+        Disconnected → Enumerated → Configured → <span style="color:#ffdd57;font-weight:bold">┌ Streaming ────────────────────────┐</span><br>
+        <span style="color:#ffdd57">│ WaitingForFrame → FrameAvailable →│</span><br>
+        <span style="color:#ffdd57">│ AtBarrier → Capturing → Sending  │</span><br>
+        <span style="color:#ffdd57">└───────────────────────────────────┘</span> → ShuttingDown
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Two-Level Stepper</h3>
+      <p>The top-level flow stays in one row. A <strong>second row below</strong> shows the substates of the currently selected top-level state. When Streaming is active, the substate row animates through the frame cycle.</p>
+      <div style="margin-top:12px;background:#1a1a2e;border-radius:8px;padding:16px;font-family:monospace;font-size:13px">
+        <div style="color:#64b5f6;margin-bottom:6px">Top-level: Disconnected → Enumerated → Configured → <span style="color:#ffdd57;font-weight:bold">Streaming</span> → ShuttingDown</div>
+        <div style="color:#ffdd57;border-top:1px solid #333;padding-top:8px">Substates: <span style="font-weight:bold">WaitingForFrame</span> → FrameAvailable → AtBarrier → Capturing → Sending</div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Tabbed Detail Panel</h3>
+      <p>Top-level states shown as a compact flow. Clicking any state shows its <strong>substates and transitions in a detail panel</strong> below. More of an explorer feel — hover to see connections, click to drill in.</p>
+      <div style="margin-top:12px;background:#1a1a2e;border-radius:8px;padding:16px;font-family:monospace;font-size:13px;color:#999">
+        Disconnected → Enumerated → Configured → <span style="color:#ffdd57;font-weight:bold">[Streaming ▼]</span> → ShuttingDown<br>
+        <div style="margin-top:8px;border:1px solid #ffdd57;border-radius:4px;padding:8px;color:#ddd">
+          <strong>Streaming</strong> substates:<br>
+          WaitingForFrame → FrameAvailable → AtBarrier → Capturing → Sending ↺<br>
+          <span style="color:#ef5350">From any: shutdown → ShuttingDown</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

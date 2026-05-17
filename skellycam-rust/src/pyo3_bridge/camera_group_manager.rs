@@ -14,13 +14,11 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
-
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
 use crate::camera::{enumerate_directshow_cameras, CameraCaptureConfig, CameraHandle};
-use crate::camera_group::{CameraGroup, CameraGroupConfig};
+use crate::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty, Streaming as GroupStreaming};
 use crate::frontend_payload::encode_multiframe;
 
 // ── Internal state per camera group ────────────────────────────────────────
@@ -132,10 +130,10 @@ impl CameraGroupManager {
         }
 
         // Create the CameraGroup
-        let group = CameraGroup::create(rust_configs)
+        let group = CameraGroup::<Empty>::new().configure(rust_configs).start()
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create camera group: {e}")))?;
 
-        let camera_handles: Vec<CameraHandle> = group.camera_handles.clone();
+        let camera_handles: Vec<CameraHandle> = group.state.camera_handles.clone();
 
         let latest_payload = Arc::new(Mutex::new(None::<(i64, f64, Vec<u8>)>));
         let running = Arc::new(AtomicBool::new(true));
@@ -286,50 +284,41 @@ impl Drop for CameraGroupManager {
 // ── Pipeline thread ────────────────────────────────────────────────────────
 
 fn pipeline_loop(
-    group: CameraGroup,
+    group: CameraGroup<GroupStreaming>,
     latest_payload: Arc<Mutex<Option<(i64, f64, Vec<u8>)>>>,
     running: Arc<AtomicBool>,
 ) {
-    while running.load(Ordering::SeqCst) {
-        match group
-            .multi_frame_receiver
-            .recv_timeout(Duration::from_millis(100))
-        {
-            Ok(payload) => {
-                match encode_multiframe(&payload) {
-                    Ok(binary) => {
-                        let timestamp_ns = if payload.frames.is_empty() {
-                            0.0
-                        } else {
-                            let sum: i64 = payload
-                                .frames
-                                .iter()
-                                .map(|f| f.timestamps.frame_available_ns)
-                                .sum();
-                            (sum as f64) / (payload.frames.len() as f64)
-                        };
-                        let frame_number = payload
-                            .frames
-                            .first()
-                            .map(|f| f.frame_number)
-                            .unwrap_or(0);
+    consume_multiframe_loop(&group.state.multi_frame_receiver, &running, 100, |payload| {
+        match encode_multiframe(&payload) {
+            Ok(binary) => {
+                let timestamp_ns = if payload.frames.is_empty() {
+                    0.0
+                } else {
+                    let sum: i64 = payload
+                        .frames
+                        .iter()
+                        .map(|f| f.timestamps.frame_available_ns)
+                        .sum();
+                    (sum as f64) / (payload.frames.len() as f64)
+                };
+                let frame_number = payload
+                    .frames
+                    .first()
+                    .map(|f| f.frame_number)
+                    .unwrap_or(0);
 
-                        if let Ok(mut guard) = latest_payload.lock() {
-                            *guard = Some((frame_number, timestamp_ns, binary));
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!("Pipeline encode error: {e}");
-                    }
+                if let Ok(mut guard) = latest_payload.lock() {
+                    *guard = Some((frame_number, timestamp_ns, binary));
                 }
             }
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(e) => {
+                tracing::error!("Pipeline encode error: {e}");
+            }
         }
-    }
-    // CameraGroup is dropped here → shutdown sent to all cameras
-    group.shutdown();
-    group.wait_for_shutdown();
+        true
+    });
+    let shutting = group.shutdown();
+    let _ = shutting.wait();
     tracing::info!("Pipeline thread exited");
 }
 

@@ -17,6 +17,12 @@ pub struct BreakableBarrier {
     inner: Arc<(Mutex<Inner>, Condvar)>,
 }
 
+impl std::fmt::Debug for BreakableBarrier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BreakableBarrier").finish_non_exhaustive()
+    }
+}
+
 impl BreakableBarrier {
     pub fn new(total: usize) -> Self {
         assert!(total > 0, "BreakableBarrier requires at least 1 participant");
@@ -72,6 +78,29 @@ impl BreakableBarrier {
         let (lock, cvar) = &*self.inner;
         let mut state = lock.lock().unwrap();
         state.broken = true;
+        cvar.notify_all();
+    }
+
+    /// Change the expected participant count. Intended to be called when
+    /// the camera group's camera set changes (add or remove cameras).
+    ///
+    /// SAFETY: Only call this when no participants are blocked at `wait()` —
+    /// otherwise the new total may not match the partial count and the
+    /// barrier may release at the wrong moment. The intended call site is
+    /// inside `CameraGroup::apply()` while the group is paused (cameras
+    /// are in their responsive polling loops, not at the barrier).
+    ///
+    /// If `count` is non-zero (some participants have already called
+    /// `wait()`), this resets `count` to zero to avoid the new total
+    /// being satisfied prematurely. Bumps `generation` so any thread
+    /// that does happen to be waiting wakes up and re-checks.
+    pub fn set_total(&self, new_total: usize) {
+        assert!(new_total > 0, "BreakableBarrier requires at least 1 participant");
+        let (lock, cvar) = &*self.inner;
+        let mut state = lock.lock().unwrap();
+        state.total = new_total;
+        state.count = 0;
+        state.generation += 1;
         cvar.notify_all();
     }
 }

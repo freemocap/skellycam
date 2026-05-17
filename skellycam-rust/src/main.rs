@@ -17,11 +17,10 @@ use std::time::{Duration, Instant};
 
 use skellycam::api::AppState;
 use skellycam::api::build_router;
-use skellycam::camera::{self, enumerate_directshow_cameras, CameraCaptureConfig, CameraEvent, CameraIdentity};
-use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
+use skellycam::camera::{enumerate_directshow_cameras, CameraCaptureConfig, CameraIdentity};
+use skellycam::camera_group::{consume_multiframe_loop, CameraGroup, CameraGroupConfig, Empty};
 use skellycam::camera_group_manager::CameraGroupManager;
 use skellycam::recording::{finalize_recording, VideoRecorder};
-use skellycam::sync_utils::BreakableBarrier;
 use skellycam::timestamps::CsvWriter;
 
 fn main() -> anyhow::Result<()> {
@@ -158,20 +157,15 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
         let mut count: u64 = 0;
         let mut first_frame_time: Option<Instant> = None;
         let mut last_frame_time: Option<Instant> = None;
-        while running_consumer.load(Ordering::SeqCst) {
-            match group.multi_frame_receiver.recv_timeout(Duration::from_millis(100)) {
-                Ok(_) => {
-                    let now = Instant::now();
-                    if first_frame_time.is_none() {
-                        first_frame_time = Some(now);
-                    }
-                    last_frame_time = Some(now);
-                    count += 1;
-                }
-                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+        consume_multiframe_loop(&group.state.multi_frame_receiver, &running_consumer, 100, |_| {
+            let now = Instant::now();
+            if first_frame_time.is_none() {
+                first_frame_time = Some(now);
             }
-        }
+            last_frame_time = Some(now);
+            count += 1;
+            true
+        });
         (group, count, first_frame_time, last_frame_time)
     });
 
@@ -197,8 +191,8 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     }
 
     eprintln!("\n  Shutting down...");
-    group.shutdown();
-    group.wait_for_shutdown();
+    let shutting = group.shutdown();
+    let _ = shutting.wait();
 
     eprintln!("  Shutdown complete.");
     eprintln!("══════════════════════════════════════════════════\n");
@@ -251,7 +245,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         dir
     };
 
-    let group = CameraGroup::create(configs)?;
+    let group = CameraGroup::<Empty>::new().configure(configs).start()?;
 
     // Create one VideoRecorder + CsvWriter per camera
     let mut recorders: Vec<VideoRecorder> = Vec::with_capacity(num_cameras);
@@ -259,7 +253,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
     let mut video_paths: Vec<PathBuf> = Vec::with_capacity(num_cameras);
     let mut csv_paths: Vec<PathBuf> = Vec::with_capacity(num_cameras);
 
-    for handle in &group.camera_handles {
+    for handle in &group.state.camera_handles {
         let base = format!(
             "camera_{}_{}",
             handle.identity.camera_index,
@@ -296,60 +290,64 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
     let max_duration = Duration::from_secs(5);
     let mut multiframe_count: u64 = 0;
 
-    loop {
-        if !running.load(Ordering::SeqCst) {
-            break;
+    let record_error: Arc<std::sync::Mutex<Option<anyhow::Error>>> =
+        Arc::new(std::sync::Mutex::new(None));
+    let record_error_ref = record_error.clone();
+
+    consume_multiframe_loop(&group.state.multi_frame_receiver, &running, 500, |payload| {
+        if capture_start.is_none() {
+            capture_start = Some(Instant::now());
+            eprintln!("  (first frame received, starting {}s recording timer)\n", max_duration.as_secs());
         }
+
+        let frame_ts = payload.frames.first()
+            .map(|f| f.timestamps.post_barrier_to_capture_ns)
+            .unwrap_or(0);
+
+        for (idx, frame) in payload.frames.iter().enumerate() {
+            if let (Some(recorder), Some(csv_writer)) =
+                (recorders.get_mut(idx), csv_writers.get_mut(idx))
+            {
+                let rgb_data = frame.data.as_bytes();
+                if let Err(e) = recorder.feed_frame(
+                    rgb_data,
+                    frame.frame_number,
+                    frame.timestamps.post_barrier_to_capture_ns,
+                    frame_ts,
+                ) {
+                    *record_error_ref.lock().unwrap() = Some(e.into());
+                    return false;
+                }
+                if let Err(e) = csv_writer.write_row(
+                    frame.frame_number,
+                    &frame.timestamps,
+                ) {
+                    *record_error_ref.lock().unwrap() = Some(e.into());
+                    return false;
+                }
+            }
+        }
+
+        if multiframe_count > 0 && multiframe_count % 30 == 0 {
+            let elapsed = capture_start.as_ref().unwrap().elapsed().as_secs_f64();
+            eprintln!(
+                "  frame {multiframe_count:>5} | {elapsed:.1}s capture | ~{:.0}fps",
+                multiframe_count as f64 / elapsed,
+            );
+        }
+        multiframe_count += 1;
+
+        // Check time limit
         if let Some(ref start) = capture_start {
-            if start.elapsed() >= max_duration {
-                break;
-            }
+            start.elapsed() < max_duration
+        } else {
+            true
         }
+    });
 
-        match group.multi_frame_receiver.recv_timeout(Duration::from_millis(500)) {
-            Ok(payload) => {
-                if capture_start.is_none() {
-                    capture_start = Some(Instant::now());
-                    eprintln!("  (first frame received, starting {}s recording timer)\n", max_duration.as_secs());
-                }
-
-                let frame_ts = payload.frames.first()
-                    .map(|f| f.timestamps.pre_capture_ns)
-                    .unwrap_or(0);
-
-                for (idx, frame) in payload.frames.iter().enumerate() {
-                    if let (Some(recorder), Some(csv_writer)) =
-                        (recorders.get_mut(idx), csv_writers.get_mut(idx))
-                    {
-                        let rgb_data = frame.data.as_bytes();
-                        recorder.feed_frame(
-                            rgb_data,
-                            frame.frame_number,
-                            frame.timestamps.pre_capture_ns,
-                            frame_ts,
-                        )?;
-                        csv_writer.write_row(
-                            frame.frame_number,
-                            &frame.timestamps,
-                        )?;
-                    }
-                }
-
-                if multiframe_count > 0 && multiframe_count % 30 == 0 {
-                    let elapsed = capture_start.as_ref().unwrap().elapsed().as_secs_f64();
-                    eprintln!(
-                        "  frame {multiframe_count:>5} | {elapsed:.1}s capture | ~{:.0}fps",
-                        multiframe_count as f64 / elapsed,
-                    );
-                }
-                multiframe_count += 1;
-            }
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                eprintln!("  Gatherer disconnected.");
-                break;
-            }
-        }
+    // Propagate recording error if one occurred
+    if let Some(e) = record_error.lock().unwrap().take() {
+        return Err(e);
     }
 
     let elapsed = capture_start.as_ref()
@@ -361,13 +359,13 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
     );
 
     // Collect camera metadata BEFORE wait_for_shutdown consumes group
-    let camera_infos: Vec<(CameraIdentity, u32, u32)> = group.camera_handles.iter().map(|h| {
+    let camera_infos: Vec<(CameraIdentity, u32, u32)> = group.state.camera_handles.iter().map(|h| {
         (h.identity.clone(), h.config.width, h.config.height)
     }).collect();
 
     eprintln!("  Shutting down...");
-    group.shutdown();
-    group.wait_for_shutdown();
+    let shutting = group.shutdown();
+    let _ = shutting.wait();
 
     // Finalize all recorders and CSV writers
     let mut frame_counts: Vec<u64> = Vec::new();
@@ -449,7 +447,7 @@ fn run_multi_camera(
     let num_cameras = configs.len();
     eprintln!("\n  ── {num_cameras}-camera lockstep ── 600 multiframes (~20s) ──\n");
 
-    let group = CameraGroup::create(configs)?;
+    let group = CameraGroup::<Empty>::new().configure(configs).start()?;
 
     let running = Arc::new(AtomicBool::new(true));
     let running_flag = running.clone();
@@ -463,28 +461,16 @@ fn run_multi_camera(
     let mut total_spread_ns: f64 = 0.0;
     let max_multiframes: u64 = 600;
 
-    loop {
-        if !running.load(Ordering::SeqCst) {
-            break;
-        }
+    consume_multiframe_loop(&group.state.multi_frame_receiver, &running, 500, |payload| {
+        multiframe_count += 1;
+        total_spread_ns += payload.hardware_sync_spread_ns() as f64;
 
-        match group.multi_frame_receiver.recv_timeout(Duration::from_millis(500)) {
-            Ok(payload) => {
-                multiframe_count += 1;
-                total_spread_ns += payload.hardware_sync_spread_ns() as f64;
-
-                if multiframe_count >= max_multiframes {
-                    eprintln!("\n  Reached {max_multiframes} multiframes, stopping.");
-                    break;
-                }
-            }
-            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                eprintln!("  Gatherer disconnected.");
-                break;
-            }
+        if multiframe_count >= max_multiframes {
+            eprintln!("\n  Reached {max_multiframes} multiframes, stopping.");
+            return false;
         }
-    }
+        true
+    });
 
     let elapsed = start.elapsed().as_secs_f64();
     let avg_spread_us = if multiframe_count > 0 {
@@ -508,8 +494,8 @@ fn run_multi_camera(
     eprintln!();
 
     eprintln!("Shutting down...");
-    group.shutdown();
-    group.wait_for_shutdown();
+    let shutting = group.shutdown();
+    let _ = shutting.wait();
     eprintln!("Done.");
     Ok(())
 }
