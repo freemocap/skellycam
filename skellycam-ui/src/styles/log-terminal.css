@@ -65,13 +65,22 @@
   padding-bottom: 4px;
   cursor: pointer;
   font-family: monospace;
-  font-size: 0.85em;
-  line-height: 20px;
+
   overflow: hidden;
   position: relative;
   background-color: var(--log-row-bg);
 }
-
+.log-level-filter {
+  filter:grayscale(1);
+  color: var(--text-white);
+}
+.log-level-filter.active {
+  filter:grayscale(0);
+}
+.button.sm.br-1:not(.active,.button-sm-group) {
+  color: var(--text-white);
+  
+}
 /* Level border colours */
 .log-entry.trace    { border-left-color: var(--log-trace); }
 .log-entry.debug    { border-left-color: var(--log-debug); }
@@ -98,6 +107,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: monospace;
 }
 
 /* ---- Timestamp ---- */
@@ -202,7 +212,7 @@
 
 /* ---- Level filter buttons ---- */
 
-.log-level-filter          { opacity: 0.5; transition: opacity var(--speed-1); }
+.log-level-filter          { transition: opacity var(--speed-1); }
 .log-level-filter.active   { opacity: 1; }
 
 .log-level-filter.trace    { color: var(--log-trace); }
