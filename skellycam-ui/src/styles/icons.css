@@ -290,7 +290,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 
   transition: filter var(--speed-1) ease-in-out;
 }
-.icon-button:hover {
+.icon-button:hover:not(.secondary)  {
  
   background-color: var(--gray-600);
   /* filter animation out */

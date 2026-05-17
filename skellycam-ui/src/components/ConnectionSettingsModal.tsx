@@ -104,8 +104,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                     <IconButton
                         icon="close-icon"
                         onClick={onClose}
-                     
-/>
+                     />
                 </div>
 
                 {/* ── Server Process Section (Electron only) ── */}
