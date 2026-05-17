@@ -4,10 +4,17 @@
 //! stream with the requested MJPG format, configures manual exposure, then runs
 //! a capture loop synchronized by a BreakableBarrier shared with the gatherer.
 //!
-//! The capture loop uses a `FrameStateMachine` to track frame-level substates
-//! (WaitingForFrame → Capturing → Sending → AtBarrier).
-//! Every substate transition automatically records a nanosecond-precision
-//! monotonic timestamp — the state machine IS the timestamp system.
+//! The thread IS the camera. It owns the COM context and persists for the
+//! device's entire lifetime. The `Camera` handle communicates with it via
+//! channels. Config changes are applied on the existing thread and COM context.
+//!
+//! Internal state machine:
+//!   Configuring → Streaming → ShuttingDown
+//!        ↓            ↓           ↓
+//!     Faulted ←────────┴───────────┘
+//!
+//! The capture loop uses a `FrameStateMachine` from `frame_loop.rs` for
+//! frame-level substate tracking and automatic timestamp recording.
 
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -17,13 +24,28 @@ use std::thread::JoinHandle;
 use crate::camera_group::sync_utils::BreakableBarrier;
 
 use super::ffi::*;
-use super::state_machine::{FrameState, FrameStateMachine};
+use super::frame_loop::{FrameState, FrameStateMachine};
 use super::types::{
-    CameraConfig, CameraCommand, CameraEvent, CameraHandle, CameraIdentity, FrameData,
-    FramePacket,
+    CameraConfig, CameraCommand, CameraEvent, CameraIdentity, FrameData, FramePacket,
 };
 
 const STABILIZATION_FRAMES: u32 = 30;
+
+/// Internal lifecycle state of the camera thread.
+///
+/// This is a plain runtime enum — not a type-state — because the thread
+/// persists and state transitions happen inside it, not by consuming `self`.
+#[derive(Debug, Clone, PartialEq)]
+enum CameraState {
+    /// Applying hardware settings, running stabilization.
+    Configuring,
+    /// Capture loop active, frames flowing.
+    Streaming,
+    /// Shutdown signal received, releasing resources.
+    ShuttingDown,
+    /// An error occurred. The thread will send an event and exit.
+    Faulted(String),
+}
 
 /// Spawn a camera capture thread and return the communication channels plus
 /// the join handle.
@@ -34,12 +56,12 @@ const STABILIZATION_FRAMES: u32 = 30;
 /// On failure, the error is returned before any thread is spawned (all
 /// failures happen during setup: create context, find format, open stream,
 /// configure, stabilize).
-pub fn spawn_camera_thread(
+pub fn spawn(
     identity: &CameraIdentity,
     config: &CameraConfig,
     barrier: Arc<BreakableBarrier>,
 ) -> anyhow::Result<(
-    CameraHandle,
+    mpsc::Sender<CameraCommand>,
     mpsc::Receiver<CameraEvent>,
     mpsc::Receiver<FramePacket>,
     JoinHandle<()>,
@@ -47,12 +69,6 @@ pub fn spawn_camera_thread(
     let (command_sender, command_receiver) = mpsc::channel::<CameraCommand>();
     let (event_sender, event_receiver) = mpsc::channel::<CameraEvent>();
     let (frame_sender, frame_receiver) = mpsc::sync_channel::<FramePacket>(1);
-
-    let handle = CameraHandle {
-        command_sender: command_sender.clone(),
-        identity: identity.clone(),
-        config: config.clone(),
-    };
 
     let label = identity.label();
     let config = config.clone();
@@ -75,20 +91,20 @@ pub fn spawn_camera_thread(
         }
     });
 
-    Ok((handle, event_receiver, frame_receiver, thread_handle))
+    Ok((command_sender, event_receiver, frame_receiver, thread_handle))
 }
 
 enum CommandResult {
     None,
     Shutdown,
-    Reconfigure(CameraConfig),
+    Configure(CameraConfig),
 }
 
 /// Check the command channel. Returns the first pending command, or None if empty.
 fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandResult {
     match command_receiver.try_recv() {
         Ok(CameraCommand::Shutdown) => CommandResult::Shutdown,
-        Ok(CameraCommand::Reconfigure { config }) => CommandResult::Reconfigure(config),
+        Ok(CameraCommand::Configure { config }) => CommandResult::Configure(config),
         Err(mpsc::TryRecvError::Empty) => CommandResult::None,
         Err(mpsc::TryRecvError::Disconnected) => CommandResult::Shutdown,
     }
@@ -130,21 +146,39 @@ fn run_camera_thread(
             "Camera {label}: capture loop raw-MJPEG ({actual_width}x{actual_height})",
         );
 
-        // ── FrameStateMachine drives the capture loop and records all timestamps ──
+        let mut state = CameraState::Streaming;
         let mut frame_sm = FrameStateMachine::new(0);
         let mut raw_buffer: Vec<u8> = Vec::new();
+        let mut active_config = config;
 
         loop {
-            // ── WaitingForFrame → check for shutdown, spin on hasNewFrame ──
+            // ── Process pending commands ──
             match check_commands(command_receiver) {
                 CommandResult::Shutdown => {
                     tracing::info!("Camera {label}: shutdown");
+                    state = CameraState::ShuttingDown;
                     break;
                 }
+                CommandResult::Configure(new_config) => {
+                    tracing::info!("Camera {label}: applying new config");
+                    state = CameraState::Configuring;
+                    // Apply exposure on the existing stream (does not require restart)
+                    configure_exposure(
+                        ctx, stream, label,
+                        &new_config.exposure_mode, new_config.exposure,
+                    );
+                    active_config = new_config;
+                    state = CameraState::Streaming;
+                }
                 CommandResult::None => {}
-                CommandResult::Reconfigure(_) => {}
             }
 
+            // ── Only capture when streaming ──
+            if state != CameraState::Streaming {
+                continue;
+            }
+
+            // ── Spin on hasNewFrame ──
             let wait_start = std::time::Instant::now();
             loop {
                 match check_commands(command_receiver) {
@@ -154,35 +188,48 @@ fn run_camera_thread(
                         Cap_releaseContext(ctx);
                         return Ok(());
                     }
+                    CommandResult::Configure(new_config) => {
+                        state = CameraState::Configuring;
+                        configure_exposure(
+                            ctx, stream, label,
+                            &new_config.exposure_mode, new_config.exposure,
+                        );
+                        active_config = new_config;
+                        state = CameraState::Streaming;
+                    }
                     CommandResult::None => {}
-                    CommandResult::Reconfigure(_) => {}
                 }
                 if Cap_hasNewFrame(ctx, stream) != 0 {
                     break;
                 }
                 std::thread::yield_now();
                 if wait_start.elapsed().as_secs() > 5 {
-                    let _ = event_sender.send(CameraEvent::Error(format!(
+                    let msg = format!(
                         "Camera {label}: timeout waiting for frame {}",
                         frame_sm.frame_number()
-                    )));
+                    );
+                    let _ = event_sender.send(CameraEvent::Error(msg.clone()));
+                    state = CameraState::Faulted(msg);
                     Cap_closeStream(ctx, stream);
                     Cap_releaseContext(ctx);
                     return Ok(());
                 }
             }
-            // ── Hardware frame is ready. Stamp NOW — before any capture work.
-            //    This is the "hardware available" timestamp used by both
-            //    frame_available_ns and post_barrier_to_capture_ns.
-            let frame_available_ns = crate::timestamps::performance::performance_counter_nanoseconds();
 
-            // ── Capture the frame immediately (before barrier) ──
+            let frame_available_ns =
+                crate::timestamps::performance::performance_counter_nanoseconds();
+
+            // ── Capture the frame ──
             let mut frame_size: u32 = 0;
-            if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK || frame_size == 0 {
-                let _ = event_sender.send(CameraEvent::Error(format!(
+            if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK
+                || frame_size == 0
+            {
+                let msg = format!(
                     "Camera {label}: getFrameSize failed or returned 0 at frame {}",
                     frame_sm.frame_number()
-                )));
+                );
+                let _ = event_sender.send(CameraEvent::Error(msg.clone()));
+                state = CameraState::Faulted(msg);
                 break;
             }
             if raw_buffer.len() < frame_size as usize {
@@ -195,23 +242,21 @@ fn run_camera_thread(
                 &mut out_bytes,
             );
             if result != CAPRESULT_OK {
-                let _ = event_sender.send(CameraEvent::Error(format!(
+                let msg = format!(
                     "Camera {label}: captureFrameRaw failed at frame {} ({})",
                     frame_sm.frame_number(),
                     result_name(result)
-                )));
+                );
+                let _ = event_sender.send(CameraEvent::Error(msg.clone()));
+                state = CameraState::Faulted(msg);
                 break;
             }
             let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());
 
-            // ── WaitingForFrame → Capturing: use the pre-recorded hardware-ready timestamp ──
-            // begin_capture() writes frame_available_ns and post_barrier_to_capture_ns
-            // both to the moment hasNewFrame() returned true — before Cap_captureFrameRaw.
             if let Err(e) = frame_sm.begin_capture(frame_available_ns) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
 
-            // ── Capturing → Sending (stamps post_capture_ns, pre_send_ns) ──
             if let Err(e) = frame_sm.transition_to(FrameState::Sending) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
@@ -220,20 +265,16 @@ fn run_camera_thread(
                 data: frame_data,
                 width: actual_width,
                 height: actual_height,
-                rotation: config.rotation,
+                rotation: active_config.rotation,
                 timestamps: frame_sm.timestamps.clone(),
                 identity: identity.clone(),
                 frame_number: frame_sm.frame_number(),
             };
 
-            // ── Send the packet; if the channel is disconnected, exit. ──
             if frame_sender.send(packet).is_err() {
                 break;
             }
 
-            // ── Sending → AtBarrier (stamps post_send_ns, pre_barrier_ns) ──
-            // C7a FIX: no command check here. The send→barrier path is uninterruptible.
-            // Any pending command will be drained in the next iteration's spin-wait loop.
             if let Err(e) = frame_sm.transition_to(FrameState::AtBarrier) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
@@ -245,8 +286,6 @@ fn run_camera_thread(
                 return Ok(());
             }
 
-            // ── Sending → WaitingForFrame (stamps post_send_ns after send completes,
-            //     and loop_start_ns for the next iteration) ──
             if let Err(e) = frame_sm.transition_to(FrameState::WaitingForFrame) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
@@ -261,7 +300,6 @@ fn run_camera_thread(
 }
 
 /// Find the best MJPG format matching the requested dimensions and framerate.
-/// Returns format info; does NOT open the stream.
 unsafe fn find_best_mjpg(
     ctx: CapContext,
     index: u32,
@@ -282,7 +320,7 @@ unsafe fn find_best_mjpg(
 
     let want_fps = requested_framerate > 0.0;
 
-    // Pass 1: exact resolution + framerate match (if framerate requested)
+    // Pass 1: exact resolution + framerate match
     for f in 0..num_formats {
         let mut info = CapFormatInfo::default();
         if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK {
@@ -368,12 +406,15 @@ unsafe fn open_stream_raw(
             break;
         }
     }
-    let format_id = format_id
-        .ok_or_else(|| anyhow::anyhow!("Camera {label}: could not re-find matching format_id for raw stream"))?;
+    let format_id = format_id.ok_or_else(|| {
+        anyhow::anyhow!("Camera {label}: could not re-find matching format_id for raw stream")
+    })?;
 
     let stream = unsafe { Cap_openStreamRaw(ctx, index, format_id) };
     if stream < 0 {
-        anyhow::bail!("Camera {label}: Cap_openStreamRaw returned {stream} (camera may not support raw MJPEG)");
+        anyhow::bail!(
+            "Camera {label}: Cap_openStreamRaw returned {stream} (camera may not support raw MJPEG)"
+        );
     }
     tracing::info!(
         "Camera {label}: raw MJPEG stream opened (format={format_id} stream={stream} {}x{})",
@@ -382,7 +423,13 @@ unsafe fn open_stream_raw(
     Ok(stream)
 }
 
-unsafe fn configure_exposure(ctx: CapContext, stream: CapStream, label: &str, exposure_mode: &str, target_exposure: i32) {
+unsafe fn configure_exposure(
+    ctx: CapContext,
+    stream: CapStream,
+    label: &str,
+    exposure_mode: &str,
+    target_exposure: i32,
+) {
     let mut min: i32 = 0;
     let mut max: i32 = 0;
     let mut default: i32 = 0;
@@ -414,8 +461,12 @@ fn stabilize_raw(ctx: CapContext, stream: CapStream, label: &str) {
             std::thread::yield_now();
         }
         let mut frame_size: u32 = 0;
-        if unsafe { Cap_getFrameSize(ctx, stream, &mut frame_size) } != CAPRESULT_OK || frame_size == 0 {
-            tracing::warn!("Camera {label}: raw stabilize frame {i} getFrameSize failed or size=0, skipping");
+        if unsafe { Cap_getFrameSize(ctx, stream, &mut frame_size) } != CAPRESULT_OK
+            || frame_size == 0
+        {
+            tracing::warn!(
+                "Camera {label}: raw stabilize frame {i} getFrameSize failed or size=0, skipping"
+            );
             continue;
         }
         if buffer.len() < frame_size as usize {

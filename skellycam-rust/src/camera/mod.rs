@@ -1,16 +1,15 @@
 pub mod ffi;
 pub mod types;
-pub mod thread;
-pub mod enumerate;
-pub mod state_machine;
+pub mod camera;
+pub mod camera_thread;
+pub mod frame_loop;
+pub mod detect;
 
 pub use types::{
     CameraConfig, CameraCommand, CameraEvent, CameraFormatInfo, CameraHandle,
     CameraIdentity, FrameData, FrameLifecycleTimestamps, FramePacket, MultiFramePayload,
 };
-pub use thread::spawn_camera_thread;
-pub use enumerate::enumerate_directshow_cameras;
-pub use state_machine::{
-    Camera, Configuring, Disconnected, Enumerated, Faulted, FrameState, FrameStateMachine,
-    LifecycleTransition, ShuttingDown, StateDiagram, Streaming,
-};
+pub use camera::Camera;
+pub use camera_thread::spawn;
+pub use detect::detect_cameras;
+pub use frame_loop::{FrameState, FrameStateMachine};

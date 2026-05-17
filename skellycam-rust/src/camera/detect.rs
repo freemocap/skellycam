@@ -1,8 +1,9 @@
-//! Camera enumeration via openpnp-capture.
+//! Camera detection via openpnp-capture.
 //!
 //! Each camera gets a unique 4-character hex identifier by SHA-256 hashing all
 //! available identity fields (index, camera name, device path, VID/PID) and
 //! taking the last 4 hex characters of the digest.
+
 use sha2::{Digest, Sha256};
 
 use super::ffi::*;
@@ -12,8 +13,16 @@ use super::types::{CameraFormatInfo, CameraIdentity};
 /// FOURCC codes are stored little-endian in the u32: byte 0 = char 0, etc.
 fn fourcc_to_str(fourcc: u32) -> String {
     let bytes = fourcc.to_le_bytes();
-    // Filter non-ASCII bytes, replace with '?'
-    bytes.iter().map(|&b| if b.is_ascii_graphic() || b == b' ' { b as char } else { '?' }).collect()
+    bytes
+        .iter()
+        .map(|&b| {
+            if b.is_ascii_graphic() || b == b' ' {
+                b as char
+            } else {
+                '?'
+            }
+        })
+        .collect()
 }
 
 /// Extract VID and PID as numeric values from the USB device path.
@@ -54,15 +63,19 @@ fn make_unique_id(
     hex[hex.len() - 4..].to_string()
 }
 
-pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
+/// Detect all DirectShow cameras attached to the system.
+///
+/// Returns a list of `CameraIdentity` values, each representing a physical
+/// camera with its available formats and a unique 4-char hex ID.
+pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
     unsafe {
         let ctx = Cap_createContext();
         if ctx.is_null() {
-            anyhow::bail!("Cap_createContext returned null during enumeration");
+            anyhow::bail!("Cap_createContext returned null during detection");
         }
 
         let device_count = Cap_getDeviceCount(ctx);
-        eprintln!("  ── Camera Detection ──");
+        eprintln!("  -- Camera Detection --");
         eprintln!("  openpnp-capture reports {device_count} device(s)\n");
 
         let mut cameras: Vec<CameraIdentity> = Vec::new();
@@ -84,8 +97,8 @@ pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
             let (vid, pid) = parse_vid_pid(&device_path);
             let short_id = make_unique_id(index, &display_name, &device_path, vid, pid);
 
-            // Collect all format info for this camera
-            let mut formats: Vec<CameraFormatInfo> = Vec::with_capacity(num_formats as usize);
+            let mut formats: Vec<CameraFormatInfo> =
+                Vec::with_capacity(num_formats as usize);
             let mut has_mjpg = false;
             for f in 0..num_formats {
                 let mut info = CapFormatInfo::default();
@@ -109,7 +122,9 @@ pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
             let pid_str = pid.map_or("????".to_string(), |p| format!("{p:04x}"));
 
             eprintln!("    [{index}] \"{display_name}\"");
-            eprintln!("           → id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats}{mjpg_flag}");
+            eprintln!(
+                "           -> id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats}{mjpg_flag}"
+            );
 
             cameras.push(CameraIdentity {
                 camera_name: display_name,
@@ -123,11 +138,11 @@ pub fn enumerate_directshow_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
         Cap_releaseContext(ctx);
 
         if filtered_count > 0 {
-            eprintln!("\n  ── {filtered_count} virtual camera(s) filtered ──");
+            eprintln!("\n  -- {filtered_count} virtual camera(s) filtered --");
         }
         eprintln!(
-            "\n  = {cameras_len} physical camera(s) ready =\n",
-            cameras_len = cameras.len()
+            "\n  = {} physical camera(s) ready =\n",
+            cameras.len()
         );
 
         Ok(cameras)

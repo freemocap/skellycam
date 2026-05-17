@@ -211,7 +211,7 @@ pub struct CameraConfig {
 #[derive(Debug)]
 pub enum CameraCommand {
     Shutdown,
-    Reconfigure { config: CameraConfig },
+    Configure { config: CameraConfig },
 }
 
 #[derive(Debug)]
