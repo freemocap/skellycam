@@ -259,6 +259,10 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
    icons buttons
    ========================= */
 
+.icon-size-12 {
+  min-width: 12px;
+  min-height: 12px;
+}
 .icon-size-20 {
   min-width: 20px;
   min-height: 20px;

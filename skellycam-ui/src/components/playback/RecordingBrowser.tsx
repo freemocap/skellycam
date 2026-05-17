@@ -411,7 +411,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     </p>
                 </div>
             ) : (
-                <div className="recording-list flex-1 overflow-y border-1 border-black br-1">
+                <div className="recording-list flex-1 overflow-y border-1 border-black br-2 p-2">
                     {filteredSorted.map((rec) => (
                         <RecordingRow
                             key={rec.path}
@@ -445,42 +445,42 @@ const RecordingRow: React.FC<RecordingRowProps> = React.memo(
 
         return (
             <div
-                className={clsx("recording-row toggle-button flex flex-col gap-1 p-2", isAnyLoading && !isLoading && "recording-row-disabled")}
+                className={clsx("br-1 recording-row text-left toggle-button flex text-white flex-col flex-start gap-1 p-2", isAnyLoading && !isLoading && "recording-row-disabled")}
                 onClick={!isAnyLoading ? onClick : undefined}
             >
                 <div className="flex items-center gap-1">
                     {isLoading
-                        ? <span className="icon loader-icon icon-size-20" />
-                        : <span className="icon import-icon icon-size-20" />}
-                    <p className="text sm recording-name">{rec.name}</p>
+                        ? <span className="icon loader-icon icon-size-12" />
+                        : <span className="icon load-icon icon-size-12" />}
+                    <p className="text md recording-name">{rec.name}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text sm text-gray" title="Camera streams">
+                <div className="flex flex-wrap flex-row justify-content-space-between gap-2 items-center">
+                    <span className="text md text-gray" title="Camera streams">
                         {rec.video_count} cam{rec.video_count !== 1 ? 's' : ''}
                     </span>
                     {rec.total_size_bytes != null && rec.total_size_bytes > 0 && (
-                        <span className="text sm text-gray" title="Total size">
+                        <span className="text md text-gray" title="Total size">
                             {formatBytes(rec.total_size_bytes)}
                         </span>
                     )}
                     {rec.duration_seconds != null && rec.duration_seconds > 0 && (
-                        <span className="text sm text-gray" title="Duration">
+                        <span className="text md text-gray" title="Duration">
                             {formatDuration(rec.duration_seconds)}
                         </span>
                     )}
                     {rec.total_frames != null && rec.total_frames > 0 && (
-                        <span className="camera-config-chip" title={t('frameCountPerCamera')}>
+                        <span className="camera-config-chip text-gray" title={t('frameCountPerCamera')}>
                             {rec.total_frames.toLocaleString()} frames
                         </span>
                     )}
                     {rec.fps != null && rec.fps > 0 && (
-                        <span className="camera-config-chip" title={t('recordingCaptureFps')}>
+                        <span className="camera-config-chip text-gray" title={t('recordingCaptureFps')}>
                             {rec.fps} fps
                         </span>
                     )}
                     {parsedDate && (
                         <span
-                            className="text sm text-gray"
+                            className="text md text-gray"
                             style={{ fontStyle: 'italic' }}
                             title={parsedDate.toLocaleString()}
                         >

@@ -267,7 +267,7 @@
   padding: 0 4px;
   border: 1px solid var(--gray-600);
   border-radius: 2px;
-  font-size: 0.6rem;
+ 
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -411,11 +411,6 @@
 .recording-row-disabled {
   opacity: 0.4;
   pointer-events: none;
-}
-
-.recording-name {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-weight: 600;
 }
 
 .sort-select {
