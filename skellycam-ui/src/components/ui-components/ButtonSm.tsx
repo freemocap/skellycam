@@ -162,7 +162,10 @@ interface ButtonSmProps {
   title?: string;
   disabled?: boolean;
   className?: string;
-
+  
+   // // add extra text className prop for more customization
+  textClass?: string;
+  
   // TOOLTIP
   tooltip?: boolean;
   tooltipText?: string;
@@ -179,7 +182,8 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
   title,
   disabled = false,
   className = "",
-
+    // add extra text className prop for more customization
+  textClass = "",
   // TOOLTIP
   tooltip = false,
   tooltipText = "",
@@ -192,7 +196,7 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
       disabled={disabled}
       className={clsx(
         "button-sm-group",
-        "gap-1 br-1 button sm fit-content flex-inline text-left items-center text-black",
+        "gap-1 br-1 button items-center sm fit-content flex-inline text-left items-center text-black",
         buttonType,
         rightSideIcon,
         className
@@ -204,7 +208,11 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
       )}
 
       {/* TEXT */}
-      <p className={clsx(textColor, "text-nowrap text md text-align-left")}>
+      <p   className={clsx(
+    textColor,
+    "text-nowrap text md text-align-left",
+    textClass
+  )}>
         {text}
       </p>
 

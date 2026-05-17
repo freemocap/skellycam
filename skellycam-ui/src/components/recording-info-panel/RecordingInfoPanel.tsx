@@ -143,9 +143,11 @@ export const RecordingInfoPanel: React.FC = () => {
                     text={displayPath ? displayPath : "Set recording path"}
                     // rightSideIcon="externallink"
                     textColor="text-gray"
+                    textClass="flex flex-end"
                     // className="text-nowrap"
                     buttonType="full-width"
                     onClick={() => setPathModalOpen(true)}
+                    
                 />
                 {/* <p className="recording-path-preview text-wrap p-1">
                     {displayPath}
