@@ -250,17 +250,10 @@
 .camera-status-available  { color: var(--blue-800); }
 .camera-status-error      { color: var(--red-500); }
 
-.camera-status-badge {
-  padding: 1px 5px;
-  border-radius: 2px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
 
-.camera-status-badge.camera-status-connected  { background-color: var(--green-100); color: #000; }
-.camera-status-badge.camera-status-available  { background-color: var(--blue-800);  color: #fff; }
-.camera-status-badge.camera-status-error      { background-color: var(--red-500);   color: #fff; }
+.camera-status-connected  { background-color: var(--green-100); color: #000; }
+.camera-status-available  { background-color: var(--blue-800);  color: #fff; }
+.camera-status-error      { background-color: var(--red-500);   color: #fff; }
 
 /* Config summary chips */
 .camera-config-chip {

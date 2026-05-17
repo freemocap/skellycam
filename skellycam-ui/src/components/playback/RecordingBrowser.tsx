@@ -351,15 +351,16 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
             {error && <p className="flex flex-row text sm text-error">{error}</p>}
 
             {/* Header bar */}
-            <div className="recording-group flex flex-col mt-3 flex-wrap flex-start items-center justify-content-space-between gap-1 ">
+            <div className="recording-group flex flex-row mt-3 flex-wrap flex-start items-center gap-1 justify-content-space-between">
                 
-                    <SubactionHeader text={t('recordings')} />
-                   
-                    {recordings.length > 0 && (
-                        <span className="camera-status-badge">
-                            {filterText ? `${filteredSorted.length} / ${recordings.length}` : recordings.length}
-                        </span>
-                    )}
+                    <div className="flex header-holder-for-recording items-center gap-1">
+                        {recordings.length > 0 && (
+                            <p className="tag camera-status-badge">
+                                {filterText ? `${filteredSorted.length} / ${recordings.length}` : recordings.length}
+                            </p>
+                        )}
+                        <SubactionHeader text={t('recordings')} />
+                    </div>
                 
                 <div className="flex flex-wrap flex-row items-center gap-1 justify-content-space-between min-w-full">
                     <div className="input-with-string">
