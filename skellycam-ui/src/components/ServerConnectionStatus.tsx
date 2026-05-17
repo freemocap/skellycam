@@ -290,7 +290,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
         const states = isElectron ? [serverState, wsState] : [wsState];
         if (states.every((s) => s === STATES.CONNECTED)) return { text: t('connected'), iconClass: 'connected-icon' };
         if (states.some((s) => s === STATES.CONNECTING)) return { text: t('connecting'), iconClass: 'loader-icon' };
-        if (states.some((s) => s === STATES.CONNECTED)) return { text: 'Partially Connected', iconClass: 'connected-icon' };
+        if (states.some((s) => s === STATES.CONNECTED)) return { text: 'Connected', iconClass: 'connected-icon' };
         return { text: 'Not Connected', iconClass: 'warning-icon' };
     };
 
