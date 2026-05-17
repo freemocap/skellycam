@@ -6,6 +6,8 @@ import React, {
   useLayoutEffect,
   useRef,
   useState,
+  isValidElement,
+  cloneElement,
 } from "react";
 
 import { createPortal } from "react-dom";
@@ -54,32 +56,23 @@ export function FloatingOnboarding({
       left: 0,
     });
 
+  // NEW:
+  // Internal auto-unmount state
+  const [isActive, setIsActive] =
+    useState(true);
+
   // =========================================================
   // CONFIG AREA
   // =========================================================
 
-  // CHANGE THIS:
-  // Prevents tooltip touching viewport edges
   const VIEWPORT_PADDING = 12;
 
-  // CHANGE THIS:
-  // Move tooltip horizontally
-  // positive = right
-  // negative = left
   const OFFSET_X = 0;
 
-  // CHANGE THIS:
-  // Move tooltip vertically
-  // positive = down
-  // negative = up
   const OFFSET_Y = 0;
 
-  // CHANGE THIS:
-  // Layer priority
   const Z_INDEX = 999999;
 
-  // CHANGE THIS:
-  // Smooth movement transition
   const POSITION_TRANSITION =
     "top 0.01s linear, left 0.01s linear";
 
@@ -101,10 +94,8 @@ export function FloatingOnboarding({
       return false;
     };
 
-    // Immediate lookup
     if (findTarget()) return;
 
-    // Watch DOM if target renders later
     const observer = new MutationObserver(
       () => {
         if (findTarget()) {
@@ -149,26 +140,20 @@ export function FloatingOnboarding({
     // MATCH TARGET SIZE
     // =====================================================
 
-    // IMPORTANT:
-    // Floating container always matches
-    // target element dimensions
+    const targetWidth = targetRect.width;
+    const targetHeight = targetRect.height;
 
-const targetWidth = targetRect.width;
-const targetHeight = targetRect.height;
+    tooltipRef.current.style.width =
+      `${targetWidth}px`;
 
-// Exact size
-tooltipRef.current.style.width =
-  `${targetWidth}px`;
+    tooltipRef.current.style.height =
+      `${targetHeight}px`;
 
-tooltipRef.current.style.height =
-  `${targetHeight}px`;
+    tooltipRef.current.style.minWidth =
+      `${targetWidth}px`;
 
-// Minimum size protection
-tooltipRef.current.style.minWidth =
-  `${targetWidth}px`;
-
-tooltipRef.current.style.minHeight =
-  `${targetHeight}px`;
+    tooltipRef.current.style.minHeight =
+      `${targetHeight}px`;
 
     // =====================================================
     // GET TOOLTIP SIZE
@@ -180,10 +165,6 @@ tooltipRef.current.style.minHeight =
     // =====================================================
     // CENTER ALIGNMENT
     // =====================================================
-
-    // Tooltip always centered
-    // horizontally + vertically
-    // relative to target element
 
     let left =
       targetRect.left +
@@ -206,12 +187,10 @@ tooltipRef.current.style.minHeight =
     // EDGE DETECTION
     // =====================================================
 
-    // Prevent overflow left
     if (left < VIEWPORT_PADDING) {
       left = VIEWPORT_PADDING;
     }
 
-    // Prevent overflow right
     if (
       left + tooltipRect.width >
       window.innerWidth - VIEWPORT_PADDING
@@ -222,12 +201,10 @@ tooltipRef.current.style.minHeight =
         VIEWPORT_PADDING;
     }
 
-    // Prevent overflow top
     if (top < VIEWPORT_PADDING) {
       top = VIEWPORT_PADDING;
     }
 
-    // Prevent overflow bottom
     if (
       top + tooltipRect.height >
       window.innerHeight -
@@ -274,7 +251,6 @@ tooltipRef.current.style.minHeight =
     // SCROLL LISTENER
     // =====================================================
 
-    // true = captures nested scrolling containers
     window.addEventListener(
       "scroll",
       handleUpdate,
@@ -294,11 +270,6 @@ tooltipRef.current.style.minHeight =
     // RESIZE OBSERVER
     // =====================================================
 
-    // Watches:
-    // - target resizing
-    // - tooltip resizing
-    // - responsive layout changes
-
     const resizeObserver =
       new ResizeObserver(() => {
         updatePosition();
@@ -315,13 +286,6 @@ tooltipRef.current.style.minHeight =
     // =====================================================
     // RAF LOOP
     // =====================================================
-
-    // Handles:
-    // - transitions
-    // - animations
-    // - layout shifts
-    // - sidebar opening
-    // - dynamic UI movement
 
     let frame = 0;
 
@@ -356,6 +320,24 @@ tooltipRef.current.style.minHeight =
   }, [targetElement]);
 
   // =========================================================
+  // AUTO-INJECT UNMOUNT CALLBACK
+  // =========================================================
+
+  let content = children;
+
+  if (isValidElement(children)) {
+    content = cloneElement(
+      children as React.ReactElement<any>,
+      {
+        __floatingOnboardingUnmount:
+          () => {
+            setIsActive(false);
+          },
+      }
+    );
+  }
+
+  // =========================================================
   // RENDER GUARDS
   // =========================================================
 
@@ -365,59 +347,42 @@ tooltipRef.current.style.minHeight =
 
   if (!targetElement) return null;
 
+  // NEW:
+  // Auto-remove container
+  if (!isActive) return null;
+
   // =========================================================
   // PORTAL RENDER
   // =========================================================
 
   return createPortal(
     <div
-    className="prompt-tooltip-reference-container"
+      className="prompt-tooltip-reference-container"
       ref={tooltipRef}
       style={{
-        // IMPORTANT:
-        // fixed bypasses overflow:hidden clipping
         position: "fixed",
-        
+
         top: position.top,
         left: position.left,
 
         zIndex: Z_INDEX,
 
-        // Allows tooltip interaction
-        pointerEvents: "auto",
-
-        // Better sizing behavior
         boxSizing: "border-box",
 
-        // CHANGE THIS:
-        // Optional visual debug border
-        // border: "2px solid red",
+        transition:
+          POSITION_TRANSITION,
 
-        // CHANGE THIS:
-        // Optional debug background
-        // background: "rgba(255,0,0,0.1)",
-
-        // CHANGE THIS:
-        // Smooth repositioning
-        transition: POSITION_TRANSITION,
-
-            // Prevent mouse/touch interaction
         pointerEvents: "none",
 
-        // Prevent text selection
         userSelect: "none",
         WebkitUserSelect: "none",
 
-        // Disable touch behaviors
         touchAction: "none",
 
-        // Optional (iOS Safari)
         WebkitTouchCallout: "none",
-
-
       }}
     >
-      {children}
+      {content}
     </div>,
     document.body
   );

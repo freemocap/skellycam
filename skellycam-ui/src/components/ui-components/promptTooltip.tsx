@@ -37,6 +37,9 @@ interface PromptTooltipProps {
   // CLOSE
   onClose?: () => void;
 
+  // AUTO UNMOUNT
+  __floatingOnboardingUnmount?: () => void;
+
   // STYLING
   position?: TooltipPosition;
   variant?: TooltipVariant;
@@ -47,25 +50,22 @@ interface PromptTooltipProps {
 const PromptTooltip: React.FC<PromptTooltipProps> = ({
   show = false,
 
-  // CONTENT
   title = "",
   text,
 
-  // IMAGE
   image = false,
   imageSrc = "",
 
-  // BUTTON
   button = false,
   buttonText = "Continue",
   buttonType = "",
   buttonIcon = "",
   onButtonClick = () => {},
 
-  // CLOSE
   onClose = () => {},
 
-  // STYLING
+  __floatingOnboardingUnmount = () => {},
+
   position = "pos-right",
   variant = "default",
   className = "",
@@ -79,9 +79,15 @@ const PromptTooltip: React.FC<PromptTooltipProps> = ({
 
   const [isVisible, setIsVisible] = useState(show);
 
-  useEffect(() => {
-    setIsVisible(show);
-  }, [show]);
+useEffect(() => {
+  setIsVisible(show);
+}, [show]);
+
+useEffect(() => {
+  if (!isVisible) {
+    __floatingOnboardingUnmount();
+  }
+}, [isVisible]);
 
   if (!isVisible) return null;
 
@@ -97,10 +103,13 @@ const PromptTooltip: React.FC<PromptTooltipProps> = ({
    * =========================================
    */
 
-  const handleClose = () => {
-    setIsVisible(false);
-    onClose();
-  };
+const handleClose = () => {
+  setIsVisible(false);
+
+  onClose();
+
+  __floatingOnboardingUnmount();
+};
 
   return (
     <div
