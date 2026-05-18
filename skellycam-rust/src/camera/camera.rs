@@ -38,7 +38,7 @@ pub struct Camera {
     event_receiver: mpsc::Receiver<CameraEvent>,
     thread_handle: Option<JoinHandle<()>>,
     identity: CameraIdentity,
-    config: CameraConfig,
+    config: std::sync::Mutex<CameraConfig>,
 }
 
 impl Camera {
@@ -61,7 +61,7 @@ impl Camera {
             event_receiver,
             thread_handle: Some(thread_handle),
             identity,
-            config,
+            config: std::sync::Mutex::new(config),
         })
     }
 
@@ -74,8 +74,12 @@ impl Camera {
     /// full effect until the camera is restarted.
     ///
     /// Takes `&self` (not `&mut self`) because sending a channel message
-    /// only requires a shared reference.
+    /// only requires a shared reference. Updates the local config copy so
+    /// that `config()` and `camera_statuses()` reflect the current settings.
     pub fn configure(&self, config: CameraConfig) {
+        if let Ok(mut guard) = self.config.lock() {
+            *guard = config.clone();
+        }
         let _ = self
             .command_sender
             .send(CameraCommand::Configure { config });
@@ -124,9 +128,9 @@ impl Camera {
         &self.identity
     }
 
-    /// The camera's active configuration.
-    pub fn config(&self) -> &CameraConfig {
-        &self.config
+    /// The camera's active configuration (cloned from the latest known state).
+    pub fn config(&self) -> CameraConfig {
+        self.config.lock().unwrap().clone()
     }
 
     /// The frame receiver, for use in select!/polling multiplexed with other cameras.

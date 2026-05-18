@@ -15,14 +15,15 @@ const TJXOP_ROT180: i32 = 6;
 const TJXOP_ROT270: i32 = 7;
 
 #[repr(C)]
-#[derive(Clone, Copy)]
 struct tjtransform {
-    op: i32,
-    options: i32,
     x: i32,
     y: i32,
     w: i32,
     h: i32,
+    op: i32,
+    options: i32,
+    data: *mut c_void,
+    custom_filter: *mut c_void,
 }
 
 unsafe extern "C" {
@@ -73,12 +74,14 @@ pub fn rotate_jpeg_lossless(jpeg_bytes: &[u8], rotation: i32) -> Option<Vec<u8>>
         }
 
         let mut xform = tjtransform {
-            op,
-            options: 0,
             x: 0,
             y: 0,
             w: 0,
             h: 0,
+            op,
+            options: 0,
+            data: std::ptr::null_mut(),
+            custom_filter: std::ptr::null_mut(),
         };
 
         let mut dst_buf: *mut u8 = std::ptr::null_mut();

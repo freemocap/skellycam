@@ -508,11 +508,11 @@ fn stabilize_raw(ctx: CapContext, stream: CapStream, label: &str) {
             Cap_captureFrameRaw(ctx, stream, buffer.as_mut_ptr(), frame_size, &mut out_bytes);
         }
         let first_bytes = &buffer[..(out_bytes as usize).min(16)];
-        tracing::debug!(
+        tracing::trace!(
             "Camera {label}: raw stabilize frame {i}: {out_bytes}B  first_16={first_bytes:02X?}"
         );
     }
-    tracing::info!("Camera {label}: raw stabilization complete ({STABILIZATION_FRAMES} frames)");
+    tracing::debug!("Camera {label}: raw stabilization complete ({STABILIZATION_FRAMES} frames)");
 }
 
 fn check_shutdown_for_stabilize() -> bool {

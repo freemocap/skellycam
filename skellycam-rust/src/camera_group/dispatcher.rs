@@ -18,7 +18,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use crate::camera::MultiFramePayload;
+use crate::camera::{CameraIdentity, MultiFramePayload};
 use crate::camera_group::frontend_encoder::encode_multiframe;
 use crate::camera_group::jpeg_transform::rotate_jpeg_lossless;
 use crate::camera_group::recording_stats::RecordingStats;
@@ -56,6 +56,8 @@ pub fn spawn_dispatcher(
         let mut csv_writers: Option<Vec<CsvWriter>> = None;
         let mut recording_stats: Option<RecordingStats> = None;
         let mut pending_recording: Option<super::types::RecordingParams> = None;
+        let mut recording_dir: Option<PathBuf> = None;
+        let mut camera_infos: Option<Vec<(CameraIdentity, u32, u32)>> = None;
 
         loop {
             // ── Drain all pending commands ──
@@ -74,6 +76,8 @@ pub fn spawn_dispatcher(
                             &mut video_recorders,
                             &mut csv_writers,
                             recording_stats.take(),
+                            recording_dir.take(),
+                            camera_infos.take(),
                         );
                         let _ = response_tx.send(summary);
                         tracing::info!("[dispatcher] recording stopped");
@@ -86,6 +90,8 @@ pub fn spawn_dispatcher(
                                 &mut video_recorders,
                                 &mut csv_writers,
                                 recording_stats.take(),
+                                recording_dir.take(),
+                                camera_infos.take(),
                             );
                         }
                         tracing::info!("[dispatcher] shutting down");
@@ -111,15 +117,17 @@ pub fn spawn_dispatcher(
                             &params,
                             &payload,
                         ) {
-                            Ok((recorders, writers)) => {
+                            Ok((recorders, writers, session_dir, infos)) => {
                                 let camera_count = payload.frames.len();
+                                let dir_display = session_dir.display().to_string();
                                 recording_stats = Some(RecordingStats::new(camera_count));
                                 video_recorders = Some(recorders);
                                 csv_writers = Some(writers);
+                                recording_dir = Some(session_dir);
+                                camera_infos = Some(infos);
                                 recording_active.store(true, Ordering::SeqCst);
                                 tracing::info!(
-                                    "[dispatcher] recording started → {} ({} cameras)",
-                                    params.output_dir, camera_count,
+                                    "[dispatcher] recording started → {dir_display} ({camera_count} cameras)",
                                 );
                             }
                             Err(e) => {
@@ -232,21 +240,41 @@ pub fn spawn_dispatcher(
 // ── Recording lifecycle helpers ────────────────────────────────────────────
 
 /// Create per-camera `VideoRecorder` and `CsvWriter` from the first multiframe.
+///
+/// Creates a timestamped session subdirectory inside `params.output_dir`,
+/// then sets up per-camera video and CSV files inside it.
+/// Returns the recorders, writers, session directory path, and camera identity
+/// info needed by the finalizer.
 fn create_recorders(
     params: &super::types::RecordingParams,
     payload: &MultiFramePayload,
-) -> anyhow::Result<(Vec<VideoRecorder>, Vec<CsvWriter>)> {
+) -> anyhow::Result<(
+    Vec<VideoRecorder>,
+    Vec<CsvWriter>,
+    PathBuf,
+    Vec<(CameraIdentity, u32, u32)>,
+)> {
     use crate::recording::VideoRecorderConfig;
 
+    let session_name = {
+        let now = chrono::Local::now();
+        let gmt_offset = now.offset().local_minus_utc() / 3600;
+        let base = now.format("%Y-%m-%dT%H_%M_%S").to_string();
+        let tag = params.label.as_deref().unwrap_or("recording");
+        format!("{base}_gmt{gmt_offset:+}_{tag}")
+    };
     let output_dir = PathBuf::from(&params.output_dir);
+    let session_dir = output_dir.join(&session_name);
     let label = params.label.as_deref().unwrap_or("recording");
-    let videos_dir = output_dir.join("synchronized_videos");
+    let videos_dir = session_dir.join("synchronized_videos");
     let timestamps_dir = videos_dir.join("timestamps").join("camera_timestamps");
     fs::create_dir_all(&videos_dir)?;
     fs::create_dir_all(&timestamps_dir)?;
 
     let mut recorders = Vec::with_capacity(payload.frames.len());
     let mut writers = Vec::with_capacity(payload.frames.len());
+    let mut infos: Vec<(CameraIdentity, u32, u32)> =
+        Vec::with_capacity(payload.frames.len());
 
     for frame in &payload.frames {
         let identity = &frame.identity;
@@ -271,69 +299,117 @@ fn create_recorders(
 
         recorders.push(recorder);
         writers.push(csv_writer);
+        infos.push((identity.clone(), frame.width, frame.height));
     }
 
-    Ok((recorders, writers))
+    Ok((recorders, writers, session_dir, infos))
 }
 
 /// Finalize all recorders, compute stats, and build the recording summary.
+///
+/// Finishes each recorder and CSV writer, then delegates to
+/// `finalizer::finalize_recording()` which validates frame counts across
+/// cameras and writes `recording_info.json`.
 fn finalize_recording_session(
     video_recorders: &mut Option<Vec<VideoRecorder>>,
     csv_writers: &mut Option<Vec<CsvWriter>>,
     recording_stats: Option<RecordingStats>,
+    recording_dir: Option<PathBuf>,
+    camera_infos: Option<Vec<(CameraIdentity, u32, u32)>>,
 ) -> finalizer::RecordingSummary {
     let stats = recording_stats.map(|s| s.finalize());
 
     // Default empty summary in case recorders were never created
-    let mut summary = finalizer::RecordingSummary {
+    let empty_summary = finalizer::RecordingSummary {
         total_frames_per_camera: 0,
         video_paths: Vec::new(),
         csv_paths: Vec::new(),
         info_json_path: PathBuf::new(),
-        stats,
+        stats: stats.clone(),
     };
 
-    if let (Some(recorders), Some(writers)) = (video_recorders.take(), csv_writers.take()) {
-        let mut video_paths = Vec::with_capacity(recorders.len());
-        let mut csv_paths = Vec::with_capacity(writers.len());
-        let mut frame_counts = Vec::with_capacity(recorders.len());
+    let (Some(recorders), Some(writers), Some(session_dir), Some(infos)) = (
+        video_recorders.take(),
+        csv_writers.take(),
+        recording_dir,
+        camera_infos,
+    ) else {
+        return empty_summary;
+    };
 
-        for recorder in recorders {
-            let frame_count = recorder.frame_count();
-            let path = recorder.output_path().to_path_buf();
-            match recorder.finish() {
-                Ok(timestamps) => {
-                    frame_counts.push(frame_count);
-                    video_paths.push(path);
-                    tracing::info!(
-                        "[dispatcher] recorder finished: {frame_count} frames, {} timestamps",
-                        timestamps.len()
-                    );
-                }
-                Err(e) => {
-                    tracing::error!("[dispatcher] recorder finish error: {e}");
-                }
+    let mut video_paths = Vec::with_capacity(recorders.len());
+    let mut csv_paths = Vec::with_capacity(writers.len());
+
+    for recorder in recorders {
+        let frame_count = recorder.frame_count();
+        let path = recorder.output_path().to_path_buf();
+        match recorder.finish() {
+            Ok(timestamps) => {
+                video_paths.push(path);
+                tracing::info!(
+                    "[dispatcher] recorder finished: {frame_count} frames, {} timestamps",
+                    timestamps.len()
+                );
+            }
+            Err(e) => {
+                tracing::error!("[dispatcher] recorder finish error: {e}");
             }
         }
-
-        for writer in writers {
-            match writer.finish() {
-                Ok(path) => {
-                    csv_paths.push(path);
-                }
-                Err(e) => {
-                    tracing::error!("[dispatcher] CSV finish error: {e}");
-                }
-            }
-        }
-
-        let total = frame_counts.first().copied().unwrap_or(0);
-        summary.total_frames_per_camera = total;
-        summary.video_paths = video_paths;
-        summary.csv_paths = csv_paths;
     }
 
-    summary
+    for writer in writers {
+        match writer.finish() {
+            Ok(path) => {
+                csv_paths.push(path);
+            }
+            Err(e) => {
+                tracing::error!("[dispatcher] CSV finish error: {e}");
+            }
+        }
+    }
+
+    if infos.len() != video_paths.len() || infos.len() != csv_paths.len() {
+        tracing::error!(
+            "[dispatcher] mismatch: {} camera infos, {} videos, {} CSVs — skipping recording_info.json",
+            infos.len(),
+            video_paths.len(),
+            csv_paths.len(),
+        );
+        return finalizer::RecordingSummary {
+            total_frames_per_camera: 0,
+            video_paths,
+            csv_paths,
+            info_json_path: PathBuf::new(),
+            stats,
+        };
+    }
+
+    let total = video_paths.len() as u64;
+    match finalizer::finalize_recording(
+        &session_dir,
+        &infos,
+        &video_paths,
+        &csv_paths,
+        stats,
+    ) {
+        Ok(summary) => {
+            tracing::info!(
+                "[dispatcher] recording_info.json written → {}",
+                summary.info_json_path.display(),
+            );
+            summary
+        }
+        Err(e) => {
+            tracing::error!("[dispatcher] finalize_recording error: {e}");
+            finalizer::RecordingSummary {
+                total_frames_per_camera: total,
+                video_paths,
+                csv_paths,
+                info_json_path: PathBuf::new(),
+                stats: None,
+            }
+        }
+    }
 }
 
 use crate::camera::FrameData;
