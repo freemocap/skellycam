@@ -412,46 +412,36 @@ mod tests {
         for frame in &frames {
             let ts = &frame.timestamps;
             tracing::trace!(
-                "frame {} timestamps: loop_start={}  frame_avail={}  post_cap={}  pre_send={}  post_send={}  pre_bar={}  post_bar={}",
+                "frame {} timestamps: loop_start={}  frame_avail={}  post_jpeg_extract={}  pre_send={}  gatherer_recv={}",
                 frame.frame_number,
                 ts.loop_start_ns,
                 ts.frame_available_ns,
-                ts.post_capture_ns,
+                ts.post_jpeg_extract_ns,
                 ts.pre_send_ns,
-                ts.post_send_ns,
-                ts.pre_barrier_ns,
-                ts.post_barrier_ns,
+                ts.gatherer_received_ns,
             );
 
-            // Every timestamp field must be non-zero (stamped during the cycle)
+            // Every timestamp in the packet must belong to a single iteration.
+            // (pre_barrier_ns and post_barrier_ns were removed because they
+            // could only carry the previous iteration's values — see the note
+            // in camera/types.rs.)
             assert!(ts.loop_start_ns > 0, "loop_start_ns not stamped");
             assert!(ts.frame_available_ns > 0, "frame_available_ns not stamped");
-            assert!(ts.post_capture_ns > 0, "post_capture_ns not stamped");
+            assert!(ts.post_jpeg_extract_ns > 0, "post_jpeg_extract_ns not stamped");
             assert!(ts.pre_send_ns > 0, "pre_send_ns not stamped");
-            assert!(ts.post_send_ns > 0, "post_send_ns not stamped");
-            assert!(ts.pre_barrier_ns > 0, "pre_barrier_ns not stamped");
-            assert!(ts.post_barrier_ns > 0, "post_barrier_ns not stamped");
 
-            // Causality: timestamps must be ordered in the frame lifecycle
+            // Causality within the current iteration.
             assert!(
-                ts.frame_available_ns <= ts.post_capture_ns,
-                "frame_available must precede post_capture"
+                ts.loop_start_ns <= ts.frame_available_ns,
+                "loop_start must precede frame_available"
             );
             assert!(
-                ts.post_capture_ns <= ts.pre_send_ns,
-                "post_capture must precede pre_send"
+                ts.frame_available_ns <= ts.post_jpeg_extract_ns,
+                "frame_available must precede post_jpeg_extract"
             );
             assert!(
-                ts.pre_send_ns <= ts.post_send_ns,
-                "pre_send must precede post_send"
-            );
-            assert!(
-                ts.post_send_ns <= ts.pre_barrier_ns,
-                "post_send must precede pre_barrier"
-            );
-            assert!(
-                ts.pre_barrier_ns <= ts.post_barrier_ns,
-                "pre_barrier must precede post_barrier"
+                ts.post_jpeg_extract_ns <= ts.pre_send_ns,
+                "post_jpeg_extract must precede pre_send"
             );
         }
 

@@ -214,6 +214,8 @@ fn run_camera_thread(
                 }
             }
 
+            // Stamp `frame_available_ns` at the precise moment Cap_hasNewFrame
+            // returned true — the hardware-ready instant, before any capture work.
             let frame_available_ns =
                 crate::timestamps::performance::performance_counter_nanoseconds();
             tracing::trace!(
@@ -221,7 +223,7 @@ fn run_camera_thread(
                 frame_sm.frame_number(),
             );
 
-            // ── Capture the frame ──
+            // ── Capture the frame and copy bytes into a heap-owned Vec ──
             let mut frame_size: u32 = 0;
             if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK
                 || frame_size == 0
@@ -257,25 +259,33 @@ fn run_camera_thread(
                 state = CameraState::Faulted(msg);
                 break;
             }
-            tracing::trace!(
-                "[CAM {label}] frame#{} captured {out_bytes} bytes (MJPEG)",
-                frame_sm.frame_number(),
-            );
             let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());
+            // Stamp `post_jpeg_extract_ns` immediately after the raw bytes are
+            // owned by a heap Vec. The interval (post_jpeg_extract - frame_available)
+            // covers Cap_captureFrameRaw + the to_vec() copy — i.e. the full
+            // device-buffer → heap-owned JPEG path. This is the OpenCV
+            // `cap.read()` comparison metric.
+            let post_jpeg_extract_ns =
+                crate::timestamps::performance::performance_counter_nanoseconds();
+            tracing::trace!(
+                "[CAM {label}] frame#{} captured {out_bytes} bytes (MJPEG)  jpeg_extract_ns={}",
+                frame_sm.frame_number(),
+                post_jpeg_extract_ns - frame_available_ns,
+            );
 
             if let Err(e) = frame_sm.begin_capture(frame_available_ns) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
-            tracing::trace!(
-                "[CAM {label}] frame#{} FSM: WaitingForFrame→Capturing  pbtc={}ns={:.1}µs",
-                frame_sm.frame_number(),
-                frame_sm.timestamps.post_barrier_to_capture_ns,
-                frame_sm.timestamps.post_barrier_to_capture_ns as f64 / 1000.0,
-            );
+            frame_sm.timestamps.post_jpeg_extract_ns = post_jpeg_extract_ns;
 
             if let Err(e) = frame_sm.transition_to(FrameState::Sending) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
+
+            // Stamp `pre_send_ns` immediately before the channel send, so the
+            // packet's cloned timestamps include the correct value.
+            frame_sm.timestamps.pre_send_ns =
+                crate::timestamps::performance::performance_counter_nanoseconds();
 
             let packet = FramePacket {
                 data: frame_data,
@@ -288,8 +298,9 @@ fn run_camera_thread(
             };
 
             tracing::trace!(
-                "[CAM {label}] frame#{} sending via channel...",
+                "[CAM {label}] frame#{} sending via channel...  pre_send_ns={}",
                 frame_sm.frame_number(),
+                frame_sm.timestamps.pre_send_ns,
             );
             if frame_sender.send(packet).is_err() {
                 tracing::trace!("[CAM {label}] frame#{} channel send FAILED (disconnected)", frame_sm.frame_number());
@@ -304,10 +315,18 @@ fn run_camera_thread(
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
 
+            // The camera calls barrier.wait() AFTER the packet has been sent
+            // downstream. That ordering means any timestamps bracketing this
+            // barrier call cannot be put on this iteration's packet — they
+            // would belong to the previous-or-next iteration and create
+            // off-by-one attribution bugs in the gatherer's stats. We do not
+            // stamp pre_barrier/post_barrier into the packet for that reason
+            // (see note in camera/types.rs). `loop_start_ns` IS still stamped
+            // because it marks the BEGINNING of the next iteration's frame
+            // packet, which the gatherer can attribute correctly.
             tracing::trace!(
-                "[CAM {label}] frame#{} ENTER barrier.wait()  pre_bar_ns={}",
+                "[CAM {label}] frame#{} ENTER barrier.wait()",
                 frame_sm.frame_number(),
-                frame_sm.timestamps.pre_barrier_ns,
             );
             if !barrier.wait() {
                 tracing::info!("Camera {label}: barrier broken (shutdown)");
@@ -315,20 +334,21 @@ fn run_camera_thread(
                 Cap_releaseContext(ctx);
                 return Ok(());
             }
+            let post_barrier_ns =
+                crate::timestamps::performance::performance_counter_nanoseconds();
+            // `post_barrier_ns` IS the next iteration's `loop_start_ns` by
+            // definition (the camera exits the barrier and immediately begins
+            // the next capture cycle).
+            frame_sm.timestamps.loop_start_ns = post_barrier_ns;
             tracing::trace!(
-                "[CAM {label}] frame#{} EXIT barrier.wait()",
+                "[CAM {label}] frame#{} EXIT barrier.wait()  loop_start_ns={}",
                 frame_sm.frame_number(),
+                post_barrier_ns,
             );
 
             if let Err(e) = frame_sm.transition_to(FrameState::WaitingForFrame) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
-            tracing::trace!(
-                "[CAM {label}] frame#{} FSM: AtBarrier→WaitingForFrame  post_bar_ns={}  loop_start_ns={}",
-                frame_sm.frame_number(),
-                frame_sm.timestamps.post_barrier_ns,
-                frame_sm.timestamps.loop_start_ns,
-            );
             frame_sm.increment_frame();
         }
 

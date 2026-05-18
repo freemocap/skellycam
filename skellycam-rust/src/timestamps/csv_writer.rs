@@ -29,12 +29,8 @@ impl CsvWriter {
                 "frame_number",
                 "timestamps.loop_start_ns",
                 "timestamps.frame_available_ns",
-                "timestamps.pre_barrier_ns",
-                "timestamps.post_barrier_ns",
-                "timestamps.post_barrier_to_capture_ns",
-                "timestamps.post_capture_ns",
+                "timestamps.post_jpeg_extract_ns",
                 "timestamps.pre_send_ns",
-                "timestamps.post_send_ns",
                 "timestamps.gatherer_received_ns",
             ])
             .context("Failed to write CSV header")?;
@@ -62,12 +58,8 @@ impl CsvWriter {
                 frame_number.to_string(),
                 timestamps.loop_start_ns.to_string(),
                 timestamps.frame_available_ns.to_string(),
-                timestamps.pre_barrier_ns.to_string(),
-                timestamps.post_barrier_ns.to_string(),
-                timestamps.post_barrier_to_capture_ns.to_string(),
-                timestamps.post_capture_ns.to_string(),
+                timestamps.post_jpeg_extract_ns.to_string(),
                 timestamps.pre_send_ns.to_string(),
-                timestamps.post_send_ns.to_string(),
                 timestamps.gatherer_received_ns.to_string(),
             ])
             .context("Failed to write CSV row")?;

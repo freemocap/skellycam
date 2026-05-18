@@ -6,30 +6,33 @@ use std::sync::mpsc;
 ///
 /// The camera thread stamps fields as the frame moves through the capture loop.
 /// The gatherer stamps `gatherer_received_ns` after `recv()` returns.
-/// All values are from `performance_counter_nanoseconds()` —
-/// nanoseconds since process start. Zero means "not yet stamped."
+/// All values are nanoseconds since T=0 — the moment `init_logging()` was
+/// called for this process (see `timestamps::performance::anchor_performance_clock`).
+/// Zero means "not yet stamped."
 #[derive(Debug, Clone)]
 pub struct FrameLifecycleTimestamps {
-    /// Top of the capture loop iteration for this frame.
+    /// Top of the per-camera capture-loop iteration for this frame. For the
+    /// first frame this is the moment the FSM was constructed (after camera
+    /// stabilization completed). For every subsequent frame it equals the
+    /// `post_barrier_ns` of the previous iteration.
     pub loop_start_ns: i64,
-    /// `Cap_hasNewFrame()` returned true — hardware has a frame ready.
+    /// `Cap_hasNewFrame()` returned true — the openpnp-capture device buffer
+    /// has a frame ready for us to copy out.
     pub frame_available_ns: i64,
-    /// Time from the previous barrier release to the start of this frame's
-    /// capture call. Measures jitter in how quickly the OS scheduler picks
-    /// up each camera thread to begin its next capture cycle.
-    pub post_barrier_to_capture_ns: i64,
-    /// About to call `barrier.wait()`.
-    pub pre_barrier_ns: i64,
-    /// Barrier released — all cameras and gatherer synchronized.
-    pub post_barrier_ns: i64,
-    /// `Cap_captureFrame()` returned successfully.
-    pub post_capture_ns: i64,
-    /// About to call `frame_sender.send()`.
+    /// `Cap_captureFrameRaw()` returned AND the raw MJPEG bytes have been
+    /// copied into a heap-owned `Vec<u8>`. The interval
+    /// `post_jpeg_extract_ns - frame_available_ns` is the JPEG-extract
+    /// duration: the scientifically load-bearing metric that quantifies how
+    /// much faster the raw-MJPEG path is than OpenCV's bundled
+    /// `VideoCapture::read()` (which couples this byte-copy with a full
+    /// JPEG decode into RGB).
+    pub post_jpeg_extract_ns: i64,
+    /// About to call `frame_sender.send(packet)`. Stamped immediately before
+    /// the send so `gatherer_received_ns - pre_send_ns` measures end-to-end
+    /// channel-send latency from the camera's point of view.
     pub pre_send_ns: i64,
-    /// `frame_sender.send()` returned — gatherer consumed previous frame,
-    /// channel has capacity for this one.
-    pub post_send_ns: i64,
-    /// Stamped by the gatherer when `recv()` returns this frame.
+    /// Stamped by the gatherer (not the camera) when `recv()` returns this
+    /// frame's `FramePacket`.
     pub gatherer_received_ns: i64,
 }
 
@@ -38,16 +41,27 @@ impl FrameLifecycleTimestamps {
         Self {
             loop_start_ns: 0,
             frame_available_ns: 0,
-            post_barrier_to_capture_ns: 0,
-            pre_barrier_ns: 0,
-            post_barrier_ns: 0,
-            post_capture_ns: 0,
+            post_jpeg_extract_ns: 0,
             pre_send_ns: 0,
-            post_send_ns: 0,
             gatherer_received_ns: 0,
         }
     }
 }
+
+// NOTE on per-camera barrier-wait:
+//   Camera threads must call `barrier.wait()` AFTER sending their frame
+//   downstream (the barrier is what synchronizes everyone for the next
+//   iteration). That ordering means the timestamps bracketing
+//   `barrier.wait()` happen AFTER the packet has already left the camera
+//   thread — so they cannot be carried in this frame's `FramePacket`.
+//   Carrying the PREVIOUS iteration's barrier timestamps and labeling them
+//   as this iteration's was the source of an off-by-one attribution bug
+//   that mixed data from two iterations in a single packet. To keep every
+//   field in `FrameLifecycleTimestamps` honest about belonging to a single
+//   iteration, those fields have been removed entirely. Per-camera
+//   barrier-wait can be inferred from `cycle_total - (wait_for_frame +
+//   jpeg_extract + channel_send_wait)`; the gatherer's OWN barrier wait is
+//   still measured directly (one-iteration scope, no off-by-one).
 
 /// Frame pixel data format.
 #[derive(Debug, Clone)]
@@ -131,68 +145,51 @@ pub struct MultiFramePayload {
 }
 
 impl MultiFramePayload {
-    /// Hardware synchronization spread: max - min of `frame_available_ns`
-    /// across cameras in this multiframe.
+    /// Frame arrival spread: max - min of `frame_available_ns` across cameras
+    /// in this multiframe.
     ///
-    /// Measures the end-to-end physical variability of when each camera
-    /// delivered its frame — sensor exposure timing + USB bus scheduling +
-    /// driver buffering + decode. This is bounded by roughly one frame
-    /// period (33ms at 30fps) because all threads start waiting after the
-    /// same barrier release. In the typical case, we expect the spread to 
-    /// be roughly +/1 0.5*frame_duration. 
-    pub fn hardware_sync_spread_ns(&self) -> i64 {
+    /// Measures the wall-clock variability of when each camera's frame
+    /// appeared in our software. Dominated by USB bus scheduling order,
+    /// driver buffering, and the cameras' independent exposure clocks — no
+    /// USB webcam guarantees lockstep frame delivery. The practical floor on
+    /// consumer UVC webcams is up to one frame period (~33 ms at 30 fps).
+    pub fn frame_arrival_spread_ns(&self) -> i64 {
         if self.frames.len() < 2 {
             return 0;
         }
-        let avail: Vec<i64> = self.frames.iter().map(|f| f.timestamps.frame_available_ns).collect();
+        let avail: Vec<i64> = self
+            .frames
+            .iter()
+            .map(|f| f.timestamps.frame_available_ns)
+            .collect();
         let min = *avail.iter().min().unwrap();
         let max = *avail.iter().max().unwrap();
-        let spread = max - min;
-        spread
+        max - min
     }
 
-    /// Post-barrier-to-capture spread: max - min of `post_barrier_to_capture_ns`
-    /// across cameras in this multiframe.
+    /// Thread wakeup spread: max - min of `loop_start_ns` across cameras.
     ///
-    /// `post_barrier_to_capture_ns` is the time from the previous barrier
-    /// release to the start of this frame's capture call. The spread measures
-    /// pure OS thread scheduling jitter — how far apart in time the OS
-    /// scheduler picks up each camera thread to begin its next capture cycle.
-    /// In the capture-then-barrier synchronization model, this is the
-    /// engineering quality metric for software-level sync: lower spread
-    /// means the OS is waking the camera threads in tighter lockstep.
-    /// USB-webcam hardware-arrival spread dominates total sync error;
-    /// this metric isolates the software contribution.
-    /// Software scheduling spread: max - min of `loop_start_ns` across cameras.
-    ///
-    /// `loop_start_ns` is stamped when the camera thread exits `barrier.wait()`
-    /// and begins its next capture iteration. Both cameras exit the same barrier
-    /// simultaneously, so this spread measures pure OS thread scheduling jitter
-    /// — how far apart the OS wakes each camera thread after barrier release.
-    /// This should be microseconds, not milliseconds.
-    pub fn software_scheduling_spread_ns(&self) -> i64 {
+    /// `loop_start_ns` is stamped immediately after each camera thread exits
+    /// the shared barrier. Because every camera exits the SAME barrier, this
+    /// spread isolates pure OS thread scheduling jitter — how evenly the OS
+    /// scheduler wakes the N camera threads after the synchronized release.
+    /// Expected: microseconds. Milliseconds here means CPU contention,
+    /// thread-priority misconfiguration, or a busy CPU core.
+    pub fn thread_wakeup_spread_ns(&self) -> i64 {
         if self.frames.len() < 2 {
             return 0;
         }
-        let starts: Vec<i64> = self.frames.iter().map(|f| f.timestamps.loop_start_ns).collect();
+        let starts: Vec<i64> = self
+            .frames
+            .iter()
+            .map(|f| f.timestamps.loop_start_ns)
+            .collect();
         let min = *starts.iter().min().unwrap();
         let max = *starts.iter().max().unwrap();
         max - min
     }
-
-    pub fn post_barrier_to_capture_spread_ns(&self) -> i64 {
-        if self.frames.len() < 2 {
-            return 0;
-        }
-        let pbtc: Vec<i64> = self.frames.iter().map(|f| f.timestamps.post_barrier_to_capture_ns).collect();
-        let min = *pbtc.iter().min().unwrap();
-        let max = *pbtc.iter().max().unwrap();
-        let spread = max - min;
-        spread
-    }
 }
 
-/// Per-camera capture configuration — the Rust equivalent of the Python
 /// Per-camera capture configuration — the Rust equivalent of the Python
 /// `CameraConfig`. Passed as a single object everywhere. `camera_id` is the
 /// primary identifier (matches the Python-generated SHA-256 hex ID).

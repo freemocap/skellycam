@@ -56,11 +56,17 @@ fn main() -> anyhow::Result<()> {
         .and_then(|pos| args.get(pos + 1))
         .map(|s| s.split(',').filter_map(|n| n.trim().parse().ok()).collect());
 
+    let max_loops: i64 = args.iter()
+        .position(|arg| arg == "--max-loops")
+        .and_then(|pos| args.get(pos + 1))
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(-1);
+
     if camera_count.is_some() || explicit_indices.is_some() {
-        return run_multi_camera(camera_count, explicit_indices);
+        return run_multi_camera(camera_count, explicit_indices, max_loops);
     }
 
-    run_single_camera()
+    run_single_camera(max_loops)
 }
 
 fn run_detection() -> anyhow::Result<()> {
@@ -228,6 +234,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
 fn run_multi_camera(
     camera_count: Option<u32>,
     explicit_indices: Option<Vec<u32>>,
+    max_loops: i64,
 ) -> anyhow::Result<()> {
     let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
@@ -265,20 +272,23 @@ fn run_multi_camera(
     }).collect();
 
     let num_cameras = configs.len();
-    tracing::info!("\n  ── {num_cameras}-camera lockstep ── 600 multiframes (~20s) ──\n");
+    if max_loops < 0 {
+        tracing::info!("\n  ── {num_cameras}-camera lockstep ── running indefinitely ──\n");
+    } else {
+        tracing::info!("\n  ── {num_cameras}-camera lockstep ── {max_loops} multiframes ──\n");
+    }
 
     let mut group = CameraGroup::new(configs);
     group.start()?;
 
     let start = Instant::now();
-    let max_multiframes: i64 = 600;
     let mut last_frame: i64 = -1;
     let mut first_frame_time: Option<Instant> = None;
     let mut last_report_frame: i64 = 0;
 
     tracing::info!("  waiting for first frame...");
 
-    while last_frame < max_multiframes {
+    while max_loops < 0 || last_frame < max_loops {
         if let Some(payload) = group.latest_frontend_payload() {
             if payload.frame_number > last_frame {
                 if first_frame_time.is_none() {
@@ -324,6 +334,6 @@ fn run_multi_camera(
     Ok(())
 }
 
-fn run_single_camera() -> anyhow::Result<()> {
-    run_multi_camera(Some(1), None)
+fn run_single_camera(max_loops: i64) -> anyhow::Result<()> {
+    run_multi_camera(Some(1), None, max_loops)
 }
