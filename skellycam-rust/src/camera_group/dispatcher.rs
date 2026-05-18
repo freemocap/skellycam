@@ -91,6 +91,12 @@ pub fn spawn_dispatcher(
             // ── Try to receive the next multiframe ──
             match multi_frame_receiver.try_recv() {
                 Ok(mut payload) => {
+                    static mut DISPATCH_COUNT: u64 = 0;
+                    let count = unsafe { DISPATCH_COUNT += 1; DISPATCH_COUNT };
+                    eprintln!(
+                        "[DISPATCH mf#{count}] received {} frames",
+                        payload.frames.len(),
+                    );
                     // Apply lossless JPEG rotation per frame
                     for frame in &mut payload.frames {
                         if frame.rotation != -1 {

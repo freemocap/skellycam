@@ -31,8 +31,8 @@ fn gatherer_full_cycle_and_back() {
 fn gatherer_rejects_all_invalid_transitions() {
     let mut gsm = GathererStateMachine::new();
 
-    // Cannot skip from CollectingFrames to WaitingAtBarrier
-    assert!(gsm.transition_to(GathererState::WaitingAtBarrier).is_err());
+    // Cannot skip from CollectingFrames to AssemblingPayload
+    assert!(gsm.transition_to(GathererState::AssemblingPayload).is_err());
 
     // Advance one step, cannot go backwards
     gsm.transition_to(GathererState::AllFramesReceived).unwrap();

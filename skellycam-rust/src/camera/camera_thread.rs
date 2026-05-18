@@ -162,7 +162,6 @@ fn run_camera_thread(
                 CommandResult::Configure(new_config) => {
                     tracing::info!("Camera {label}: applying new config");
                     state = CameraState::Configuring;
-                    // Apply exposure on the existing stream (does not require restart)
                     configure_exposure(
                         ctx, stream, label,
                         &new_config.exposure_mode, new_config.exposure,
@@ -173,7 +172,6 @@ fn run_camera_thread(
                 CommandResult::None => {}
             }
 
-            // ── Only capture when streaming ──
             if state != CameraState::Streaming {
                 continue;
             }
@@ -218,6 +216,10 @@ fn run_camera_thread(
 
             let frame_available_ns =
                 crate::timestamps::performance::performance_counter_nanoseconds();
+            tracing::trace!(
+                "[CAM {label}] frame#{} hasNewFrame=1  frame_avail_ns={frame_available_ns}",
+                frame_sm.frame_number(),
+            );
 
             // ── Capture the frame ──
             let mut frame_size: u32 = 0;
@@ -232,6 +234,10 @@ fn run_camera_thread(
                 state = CameraState::Faulted(msg);
                 break;
             }
+            tracing::trace!(
+                "[CAM {label}] frame#{} getFrameSize={frame_size} bytes",
+                frame_sm.frame_number(),
+            );
             if raw_buffer.len() < frame_size as usize {
                 raw_buffer.resize(frame_size as usize, 0);
             }
@@ -251,11 +257,21 @@ fn run_camera_thread(
                 state = CameraState::Faulted(msg);
                 break;
             }
+            tracing::trace!(
+                "[CAM {label}] frame#{} captured {out_bytes} bytes (MJPEG)",
+                frame_sm.frame_number(),
+            );
             let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());
 
             if let Err(e) = frame_sm.begin_capture(frame_available_ns) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
+            tracing::trace!(
+                "[CAM {label}] frame#{} FSM: WaitingForFrame→Capturing  pbtc={}ns={:.1}µs",
+                frame_sm.frame_number(),
+                frame_sm.timestamps.post_barrier_to_capture_ns,
+                frame_sm.timestamps.post_barrier_to_capture_ns as f64 / 1000.0,
+            );
 
             if let Err(e) = frame_sm.transition_to(FrameState::Sending) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
@@ -271,24 +287,48 @@ fn run_camera_thread(
                 frame_number: frame_sm.frame_number(),
             };
 
+            tracing::trace!(
+                "[CAM {label}] frame#{} sending via channel...",
+                frame_sm.frame_number(),
+            );
             if frame_sender.send(packet).is_err() {
+                tracing::trace!("[CAM {label}] frame#{} channel send FAILED (disconnected)", frame_sm.frame_number());
                 break;
             }
+            tracing::trace!(
+                "[CAM {label}] frame#{} sent OK, FSM: Sending→AtBarrier",
+                frame_sm.frame_number(),
+            );
 
             if let Err(e) = frame_sm.transition_to(FrameState::AtBarrier) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
 
+            tracing::trace!(
+                "[CAM {label}] frame#{} ENTER barrier.wait()  pre_bar_ns={}",
+                frame_sm.frame_number(),
+                frame_sm.timestamps.pre_barrier_ns,
+            );
             if !barrier.wait() {
                 tracing::info!("Camera {label}: barrier broken (shutdown)");
                 Cap_closeStream(ctx, stream);
                 Cap_releaseContext(ctx);
                 return Ok(());
             }
+            tracing::trace!(
+                "[CAM {label}] frame#{} EXIT barrier.wait()",
+                frame_sm.frame_number(),
+            );
 
             if let Err(e) = frame_sm.transition_to(FrameState::WaitingForFrame) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
+            tracing::trace!(
+                "[CAM {label}] frame#{} FSM: AtBarrier→WaitingForFrame  post_bar_ns={}  loop_start_ns={}",
+                frame_sm.frame_number(),
+                frame_sm.timestamps.post_barrier_ns,
+                frame_sm.timestamps.loop_start_ns,
+            );
             frame_sm.increment_frame();
         }
 

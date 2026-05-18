@@ -22,12 +22,7 @@ fn main() -> anyhow::Result<()> {
             "WARNING: Running in debug mode. Use `cargo run --release` for full performance.\n"
         );
     }
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("skellycam=info")),
-        )
-        .init();
+    skellycam::init_logging(skellycam::DEFAULT_LOG_LEVEL);
 
     let args: Vec<String> = std::env::args().collect();
 

@@ -722,7 +722,7 @@ impl GathererStateMachine {
                 self.timestamps.all_frames_received_ns = now;
             }
             GathererState::WaitingAtBarrier => {
-                // No timestamp — about to call barrier.wait().
+                // About to call barrier.wait()
             }
             GathererState::AssemblingPayload => {
                 self.timestamps.post_barrier_ns = now;

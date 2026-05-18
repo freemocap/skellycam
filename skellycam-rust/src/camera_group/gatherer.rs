@@ -125,6 +125,7 @@ pub fn spawn_gatherer(
         let mut camera_count = frame_receivers.len();
         let mut hardware_spread_values: Vec<f64> = Vec::new();
         let mut software_spread_values: Vec<f64> = Vec::new();
+        let mut scheduling_spread_values: Vec<f64> = Vec::new();
         let mut multiframe_interval_ns: Vec<f64> = Vec::new();
         let mut prev_multiframe_ts: Option<i64> = None;
         let mut duration_hardware_wait: Vec<f64> = Vec::new();
@@ -143,7 +144,7 @@ pub fn spawn_gatherer(
                         camera_id,
                         frame_receiver,
                     } => {
-                        eprintln!(
+                        tracing::debug!(
                             "[gatherer] added camera '{}' at step {}",
                             camera_id, step
                         );
@@ -151,7 +152,7 @@ pub fn spawn_gatherer(
                         camera_count = frame_receivers.len();
                     }
                     super::types::GathererUpdate::RemoveCamera { camera_id } => {
-                        eprintln!(
+                        tracing::debug!(
                             "[gatherer] removing camera '{}' at step {}",
                             camera_id, step
                         );
@@ -162,23 +163,36 @@ pub fn spawn_gatherer(
             }
 
             if camera_count == 0 {
-                eprintln!("[gatherer] no cameras left, exiting");
+                tracing::info!("[gatherer] no cameras left, exiting");
                 break;
             }
 
+            tracing::trace!(
+                "[GATHER step {step}] CollectingFrames: waiting for {camera_count} camera(s)..."
+            );
             // ── CollectingFrames: recv() one frame from each camera ──
             let mut frames: Vec<FramePacket> = Vec::with_capacity(camera_count);
             let mut disconnected = false;
 
             for (index, (camera_id, receiver)) in frame_receivers.iter().enumerate() {
+                tracing::trace!(
+                    "[GATHER step {step}] blocking recv() for camera[{index}] id={camera_id}..."
+                );
                 match receiver.recv() {
                     Ok(mut packet) => {
                         packet.timestamps.gatherer_received_ns =
                             crate::timestamps::performance::performance_counter_nanoseconds();
+                        tracing::trace!(
+                            "[GATHER step {step}] RECV camera[{index}] id={camera_id} \
+                             frame#{}  {:.1} KB  gatherer_recv_ns={}",
+                            packet.frame_number,
+                            packet.data.len() as f64 / 1024.0,
+                            packet.timestamps.gatherer_received_ns,
+                        );
                         frames.push(packet);
                     }
                     Err(_) => {
-                        eprintln!(
+                        tracing::error!(
                             "[gatherer] camera '{}' (index {}) disconnected at step {}",
                             camera_id, index, step
                         );
@@ -193,40 +207,67 @@ pub fn spawn_gatherer(
                 break;
             }
 
-            // ── CollectingFrames → AllFramesReceived ──
+            tracing::trace!(
+                "[GATHER step {step}] all {camera_count} frames collected, validating frame numbers..."
+            );
+            // ── Validate: ALL cameras must be on the same frame number ──
+            if camera_count > 1 {
+                let first_fn = frames[0].frame_number;
+                for (i, frame) in frames.iter().enumerate().skip(1) {
+                    if frame.frame_number != first_fn {
+                        panic!(
+                            "CAMERA SYNC LOST at step {step}: camera[0] frame#={first_fn}, \
+                             camera[{i}] frame#={} — cameras are out of sync!",
+                            frame.frame_number
+                        );
+                    }
+                }
+                tracing::trace!(
+                    "[GATHER step {step}] frame numbers OK: all cameras at frame#{first_fn}"
+                );
+            }
+
+            // ── AllFramesReceived ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::AllFramesReceived) {
-                eprintln!("[gatherer] invalid state transition: {e}");
+                tracing::error!("[gatherer] invalid state transition: {e}");
             }
+            tracing::trace!(
+                "[GATHER step {step}] FSM: CollectingFrames→AllFramesReceived  stamp={}ns",
+                gatherer_sm.timestamps.all_frames_received_ns,
+            );
 
-            // ── AllFramesReceived → WaitingAtBarrier ──
+            // ── WaitingAtBarrier → Hit the barrier — release all cameras ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::WaitingAtBarrier) {
-                eprintln!("[gatherer] invalid state transition: {e}");
+                tracing::error!("[gatherer] invalid state transition: {e}");
             }
-
-            // ── Hit the barrier ──
-            // All cameras are at barrier.wait(). Calling barrier.wait() here
-            // releases them simultaneously. Cameras now spin for their next
-            // hardware frame IN PARALLEL with the payload work below.
+            eprintln!(
+                "[GATHER step {step}] ENTER barrier.wait() (WaitingAtBarrier)"
+            );
             if !barrier.wait() {
                 eprintln!("[gatherer] barrier broken, shutting down");
                 break;
             }
+            eprintln!(
+                "[GATHER step {step}] EXIT barrier.wait() — cameras released"
+            );
 
-            // ── WaitingAtBarrier → AssemblingPayload ──
+            // ── AssemblingPayload ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::AssemblingPayload) {
-                eprintln!("[gatherer] invalid state transition: {e}");
+                tracing::error!("[gatherer] invalid state transition: {e}");
             }
+            eprintln!(
+                "[GATHER step {step}] FSM: WaitingAtBarrier→AssemblingPayload  post_bar_ns={}ns",
+                gatherer_sm.timestamps.post_barrier_ns,
+            );
 
             // Check if paused — if so, skip downstream send but continue the cycle.
-            // Cameras have already been released by the barrier, so they remain
-            // responsive to config changes and shutdown signals.
             if paused.load(Ordering::SeqCst) {
-                // ── SendingDownstream → CollectingFrames (skip send) ──
+                eprintln!("[GATHER step {step}] PAUSED — skipping downstream send");
                 if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
-                    eprintln!("[gatherer] invalid state transition: {e}");
+                    tracing::error!("[gatherer] invalid state transition: {e}");
                 }
                 if let Err(e) = gatherer_sm.transition_to(GathererState::CollectingFrames) {
-                    eprintln!("[gatherer] invalid state transition: {e}");
+                    tracing::error!("[gatherer] invalid state transition: {e}");
                 }
                 step += 1;
                 continue;
@@ -243,7 +284,7 @@ pub fn spawn_gatherer(
 
             // ── AssemblingPayload → SendingDownstream ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
-                eprintln!("[gatherer] invalid state transition: {e}");
+                tracing::error!("[gatherer] invalid state transition: {e}");
             }
             payload.payload_assembled_ns = gatherer_sm.timestamps.payload_assembled_ns;
             payload.pre_send_downstream_ns = gatherer_sm.timestamps.pre_send_downstream_ns;
@@ -266,6 +307,7 @@ pub fn spawn_gatherer(
             // ── Track sync spreads ──
             hardware_spread_values.push(payload.hardware_sync_spread_ns() as f64);
             software_spread_values.push(payload.post_barrier_to_capture_spread_ns() as f64);
+            scheduling_spread_values.push(payload.software_scheduling_spread_ns() as f64);
 
             // ── Track per-frame lifecycle timings ──
             for frame in &payload.frames {
@@ -293,17 +335,28 @@ pub fn spawn_gatherer(
 
             step += 1;
 
+            // ── SendingDownstream ──
+            if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
+                tracing::error!("[gatherer] invalid state transition: {e}");
+            }
+            eprintln!(
+                "[GATHER step {step}] FSM: AssemblingPayload→SendingDownstream  sending payload with {} frames...",
+                payload.frames.len(),
+            );
+
             // ── Send downstream ──
             if multi_frame_sender.send(payload).is_err() {
                 eprintln!("[gatherer] downstream disconnected, shutting down");
                 barrier.break_barrier();
                 break;
             }
+            eprintln!("[GATHER step {step}] payload sent downstream OK");
 
             // ── SendingDownstream → CollectingFrames ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::CollectingFrames) {
-                eprintln!("[gatherer] invalid state transition: {e}");
+                tracing::error!("[gatherer] invalid state transition: {e}");
             }
+            eprintln!("[GATHER step {step}] FSM: SendingDownstream→CollectingFrames  cycle complete");
         }
 
         // ── Print statistics on exit ──
@@ -314,6 +367,7 @@ pub fn spawn_gatherer(
                 &multiframe_interval_ns,
                 &hardware_spread_values,
                 &software_spread_values,
+                &scheduling_spread_values,
                 &duration_hardware_wait,
                 &duration_barrier_sync,
                 &duration_capture,
@@ -333,6 +387,7 @@ fn print_statistics(
     multiframe_interval_ns: &[f64],
     hardware_spread_values: &[f64],
     software_spread_values: &[f64],
+    scheduling_spread_values: &[f64],
     duration_hardware_wait: &[f64],
     duration_barrier_sync: &[f64],
     duration_capture: &[f64],
@@ -350,9 +405,11 @@ fn print_statistics(
 
     let hw_spread_stats = compute_stats(hardware_spread_values);
     let sw_spread_stats = compute_stats(software_spread_values);
+    let sched_spread_stats = compute_stats(scheduling_spread_values);
 
     let (hw_div, hw_unit) = auto_scale(hardware_spread_values);
     let (sw_div, sw_unit) = auto_scale(software_spread_values);
+    let (sched_div, sched_unit) = auto_scale(scheduling_spread_values);
 
     let timing_headers = ["Metric", "Median", "Mean", "Std", "Min", "Max"]
         .iter()
@@ -383,6 +440,14 @@ fn print_statistics(
             fmt_val(sw_spread_stats.std / sw_div, sw_unit),
             fmt_val(sw_spread_stats.min / sw_div, sw_unit),
             fmt_val(sw_spread_stats.max / sw_div, sw_unit),
+        ],
+        vec![
+            "scheduling spread (loop_start)".to_string(),
+            fmt_val(sched_spread_stats.median / sched_div, sched_unit),
+            fmt_val(sched_spread_stats.mean / sched_div, sched_unit),
+            fmt_val(sched_spread_stats.std / sched_div, sched_unit),
+            fmt_val(sched_spread_stats.min / sched_div, sched_unit),
+            fmt_val(sched_spread_stats.max / sched_div, sched_unit),
         ],
     ];
 
@@ -462,7 +527,7 @@ fn print_statistics(
 
     print_table_row(&timing_headers, &widths);
     print_separator(&widths);
-    for row in &all_rows[..3] {
+    for row in &all_rows[..4] {
         print_table_row(row, &widths);
     }
 
@@ -472,7 +537,7 @@ fn print_statistics(
 
     print_table_row(&duration_headers, &widths);
     print_separator(&widths);
-    for (i, row) in all_rows[3..].iter().enumerate() {
+    for (i, row) in all_rows[4..].iter().enumerate() {
         if stage_data[i].0 == "total iteration" {
             print_separator(&widths);
         }

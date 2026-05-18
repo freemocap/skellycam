@@ -148,14 +148,6 @@ impl MultiFramePayload {
         let min = *avail.iter().min().unwrap();
         let max = *avail.iter().max().unwrap();
         let spread = max - min;
-        if self.frame_number < 5 {
-            eprintln!(
-                "  [SPREAD mf#{}] hardware_sync: raw_avail={:?}  min={min}  max={max}  spread={spread} ns = {:.1} µs",
-                self.frame_number,
-                avail,
-                spread as f64 / 1000.0,
-            );
-        }
         spread
     }
 
@@ -171,6 +163,23 @@ impl MultiFramePayload {
     /// means the OS is waking the camera threads in tighter lockstep.
     /// USB-webcam hardware-arrival spread dominates total sync error;
     /// this metric isolates the software contribution.
+    /// Software scheduling spread: max - min of `loop_start_ns` across cameras.
+    ///
+    /// `loop_start_ns` is stamped when the camera thread exits `barrier.wait()`
+    /// and begins its next capture iteration. Both cameras exit the same barrier
+    /// simultaneously, so this spread measures pure OS thread scheduling jitter
+    /// — how far apart the OS wakes each camera thread after barrier release.
+    /// This should be microseconds, not milliseconds.
+    pub fn software_scheduling_spread_ns(&self) -> i64 {
+        if self.frames.len() < 2 {
+            return 0;
+        }
+        let starts: Vec<i64> = self.frames.iter().map(|f| f.timestamps.loop_start_ns).collect();
+        let min = *starts.iter().min().unwrap();
+        let max = *starts.iter().max().unwrap();
+        max - min
+    }
+
     pub fn post_barrier_to_capture_spread_ns(&self) -> i64 {
         if self.frames.len() < 2 {
             return 0;
@@ -179,14 +188,6 @@ impl MultiFramePayload {
         let min = *pbtc.iter().min().unwrap();
         let max = *pbtc.iter().max().unwrap();
         let spread = max - min;
-        if self.frame_number < 5 {
-            eprintln!(
-                "  [SPREAD mf#{}] software_sync: raw_pbtc={:?}  min={min}  max={max}  spread={spread} ns = {:.1} µs",
-                self.frame_number,
-                pbtc,
-                spread as f64 / 1000.0,
-            );
-        }
         spread
     }
 }

@@ -24,12 +24,7 @@ use types::{
 /// `_skellycam_rust.PyO3CameraGroupManager`, etc.
 #[pymodule]
 fn _skellycam_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("skellycam=info")),
-        )
-        .try_init();
+    crate::init_logging(crate::DEFAULT_LOG_LEVEL);
 
     // ── Data types ──
     m.add_class::<ImageResolution>()?;
