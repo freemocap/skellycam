@@ -64,7 +64,7 @@ pub fn spawn_dispatcher(
                 match cmd {
                     DispatcherCommand::StartRecording { params } => {
                         // Placeholder — wired in a later step
-                        eprintln!(
+                        tracing::info!(
                             "[dispatcher] recording started → {}",
                             params.output_dir
                         );
@@ -79,10 +79,10 @@ pub fn spawn_dispatcher(
                             csv_paths: Vec::new(),
                             info_json_path: std::path::PathBuf::new(),
                         });
-                        eprintln!("[dispatcher] recording stopped");
+                        tracing::info!("[dispatcher] recording stopped");
                     }
                     DispatcherCommand::Shutdown => {
-                        eprintln!("[dispatcher] shutting down");
+                        tracing::info!("[dispatcher] shutting down");
                         return;
                     }
                 }
@@ -93,7 +93,7 @@ pub fn spawn_dispatcher(
                 Ok(mut payload) => {
                     static mut DISPATCH_COUNT: u64 = 0;
                     let count = unsafe { DISPATCH_COUNT += 1; DISPATCH_COUNT };
-                    eprintln!(
+                    tracing::trace!(
                         "[DISPATCH mf#{count}] received {} frames",
                         payload.frames.len(),
                     );
@@ -179,7 +179,7 @@ pub fn spawn_dispatcher(
                     std::thread::sleep(Duration::from_millis(1));
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    eprintln!("[dispatcher] gatherer disconnected, exiting");
+                    tracing::warn!("[dispatcher] gatherer disconnected, exiting");
                     break;
                 }
             }

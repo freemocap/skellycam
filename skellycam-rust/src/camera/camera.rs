@@ -185,7 +185,7 @@ mod tests {
                 Err(mpsc::TryRecvError::Empty) => {
                     consecutive_empty += 1;
                     if consecutive_empty > max_consecutive_empty {
-                        eprintln!(
+                        tracing::warn!(
                             "collect_frames: timed out after {} empty polls (got {} of {} frames)",
                             consecutive_empty, frames.len(), n
                         );
@@ -194,7 +194,7 @@ mod tests {
                     std::thread::sleep(Duration::from_millis(5));
                 }
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    eprintln!("collect_frames: channel disconnected");
+                    tracing::warn!("collect_frames: channel disconnected");
                     break;
                 }
             }
@@ -277,7 +277,7 @@ mod tests {
                 .cloned()
                 .fold(f64::INFINITY, f64::min);
 
-        eprintln!(
+        tracing::info!(
             "FPS stats over {} frames: mean={mean_fps:.1}  min={min_fps:.1}  max={max_fps:.1}",
             frames.len(),
         );
@@ -306,7 +306,7 @@ mod tests {
         let mean_size = sizes.iter().sum::<usize>() as f64 / sizes.len() as f64;
         let min_size = sizes.iter().min().unwrap();
         let max_size = sizes.iter().max().unwrap();
-        eprintln!(
+        tracing::info!(
             "JPEG size stats: mean={mean_size:.0}B  min={min_size}B  max={max_size}B"
         );
         assert!(
@@ -329,8 +329,8 @@ mod tests {
         // ── Clean shutdown ──
         barrier.break_barrier();
         match camera.shutdown() {
-            Ok(()) => eprintln!("shutdown: clean"),
-            Err(e) => eprintln!("shutdown: {e} (thread may have already exited)"),
+            Ok(()) => tracing::info!("shutdown: clean"),
+            Err(e) => tracing::warn!("shutdown: {e} (thread may have already exited)"),
         }
     }
 
@@ -357,7 +357,7 @@ mod tests {
         let mut new_config = config.clone();
         new_config.exposure = -5;
         camera.configure(new_config.clone());
-        eprintln!(
+        tracing::info!(
             "configure: exposure {} -> {}",
             config.exposure, new_config.exposure
         );
@@ -385,7 +385,7 @@ mod tests {
             assert_eq!(frame.rotation, new_config.rotation);
         }
 
-        eprintln!(
+        tracing::info!(
             "frames: {} before configure, {} after configure",
             first_frames.len(),
             second_frames.len()
@@ -411,7 +411,7 @@ mod tests {
 
         for frame in &frames {
             let ts = &frame.timestamps;
-            eprintln!(
+            tracing::trace!(
                 "frame {} timestamps: loop_start={}  frame_avail={}  post_cap={}  pre_send={}  post_send={}  pre_bar={}  post_bar={}",
                 frame.frame_number,
                 ts.loop_start_ns,

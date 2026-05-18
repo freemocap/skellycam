@@ -75,8 +75,8 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
         }
 
         let device_count = Cap_getDeviceCount(ctx);
-        eprintln!("  -- Camera Detection --");
-        eprintln!("  openpnp-capture reports {device_count} device(s)\n");
+        tracing::info!("  -- Camera Detection --");
+        tracing::info!("  openpnp-capture reports {device_count} device(s)\n");
 
         let mut cameras: Vec<CameraIdentity> = Vec::new();
         let mut filtered_no_formats: u32 = 0;
@@ -92,7 +92,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
 
             // ── Filter: virtual cameras ──
             if display_name.to_lowercase().contains("virtual") {
-                eprintln!(
+                tracing::info!(
                     "    [{index}] \"{display_name}\" — VIRTUAL CAMERA, skipping"
                 );
                 filtered_virtual += 1;
@@ -101,7 +101,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
 
             // ── Filter: no formats ──
             if num_formats <= 0 {
-                eprintln!(
+                tracing::info!(
                     "    [{index}] \"{display_name}\" — NO FORMATS, skipping"
                 );
                 filtered_no_formats += 1;
@@ -132,7 +132,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
 
             // ── Filter: no MJPG format ──
             if !has_mjpg {
-                eprintln!(
+                tracing::info!(
                     "    [{index}] \"{display_name}\" — NO MJPG FORMAT, skipping (has {} formats: {:?})",
                     num_formats,
                     formats.iter().map(|f| f.fourcc_str.as_str()).collect::<Vec<_>>()
@@ -144,8 +144,8 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
             let vid_str = vid.map_or("????".to_string(), |v| format!("{v:04x}"));
             let pid_str = pid.map_or("????".to_string(), |p| format!("{p:04x}"));
 
-            eprintln!("    [{index}] \"{display_name}\"");
-            eprintln!(
+            tracing::info!("    [{index}] \"{display_name}\"");
+            tracing::info!(
                 "           -> id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats} MJPG"
             );
 
@@ -163,18 +163,18 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
         // ── Summary ──
         let total_filtered = filtered_virtual + filtered_no_formats + filtered_no_mjpg;
         if total_filtered > 0 {
-            eprintln!();
+            tracing::info!("");
             if filtered_virtual > 0 {
-                eprintln!("  -- {filtered_virtual} virtual camera(s) filtered --");
+                tracing::info!("  -- {filtered_virtual} virtual camera(s) filtered --");
             }
             if filtered_no_formats > 0 {
-                eprintln!("  -- {filtered_no_formats} camera(s) filtered (no formats) --");
+                tracing::info!("  -- {filtered_no_formats} camera(s) filtered (no formats) --");
             }
             if filtered_no_mjpg > 0 {
-                eprintln!("  -- {filtered_no_mjpg} camera(s) filtered (no MJPG format) --");
+                tracing::info!("  -- {filtered_no_mjpg} camera(s) filtered (no MJPG format) --");
             }
         }
-        eprintln!(
+        tracing::info!(
             "\n  = {} camera(s) ready (all MJPG) =\n",
             cameras.len()
         );

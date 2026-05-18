@@ -91,14 +91,14 @@ fn print_table_row(cols: &[String], widths: &[usize]) {
         })
         .collect::<Vec<_>>()
         .join("  ");
-    eprintln!("  {line}");
+    tracing::info!("  {line}");
 }
 
 fn print_separator(widths: &[usize]) {
     let total: usize =
         widths.iter().sum::<usize>() + (widths.len() - 1) * 2 + 2;
     let sep = "─".repeat(total);
-    eprintln!("  {sep}");
+    tracing::info!("  {sep}");
 }
 
 // ── Gatherer spawn ───────────────────────────────────────────────────────────
@@ -240,14 +240,14 @@ pub fn spawn_gatherer(
             if let Err(e) = gatherer_sm.transition_to(GathererState::WaitingAtBarrier) {
                 tracing::error!("[gatherer] invalid state transition: {e}");
             }
-            eprintln!(
+            tracing::trace!(
                 "[GATHER step {step}] ENTER barrier.wait() (WaitingAtBarrier)"
             );
             if !barrier.wait() {
-                eprintln!("[gatherer] barrier broken, shutting down");
+                tracing::warn!("[gatherer] barrier broken, shutting down");
                 break;
             }
-            eprintln!(
+            tracing::trace!(
                 "[GATHER step {step}] EXIT barrier.wait() — cameras released"
             );
 
@@ -255,14 +255,14 @@ pub fn spawn_gatherer(
             if let Err(e) = gatherer_sm.transition_to(GathererState::AssemblingPayload) {
                 tracing::error!("[gatherer] invalid state transition: {e}");
             }
-            eprintln!(
+            tracing::trace!(
                 "[GATHER step {step}] FSM: WaitingAtBarrier→AssemblingPayload  post_bar_ns={}ns",
                 gatherer_sm.timestamps.post_barrier_ns,
             );
 
             // Check if paused — if so, skip downstream send but continue the cycle.
             if paused.load(Ordering::SeqCst) {
-                eprintln!("[GATHER step {step}] PAUSED — skipping downstream send");
+                tracing::trace!("[GATHER step {step}] PAUSED — skipping downstream send");
                 if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
                     tracing::error!("[gatherer] invalid state transition: {e}");
                 }
@@ -335,28 +335,24 @@ pub fn spawn_gatherer(
 
             step += 1;
 
-            // ── SendingDownstream ──
-            if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
-                tracing::error!("[gatherer] invalid state transition: {e}");
-            }
-            eprintln!(
+            tracing::trace!(
                 "[GATHER step {step}] FSM: AssemblingPayload→SendingDownstream  sending payload with {} frames...",
                 payload.frames.len(),
             );
 
             // ── Send downstream ──
             if multi_frame_sender.send(payload).is_err() {
-                eprintln!("[gatherer] downstream disconnected, shutting down");
+                tracing::warn!("[gatherer] downstream disconnected, shutting down");
                 barrier.break_barrier();
                 break;
             }
-            eprintln!("[GATHER step {step}] payload sent downstream OK");
+            tracing::trace!("[GATHER step {step}] payload sent downstream OK");
 
             // ── SendingDownstream → CollectingFrames ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::CollectingFrames) {
                 tracing::error!("[gatherer] invalid state transition: {e}");
             }
-            eprintln!("[GATHER step {step}] FSM: SendingDownstream→CollectingFrames  cycle complete");
+            tracing::trace!("[GATHER step {step}] FSM: SendingDownstream→CollectingFrames  cycle complete");
         }
 
         // ── Print statistics on exit ──
@@ -376,7 +372,7 @@ pub fn spawn_gatherer(
             );
         }
 
-        eprintln!("[gatherer] exited after {step} steps");
+        tracing::info!("[gatherer] exited after {step} steps");
     })
 }
 
@@ -514,16 +510,16 @@ fn print_statistics(
     }
 
     // ── Print tables ──
-    eprintln!();
-    eprintln!("══════════════════════════════════════════════════════════════════════");
-    eprintln!(
+    tracing::info!("");
+    tracing::info!("══════════════════════════════════════════════════════════════════════");
+    tracing::info!(
         "  GATHERER STATISTICS — {step} multiframes, {camera_count} cameras, {total_samples} total samples"
     );
-    eprintln!("──────────────────────────────────────────────────────────────────────");
+    tracing::info!("──────────────────────────────────────────────────────────────────────");
 
-    eprintln!();
-    eprintln!("  FRAME TIMING");
-    eprintln!("  ────────────");
+    tracing::info!("");
+    tracing::info!("  FRAME TIMING");
+    tracing::info!("  ────────────");
 
     print_table_row(&timing_headers, &widths);
     print_separator(&widths);
@@ -531,9 +527,9 @@ fn print_statistics(
         print_table_row(row, &widths);
     }
 
-    eprintln!();
-    eprintln!("  PER-STAGE DURATIONS");
-    eprintln!("  ───────────────────");
+    tracing::info!("");
+    tracing::info!("  PER-STAGE DURATIONS");
+    tracing::info!("  ───────────────────");
 
     print_table_row(&duration_headers, &widths);
     print_separator(&widths);
@@ -544,9 +540,9 @@ fn print_statistics(
         print_table_row(row, &widths);
     }
 
-    eprintln!();
-    eprintln!("  Spread legend: hardware = frame_available | software = post_barrier_to_capture");
-    eprintln!("  % of total is each stage's median divided by total iteration median.");
-    eprintln!("══════════════════════════════════════════════════════════════════════");
-    eprintln!();
+    tracing::info!("");
+    tracing::info!("  Spread legend: hardware = frame_available | software = post_barrier_to_capture");
+    tracing::info!("  % of total is each stage's median divided by total iteration median.");
+    tracing::info!("══════════════════════════════════════════════════════════════════════");
+    tracing::info!("");
 }

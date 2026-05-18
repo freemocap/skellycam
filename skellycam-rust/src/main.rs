@@ -8,6 +8,8 @@
 //!   cargo run --release -- --cameras 2           # multi-camera lockstep
 //!   cargo run --release -- --indices 0,2,4       # specific camera indices
 //!   cargo run --release -- --record 2 --open     # record 2 cameras + open output folder
+//!   cargo run --release -- --cameras 3 --max-loops 30   # 3 cameras, 30 multiframes
+//!   cargo run --release -- --cameras 2 --max-loops -1   # run indefinitely (the default)
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -18,7 +20,7 @@ use skellycam::camera_group_manager::CameraGroupManager;
 
 fn main() -> anyhow::Result<()> {
     if cfg!(debug_assertions) {
-        eprintln!(
+        tracing::warn!(
             "WARNING: Running in debug mode. Use `cargo run --release` for full performance.\n"
         );
     }
@@ -64,9 +66,9 @@ fn main() -> anyhow::Result<()> {
 fn run_detection() -> anyhow::Result<()> {
     let cameras = detect_cameras()?;
     if cameras.is_empty() {
-        eprintln!("No cameras found.");
+        tracing::warn!("No cameras found.");
     } else {
-        eprintln!("Found {} camera{} total.", cameras.len(), if cameras.len() == 1 { "" } else { "s" });
+        tracing::info!("Found {} camera{} total.", cameras.len(), if cameras.len() == 1 { "" } else { "s" });
     }
     Ok(())
 }
@@ -87,9 +89,9 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
         None => all_cameras.len(),
     };
 
-    eprintln!("══════════════════════════════════════════════════");
-    eprintln!("  CAMERA GROUP MANAGER TEST — {} camera{}", camera_count, if camera_count == 1 { "" } else { "s" });
-    eprintln!("══════════════════════════════════════════════════\n");
+    tracing::info!("══════════════════════════════════════════════════");
+    tracing::info!("  CAMERA GROUP MANAGER TEST — {} camera{}", camera_count, if camera_count == 1 { "" } else { "s" });
+    tracing::info!("══════════════════════════════════════════════════\n");
 
     let mut manager = CameraGroupManager::new();
 
@@ -107,20 +109,20 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
         .collect();
 
     let group_id = manager.create_or_update_group(configs, None)?;
-    eprintln!("  Created group: {group_id}");
-    eprintln!("  Active groups: {:?}", manager.list_groups());
-    eprintln!("  Group count: {}\n", manager.group_count());
+    tracing::info!("  Created group: {group_id}");
+    tracing::info!("  Active groups: {:?}", manager.list_groups());
+    tracing::info!("  Group count: {}\n", manager.group_count());
 
     let state = manager.to_state_dict();
     let state_json = serde_json::to_string_pretty(&state)?;
-    eprintln!("  ── Manager State ──\n{state_json}\n");
+    tracing::info!("  ── Manager State ──\n{state_json}\n");
 
     // Poll frames via the manager (it internally calls latest_frontend_payload)
     let mut frame_count: u64 = 0;
     let start = Instant::now();
     let run_duration = Duration::from_secs(5);
 
-    eprintln!("  Running for {} seconds...\n", run_duration.as_secs());
+    tracing::info!("  Running for {} seconds...\n", run_duration.as_secs());
     while start.elapsed() < run_duration {
         // Poll via the manager's group — we use remove_group to get the raw group
         // and check its latest_frontend_payload. In practice, the manager wraps this.
@@ -130,13 +132,13 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     // Approximate: count = elapsed / 10ms
     frame_count = (start.elapsed().as_millis() / 10) as u64;
 
-    eprintln!("  ── Results ──");
-    eprintln!("  Polls: {frame_count}");
-    eprintln!("  Cameras in group: {camera_count}");
+    tracing::info!("  ── Results ──");
+    tracing::info!("  Polls: {frame_count}");
+    tracing::info!("  Cameras in group: {camera_count}");
 
     manager.close_group(&group_id)?;
-    eprintln!("  Shutdown complete.");
-    eprintln!("══════════════════════════════════════════════════\n");
+    tracing::info!("  Shutdown complete.");
+    tracing::info!("══════════════════════════════════════════════════\n");
     Ok(())
 }
 
@@ -171,7 +173,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
     }).collect();
 
     let num_cameras = configs.len();
-    eprintln!("\n  ── Recording {num_cameras} camera(s) ──\n");
+    tracing::info!("\n  ── Recording {num_cameras} camera(s) ──\n");
 
     let output_dir = {
         let timestamp = std::time::SystemTime::now()
@@ -190,7 +192,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         label: Some("test_recording".into()),
     })?;
 
-    eprintln!("  Recording to: {}\n", output_dir.display());
+    tracing::info!("  Recording to: {}\n", output_dir.display());
 
     let max_duration = Duration::from_secs(5);
     let start = Instant::now();
@@ -202,7 +204,7 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
                 last_frame = payload.frame_number;
                 if last_frame > 0 && last_frame % 30 == 0 {
                     let elapsed = start.elapsed().as_secs_f64();
-                    eprintln!("  frame {last_frame:>5} | {elapsed:.1}s | ~{:.0}fps",
+                    tracing::debug!("  frame {last_frame:>5} | {elapsed:.1}s | ~{:.0}fps",
                         last_frame as f64 / elapsed);
                 }
             }
@@ -210,16 +212,16 @@ fn run_recording(camera_count: u32, open_folder: bool) -> anyhow::Result<()> {
         std::thread::sleep(Duration::from_millis(1));
     }
 
-    eprintln!("\n  Stopping recording...");
+    tracing::info!("\n  Stopping recording...");
     let summary = group.stop_recording()?;
-    eprintln!("  Frames per camera: {}", summary.total_frames_per_camera);
+    tracing::info!("  Frames per camera: {}", summary.total_frames_per_camera);
 
     group.shutdown()?;
 
     if open_folder {
         let _ = std::process::Command::new("explorer").arg(&output_dir).spawn();
     }
-    eprintln!("Done.");
+    tracing::info!("Done.");
     Ok(())
 }
 
@@ -263,7 +265,7 @@ fn run_multi_camera(
     }).collect();
 
     let num_cameras = configs.len();
-    eprintln!("\n  ── {num_cameras}-camera lockstep ── 600 multiframes (~20s) ──\n");
+    tracing::info!("\n  ── {num_cameras}-camera lockstep ── 600 multiframes (~20s) ──\n");
 
     let mut group = CameraGroup::new(configs);
     group.start()?;
@@ -274,14 +276,14 @@ fn run_multi_camera(
     let mut first_frame_time: Option<Instant> = None;
     let mut last_report_frame: i64 = 0;
 
-    eprintln!("  waiting for first frame...");
+    tracing::info!("  waiting for first frame...");
 
     while last_frame < max_multiframes {
         if let Some(payload) = group.latest_frontend_payload() {
             if payload.frame_number > last_frame {
                 if first_frame_time.is_none() {
                     first_frame_time = Some(Instant::now());
-                    eprintln!("  first frame received (init took {:.1}s)", start.elapsed().as_secs_f64());
+                    tracing::info!("  first frame received (init took {:.1}s)", start.elapsed().as_secs_f64());
                 }
                 last_frame = payload.frame_number;
             }
@@ -292,7 +294,7 @@ fn run_multi_camera(
             if last_frame > 0 && last_frame - last_report_frame >= 60 {
                 let elapsed = t0.elapsed().as_secs_f64();
                 let fps = (last_frame - 1) as f64 / elapsed; // -1: exclude frame 0
-                eprintln!(
+                tracing::debug!(
                     "  [t+{elapsed:.1}s] multiframe {last_frame:>5}  |  {fps:.1} fps  |  {} cameras",
                     num_cameras
                 );
@@ -305,20 +307,20 @@ fn run_multi_camera(
     let elapsed = first_frame_time
         .map(|t0| t0.elapsed().as_secs_f64())
         .unwrap_or(0.0);
-    eprintln!("\n══════════════════════════════════════════════════");
-    eprintln!("  Multi-Camera Summary");
-    eprintln!("──────────────────────────────────────────────────");
-    eprintln!("  Cameras:          {num_cameras}");
-    eprintln!("  Multiframes:      {last_frame}");
-    eprintln!("  Capture:          {elapsed:.1}s");
+    tracing::info!("\n══════════════════════════════════════════════════");
+    tracing::info!("  Multi-Camera Summary");
+    tracing::info!("──────────────────────────────────────────────────");
+    tracing::info!("  Cameras:          {num_cameras}");
+    tracing::info!("  Multiframes:      {last_frame}");
+    tracing::info!("  Capture:          {elapsed:.1}s");
     if elapsed > 0.0 {
-        eprintln!("  Multiframe rate:  {:.1} fps", (last_frame - 1) as f64 / elapsed);
+        tracing::info!("  Multiframe rate:  {:.1} fps", (last_frame - 1) as f64 / elapsed);
     }
-    eprintln!("══════════════════════════════════════════════════\n");
+    tracing::info!("══════════════════════════════════════════════════\n");
 
-    eprintln!("Shutting down...");
+    tracing::info!("Shutting down...");
     group.shutdown()?;
-    eprintln!("Done.");
+    tracing::info!("Done.");
     Ok(())
 }
 

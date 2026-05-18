@@ -11,7 +11,7 @@ pub mod pyo3_bridge;
 /// Change this to "trace" for hot-loop debugging, "debug" for
 /// per-cycle diagnostics, "info" for normal operation.
 /// `RUST_LOG` env var overrides this if set.
-pub const DEFAULT_LOG_LEVEL: &str = "info";
+pub const DEFAULT_LOG_LEVEL: &str = "trace";
 
 /// Initialize the tracing subscriber once for the entire process.
 ///

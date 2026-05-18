@@ -156,7 +156,7 @@ impl CameraGroup {
         }
 
         let camera_count = self.configs.len();
-        eprintln!(
+        tracing::info!(
             "[CameraGroup {}] starting {} camera(s)",
             self.group_id, camera_count
         );
@@ -217,7 +217,7 @@ impl CameraGroup {
         self.dispatcher_control_sender = Some(control_sender);
         self.state = CameraGroupState::Streaming;
 
-        eprintln!(
+        tracing::info!(
             "[CameraGroup {}] started — {} cameras streaming",
             self.group_id,
             self.cameras.len()
@@ -289,7 +289,7 @@ impl CameraGroup {
 
         let total = changed.len() + added.len() + removed.len();
         if total > 0 {
-            eprintln!(
+            tracing::info!(
                 "[CameraGroup {}] applied configs: {} reconfigured, {} added, {} removed",
                 self.group_id,
                 changed.len(),
@@ -309,7 +309,7 @@ impl CameraGroup {
             anyhow::bail!("CameraGroup is already Stopped");
         }
 
-        eprintln!("[CameraGroup {}] shutting down", self.group_id);
+        tracing::info!("[CameraGroup {}] shutting down", self.group_id);
         self.state = CameraGroupState::ShuttingDown;
 
         // Shut down each camera
@@ -317,7 +317,7 @@ impl CameraGroup {
         for id in camera_ids {
             if let Some(camera) = self.cameras.remove(&id) {
                 if let Err(e) = camera.shutdown() {
-                    eprintln!(
+                    tracing::error!(
                         "[CameraGroup {}] camera '{}' shutdown error: {}",
                         self.group_id, id, e
                     );
@@ -336,7 +336,7 @@ impl CameraGroup {
         // Join the gatherer thread
         if let Some(handle) = self.gatherer_handle.take() {
             if let Err(e) = handle.join() {
-                eprintln!(
+                tracing::error!(
                     "[CameraGroup {}] gatherer thread panicked: {:?}",
                     self.group_id,
                     e.downcast_ref::<&str>().unwrap_or(&"unknown panic message")
@@ -347,7 +347,7 @@ impl CameraGroup {
         // Join the dispatcher thread
         if let Some(handle) = self.dispatcher_handle.take() {
             if let Err(e) = handle.join() {
-                eprintln!(
+                tracing::error!(
                     "[CameraGroup {}] dispatcher thread panicked: {:?}",
                     self.group_id,
                     e.downcast_ref::<&str>().unwrap_or(&"unknown panic message")
@@ -356,7 +356,7 @@ impl CameraGroup {
         }
 
         self.state = CameraGroupState::Stopped;
-        eprintln!("[CameraGroup {}] shutdown complete", self.group_id);
+        tracing::info!("[CameraGroup {}] shutdown complete", self.group_id);
         Ok(())
     }
 
@@ -535,7 +535,7 @@ impl CameraGroup {
         self.barrier
             .set_total(self.cameras.len() + 1);
 
-        eprintln!(
+        tracing::info!(
             "[CameraGroup {}] added camera '{}' — {} total",
             self.group_id,
             camera_id,
@@ -573,7 +573,7 @@ impl CameraGroup {
         };
         self.barrier.set_total(new_count);
 
-        eprintln!(
+        tracing::info!(
             "[CameraGroup {}] removed camera '{}' — {} remaining",
             self.group_id,
             camera_id,
