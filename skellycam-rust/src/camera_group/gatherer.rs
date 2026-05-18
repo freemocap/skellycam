@@ -33,6 +33,27 @@ const STATS_WARMUP_MULTIFRAMES: i64 = 3;
 /// timings can be distorted by shutdown.
 const STATS_COOLDOWN_MULTIFRAMES: usize = 1;
 
+/// Maximum number of multiframes retained in the gatherer's lifecycle-stats
+/// ring buffer. 300 multiframes ≈ 10 seconds at 30 fps — enough for a
+/// representative sample without unbounded memory growth.
+const STATS_RING_BUFFER_LIMIT: usize = 300;
+
+/// Truncate a single stats Vec if it exceeds the ring-buffer limit.
+/// Drops from the front so the most recent samples are retained.
+fn truncate_ring<T>(v: &mut Vec<T>) {
+    if v.len() > STATS_RING_BUFFER_LIMIT {
+        let excess = v.len() - STATS_RING_BUFFER_LIMIT;
+        v.drain(0..excess);
+    }
+}
+
+/// Truncate a slice of per-camera stats Vecs.
+fn truncate_ring_buffer<T>(vecs: &mut [Vec<T>]) {
+    for v in vecs.iter_mut() {
+        truncate_ring(v);
+    }
+}
+
 // ── Statistics primitives ────────────────────────────────────────────────────
 
 struct Stats {
@@ -172,6 +193,7 @@ pub fn spawn_gatherer(
     update_receiver: Receiver<super::types::GathererUpdate>,
     barrier: Arc<BreakableBarrier>,
     paused: Arc<AtomicBool>,
+    performance_snapshot: Arc<std::sync::Mutex<Option<String>>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut step: i64 = 0;
@@ -442,6 +464,36 @@ pub fn spawn_gatherer(
                 if gather_post_bar > 0 && payload_assembled >= gather_post_bar {
                     gatherer_payload_assembly
                         .push((payload_assembled - gather_post_bar) as f64);
+                }
+            }
+
+            // ── Ring-buffer cap: prevent unbounded memory growth ──
+            if push_stats {
+                truncate_ring_buffer(&mut per_camera_wait_for_frame);
+                truncate_ring_buffer(&mut per_camera_jpeg_extract);
+                truncate_ring_buffer(&mut per_camera_channel_send_wait);
+                truncate_ring_buffer(&mut per_camera_cycle_total);
+                truncate_ring(&mut frame_arrival_spread_values);
+                truncate_ring(&mut thread_wakeup_spread_values);
+                truncate_ring(&mut multiframe_interval_ns);
+                truncate_ring(&mut gatherer_frames_collection);
+                truncate_ring(&mut gatherer_barrier_wait_values);
+                truncate_ring(&mut gatherer_payload_assembly);
+                truncate_ring(&mut gatherer_downstream_send);
+
+                // Update performance snapshot every ~3s (every 100 multiframes)
+                if step % 100 == 0 {
+                    if let Ok(mut slot) = performance_snapshot.lock() {
+                        *slot = Some(build_snapshot_json(
+                            &per_camera_wait_for_frame,
+                            &per_camera_jpeg_extract,
+                            &per_camera_channel_send_wait,
+                            &per_camera_cycle_total,
+                            &frame_arrival_spread_values,
+                            &multiframe_interval_ns,
+                            &camera_labels,
+                        ));
+                    }
                 }
             }
 
@@ -952,4 +1004,73 @@ fn print_statistics(
     line("");
     line("═══════════════════════════════════════════════════════════════════════════════");
     line("");
+}
+
+// ── Performance snapshot (lightweight JSON for PyO3 bridge polling) ─────
+
+fn build_snapshot_json(
+    per_camera_wait_for_frame: &[Vec<f64>],
+    per_camera_jpeg_extract: &[Vec<f64>],
+    per_camera_channel_send_wait: &[Vec<f64>],
+    per_camera_cycle_total: &[Vec<f64>],
+    frame_arrival_spread: &[f64],
+    multiframe_interval_ns: &[f64],
+    camera_labels: &[String],
+) -> String {
+    let fps: Vec<f64> = multiframe_interval_ns
+        .iter()
+        .filter(|dt| **dt > 0.0)
+        .map(|dt_ns| 1_000_000_000.0 / dt_ns)
+        .collect();
+
+    let fps_stats = compute_stats(&fps);
+    let spread_stats = compute_stats(frame_arrival_spread);
+
+    let per_camera: Vec<serde_json::Value> = camera_labels
+        .iter()
+        .enumerate()
+        .map(|(i, label)| {
+            let wf = per_camera_wait_for_frame.get(i).map(|v| stat_to_json(compute_stats(v)));
+            let je = per_camera_jpeg_extract.get(i).map(|v| stat_to_json(compute_stats(v)));
+            let cs = per_camera_channel_send_wait.get(i).map(|v| stat_to_json(compute_stats(v)));
+            let ct = per_camera_cycle_total.get(i).map(|v| stat_to_json(compute_stats(v)));
+            serde_json::json!({
+                "camera_label": label,
+                "wait_for_frame_us": wf,
+                "jpeg_extract_us": je,
+                "channel_send_wait_us": cs,
+                "cycle_total_ms": ct,
+            })
+        })
+        .collect();
+
+    let snapshot = serde_json::json!({
+        "multiframe_fps": stat_to_json(fps_stats),
+        "frame_arrival_spread_us": stat_to_json(
+            spread_stats.map(|mut s| {
+                s.mean /= 1_000.0; s.median /= 1_000.0;
+                s.std /= 1_000.0; s.min /= 1_000.0; s.max /= 1_000.0;
+                s
+            })
+        ),
+        "sample_count": multiframe_interval_ns.len(),
+        "per_camera": per_camera,
+    });
+
+    snapshot.to_string()
+}
+
+fn stat_to_json(stats: Option<Stats>) -> serde_json::Value {
+    match stats {
+        Some(s) => serde_json::json!({
+            "median_us": s.median / 1_000.0,
+            "mean_us": s.mean / 1_000.0,
+            "std_us": s.std / 1_000.0,
+            "cv_pct": s.cv_pct,
+            "min_us": s.min / 1_000.0,
+            "max_us": s.max / 1_000.0,
+            "n": s.n,
+        }),
+        None => serde_json::Value::Null,
+    }
 }

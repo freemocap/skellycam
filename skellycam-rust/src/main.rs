@@ -124,19 +124,14 @@ fn run_manager_test(requested_count: Option<u32>) -> anyhow::Result<()> {
     tracing::info!("  ── Manager State ──\n{state_json}\n");
 
     // Poll frames via the manager (it internally calls latest_frontend_payload)
-    let mut frame_count: u64 = 0;
     let start = Instant::now();
     let run_duration = Duration::from_secs(5);
 
     tracing::info!("  Running for {} seconds...\n", run_duration.as_secs());
     while start.elapsed() < run_duration {
-        // Poll via the manager's group — we use remove_group to get the raw group
-        // and check its latest_frontend_payload. In practice, the manager wraps this.
         std::thread::sleep(Duration::from_millis(10));
-        frame_count += 1;
     }
-    // Approximate: count = elapsed / 10ms
-    frame_count = (start.elapsed().as_millis() / 10) as u64;
+    let frame_count = (start.elapsed().as_millis() / 10) as u64;
 
     tracing::info!("  ── Results ──");
     tracing::info!("  Polls: {frame_count}");

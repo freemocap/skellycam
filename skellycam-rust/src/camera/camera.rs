@@ -169,7 +169,7 @@ mod tests {
         camera: &Camera,
         barrier: &BreakableBarrier,
         n: usize,
-        frame_timeout: Duration,
+        _frame_timeout: Duration,
     ) -> Vec<FramePacket> {
         let mut frames = Vec::with_capacity(n);
         let mut consecutive_empty = 0u32;

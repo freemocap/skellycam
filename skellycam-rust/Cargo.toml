@@ -4,7 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
+name = "skellycam"
 crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "skellycam-rust"
+path = "src/main.rs"
 
 [dependencies]
 # PyO3 — Python bindings

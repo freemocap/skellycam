@@ -99,6 +99,9 @@ pub struct CameraGroup {
     dispatcher_control_sender: Option<mpsc::Sender<DispatcherCommand>>,
     latest_frontend_payload: Arc<Mutex<Option<FrontendPayload>>>,
     recording_active: Arc<AtomicBool>,
+
+    // Performance snapshot updated by the gatherer each cycle
+    performance_snapshot: Arc<Mutex<Option<String>>>,
 }
 
 impl CameraGroup {
@@ -130,6 +133,7 @@ impl CameraGroup {
             dispatcher_control_sender: None,
             latest_frontend_payload: Arc::new(Mutex::new(None)),
             recording_active: Arc::new(AtomicBool::new(false)),
+            performance_snapshot: Arc::new(Mutex::new(None)),
             barrier,
             paused: Arc::new(AtomicBool::new(false)),
         }
@@ -202,6 +206,7 @@ impl CameraGroup {
             update_receiver,
             self.barrier.clone(),
             self.paused.clone(),
+            self.performance_snapshot.clone(),
         );
 
         let dispatcher_handle = super::dispatcher::spawn_dispatcher(
@@ -438,6 +443,11 @@ impl CameraGroup {
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────
+
+    /// Return the latest performance snapshot JSON from the gatherer, if any.
+    pub fn latest_performance_snapshot(&self) -> Option<String> {
+        self.performance_snapshot.lock().ok().and_then(|g| g.clone())
+    }
 
     /// Number of cameras currently in the group.
     pub fn camera_count(&self) -> usize {
@@ -968,13 +978,13 @@ mod tests {
         let mut group = CameraGroup::new(configs);
         assert!(!group.is_recording());
 
-        group.start_recording(RecordingParams {
+        let _ = group.start_recording(RecordingParams {
             output_dir: "/tmp/test".into(),
             label: Some("test_session".into()),
         });
         assert!(group.is_recording());
 
-        group.stop_recording();
+        let _ = group.stop_recording();
         assert!(!group.is_recording());
     }
 

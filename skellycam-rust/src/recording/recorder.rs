@@ -74,8 +74,6 @@ pub struct VideoRecorder {
     ffmpeg_child: ffmpeg_sidecar::child::FfmpegChild,
     stdin: Option<ChildStdin>,
     output_path: PathBuf,
-    width: u32,
-    height: u32,
     frame_count: u64,
     timestamps: Vec<FrameTimestamp>,
 }
@@ -137,8 +135,6 @@ impl VideoRecorder {
             ffmpeg_child: child,
             stdin: Some(stdin),
             output_path,
-            width: even_width,
-            height: even_height,
             frame_count: 0,
             timestamps: Vec::new(),
         })
@@ -204,6 +200,10 @@ impl VideoRecorder {
 
     pub fn frame_count(&self) -> u64 {
         self.frame_count
+    }
+
+    pub fn output_path(&self) -> &std::path::Path {
+        &self.output_path
     }
 }
 

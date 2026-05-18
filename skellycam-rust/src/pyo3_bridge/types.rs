@@ -12,7 +12,7 @@ use pyo3::types::PyDict;
 
 // ── ImageResolution ────────────────────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct ImageResolution {
     #[pyo3(get, set)]
@@ -75,20 +75,11 @@ impl RotationType {
             _ => Self::NoRotation,
         }
     }
-
-    pub fn name(&self) -> &'static str {
-        match self {
-            Self::NoRotation => "NO_ROTATION",
-            Self::Clockwise90 => "CLOCKWISE_90",
-            Self::Rotate180 => "ROTATE_180",
-            Self::CounterClockwise90 => "COUNTERCLOCKWISE_90",
-        }
-    }
 }
 
 // ── CameraConfig ───────────────────────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Debug)]
 pub struct CameraConfig {
     #[pyo3(get, set)]
@@ -205,7 +196,7 @@ impl CameraConfig {
         let use_this_camera: bool = get_dict_bool_or(data, "use_this_camera", true);
 
         let (height, width) = if let Ok(Some(res)) = data.get_item("resolution") {
-            if let Ok(res_dict) = res.downcast::<PyDict>() {
+            if let Ok(res_dict) = res.cast::<PyDict>() {
                 let h = get_dict_i32_or(&res_dict, "height", 720);
                 let w = get_dict_i32_or(&res_dict, "width", 1280);
                 (h, w)
@@ -332,7 +323,7 @@ impl CameraConfig {
 
 // ── RecordingInfo ──────────────────────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct RecordingInfo {
     #[pyo3(get, set)]
@@ -440,7 +431,7 @@ impl RecordingInfo {
 
 // ── StatsSummary ───────────────────────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct StatsSummary {
     #[pyo3(get, set)]
@@ -475,7 +466,7 @@ impl StatsSummary {
 
 // ── StopRecordingResponse ──────────────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Debug)]
 pub struct StopRecordingResponse {
     #[pyo3(get, set)]
@@ -566,7 +557,7 @@ impl StopRecordingResponse {
 
 // ── CameraStatusDict (for to_state_dict()) ─────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct CameraStatusDict {
     #[pyo3(get, set)]
@@ -608,7 +599,7 @@ impl CameraStatusDict {
 
 // ── FramerateData ──────────────────────────────────────────────────────────
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[derive(Clone, Debug)]
 pub struct FramerateData {
     #[pyo3(get, set)]

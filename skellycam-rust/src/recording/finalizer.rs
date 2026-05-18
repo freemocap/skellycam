@@ -38,6 +38,7 @@ pub struct RecordingSummary {
     pub video_paths: Vec<PathBuf>,
     pub csv_paths: Vec<PathBuf>,
     pub info_json_path: PathBuf,
+    pub stats: Option<crate::camera_group::recording_stats::RecordingStatsSummary>,
 }
 
 /// Validate recording output and generate RecordingInfo JSON.
@@ -50,6 +51,7 @@ pub fn finalize_recording(
     camera_infos: &[(CameraIdentity, u32, u32)],  // (identity, width, height)
     video_paths: &[PathBuf],
     csv_paths: &[PathBuf],
+    stats: Option<crate::camera_group::recording_stats::RecordingStatsSummary>,
 ) -> anyhow::Result<RecordingSummary> {
     if camera_infos.len() != video_paths.len() || camera_infos.len() != csv_paths.len() {
         anyhow::bail!(
@@ -125,6 +127,7 @@ pub fn finalize_recording(
         video_paths: video_paths.to_vec(),
         csv_paths: csv_paths.to_vec(),
         info_json_path: json_path,
+        stats,
     })
 }
 

@@ -210,7 +210,6 @@ mod tests {
         // loop_start_ns is updated for the next iteration by the camera
         // thread directly. The FSM doesn't auto-update it.
         let next_loop_start = performance_counter_nanoseconds();
-        fsm.timestamps.loop_start_ns = next_loop_start;
         assert!(next_loop_start > ps);
     }
 }

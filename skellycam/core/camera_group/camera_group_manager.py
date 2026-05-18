@@ -266,25 +266,57 @@ class RustCameraGroup:
     async def close(self) -> None:
         self._native.close_all_groups()
 
-    # ── Stubs for unimplemented functionality ────────────────────────────
+    # ── Lifecycle ──────────────────────────────────────────────────────
 
     async def update_camera_settings(self, requested_configs):
-        raise NotImplementedError("Config updates not yet in Rust backend")
+        configs_dict = {}
+        for camera_id, config in requested_configs.items():
+            resolution = config.resolution
+            configs_dict[camera_id] = {
+                "camera_id": camera_id,
+                "camera_index": config.camera_index,
+                "width": resolution.width,
+                "height": resolution.height,
+                "exposure": config.exposure,
+                "exposure_mode": config.exposure_mode,
+                "framerate": config.framerate,
+                "rotation": config.rotation.value,
+            }
+        self._native.apply_configs(self._group_id, configs_dict)
+        logger.info(f"Applied config updates for group {self._group_id}")
 
     async def start_recording(self, recording_info):
-        raise NotImplementedError("Recording not yet in Rust backend")
+        from skellycam.core.recorders.videos.recording_info import RecordingInfo
+        if isinstance(recording_info, RecordingInfo):
+            self._native.start_recording(
+                output_dir=recording_info.recording_directory,
+                label=recording_info.recording_name,
+            )
+        else:
+            raise TypeError(f"Expected RecordingInfo, got {type(recording_info)}")
 
     async def stop_recording(self):
-        raise NotImplementedError("Recording not yet in Rust backend")
+        result = self._native.stop_recording()
+        group_data = result.get(self._group_id, {})
+        return group_data
 
     async def pause_unpause(self, await_state_change=True):
-        raise NotImplementedError("Pause not yet in Rust backend")
+        # Toggle: check current state from the native manager
+        state = self._native.to_state_dict()
+        groups = state.get("camera_groups", {})
+        group_data = groups.get(self._group_id, {})
+        cameras = group_data.get("cameras", [])
+        is_paused = any(cam.get("is_paused", False) for cam in cameras) if cameras else False
+        if is_paused:
+            self._native.unpause()
+        else:
+            self._native.pause()
 
     def pause(self, await_paused=True):
-        raise NotImplementedError("Pause not yet in Rust backend")
+        self._native.pause()
 
     def unpause(self, await_unpaused=True):
-        raise NotImplementedError("Pause not yet in Rust backend")
+        self._native.unpause()
 
     def get_latest_frames(self):
         return None
@@ -305,8 +337,11 @@ class RustCameraGroup:
                 name=cam.get("display_name", "Unknown"),
                 alive=True,
                 status={
-                    "connected": True, "closed": False,
-                    "recording_in_progress": False, "is_paused": False, "error": False,
+                    "connected": True,
+                    "closed": False,
+                    "recording_in_progress": cam.get("is_recording", False),
+                    "is_paused": cam.get("is_paused", False),
+                    "error": False,
                 },
             )
         return CameraGroupState(
@@ -339,6 +374,8 @@ class RustCameraGroupManager:
     def __post_init__(self):
         import _skellycam_rust
         self._native = _skellycam_rust.CameraGroupManager()
+        # Per-group framerate tracking: (frame_number, timestamp_ns) pairs
+        self._framerate_timestamps: dict[CameraGroupIdString, list[tuple[int, float]]] = {}
 
     async def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> RustCameraGroup:
         return await self.create_or_update_camera_group(camera_configs)
@@ -386,14 +423,21 @@ class RustCameraGroupManager:
             return
         self._native.close_all_groups()
         self.camera_groups.clear()
+        self._framerate_timestamps.clear()
         logger.success("Closed all Rust camera groups")
         self.closing = False
 
     async def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
-        raise NotImplementedError("Recording not yet in Rust backend")
+        self._native.start_recording(
+            output_dir=recording_info.recording_directory,
+            label=recording_info.recording_name,
+        )
+        logger.info(f"Started recording for all Rust camera groups → {recording_info.recording_directory}")
 
-    async def stop_recording_all_groups(self) -> list[tuple[RecordingInfo, "RecordingTimestampsStats"]]:
-        raise NotImplementedError("Recording not yet in Rust backend")
+    async def stop_recording_all_groups(self) -> list[tuple["RecordingInfo", "RecordingTimestampsStats"]]:
+        result = self._native.stop_recording()
+        logger.info(f"Stopped recording for {len(result)} Rust camera group(s)")
+        return []  # TODO: convert RecordingSummary back to RecordingInfo/RecordingTimestampsStats
 
     def get_latest_frontend_payloads(
         self,
@@ -409,24 +453,78 @@ class RustCameraGroupManager:
         for group_id, (frame_number, timestamp_ns, py_bytes) in raw.items():
             timestamp_s = float(timestamp_ns) / 1_000_000_000.0
             result[group_id] = (int(frame_number), timestamp_s, bytearray(py_bytes))
+            # Track for framerate calculations (keep last 300 samples)
+            if group_id not in self._framerate_timestamps:
+                self._framerate_timestamps[group_id] = []
+            ts_list = self._framerate_timestamps[group_id]
+            ts_list.append((int(frame_number), float(timestamp_ns)))
+            if len(ts_list) > 300:
+                ts_list.pop(0)
         return result
 
     def get_backend_framerate_updates(self) -> dict[CameraGroupIdString, CurrentFramerate]:
-        return {}
+        result: dict[CameraGroupIdString, CurrentFramerate] = {}
+        for group_id, ts_list in self._framerate_timestamps.items():
+            if len(ts_list) < 2:
+                continue
+            # Compute from frame_number deltas and timestamp deltas
+            first_fn, first_ts = ts_list[0]
+            last_fn, last_ts = ts_list[-1]
+            frame_delta = last_fn - first_fn
+            time_delta_ns = last_ts - first_ts
+            if frame_delta > 0 and time_delta_ns > 0:
+                fps = frame_delta / (time_delta_ns / 1_000_000_000.0)
+                mean_duration_ms = (time_delta_ns / frame_delta) / 1_000_000.0
+                result[group_id] = CurrentFramerate(
+                    mean_frame_duration_ms=mean_duration_ms,
+                    mean_frames_per_second=fps,
+                    frame_duration_stddev=0.0,
+                    frame_duration_median=mean_duration_ms,
+                    calculation_window_size=len(ts_list),
+                    framerate_source="Rust Backend",
+                )
+        return result
 
     def get_latest_performance_data(
         self, session_start_perf_ns: int,
     ) -> dict[CameraGroupIdString, dict]:
+        import json
+        snapshot_json = self._native.get_performance_snapshot()
+        if snapshot_json is None:
+            return {}
+        try:
+            snapshot = json.loads(snapshot_json)
+            # Return under the first group's ID (or use a synthetic key)
+            if self.camera_groups:
+                group_id = next(iter(self.camera_groups.keys()))
+                return {group_id: snapshot}
+        except (json.JSONDecodeError, StopIteration):
+            pass
         return {}
 
     def pause_all_groups(self, await_paused: bool = True) -> None:
-        raise NotImplementedError("Pause not yet in Rust backend")
+        self._native.pause()
+        logger.info("Paused all Rust camera groups")
 
     async def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
-        raise NotImplementedError("Pause not yet in Rust backend")
+        # Toggle: check if any camera is paused
+        state = self._native.to_state_dict()
+        any_paused = False
+        for group_data in state.get("camera_groups", {}).values():
+            for cam in group_data.get("cameras", []):
+                if cam.get("is_paused", False):
+                    any_paused = True
+                    break
+        if any_paused:
+            self._native.unpause()
+            logger.info("Unpaused all Rust camera groups")
+        else:
+            self._native.pause()
+            logger.info("Paused all Rust camera groups")
 
     def unpause_all_groups(self, await_unpaused: bool = True) -> None:
-        raise NotImplementedError("Pause not yet in Rust backend")
+        self._native.unpause()
+        logger.info("Unpaused all Rust camera groups")
 
     def find_camera_group_by_camera_ids(
         self, camera_ids: list[CameraIdString],

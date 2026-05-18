@@ -5,6 +5,7 @@ pub mod dispatcher;
 pub mod sync_utils;
 pub mod frontend_encoder;
 pub mod jpeg_transform;
+pub mod recording_stats;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;

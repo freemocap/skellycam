@@ -11,7 +11,7 @@ pub mod pyo3_bridge;
 /// Change this to "trace" for hot-loop debugging, "debug" for
 /// per-cycle diagnostics, "info" for normal operation.
 /// `RUST_LOG` env var overrides this if set.
-pub const DEFAULT_LOG_LEVEL: &str = "trace";
+pub const DEFAULT_LOG_LEVEL: &str = "debug"; //"trace"; (trace turns on logs in the hot loop, which is very verbose but useful for debugging)
 
 /// Initialize the tracing subscriber once for the entire process AND anchor
 /// the performance clock at T=0.

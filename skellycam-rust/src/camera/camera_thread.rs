@@ -31,22 +31,6 @@ use super::types::{
 
 const STABILIZATION_FRAMES: u32 = 30;
 
-/// Internal lifecycle state of the camera thread.
-///
-/// This is a plain runtime enum — not a type-state — because the thread
-/// persists and state transitions happen inside it, not by consuming `self`.
-#[derive(Debug, Clone, PartialEq)]
-enum CameraState {
-    /// Applying hardware settings, running stabilization.
-    Configuring,
-    /// Capture loop active, frames flowing.
-    Streaming,
-    /// Shutdown signal received, releasing resources.
-    ShuttingDown,
-    /// An error occurred. The thread will send an event and exit.
-    Faulted(String),
-}
-
 /// Spawn a camera capture thread and return the communication channels plus
 /// the join handle.
 ///
@@ -146,7 +130,6 @@ fn run_camera_thread(
             "Camera {label}: capture loop raw-MJPEG ({actual_width}x{actual_height})",
         );
 
-        let mut state = CameraState::Streaming;
         let mut frame_sm = FrameStateMachine::new(0);
         let mut raw_buffer: Vec<u8> = Vec::new();
         let mut active_config = config;
@@ -156,24 +139,17 @@ fn run_camera_thread(
             match check_commands(command_receiver) {
                 CommandResult::Shutdown => {
                     tracing::info!("Camera {label}: shutdown");
-                    state = CameraState::ShuttingDown;
                     break;
                 }
                 CommandResult::Configure(new_config) => {
                     tracing::info!("Camera {label}: applying new config");
-                    state = CameraState::Configuring;
                     configure_exposure(
                         ctx, stream, label,
                         &new_config.exposure_mode, new_config.exposure,
                     );
                     active_config = new_config;
-                    state = CameraState::Streaming;
                 }
                 CommandResult::None => {}
-            }
-
-            if state != CameraState::Streaming {
-                continue;
             }
 
             // ── Spin on hasNewFrame ──
@@ -187,13 +163,11 @@ fn run_camera_thread(
                         return Ok(());
                     }
                     CommandResult::Configure(new_config) => {
-                        state = CameraState::Configuring;
                         configure_exposure(
                             ctx, stream, label,
                             &new_config.exposure_mode, new_config.exposure,
                         );
                         active_config = new_config;
-                        state = CameraState::Streaming;
                     }
                     CommandResult::None => {}
                 }
@@ -206,8 +180,7 @@ fn run_camera_thread(
                         "Camera {label}: timeout waiting for frame {}",
                         frame_sm.frame_number()
                     );
-                    let _ = event_sender.send(CameraEvent::Error(msg.clone()));
-                    state = CameraState::Faulted(msg);
+                    let _ = event_sender.send(CameraEvent::Error(msg));
                     Cap_closeStream(ctx, stream);
                     Cap_releaseContext(ctx);
                     return Ok(());
@@ -232,8 +205,7 @@ fn run_camera_thread(
                     "Camera {label}: getFrameSize failed or returned 0 at frame {}",
                     frame_sm.frame_number()
                 );
-                let _ = event_sender.send(CameraEvent::Error(msg.clone()));
-                state = CameraState::Faulted(msg);
+                let _ = event_sender.send(CameraEvent::Error(msg));
                 break;
             }
             tracing::trace!(
@@ -255,8 +227,7 @@ fn run_camera_thread(
                     frame_sm.frame_number(),
                     result_name(result)
                 );
-                let _ = event_sender.send(CameraEvent::Error(msg.clone()));
-                state = CameraState::Faulted(msg);
+                let _ = event_sender.send(CameraEvent::Error(msg));
                 break;
             }
             let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());

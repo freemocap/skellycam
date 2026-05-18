@@ -39,8 +39,6 @@ unsafe extern "C" {
     ) -> i32;
     fn tjDestroy(handle: tjhandle) -> i32;
     fn tjFree(buffer: *mut u8);
-    fn tjGetErrorStr() -> *const i8;
-    fn tjGetErrorStr2(handle: tjhandle) -> *const i8;
 }
 
 // We don't use libc types; define c_ulong for Windows x86_64
