@@ -605,10 +605,13 @@ fn per_camera_cells(
     ]
 }
 
-/// Print one per-metric per-camera table block (header → data rows → across
-/// summary row). Rows are printed in the order given by `sort_order` (which
-/// the caller should compute once, sorted by `camera_index`, so all per-
-/// camera tables in the block are in the same order).
+/// Print one per-metric per-camera table block (header → data rows →
+/// Mean/Median camera summary rows → across-cameras spread line). Rows are
+/// printed in the order given by `sort_order` (sorted by `camera_index`).
+///
+/// Summary rows:
+///   "Mean camera"   — for each column, the MEAN of the N per-camera values.
+///   "Median camera" — for each column, the MEDIAN of the N per-camera values.
 ///
 /// Does NOT print the metric's prose description — see
 /// `FRAMERATE_METRIC_DEFINITIONS.md` at the crate root for that.
@@ -639,7 +642,13 @@ fn print_per_camera_table(
     );
     schema.print_separator();
 
-    let mut per_camera_medians: Vec<f64> = Vec::with_capacity(per_camera_values.len());
+    // Accumulators for cross-camera summary rows.
+    let mut acc_medians: Vec<f64> = Vec::new();
+    let mut acc_means: Vec<f64> = Vec::new();
+    let mut acc_stds: Vec<f64> = Vec::new();
+    let mut acc_cv_pcts: Vec<f64> = Vec::new();
+    let mut acc_pct_of_cycles: Vec<f64> = Vec::new();
+
     for &i in sort_order {
         let values = match per_camera_values.get(i) {
             Some(v) => v,
@@ -653,7 +662,6 @@ fn print_per_camera_table(
                 continue;
             }
         };
-        per_camera_medians.push(stats.median);
         let pct_of_cycle = per_camera_cycle_total
             .get(i)
             .and_then(|c| compute_stats(c))
@@ -664,20 +672,76 @@ fn print_per_camera_table(
                     0.0
                 }
             });
+
+        acc_medians.push(stats.median);
+        acc_means.push(stats.mean);
+        acc_stds.push(stats.std);
+        acc_cv_pcts.push(stats.cv_pct);
+        if let Some(pct) = pct_of_cycle {
+            acc_pct_of_cycles.push(pct);
+        }
+
         schema.print_row(&label, &per_camera_cells(&stats, div, unit, pct_of_cycle));
     }
 
-    if per_camera_medians.len() >= 2 {
-        let med_max = per_camera_medians.iter().cloned().fold(f64::MIN, f64::max);
-        let med_min = per_camera_medians.iter().cloned().fold(f64::MAX, f64::min);
-        let spread = med_max - med_min;
-        let across_stats = compute_stats(&per_camera_medians).unwrap();
+    if acc_medians.len() >= 2 {
+        // Compute cross-camera stats for each column.
+        let s_med = compute_stats(&acc_medians);
+        let s_mean = compute_stats(&acc_means);
+        let s_std = compute_stats(&acc_stds);
+        let s_cv = compute_stats(&acc_cv_pcts);
+        let s_pct = if acc_pct_of_cycles.is_empty() {
+            None
+        } else {
+            compute_stats(&acc_pct_of_cycles)
+        };
+
+        let pct_cell = |opt: &Option<Stats>, f: fn(&Stats) -> f64| -> String {
+            opt.as_ref().map_or("—".to_string(), |s| fmt_pct(f(s)))
+        };
+        let val_cell = |opt: &Option<Stats>, f: fn(&Stats) -> f64| -> String {
+            opt.as_ref()
+                .map_or("—".to_string(), |s| fmt_val(f(s) / div, unit))
+        };
+
+        schema.print_separator();
+
+        // Mean camera — each column is the mean of the N per-camera values.
+        schema.print_row(
+            "Mean camera",
+            &[
+                val_cell(&s_med, |s| s.mean),
+                val_cell(&s_mean, |s| s.mean),
+                val_cell(&s_std, |s| s.mean),
+                pct_cell(&s_cv, |s| s.mean),
+                pct_cell(&s_pct, |s| s.mean),
+                "—".to_string(),
+            ],
+        );
+
+        // Median camera — each column is the median of the N per-camera values.
+        schema.print_row(
+            "Median camera",
+            &[
+                val_cell(&s_med, |s| s.median),
+                val_cell(&s_mean, |s| s.median),
+                val_cell(&s_std, |s| s.median),
+                pct_cell(&s_cv, |s| s.median),
+                pct_cell(&s_pct, |s| s.median),
+                "—".to_string(),
+            ],
+        );
+
+        // Across-cameras spread line (max−min of per-camera medians).
+        let spread = acc_medians.iter().cloned().fold(f64::MIN, f64::max)
+            - acc_medians.iter().cloned().fold(f64::MAX, f64::min);
+        let across_cv = s_med.as_ref().map_or(0.0, |s| s.cv_pct);
         schema.print_separator();
         line(&format!(
             "  Across cameras (of {n} per-camera medians):  spread {sp}  │  CV% {cv}",
-            n = per_camera_medians.len(),
+            n = acc_medians.len(),
             sp = fmt_val(spread / div, unit),
-            cv = fmt_pct(across_stats.cv_pct),
+            cv = fmt_pct(across_cv),
         ));
     }
     line("");
