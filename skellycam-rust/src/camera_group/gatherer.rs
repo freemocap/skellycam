@@ -76,29 +76,34 @@ fn compute_stats(values: &[f64]) -> Option<Stats> {
     })
 }
 
-/// Choose a divisor and unit for an entire collection of values based on the
-/// median magnitude (ns / µs / ms). All values in the same row share the same
-/// scaling so they remain comparable.
+/// Choose a divisor and unit for an entire column of values (ns / µs / ms).
+///
+/// Uses the **maximum** value in the column, not the median. This ensures
+/// that any value over 1000 µs in a column forces the whole column into ms,
+/// preventing cases like `31446 µs` alongside `278 µs` in the same table.
 fn auto_scale(values_ns: &[f64]) -> (f64, &'static str) {
-    let median = match compute_stats(values_ns) {
-        Some(s) => s.median,
-        None => return (1.0, "ns"),
-    };
-    if median >= 1_000_000.0 {
+    let max = values_ns.iter().cloned().fold(0.0_f64, f64::max);
+    if max >= 1_000_000.0 {
         (1_000_000.0, "ms")
-    } else if median >= 1_000.0 {
+    } else if max >= 1_000.0 {
         (1_000.0, "µs")
     } else {
         (1.0, "ns")
     }
 }
 
+/// Format a single numeric value with its unit.
+///
+/// Always shows at least 2 decimal places for non-zero values so that
+/// all cells in a column have consistent precision:
+///   >= 10 000  → 1 decimal  (very large numbers; rare after max-based scaling)
+///   >=     1   → 2 decimals
+///   <      1   → 3 decimals (sub-unit precision, e.g. 0.048 ms)
+///   exactly 0  → "0 {unit}"
 fn fmt_val(value: f64, unit: &str) -> String {
     if value == 0.0 {
         format!("0 {unit}")
-    } else if value.abs() >= 100.0 {
-        format!("{value:.0} {unit}")
-    } else if value.abs() >= 10.0 {
+    } else if value.abs() >= 10_000.0 {
         format!("{value:.1} {unit}")
     } else if value.abs() >= 1.0 {
         format!("{value:.2} {unit}")
