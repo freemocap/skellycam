@@ -41,6 +41,20 @@ pub struct FrontendPayload {
     pub jpeg_bytes: Vec<u8>,
 }
 
+/// Per-camera raw frame data — JPEG bytes with metadata, stored for on-demand
+/// decoding by downstream consumers (tests, PyO3 bridge, image analysis).
+///
+/// The dispatcher clones these into a shared slot each multiframe. Decoding
+/// happens only when a consumer calls `mjpeg_to_rgb()` — never on the hot path.
+#[derive(Clone)]
+pub struct RawFrame {
+    pub camera_id: String,
+    pub camera_index: i32,
+    pub width: u32,
+    pub height: u32,
+    pub jpeg_bytes: Vec<u8>,
+}
+
 // ── Dispatcher spawn ────────────────────────────────────────────────────────
 
 /// Spawn the dispatcher thread.
@@ -48,6 +62,7 @@ pub fn spawn_dispatcher(
     multi_frame_receiver: Receiver<MultiFramePayload>,
     control_receiver: Receiver<DispatcherCommand>,
     latest_payload: Arc<Mutex<Option<FrontendPayload>>>,
+    latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
@@ -182,6 +197,23 @@ pub fn spawn_dispatcher(
                         Err(e) => {
                             tracing::error!("[dispatcher] encode error: {e}");
                         }
+                    }
+
+                    // ── Store raw per-camera JPEGs for on-demand decode ──
+                    if let Ok(mut guard) = latest_raw_frames.lock() {
+                        *guard = Some(
+                            payload
+                                .frames
+                                .iter()
+                                .map(|f| RawFrame {
+                                    camera_id: f.identity.camera_id.clone(),
+                                    camera_index: f.identity.camera_index,
+                                    width: f.width,
+                                    height: f.height,
+                                    jpeg_bytes: f.data.as_bytes().to_vec(),
+                                })
+                                .collect(),
+                        );
                     }
 
                     // ── Recording: feed per-camera frames ──

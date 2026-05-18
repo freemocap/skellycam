@@ -39,7 +39,7 @@ fn dispatch_command(args: &[String]) -> anyhow::Result<()> {
             Some(other) => {
                 eprintln!("unknown test module: {other}");
                 Ok(())
-            }
+        }
             None => print_usage(),
         },
         _ => print_usage(),

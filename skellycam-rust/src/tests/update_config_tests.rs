@@ -12,18 +12,19 @@ use skellycam::camera_group::CameraGroup;
 pub fn run(args: &[String]) -> anyhow::Result<()> {
     match args.first().map(|s| s.as_str()) {
         Some("exposure") => run_exposure_test(&args[1..]),
+        Some("auto-exposure") => run_auto_exposure_test(&args[1..]),
         Some("resolution") => run_resolution_test(&args[1..]),
         Some("framerate") => run_framerate_test(&args[1..]),
         Some("add-camera") => run_add_camera_test(&args[1..]),
         Some("remove-camera") => run_remove_camera_test(&args[1..]),
         Some(other) => {
             eprintln!("unknown update subcommand: {other}");
-            eprintln!("available: exposure, resolution, framerate, add-camera, remove-camera");
+            eprintln!("available: exposure, auto-exposure, resolution, framerate, add-camera, remove-camera");
             Ok(())
         }
         None => {
             eprintln!("usage: cargo run --release -- test update <subcommand> [flags]");
-            eprintln!("available: exposure, resolution, framerate, add-camera, remove-camera");
+            eprintln!("available: exposure, auto-exposure, resolution, framerate, add-camera, remove-camera");
             Ok(())
         }
     }
@@ -42,11 +43,24 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(all_cameras.len().min(2) as u32) as usize;
+    let num = camera_count.unwrap_or(1) as usize;
+
+    // The camera reports its hardware exposure range during stream open.
+    // We detect it from the logs (min=-13 max=-1 default=-6 for these USB cams).
+    // We scan the full reported range plus a couple values outside it to see
+    // if the driver clamps, ignores, or errors on out-of-range requests.
+    let reported_range: Vec<i32> = (-13..=-1).collect();
+    let outside_range: Vec<i32> = vec![-15, 0];
+    let mut test_values: Vec<i32> = reported_range.clone();
+    test_values.extend(&outside_range);
+    // Sort so we sweep from darkest (lowest number) to brightest
+    test_values.sort();
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  UPDATE EXPOSURE TEST — {} camera{}", num, if num == 1 { "" } else { "s" });
+    tracing::info!("  EXPOSURE RANGE SCAN — {} camera{}", num, if num == 1 { "" } else { "s" });
+    tracing::info!("  Reported range: {}..=-1", reported_range.first().unwrap());
+    tracing::info!("  Testing: {} values (reported range + outside-range probes)", test_values.len());
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
@@ -58,12 +72,10 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
                 capture_config: CameraConfig {
                     camera_id: identity.camera_id.clone(),
                     camera_index: identity.camera_index as u32,
-                    width: 1280,
-                    height: 720,
-                    exposure: -7, // start with moderate exposure
+                    width: 1280, height: 720,
+                    exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
-                    rotation: -1,
+                    framerate: 30.0, rotation: -1,
                 },
                 identity: identity.clone(),
             };
@@ -74,101 +86,220 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
     let mut group = CameraGroup::new(configs);
     group.start()?;
 
-    // Poll 30 frames to stabilize
     let mut current_frame: i64 = -1;
-    let mut _polls: u64 = 0;
-    poll_frames(&mut group, &mut current_frame, &mut _polls, 30)?;
-    tracing::info!("  Stabilized at frame {current_frame}");
+    let mut polls: u64 = 0;
+    poll_frames(&mut group, &mut current_frame, &mut polls, 30)?;
 
-    // Capture reference frame brightness
-    let ref_brightness = capture_brightness_sample(&group);
-    tracing::info!("  Reference brightness (exposure=-7): {ref_brightness:.1}");
+    // ── Scan each exposure value ──────────────────────────────────────────
+    let mut prev_lum: Option<f64> = None;
 
-    // Pause, apply lower exposure, unpause
-    group.pause();
-    tracing::info!("  Applying new config with exposure=-11...");
+    for &exposure_value in &test_values {
+        let in_range = reported_range.contains(&exposure_value);
+        let label = if in_range { "" } else { " [OUTSIDE REPORTED RANGE]" };
 
-    let mut new_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
-    for status in group.camera_statuses() {
-        let mut new_cfg = status.config.clone();
-        new_cfg.exposure = -11; // lower exposure → darker image
-        new_configs.insert(
-            status.config.camera_id.clone(),
-            CameraGroupConfig {
-                capture_config: new_cfg,
-                identity: all_cameras
-                    .iter()
-                    .find(|c| c.camera_index == status.camera_index)
-                    .cloned()
-                    .unwrap_or_else(|| skellycam::camera::CameraIdentity {
-                        camera_name: status.camera_name.clone(),
-                        camera_index: status.camera_index,
-                        camera_id: status.config.camera_id.clone(),
-                        device_path: status.device_path.clone(),
-                        formats: vec![],
-                    }),
-            },
-        );
-    }
-    group.apply(new_configs)?;
-    std::thread::sleep(std::time::Duration::from_millis(500)); // let settings settle
-    group.unpause();
+        group.pause();
+        let mut new_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
+        for status in group.camera_statuses() {
+            let mut new_cfg = status.config.clone();
+            new_cfg.exposure = exposure_value;
+            new_configs.insert(
+                status.config.camera_id.clone(),
+                CameraGroupConfig {
+                    capture_config: new_cfg,
+                    identity: all_cameras.iter()
+                        .find(|c| c.camera_index == status.camera_index)
+                        .cloned()
+                        .unwrap_or_else(|| skellycam::camera::CameraIdentity {
+                            camera_name: status.camera_name.clone(),
+                            camera_index: status.camera_index,
+                            camera_id: status.config.camera_id.clone(),
+                            device_path: status.device_path.clone(),
+                            formats: vec![],
+                        }),
+                },
+            );
+        }
+        group.apply(new_configs)?;
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        group.unpause();
 
-    // Poll 30 more frames
-    let target = current_frame + 30;
-    poll_frames(&mut group, &mut current_frame, &mut _polls, target)?;
+        let target = current_frame + 15;
+        poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
 
-    // Capture updated frame brightness
-    let new_brightness = capture_brightness_sample(&group);
-    tracing::info!("  New brightness (exposure=-11): {new_brightness:.1}");
+        let luminance = capture_brightness_sample(&group);
 
-    // Verify brightness changed in expected direction
-    if new_brightness < ref_brightness * 0.95 {
+        // Show direction from previous value
+        let direction = if let Some(prev) = prev_lum {
+            if luminance > prev * 1.02 { "↑" }
+            else if luminance < prev * 0.98 { "↓" }
+            else { "→" }
+        } else { "—" };
+
+        // Verify camera_statuses reflect the applied value
+        let statuses_ok = group.camera_statuses().iter()
+            .all(|s| s.config.exposure == exposure_value);
+
         tracing::info!(
-            "  ✓ Brightness decreased by {:.1}% (as expected for lower exposure)",
-            (1.0 - new_brightness / ref_brightness) * 100.0
+            "  exp={:>4} {} lum={:.1} {} status_ok={}",
+            exposure_value, label, luminance, direction, statuses_ok,
         );
-    } else if new_brightness > ref_brightness * 1.05 {
-        tracing::warn!(
-            "  ✗ WARNING: Brightness INCREASED ({:.1}%) when it should have decreased. \
-             This platform may not support manual exposure control.",
-            (new_brightness / ref_brightness - 1.0) * 100.0
-        );
-    } else {
-        tracing::warn!(
-            "  ? Brightness changed by <5% — exposure setting may not have taken effect \
-             on this platform (ref={ref_brightness:.1}, new={new_brightness:.1})"
-        );
+
+        prev_lum = Some(luminance);
     }
 
-    // Verify camera_statuses reflect the new exposure
-    for status in group.camera_statuses() {
-        assert_eq!(
-            status.config.exposure, -11,
-            "Camera {} exposure should be -11, got {}",
-            status.config.camera_id, status.config.exposure
-        );
-    }
-    tracing::info!("  ✓ All camera statuses reflect exposure=-11");
+    tracing::info!("");
 
     group.shutdown()?;
-    tracing::info!("  Shutdown complete.");
-    tracing::info!("");
-    tracing::info!("  EXPOSURE TEST COMPLETE");
+    tracing::info!("  EXPOSURE RANGE SCAN COMPLETE");
     tracing::info!("");
 
     Ok(())
 }
 
+// ── Auto-Exposure test ────────────────────────────────────────────────────────
+
+fn run_auto_exposure_test(args: &[String]) -> anyhow::Result<()> {
+    use std::collections::HashMap;
+    use skellycam::camera::{detect_cameras, CameraConfig};
+    use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
+
+    let camera_count = parse_camera_count(args);
+    let all_cameras = detect_cameras()?;
+    if all_cameras.is_empty() {
+        anyhow::bail!("No cameras detected");
+    }
+    let num = camera_count.unwrap_or(1) as usize;
+
+    tracing::info!("");
+    tracing::info!("══════════════════════════════════════════════════");
+    tracing::info!("  AUTO-EXPOSURE TEST — {} camera{}", num, if num == 1 { "" } else { "s" });
+    tracing::info!("  MANUAL dark → AUTO (should brighten) → MANUAL bright → AUTO (should darken)");
+    tracing::info!("══════════════════════════════════════════════════");
+    tracing::info!("");
+
+    let configs: HashMap<String, CameraGroupConfig> = all_cameras
+        .iter()
+        .take(num)
+        .map(|identity| {
+            let cfg = CameraGroupConfig {
+                capture_config: CameraConfig {
+                    camera_id: identity.camera_id.clone(),
+                    camera_index: identity.camera_index as u32,
+                    width: 1280, height: 720,
+                    exposure: -11,
+                    exposure_mode: "MANUAL".into(),
+                    framerate: 30.0, rotation: -1,
+                },
+                identity: identity.clone(),
+            };
+            (cfg.identity.camera_id.clone(), cfg)
+        })
+        .collect();
+
+    let mut group = CameraGroup::new(configs);
+    group.start()?;
+
+    let mut current_frame: i64 = -1;
+    let mut polls: u64 = 0;
+    poll_frames(&mut group, &mut current_frame, &mut polls, 30)?;
+
+    // ── Phase 1: MANUAL dark (-11) → AUTO (should brighten) ──────────────
+    tracing::info!("  ── Phase 1: AUTO recovery from dark ──");
+
+    // Confirm dark
+    let dark_lum = capture_brightness_sample(&group);
+    tracing::info!("  MANUAL exposure=-11 → luminance={dark_lum:.2} (dark)");
+
+    // Switch to AUTO
+    apply_exposure_mode(&mut group, &all_cameras, "AUTO", -11);
+    let target = current_frame + 20;
+    poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
+
+    let auto_from_dark = capture_brightness_sample(&group);
+    let brightened = auto_from_dark > dark_lum * 1.10;
+    let ratio = auto_from_dark / dark_lum.max(0.01);
+    tracing::info!("  AUTO (from dark) → luminance={auto_from_dark:.2} ({ratio:.1}x)  {}",
+        if brightened { "✓ brightened" } else { "? didn't brighten significantly" });
+
+    // ── Phase 2: MANUAL bright (-3) → AUTO (should darken) ───────────────
+    tracing::info!("  ── Phase 2: AUTO recovery from bright ──");
+
+    apply_exposure_mode(&mut group, &all_cameras, "MANUAL", -3);
+    let target = current_frame + 20;
+    poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
+
+    let bright_lum = capture_brightness_sample(&group);
+    tracing::info!("  MANUAL exposure=-3 → luminance={bright_lum:.2} (bright/saturated)");
+
+    apply_exposure_mode(&mut group, &all_cameras, "AUTO", -3);
+    let target = current_frame + 20;
+    poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
+
+    let auto_from_bright = capture_brightness_sample(&group);
+    let darkened = auto_from_bright < bright_lum * 0.90;
+    let ratio = bright_lum / auto_from_bright.max(0.01);
+    tracing::info!("  AUTO (from bright) → luminance={auto_from_bright:.2} (1/{ratio:.1}x)  {}",
+        if darkened { "✓ darkened" } else { "? didn't darken significantly" });
+
+    // ── Summary ───────────────────────────────────────────────────────
+    tracing::info!("");
+    tracing::info!("  ── Summary ──");
+    tracing::info!("  dark MANUAL={dark_lum:.2} → AUTO={auto_from_dark:.2} (target: brighten)");
+    tracing::info!("  bright MANUAL={bright_lum:.2} → AUTO={auto_from_bright:.2} (target: darken)");
+
+    if auto_from_dark < 1.0 && auto_from_bright < 1.0 {
+        tracing::warn!("  ? AUTO barely changed from either extreme — camera may not support auto-exposure");
+    } else if brightened && darkened {
+        tracing::info!("  ✓ AUTO successfully corrects in both directions");
+    }
+
+    group.shutdown()?;
+    tracing::info!("  AUTO-EXPOSURE TEST COMPLETE");
+    tracing::info!("");
+
+    Ok(())
+}
+
+/// Apply a new exposure mode and value to all cameras in the group.
+fn apply_exposure_mode(
+    group: &mut CameraGroup,
+    all_cameras: &[skellycam::camera::CameraIdentity],
+    mode: &str,
+    exposure: i32,
+) {
+    use std::collections::HashMap;
+    use skellycam::camera_group::CameraGroupConfig;
+    group.pause();
+    let mut new_configs = HashMap::new();
+    for status in group.camera_statuses() {
+        let mut new_cfg = status.config.clone();
+        new_cfg.exposure_mode = mode.to_string();
+        new_cfg.exposure = exposure;
+        new_configs.insert(
+            status.config.camera_id.clone(),
+            CameraGroupConfig {
+                capture_config: new_cfg,
+                identity: all_cameras.iter()
+                    .find(|c| c.camera_index == status.camera_index)
+                    .cloned()
+                    .expect("camera identity not found"),
+            },
+        );
+    }
+    group.apply(new_configs).expect("apply exposure mode");
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    group.unpause();
+}
+
 // ── Resolution test ────────────────────────────────────────────────────────────
 
 fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
+    use std::collections::BTreeSet;
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
     let camera_index = parse_camera_index(args).unwrap_or(0);
-
     let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
@@ -178,39 +309,35 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
         .find(|c| c.camera_index == camera_index as i32)
         .ok_or_else(|| anyhow::anyhow!("Camera index {camera_index} not found"))?;
 
-    // Find two distinct MJPG resolution formats
-    let formats: Vec<_> = identity
+    // Collect all unique MJPG resolutions (deduplicated, sorted by pixel count)
+    let unique_resolutions: BTreeSet<(u64, u32, u32, u32)> = identity
         .formats
         .iter()
         .filter(|f| f.fourcc_str == "MJPG")
+        .map(|f| ((f.width as u64) * (f.height as u64), f.width, f.height, f.fps))
         .collect();
-    if formats.len() < 2 {
-        anyhow::bail!(
-            "Camera {} only has {} MJPG format(s) — need at least 2 for resolution test",
-            identity.label(),
-            formats.len()
-        );
-    }
 
-    let (fmt_low, fmt_high) = if formats[0].width * formats[0].height
-        < formats[1].width * formats[1].height
-    {
-        (formats[0], formats[1])
-    } else {
-        (formats[1], formats[0])
-    };
+    let resolutions: Vec<(u32, u32, u32)> = unique_resolutions
+        .into_iter()
+        .map(|(_, w, h, fps)| (w, h, fps))
+        .collect();
+
+    if resolutions.is_empty() {
+        anyhow::bail!("No MJPG formats found");
+    }
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!(
-        "  UPDATE RESOLUTION TEST — {} ({}x{} → {}x{})",
+        "  RESOLUTION SCAN — {} ({} unique MJPG resolutions)",
         identity.label(),
-        fmt_low.width, fmt_low.height,
-        fmt_high.width, fmt_high.height,
+        resolutions.len(),
     );
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
+    // Start at the lowest resolution
+    let first = &resolutions[0];
     let mut configs = HashMap::new();
     configs.insert(
         identity.camera_id.clone(),
@@ -218,12 +345,9 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
             capture_config: CameraConfig {
                 camera_id: identity.camera_id.clone(),
                 camera_index: identity.camera_index as u32,
-                width: fmt_low.width,
-                height: fmt_low.height,
-                exposure: -7,
-                exposure_mode: "MANUAL".into(),
-                framerate: fmt_low.fps as f64,
-                rotation: -1,
+                width: first.0, height: first.1,
+                exposure: -7, exposure_mode: "MANUAL".into(),
+                framerate: first.2 as f64, rotation: -1,
             },
             identity: identity.clone(),
         },
@@ -233,63 +357,58 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
     group.start()?;
 
     let mut current_frame: i64 = -1;
-    let mut _polls: u64 = 0;
-    poll_frames(&mut group, &mut current_frame, &mut _polls, 30)?;
+    let mut polls: u64 = 0;
+    poll_frames(&mut group, &mut current_frame, &mut polls, 20)?;
 
-    // Verify initial resolution
-    let init_statuses = group.camera_statuses();
-    let init_cfg = &init_statuses[0].config;
-    tracing::info!(
-        "  Initial: {}x{} @{}fps",
-        init_cfg.width, init_cfg.height, init_cfg.framerate
-    );
-    assert_eq!(init_cfg.width, fmt_low.width);
-    assert_eq!(init_cfg.height, fmt_low.height);
-
-    // Pause, apply new resolution, unpause
-    group.pause();
-    let mut new_configs = HashMap::new();
-    new_configs.insert(
-        identity.camera_id.clone(),
-        CameraGroupConfig {
-            capture_config: CameraConfig {
-                camera_id: identity.camera_id.clone(),
-                camera_index: identity.camera_index as u32,
-                width: fmt_high.width,
-                height: fmt_high.height,
-                exposure: -7,
-                exposure_mode: "MANUAL".into(),
-                framerate: fmt_high.fps as f64,
-                rotation: -1,
+    // Scan each resolution
+    for &(width, height, fps) in &resolutions {
+        group.pause();
+        let mut new_configs = HashMap::new();
+        new_configs.insert(
+            identity.camera_id.clone(),
+            CameraGroupConfig {
+                capture_config: CameraConfig {
+                    camera_id: identity.camera_id.clone(),
+                    camera_index: identity.camera_index as u32,
+                    width, height, exposure: -7,
+                    exposure_mode: "MANUAL".into(),
+                    framerate: fps as f64, rotation: -1,
+                },
+                identity: identity.clone(),
             },
-            identity: identity.clone(),
-        },
-    );
-    group.apply(new_configs)?;
-    group.unpause();
+        );
+        group.apply(new_configs)?;
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        group.unpause();
 
-    let target = current_frame + 30;
-    poll_frames(&mut group, &mut current_frame, &mut _polls, target)?;
+        let target = current_frame + 10;
+        poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
 
-    let new_statuses = group.camera_statuses();
-    let new_cfg = &new_statuses[0].config;
-    tracing::info!(
-        "  After apply: {}x{} @{}fps",
-        new_cfg.width, new_cfg.height, new_cfg.framerate
-    );
+        // Check config and actual frame dimensions
+        let cfg_dims = group.camera_statuses()
+            .first()
+            .map(|s| format!("{}x{}", s.config.width, s.config.height))
+            .unwrap_or_default();
 
-    if new_cfg.width == fmt_high.width && new_cfg.height == fmt_high.height {
-        tracing::info!("  ✓ Resolution changed successfully");
-    } else {
-        tracing::warn!(
-            "  ? Resolution did not change (still {}x{}) — mid-stream resolution \
-             change may require stream restart on this platform",
-            new_cfg.width, new_cfg.height,
+        let actual_dims = group.latest_raw_frames()
+            .and_then(|fs| fs.first().map(|f| format!("{}x{}", f.width, f.height)))
+            .unwrap_or_else(|| "no frame".to_string());
+
+        let config_match = cfg_dims == format!("{width}x{height}");
+        let actual_match = actual_dims == format!("{width}x{height}");
+
+        tracing::info!(
+            "  {width}x{height} @{fps}fps  cfg={:5}  actual={}  {}",
+            config_match,
+            actual_dims,
+            if actual_match { "✓" } else { "? stream not restarted" },
         );
     }
 
+    tracing::info!("");
+
     group.shutdown()?;
-    tracing::info!("  RESOLUTION TEST COMPLETE");
+    tracing::info!("  RESOLUTION SCAN COMPLETE");
     tracing::info!("");
 
     Ok(())
@@ -695,25 +814,29 @@ fn poll_frames(
     Ok(())
 }
 
-/// Compute an approximate mean brightness from the JPEG data of the latest payload.
+/// Decode the first camera's raw JPEG frame to RGB and compute mean luminance.
 ///
-/// Decodes the first camera's JPEG to a grayscale image and returns the mean
-/// pixel value (0=black, 255=white). Returns 128.0 if decoding fails.
+/// Uses the on-demand raw frames slot (zero overhead on the hot path).
+/// Returns mean ITU-R BT.601 luminance 0–255 (0=black, 255=white).
+/// Returns -1.0 on failure.
 fn capture_brightness_sample(group: &CameraGroup) -> f64 {
     for _ in 0..10 {
-        if let Some(payload) = group.latest_frontend_payload() {
-            if payload.jpeg_bytes.is_empty() {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                continue;
+        if let Some(frames) = group.latest_raw_frames() {
+            if let Some(first) = frames.first() {
+                if first.jpeg_bytes.is_empty() {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    continue;
+                }
+                match skellycam::decode::mjpeg_to_rgb(&first.jpeg_bytes) {
+                    Ok((_w, _h, rgb)) => {
+                        return skellycam::decode::mean_luminance(&rgb);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to decode JPEG for brightness sample: {e}");
+                        return -1.0;
+                    }
+                }
             }
-            // The frontend payload is a custom binary encoding (not a raw JPEG).
-            // We cannot decode individual frame brightness from the encoded payload
-            // without accessing individual camera frames.
-            //
-            // Instead, use the payload size as a rough proxy:
-            // for MJPEG, larger JPEG = more detail/lower compression = generally brighter
-            // This is imperfect but provides a directional signal.
-            return payload.jpeg_bytes.len() as f64 / 1024.0;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }

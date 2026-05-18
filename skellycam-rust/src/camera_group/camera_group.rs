@@ -29,7 +29,7 @@ use crate::camera::{Camera, CameraConfig, FramePacket};
 use crate::camera_group::sync_utils::BreakableBarrier;
 use crate::timestamps::performance::performance_counter_nanoseconds;
 
-use super::dispatcher::FrontendPayload;
+use super::dispatcher::{FrontendPayload, RawFrame};
 use super::types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingParams};
 use crate::recording::finalizer::RecordingSummary;
 
@@ -98,6 +98,7 @@ pub struct CameraGroup {
     dispatcher_handle: Option<JoinHandle<()>>,
     dispatcher_control_sender: Option<mpsc::Sender<DispatcherCommand>>,
     latest_frontend_payload: Arc<Mutex<Option<FrontendPayload>>>,
+    latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
 
     // Performance snapshot updated by the gatherer each cycle
@@ -132,6 +133,7 @@ impl CameraGroup {
             dispatcher_handle: None,
             dispatcher_control_sender: None,
             latest_frontend_payload: Arc::new(Mutex::new(None)),
+            latest_raw_frames: Arc::new(Mutex::new(None)),
             recording_active: Arc::new(AtomicBool::new(false)),
             performance_snapshot: Arc::new(Mutex::new(None)),
             barrier,
@@ -213,6 +215,7 @@ impl CameraGroup {
             multi_frame_receiver,
             control_receiver,
             self.latest_frontend_payload.clone(),
+            self.latest_raw_frames.clone(),
             self.recording_active.clone(),
         );
 
@@ -374,6 +377,18 @@ impl CameraGroup {
     /// Returns `None` if no payload has been produced yet.
     pub fn latest_frontend_payload(&self) -> Option<FrontendPayload> {
         self.latest_frontend_payload
+            .lock()
+            .ok()
+            .and_then(|guard| guard.clone())
+    }
+
+    /// Return the latest per-camera raw JPEG frames, if any.
+    ///
+    /// The dispatcher stores individual camera JPEGs in a shared slot each
+    /// multiframe. Decode them on demand via `skellycam::decode::mjpeg_to_rgb()`.
+    /// Returns `None` if no multiframe has been processed yet.
+    pub fn latest_raw_frames(&self) -> Option<Vec<RawFrame>> {
+        self.latest_raw_frames
             .lock()
             .ok()
             .and_then(|guard| guard.clone())
