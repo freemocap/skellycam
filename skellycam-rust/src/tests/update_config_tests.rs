@@ -11,7 +11,7 @@ use skellycam::camera_group::CameraGroup;
 
 pub fn run(args: &[String]) -> anyhow::Result<()> {
     match args.first().map(|s| s.as_str()) {
-        Some("exposure") => run_exposure_test(&args[1..]),
+Some("exposure") => run_exposure_test(&args[1..]),
         Some("auto-exposure") => run_auto_exposure_test(&args[1..]),
         Some("resolution") => run_resolution_test(&args[1..]),
         Some("framerate") => run_framerate_test(&args[1..]),
@@ -43,7 +43,7 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(1) as usize;
+    let num = camera_count.unwrap_or(all_cameras.len() as u32) as usize;
 
     // The camera reports its hardware exposure range during stream open.
     // We detect it from the logs (min=-13 max=-1 default=-6 for these USB cams).
@@ -166,7 +166,7 @@ fn run_auto_exposure_test(args: &[String]) -> anyhow::Result<()> {
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(1) as usize;
+    let num = camera_count.unwrap_or(all_cameras.len() as u32) as usize;
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
@@ -177,7 +177,7 @@ fn run_auto_exposure_test(args: &[String]) -> anyhow::Result<()> {
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
-        .take(num)
+        .take(num as usize)
         .map(|identity| {
             let cfg = CameraGroupConfig {
                 capture_config: CameraConfig {
@@ -322,10 +322,11 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
         anyhow::bail!("No MJPG formats found");
     }
 
-    // Sample evenly when --sample N limits the scan
-    let sample = parse_sample_count(args);
+    // Sample evenly; default to 5 when no --sample flag given so the
+    // scan stays fast. Pass --sample=0 to scan every resolution.
+    let sample = parse_sample_count(args).or(Some(5));
     if let Some(n) = sample {
-        if resolutions.len() > n {
+        if n > 0 && resolutions.len() > n {
             let step = resolutions.len() as f64 / n as f64;
             let mut sampled = Vec::with_capacity(n);
             sampled.push(resolutions[0]);
@@ -471,11 +472,12 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
         fps_set.into_iter().collect()
     };
 
-    // Sample evenly when --sample N limits the scan
-    let sample = parse_sample_count(args);
+    // Sample evenly; default to 5 when no --sample flag given so the
+    // scan stays fast. Pass --sample=0 to scan every combo.
+    let sample = parse_sample_count(args).or(Some(5));
     let total_combos = combos.len();
     if let Some(n) = sample {
-        if combos.len() > n {
+        if n > 0 && combos.len() > n {
             let step = combos.len() as f64 / n as f64;
             let mut sampled = Vec::with_capacity(n);
             sampled.push(combos[0]);
@@ -490,7 +492,7 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
-    if let Some(n) = sample {
+    if let Some(_n) = sample {
         tracing::info!(
             "  FRAMERATE SCAN — {} ({} unique fps × {} of {} combos sampled)",
             identity.label(),
@@ -590,12 +592,12 @@ fn run_add_camera_test(args: &[String]) -> anyhow::Result<()> {
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
-    let camera_count = parse_camera_count(args).unwrap_or(2);
+    let all_cameras = detect_cameras()?;
+    let camera_count = parse_camera_count(args).unwrap_or(all_cameras.len() as u32);
     if camera_count < 2 {
         anyhow::bail!("Need at least 2 cameras for add-camera test (one to start, one to add)");
     }
 
-    let all_cameras = detect_cameras()?;
     if all_cameras.len() < camera_count as usize {
         anyhow::bail!(
             "Requested {camera_count} cameras but only {} available",
@@ -715,12 +717,12 @@ fn run_remove_camera_test(args: &[String]) -> anyhow::Result<()> {
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
-    let camera_count = parse_camera_count(args).unwrap_or(2);
+    let all_cameras = detect_cameras()?;
+    let camera_count = parse_camera_count(args).unwrap_or(all_cameras.len() as u32);
     if camera_count < 2 {
         anyhow::bail!("Need at least 2 cameras for remove-camera test");
     }
 
-    let all_cameras = detect_cameras()?;
     if all_cameras.len() < camera_count as usize {
         anyhow::bail!(
             "Requested {camera_count} cameras but only {} available",
@@ -891,35 +893,4 @@ fn capture_brightness_sample(group: &CameraGroup) -> f64 {
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
     -1.0
-}
-
-/// Measure actual FPS by tracking frame intervals from the frontend payload.
-fn measure_fps(group: &CameraGroup, sample_frames: i64) -> f64 {
-    let start = std::time::Instant::now();
-    let mut last_frame: i64 = -1;
-    let mut frame_count = 0i64;
-
-    while frame_count < sample_frames {
-        if let Some(payload) = group.latest_frontend_payload() {
-            if payload.frame_number > last_frame {
-                last_frame = payload.frame_number;
-                frame_count += 1;
-                if frame_count == 1 {
-                    // restart timing from first frame
-                    let _ = std::time::Instant::now();
-                }
-            }
-        }
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        if start.elapsed().as_secs() > 30 {
-            break;
-        }
-    }
-
-    let elapsed = start.elapsed().as_secs_f64();
-    if elapsed > 0.0 && frame_count > 1 {
-        frame_count as f64 / elapsed
-    } else {
-        0.0
-    }
 }

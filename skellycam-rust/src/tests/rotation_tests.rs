@@ -14,12 +14,11 @@ const FRAMES_PER_ROTATION: i64 = 20;
 const RECORD_FRAMES: i64 = 60;
 
 pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count = args
+    let camera_count: Option<u32> = args
         .iter()
         .position(|arg| arg == "--cameras")
         .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok())
-        .unwrap_or(1);
+        .and_then(|s| s.parse::<u32>().ok());
 
     let output_base = args
         .iter()
@@ -40,7 +39,9 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         anyhow::bail!("No cameras detected");
     }
 
-    let num = camera_count.min(all_cameras.len() as u32) as usize;
+    let num = camera_count
+        .unwrap_or(all_cameras.len() as u32)
+        .min(all_cameras.len() as u32) as usize;
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");

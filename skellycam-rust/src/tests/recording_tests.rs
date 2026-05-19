@@ -56,7 +56,7 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
             }
             n as usize
         }
-        None => all_cameras.len().min(2),
+        None => all_cameras.len(),
     };
 
     tracing::info!("");

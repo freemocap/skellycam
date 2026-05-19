@@ -19,7 +19,7 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(1).min(all_cameras.len());
+    let num = camera_count.unwrap_or(all_cameras.len()).min(all_cameras.len());
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");

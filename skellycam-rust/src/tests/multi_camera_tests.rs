@@ -22,7 +22,7 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         .position(|arg| arg == "--max-loops")
         .and_then(|pos| args.get(pos + 1))
         .and_then(|s| s.parse().ok())
-        .unwrap_or(-1);
+        .unwrap_or(60);
 
     let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
@@ -32,7 +32,7 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
     let indices: Vec<u32> = if let Some(explicit) = explicit_indices {
         explicit
     } else {
-        let count = camera_count.unwrap_or(2) as usize;
+        let count = camera_count.unwrap_or(all_cameras.len() as u32) as usize;
         all_cameras
             .iter()
             .take(count)

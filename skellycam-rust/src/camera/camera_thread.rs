@@ -116,7 +116,7 @@ unsafe fn apply_config(
     old_config: &CameraConfig,
     actual_width: u32,
     actual_height: u32,
-) -> (CapStream, u32, u32) {
+) -> (CapStream, u32, u32) { unsafe {
     let needs_restart = actual_width != new_config.width
         || actual_height != new_config.height
         || (old_config.framerate - new_config.framerate).abs() > 0.1;
@@ -126,7 +126,7 @@ unsafe fn apply_config(
             "Camera {label}: stream restart needed ({actual_width}x{actual_height} → {}x{})",
             new_config.width, new_config.height,
         );
-        unsafe { Cap_closeStream(ctx, stream) };
+         Cap_closeStream(ctx, stream) ;
 
         let format_info = match find_best_mjpg(
             ctx,
@@ -169,7 +169,7 @@ unsafe fn apply_config(
         tracing::info!("Camera {label}: applied config (exposure={})", new_config.exposure);
         (stream, actual_width, actual_height)
     }
-}
+}}
 
 fn run_camera_thread(
     config: CameraConfig,

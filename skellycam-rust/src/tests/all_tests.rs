@@ -128,8 +128,8 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         super::rotation_tests::run(&[])
     });
 
-    run_test("auto-exposure", &["--cameras=1".into()], &mut passed, &mut failed, &mut skipped, || {
-        super::update_config_tests::run(&["auto-exposure".into(), "--cameras".into(), "1".into()])
+    run_test("auto-exposure", &[], &mut passed, &mut failed, &mut skipped, || {
+        super::update_config_tests::run(&["auto-exposure".into()])
     });
 
     // ── Summary ──────────────────────────────────────────────────────────
