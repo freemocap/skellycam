@@ -113,6 +113,11 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
                 last_report_frame = last_frame;
             }
         }
+        if !group.is_alive() {
+            anyhow::bail!(
+                "Gatherer died at frame {last_frame} (target {max_loops}) — camera may have disconnected"
+            );
+        }
         std::thread::sleep(Duration::from_millis(1));
     }
 

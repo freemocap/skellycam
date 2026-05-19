@@ -193,8 +193,10 @@ pub fn spawn_gatherer(
     update_receiver: Receiver<super::types::GathererUpdate>,
     barrier: Arc<BreakableBarrier>,
     paused: Arc<AtomicBool>,
+    alive: Arc<AtomicBool>,
     performance_snapshot: Arc<std::sync::Mutex<Option<String>>>,
 ) -> JoinHandle<()> {
+    alive.store(true, Ordering::SeqCst);
     thread::spawn(move || {
         let mut step: i64 = 0;
         let mut frame_receivers = frame_receivers;
@@ -624,6 +626,7 @@ pub fn spawn_gatherer(
             &gatherer_downstream_send,
         );
 
+        alive.store(false, Ordering::SeqCst);
         tracing::info!("[gatherer] exited after {step} steps");
     })
 }

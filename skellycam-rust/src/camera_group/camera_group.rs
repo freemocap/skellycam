@@ -101,6 +101,10 @@ pub struct CameraGroup {
     latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
 
+    // True while the gatherer is running its main loop. Set false on exit
+    // (camera disconnect, barrier broken, shutdown, or camera_count==0).
+    gatherer_alive: Arc<AtomicBool>,
+
     // Performance snapshot updated by the gatherer each cycle
     performance_snapshot: Arc<Mutex<Option<String>>>,
 }
@@ -138,6 +142,7 @@ impl CameraGroup {
             performance_snapshot: Arc::new(Mutex::new(None)),
             barrier,
             paused: Arc::new(AtomicBool::new(false)),
+            gatherer_alive: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -210,6 +215,7 @@ impl CameraGroup {
             update_receiver,
             self.barrier.clone(),
             self.paused.clone(),
+            self.gatherer_alive.clone(),
             self.performance_snapshot.clone(),
         );
 
@@ -433,6 +439,15 @@ impl CameraGroup {
     pub fn toggle_pause(&mut self) {
         let was_paused = self.paused.load(Ordering::SeqCst);
         self.paused.store(!was_paused, Ordering::SeqCst);
+    }
+
+    /// Whether the gatherer is still running.
+    ///
+    /// Returns `false` if the gatherer has exited for any reason (camera
+    /// disconnect, barrier broken, shutdown, or zero cameras remaining).
+    /// Returns `true` during normal streaming operation.
+    pub fn is_alive(&self) -> bool {
+        self.gatherer_alive.load(Ordering::SeqCst)
     }
 
     /// Whether the group is currently paused.

@@ -36,6 +36,7 @@ fn dispatch_command(args: &[String]) -> anyhow::Result<()> {
             Some("multi") => tests::multi_camera_tests::run(&args[3..]),
             Some("manager") => tests::manager_tests::run(&args[3..]),
             Some("detect") => tests::detection_tests::run(&args[3..]),
+            Some("lifecycle") => tests::lifecycle_tests::run(&args[3..]),
             Some(other) => {
                 eprintln!("unknown test module: {other}");
                 Ok(())
@@ -51,6 +52,7 @@ fn print_usage() -> anyhow::Result<()> {
     eprintln!("modules:");
     eprintln!("  all        — run full test suite (1 camera → N cameras)");
     eprintln!("  detect     — enumerate cameras");
+    eprintln!("  lifecycle  — start → stream → shutdown test");
     eprintln!("  multi      — multi-camera lockstep streaming");
     eprintln!("  manager    — CameraGroupManager lifecycle");
     eprintln!("  recording  — full recording lifecycle test");

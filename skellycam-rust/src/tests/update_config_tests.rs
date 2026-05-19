@@ -847,6 +847,9 @@ fn poll_frames(
 ) -> anyhow::Result<()> {
     let start = std::time::Instant::now();
     while *current_frame < target {
+        if !group.is_alive() {
+            anyhow::bail!("Gatherer died at frame {current_frame}, target {target}");
+        }
         if let Some(payload) = group.latest_frontend_payload() {
             if payload.frame_number > *current_frame {
                 *current_frame = payload.frame_number;

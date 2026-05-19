@@ -302,37 +302,55 @@ fn run_camera_thread(
             );
 
             // ── Capture the frame and copy bytes into a heap-owned Vec ──
-            let mut frame_size: u32 = 0;
-            if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK
-                || frame_size == 0
-            {
-                let msg = format!(
-                    "Camera {label}: getFrameSize failed or returned 0 at frame {}",
-                    frame_sm.frame_number()
-                );
-                let _ = event_sender.send(CameraEvent::Error(msg));
-                break;
-            }
-            tracing::trace!(
-                "[CAM {label}] frame#{} getFrameSize={frame_size} bytes",
-                frame_sm.frame_number(),
-            );
-            if raw_buffer.len() < frame_size as usize {
-                raw_buffer.resize(frame_size as usize, 0);
-            }
+            // Cap_getFrameSize and Cap_captureFrameRaw are not atomic — the
+            // DirectShow callback thread can deliver a differently-sized
+            // MJPEG frame between the two calls. Retry on buffer-too-small.
             let mut out_bytes: u32 = 0;
-            let result = Cap_captureFrameRaw(
-                ctx, stream,
-                raw_buffer.as_mut_ptr(), frame_size,
-                &mut out_bytes,
-            );
-            if result != CAPRESULT_OK {
+            let mut capture_ok = false;
+            for retry in 0..3 {
+                let mut frame_size: u32 = 0;
+                if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK
+                    || frame_size == 0
+                {
+                    let msg = format!(
+                        "Camera {label}: getFrameSize failed or returned 0 at frame {}",
+                        frame_sm.frame_number()
+                    );
+                    let _ = event_sender.send(CameraEvent::Error(msg));
+                    break;
+                }
+                tracing::trace!(
+                    "[CAM {label}] frame#{} getFrameSize={frame_size} bytes  retry={retry}",
+                    frame_sm.frame_number(),
+                );
+                let needed = frame_size as usize;
+                if raw_buffer.len() < needed {
+                    raw_buffer.resize(needed * 2, 0);
+                }
+                let result = Cap_captureFrameRaw(
+                    ctx, stream,
+                    raw_buffer.as_mut_ptr(), raw_buffer.len() as u32,
+                    &mut out_bytes,
+                );
+                if result == CAPRESULT_OK {
+                    capture_ok = true;
+                    break;
+                }
+                // Buffer too small — out_bytes carries the actual size,
+                // grow and retry.
+                if out_bytes as usize > raw_buffer.len() {
+                    raw_buffer.resize(out_bytes as usize * 2, 0);
+                    continue;
+                }
                 let msg = format!(
                     "Camera {label}: captureFrameRaw failed at frame {} ({})",
                     frame_sm.frame_number(),
                     result_name(result)
                 );
                 let _ = event_sender.send(CameraEvent::Error(msg));
+                break;
+            }
+            if !capture_ok {
                 break;
             }
             let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());
