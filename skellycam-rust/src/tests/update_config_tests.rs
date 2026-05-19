@@ -313,7 +313,7 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
         .map(|f| ((f.width as u64) * (f.height as u64), f.width, f.height, f.fps))
         .collect();
 
-    let resolutions: Vec<(u32, u32, u32)> = unique_resolutions
+    let mut resolutions: Vec<(u32, u32, u32)> = unique_resolutions
         .into_iter()
         .map(|(_, w, h, fps)| (w, h, fps))
         .collect();
@@ -322,13 +322,38 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
         anyhow::bail!("No MJPG formats found");
     }
 
+    // Sample evenly when --sample N limits the scan
+    let sample = parse_sample_count(args);
+    if let Some(n) = sample {
+        if resolutions.len() > n {
+            let step = resolutions.len() as f64 / n as f64;
+            let mut sampled = Vec::with_capacity(n);
+            sampled.push(resolutions[0]);
+            for i in 1..(n - 1) {
+                let idx = (i as f64 * step).round() as usize;
+                sampled.push(resolutions[idx.min(resolutions.len() - 2)]);
+            }
+            sampled.push(resolutions[resolutions.len() - 1]);
+            resolutions = sampled;
+        }
+    }
+
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!(
-        "  RESOLUTION SCAN — {} ({} unique MJPG resolutions)",
-        identity.label(),
-        resolutions.len(),
-    );
+    if let Some(n) = sample {
+        tracing::info!(
+            "  RESOLUTION SCAN — {} ({} of {} resolutions sampled)",
+            identity.label(),
+            resolutions.len(),
+            n,
+        );
+    } else {
+        tracing::info!(
+            "  RESOLUTION SCAN — {} ({} resolutions)",
+            identity.label(),
+            resolutions.len(),
+        );
+    }
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
@@ -435,25 +460,52 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
         .map(|f| (f.fps, f.width, f.height))
         .collect();
 
-    let combos: Vec<(u32, u32, u32)> = unique_combos.into_iter().collect();
+    let mut combos: Vec<(u32, u32, u32)> = unique_combos.into_iter().collect();
 
     if combos.is_empty() {
         anyhow::bail!("No MJPG formats found");
     }
 
     let unique_fps: Vec<u32> = {
-        let mut fps_set: BTreeSet<u32> = combos.iter().map(|(fps, _, _)| *fps).collect();
+        let fps_set: BTreeSet<u32> = combos.iter().map(|(fps, _, _)| *fps).collect();
         fps_set.into_iter().collect()
     };
 
+    // Sample evenly when --sample N limits the scan
+    let sample = parse_sample_count(args);
+    let total_combos = combos.len();
+    if let Some(n) = sample {
+        if combos.len() > n {
+            let step = combos.len() as f64 / n as f64;
+            let mut sampled = Vec::with_capacity(n);
+            sampled.push(combos[0]);
+            for i in 1..(n - 1) {
+                let idx = (i as f64 * step).round() as usize;
+                sampled.push(combos[idx.min(combos.len() - 2)]);
+            }
+            sampled.push(combos[combos.len() - 1]);
+            combos = sampled;
+        }
+    }
+
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!(
-        "  FRAMERATE SCAN — {} ({} unique fps × resolutions = {} combos)",
-        identity.label(),
-        unique_fps.len(),
-        combos.len(),
-    );
+    if let Some(n) = sample {
+        tracing::info!(
+            "  FRAMERATE SCAN — {} ({} unique fps × {} of {} combos sampled)",
+            identity.label(),
+            unique_fps.len(),
+            combos.len(),
+            total_combos,
+        );
+    } else {
+        tracing::info!(
+            "  FRAMERATE SCAN — {} ({} unique fps × {} combos)",
+            identity.label(),
+            unique_fps.len(),
+            combos.len(),
+        );
+    }
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
@@ -778,6 +830,13 @@ fn parse_camera_index(args: &[String]) -> Option<u32> {
         .position(|arg| arg == "--camera-index")
         .and_then(|pos| args.get(pos + 1))
         .and_then(|s| s.parse::<u32>().ok())
+}
+
+fn parse_sample_count(args: &[String]) -> Option<usize> {
+    args.iter()
+        .position(|arg| arg == "--sample")
+        .and_then(|pos| args.get(pos + 1))
+        .and_then(|s| s.parse::<usize>().ok())
 }
 
 fn poll_frames(

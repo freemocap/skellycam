@@ -71,12 +71,13 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
             )
         });
 
-        // ── Multi-camera tests (require 2+ cameras) ────────────────────────
-        if camera_count >= 2 {
-            run_test("update exposure", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-                super::update_config_tests::run(&["exposure".into(), format!("--cameras={camera_count}")])
-            });
+        // ── Exposure test ───────────────────────────────────────────────────
+        run_test("update exposure", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
+            super::update_config_tests::run(&["exposure".into(), format!("--cameras={camera_count}")])
+        });
 
+        // ── Multi-camera only tests (require 2+ cameras) ────────────────────
+        if camera_count >= 2 {
             run_test("update add-camera", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
                 super::update_config_tests::run(&["add-camera".into(), format!("--cameras={camera_count}")])
             });
@@ -92,11 +93,36 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
             }
         }
 
+        // ── Resolution sample (5 evenly spaced across supported formats) ────
+        run_test("update resolution", &[format!("--sample=5")], &mut passed, &mut failed, &mut skipped, || {
+            super::update_config_tests::run(&["resolution".into(), "--sample".into(), "5".into()])
+        });
+
+        // ── Framerate sample (5 evenly spaced across supported formats) ─────
+        run_test("update framerate", &[format!("--sample=5")], &mut passed, &mut failed, &mut skipped, || {
+            super::update_config_tests::run(&["framerate".into(), "--sample".into(), "5".into()])
+        });
+
         // ── Manager test ───────────────────────────────────────────────────
         run_test("manager", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
             super::manager_tests::run(&[format!("--cameras={camera_count}")])
         });
     }
+
+    // ── Camera-count-independent tests (run once) ───────────────────────────
+    tracing::info!("");
+    tracing::info!("┌──────────────────────────────────────────────────────────────┐");
+    tracing::info!("│  CAMERA-COUNT-INDEPENDENT TESTS                               │");
+    tracing::info!("└──────────────────────────────────────────────────────────────┘");
+    tracing::info!("");
+
+    run_test("rotate", &[], &mut passed, &mut failed, &mut skipped, || {
+        super::rotation_tests::run(&[])
+    });
+
+    run_test("auto-exposure", &["--cameras=1".into()], &mut passed, &mut failed, &mut skipped, || {
+        super::update_config_tests::run(&["auto-exposure".into(), "--cameras".into(), "1".into()])
+    });
 
     // ── Summary ──────────────────────────────────────────────────────────
     let elapsed = suite_start.elapsed().as_secs_f64();
