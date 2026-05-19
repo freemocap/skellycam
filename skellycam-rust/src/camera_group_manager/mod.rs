@@ -109,6 +109,16 @@ impl CameraGroupManager {
         self.groups.len()
     }
 
+    /// Return a reference to a group by its identifier.
+    pub fn get_group(&self, group_id: &str) -> Option<&CameraGroup> {
+        self.groups.get(group_id)
+    }
+
+    /// Return a mutable reference to a group by its identifier.
+    pub fn get_group_mut(&mut self, group_id: &str) -> Option<&mut CameraGroup> {
+        self.groups.get_mut(group_id)
+    }
+
     /// Produce a serializable snapshot of the manager's state.
     pub fn to_state_dict(&self) -> ManagerState {
         let groups: Vec<GroupState> = self

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skellycam Test Console</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d2991d;--subtle:#8b949e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
+header{border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:20px}
+header h1{font-size:18px;font-weight:600;color:var(--green)}
+header .status{padding:3px 10px;border-radius:12px;font-size:12px;background:var(--surface);border:1px solid var(--border)}
+header .status.connected{background:#1a3a1a;border-color:var(--green);color:var(--green)}
+main{flex:1;display:flex;overflow:hidden}
+.panel{padding:16px;overflow-y:auto}
+.controls{width:340px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:14px}
+.preview{flex:1}
+h3{font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtle);margin-bottom:6px}
+button{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+button.primary:hover{opacity:.9}
+button.danger{background:var(--red);color:#fff;border-color:var(--red)}
+button:disabled{opacity:.35;pointer-events:none}
+.cam-list{display:flex;flex-direction:column;gap:3px;max-height:260px;overflow-y:auto}
+.cam-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid transparent}
+.cam-row:hover{background:var(--surface)}
+.cam-row.selected{border-color:var(--green);background:#1a2a1a}
+.cam-row input[type=checkbox]{accent-color:var(--green)}
+.cam-row .idx{color:var(--subtle);min-width:24px}
+.cam-row .name{flex:1}
+.cam-row .id{color:var(--subtle);font-size:11px}
+.input-row{display:flex;align-items:center;gap:8px}
+.input-row label{font-size:12px;color:var(--subtle);min-width:60px}
+.input-row input,.input-row select{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:5px 8px;border-radius:4px;font-size:13px;width:80px}
+#frames{display:flex;flex-wrap:wrap;gap:12px;padding:8px}
+.frame-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.frame-card .label{padding:4px 8px;font-size:11px;color:var(--subtle);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.frame-card img{display:block;max-width:360px;max-height:270px}
+#log{font-size:11px;color:var(--subtle);font-family:monospace;max-height:120px;overflow-y:auto;border-top:1px solid var(--border);padding:8px;white-space:pre-wrap}
+.fps-badge{font-size:32px;font-weight:700;color:var(--yellow);text-align:center;padding:8px}
+footer{border-top:1px solid var(--border);padding:8px 20px;font-size:11px;color:var(--subtle);display:flex;gap:16px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Skellycam</h1>
+  <span id="ws-status" class="status">disconnected</span>
+  <span style="flex:1"></span>
+  <span style="font-size:12px;color:var(--subtle)">localhost:53117</span>
+</header>
+
+<main>
+<div class="panel controls">
+  <div>
+    <h3>1. Cameras</h3>
+    <button class="primary" onclick="detect()" id="detect-btn">Detect Cameras</button>
+    <div class="cam-list" id="cam-list"></div>
+    <div style="margin-top:6px;font-size:11px;color:var(--subtle)">Selected: <span id="sel-count">0</span></div>
+  </div>
+
+  <div>
+    <h3>2. Settings</h3>
+    <div class="input-row">
+      <label>Exposure</label>
+      <input type="number" id="exposure" value="-7" min="-13" max="0">
+      <span style="font-size:10px;color:var(--subtle)">-13 to 0</span>
+    </div>
+    <div style="font-size:10px;color:var(--subtle);margin-top:3px">-13=1/8192s .. 0=1s. -7=1/128s (default). Lower = less blur.</div>
+  </div>
+
+  <div>
+    <h3>3. Group</h3>
+    <button class="primary" onclick="createGroup()" id="create-btn" disabled>Create Group + Stream</button>
+    <button onclick="togglePause()" id="pause-btn" disabled>Pause/Unpause</button>
+    <button onclick="startRecording()" id="record-btn" disabled>Start Recording</button>
+    <button onclick="stopRecording()" id="stop-btn" disabled>Stop Recording</button>
+    <button class="danger" onclick="closeAll()" id="close-btn" disabled>Close All</button>
+  </div>
+
+  <div id="log"></div>
+</div>
+
+<div class="preview">
+  <div class="fps-badge" id="fps">0.0 fps</div>
+  <div id="frames"></div>
+</div>
+</main>
+
+<footer>
+  <span>POST /detect</span>
+  <span>POST /group/apply</span>
+  <span>WS /websocket/connect</span>
+  <span>POST /record/start</span>
+  <span>GET /record/stop</span>
+  <span>GET /pause_unpause</span>
+  <span>DELETE /close/all</span>
+</footer>
+
+<script>
+// ── State ──
+const BASE = '';
+let cameras = [], selected = new Set(), ws = null;
+let frameCount = 0, fpsStart = 0, fpsLast=0;
+
+// ── Log ──
+function log(msg){const el=document.getElementById('log');el.textContent+=msg+'\n';el.scrollTop=el.scrollHeight}
+
+// ── Detect ──
+async function detect(){
+  log('Detecting cameras...');
+  document.getElementById('detect-btn').disabled=true;
+  try{
+    let r=await fetch(BASE+'/skellycam/camera/detect',{method:'POST'});
+    if(!r.ok)throw new Error(r.status+' '+r.statusText);
+    let d=await r.json();
+    cameras=d.cameras;
+    renderCamList();
+    log('Found '+d.cameras.length+' cameras');
+  }catch(e){log('Error: '+e.message)}
+  document.getElementById('detect-btn').disabled=false;
+}
+
+function renderCamList(){
+  let el=document.getElementById('cam-list');
+  el.innerHTML=cameras.map(c=>{
+    let sel=selected.has(c.index)?' selected':'';
+    return `<div class="cam-row${sel}" onclick="toggle(${c.index})">
+      <input type="checkbox" ${sel?'checked':''} tabindex="-1">
+      <span class="idx">[${c.index}]</span>
+      <span class="name">${esc(c.name)}</span>
+      <span class="id">${c.camera_id}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('sel-count').textContent=selected.size;
+  document.getElementById('create-btn').disabled=selected.size===0;
+}
+function esc(s){let d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function toggle(idx){
+  selected.has(idx)?selected.delete(idx):selected.add(idx);
+  renderCamList();
+}
+
+// ── Create Group ──
+async function createGroup(){
+  let indices=[...selected];
+  let exposure=parseInt(document.getElementById('exposure').value)||-7;
+  log('Creating group: ['+indices+'] exposure='+exposure);
+  document.getElementById('create-btn').disabled=true;
+  try{
+    let cameraConfigs={};
+    for(let idx of indices){
+      let cam=cameras.find(c=>c.index===idx);
+      if(!cam)continue;
+      cameraConfigs[cam.camera_id]={
+        cameraId:cam.camera_id,
+        cameraIndex:cam.index,
+        cameraName:cam.name,
+        exposure:exposure,
+        framerate:-1.0,
+        rotation:-1
+      };
+    }
+    let r=await fetch(BASE+'/skellycam/camera/group/apply',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({cameraConfigs})
+    });
+    if(!r.ok){let t=await r.text();throw new Error(t)}
+    let d=await r.json();
+    log('Group created: '+d.groupId+' ('+Object.keys(d.cameraConfigs).length+' cameras)');
+    document.getElementById('close-btn').disabled=false;
+    document.getElementById('pause-btn').disabled=false;
+    document.getElementById('record-btn').disabled=false;
+    connectWS();
+  }catch(e){log('Error: '+e.message);document.getElementById('create-btn').disabled=false}
+}
+
+// ── Pause ──
+async function togglePause(){
+  try{
+    let r=await fetch(BASE+'/skellycam/camera/group/all/pause_unpause');
+    let paused=await r.json();
+    log(paused?'Paused':'Unpaused');
+  }catch(e){log('Error: '+e.message)}
+}
+
+// ── Recording ──
+async function startRecording(){
+  log('Starting recording...');
+  document.getElementById('record-btn').disabled=true;
+  try{
+    let r=await fetch(BASE+'/skellycam/camera/group/all/record/start',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({})
+    });
+    if(!r.ok){let t=await r.text();throw new Error(t)}
+    log('Recording started');
+    document.getElementById('stop-btn').disabled=false;
+  }catch(e){log('Error: '+e.message);document.getElementById('record-btn').disabled=false}
+}
+
+async function stopRecording(){
+  log('Stopping recording...');
+  try{
+    let r=await fetch(BASE+'/skellycam/camera/group/all/record/stop');
+    let d=await r.json();
+    log('Recording stopped: '+d.numberOfFrames+' frames, '+d.totalDurationSec.toFixed(1)+'s, '+d.meanFramerate.toFixed(1)+' fps');
+    document.getElementById('record-btn').disabled=false;
+    document.getElementById('stop-btn').disabled=true;
+  }catch(e){log('Error: '+e.message)}
+}
+
+// ── WebSocket ──
+function connectWS(){
+  if(ws){try{ws.close()}catch(e){}}
+  let proto=location.protocol==='https:'?'wss:':'ws:';
+  ws=new WebSocket(proto+'//'+location.host+'/skellycam/websocket/connect');
+  ws.binaryType='arraybuffer';
+  ws.onopen=()=>{
+    log('WebSocket connected');
+    let s=document.getElementById('ws-status');
+    s.textContent='connected';s.classList.add('connected');
+    frameCount=0;fpsStart=performance.now();
+  };
+  ws.onmessage=handleBinary;
+  ws.onclose=()=>{
+    log('WebSocket disconnected');
+    let s=document.getElementById('ws-status');
+    s.textContent='disconnected';s.classList.remove('connected');
+    document.getElementById('create-btn').disabled=selected.size===0;
+    document.getElementById('close-btn').disabled=true;
+  };
+  ws.onerror=()=>log('WebSocket error');
+}
+
+function handleBinary(e){
+  let bytes=new Uint8Array(e.data);
+  let view=new DataView(e.data);
+  if(bytes.length<24)return;
+  let msgType=bytes[0];
+  if(msgType!==0)return;
+
+  let frameNum=Number(view.getBigInt64(8,true));
+  let numCams=view.getInt32(16,true);
+  let offset=24;
+
+  let container=document.getElementById('frames');
+
+  for(let i=0;i<numCams;i++){
+    if(offset+56>bytes.length)return;
+    let fhType=bytes[offset];
+    if(fhType!==1)return;
+    let fhFrameNum=Number(view.getBigInt64(offset+8,true));
+    let camIdBytes=bytes.slice(offset+16,offset+32);
+    let camId='';for(let b of camIdBytes){if(b===0)break;camId+=String.fromCharCode(b)}
+    let camIndex=view.getInt32(offset+32,true);
+    let imgW=view.getInt32(offset+36,true),imgH=view.getInt32(offset+40,true);
+    let jpegLen=view.getInt32(offset+48,true);
+    offset+=56;
+    if(offset+jpegLen>bytes.length)return;
+    let jpegBytes=bytes.slice(offset,offset+jpegLen);
+    offset+=jpegLen;
+
+    let card=document.getElementById('cam-card-'+camIndex);
+    if(!card){
+      card=document.createElement('div');card.className='frame-card';card.id='cam-card-'+camIndex;
+      let label=document.createElement('div');label.className='label';
+      label.innerHTML='<span>Cam '+camIndex+' ('+camId+')</span><span></span>';
+      card.appendChild(label);
+      let img=document.createElement('img');img.id='cam-img-'+camIndex;
+      card.appendChild(img);
+      container.appendChild(card);
+    }
+    let img=document.getElementById('cam-img-'+camIndex);
+    let blob=new Blob([jpegBytes],{type:'image/jpeg'});
+    let url=URL.createObjectURL(blob);
+    let old=img.src;
+    img.src=url;
+    if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);
+  }
+
+  frameCount++;
+  let now=performance.now();
+  if(now-fpsLast>250){
+    let dt=(now-fpsStart)/1000;
+    document.getElementById('fps').textContent=dt>0?(frameCount/dt).toFixed(1)+' fps':'';
+    fpsLast=now;
+  }
+}
+
+// ── Close ──
+async function closeAll(){
+  log('Closing all groups...');
+  try{
+    let r=await fetch(BASE+'/skellycam/camera/group/close/all',{method:'DELETE'});
+    let d=await r.json();
+    log(d.success?'All groups closed':'Close failed');
+    document.getElementById('close-btn').disabled=true;
+    document.getElementById('pause-btn').disabled=true;
+    document.getElementById('record-btn').disabled=true;
+    document.getElementById('stop-btn').disabled=true;
+    if(ws){ws.close();ws=null}
+    // Clear frames
+    document.getElementById('frames').innerHTML='';
+    document.getElementById('fps').textContent='0.0 fps';
+  }catch(e){log('Error: '+e.message)}
+}
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown',e=>{
+  if(e.key==='d'&&e.ctrlKey){e.preventDefault();detect()}
+  if(e.key==='Enter'&&e.ctrlKey&&selected.size>0){e.preventDefault();createGroup()}
+});
+</script>
+</body>
+</html>

@@ -26,6 +26,10 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn dispatch_command(args: &[String]) -> anyhow::Result<()> {
+    if args.iter().any(|arg| arg == "--serve") {
+        return run_server();
+    }
+
     match args.get(1).map(|s| s.as_str()) {
         Some("test") => match args.get(2).map(|s| s.as_str()) {
             Some("all") => tests::all_tests::run(&args[3..]),
@@ -47,8 +51,60 @@ fn dispatch_command(args: &[String]) -> anyhow::Result<()> {
     }
 }
 
+fn run_server() -> anyhow::Result<()> {
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
+
+    let state = Arc::new(skellycam::api::AppState::new());
+    let router = skellycam::api::build_router(state.clone());
+
+    let addr = "0.0.0.0:53117";
+    eprintln!("══════════════════════════════════════════════════");
+    eprintln!("  Skellycam Server");
+    eprintln!("  http://localhost:53117");
+    eprintln!("  Swagger docs: http://localhost:53117/docs");
+    eprintln!("  Test page:    http://localhost:53117/test");
+    eprintln!("  Press Ctrl+C to stop");
+    eprintln!("══════════════════════════════════════════════════");
+
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(4)
+        .enable_all()
+        .build()?;
+
+    rt.block_on(async {
+        let listener = tokio::net::TcpListener::bind(addr).await?;
+
+        let shutdown_flag = state.shutdown_flag.clone();
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async move {
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => {
+                        eprintln!("\nCtrl+C received — shutting down...");
+                    }
+                    _ = async {
+                        while !shutdown_flag.load(Ordering::SeqCst) {
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        }
+                    } => {
+                        eprintln!("\n/shutdown called — shutting down...");
+                    }
+                }
+            })
+            .await?;
+
+        Ok::<_, anyhow::Error>(())
+    })?;
+
+    // Close all camera groups on the way out
+    state.camera_manager.blocking_lock().close_all_groups();
+
+    eprintln!("Server stopped.");
+    Ok(())
+}
+
 fn print_usage() -> anyhow::Result<()> {
-    eprintln!("usage: cargo run --release -- test <module> [flags]");
+    eprintln!("usage: cargo run --release -- [--serve] test <module> [flags]");
     eprintln!("modules:");
     eprintln!("  all        — run full test suite (1 camera → N cameras)");
     eprintln!("  detect     — enumerate cameras");

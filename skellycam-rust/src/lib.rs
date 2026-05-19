@@ -1,3 +1,4 @@
+pub mod api;
 pub mod camera;
 pub mod camera_group;
 pub mod camera_group_manager;
@@ -6,6 +7,7 @@ pub mod recording;
 pub mod timestamps;
 pub mod frontend_payload;
 pub mod pyo3_bridge;
+pub mod websocket;
 
 /// Default log level for the entire process.
 ///
