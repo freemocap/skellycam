@@ -43,10 +43,26 @@ pub fn camera_routes() -> Router<Arc<AppState>> {
 
 // ── Health ─────────────────────────────────────────────────────────────────
 
+/// Health check — returns "skellycam ok"
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "Server is alive", body = str)
+    )
+)]
 async fn health_check() -> &'static str {
     "skellycam ok"
 }
 
+/// Initiate graceful server shutdown
+#[utoipa::path(
+    get,
+    path = "/shutdown",
+    responses(
+        (status = 200, description = "Shutdown initiated")
+    )
+)]
 async fn shutdown(State(state): State<Arc<AppState>>) -> Result<Json<serde_json::Value>, AppError> {
     state.shutdown_flag.store(true, Ordering::SeqCst);
     Ok(Json(serde_json::json!({"message": "shutting down"})))
@@ -54,6 +70,15 @@ async fn shutdown(State(state): State<Arc<AppState>>) -> Result<Json<serde_json:
 
 // ── Detection ──────────────────────────────────────────────────────────────
 
+/// Detect connected cameras
+#[utoipa::path(
+    post,
+    path = "/skellycam/camera/detect",
+    responses(
+        (status = 200, description = "Cameras detected", body = DetectedCamerasResponse),
+        (status = 500, description = "Detection failed")
+    )
+)]
 async fn detect_cameras_handler(
     State(_state): State<Arc<AppState>>,
 ) -> Result<Json<DetectedCamerasResponse>, AppError> {
@@ -69,6 +94,17 @@ async fn detect_cameras_handler(
 
 // ── Group create/apply ─────────────────────────────────────────────────────
 
+/// Create or update a camera group
+#[utoipa::path(
+    post,
+    path = "/skellycam/camera/group/apply",
+    request_body = CameraGroupApplyRequest,
+    responses(
+        (status = 200, description = "Group created", body = CreateCameraGroupResponse),
+        (status = 400, description = "Bad request"),
+        (status = 500, description = "Creation failed")
+    )
+)]
 async fn create_or_update_group(
     State(state): State<Arc<AppState>>,
     Json(request): Json<CameraGroupApplyRequest>,
@@ -79,27 +115,83 @@ async fn create_or_update_group(
         ));
     }
 
-    // Re-detect to get full CameraIdentity for each requested camera
-    let all_cameras = tokio::task::spawn_blocking(|| detect_cameras())
-        .await
-        .map_err(|e| AppError::Internal(format!("Camera detection panicked: {e}")))?
-        .map_err(|e| AppError::Internal(format!("Camera detection failed: {e}")))?;
+    // Build a HashMap<String, CameraGroupConfig> keyed by camera_id.
+    // For an existing group, reuse stored identities. For new cameras
+    // (either first create or adding to an existing group), detect.
+    let manager = state.camera_manager.lock().await;
+    let active_id = state.active_group_id.lock().await.clone();
 
-    let mut configs: Vec<CameraGroupConfig> = Vec::new();
+    // Collect existing identities if we are updating an active group
+    let existing_identities: HashMap<String, CameraIdentity> = active_id
+        .as_ref()
+        .and_then(|id| manager.get_group(id))
+        .map(|g| {
+            g.camera_statuses()
+                .into_iter()
+                .map(|s| {
+                    let cid = s.config.camera_id.clone();
+                    let identity = CameraIdentity {
+                        camera_name: s.camera_name,
+                        camera_index: s.camera_index,
+                        camera_id: cid.clone(),
+                        device_path: s.device_path,
+                        formats: vec![],
+                    };
+                    (cid, identity)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // Only re-detect for camera IDs not already in the existing group
+    let need_detection: Vec<String> = request
+        .camera_configs
+        .keys()
+        .filter(|id| !existing_identities.contains_key(*id))
+        .cloned()
+        .collect();
+
+    let detected = if !need_detection.is_empty() {
+        // Release locks during blocking detection call
+        drop(active_id);
+        drop(manager);
+        Some(
+            tokio::task::spawn_blocking(|| detect_cameras())
+                .await
+                .map_err(|e| AppError::Internal(format!("Camera detection panicked: {e}")))?
+                .map_err(|e| AppError::Internal(format!("Camera detection failed: {e}")))?,
+        )
+    } else {
+        None
+    };
+
+    let mut manager = state.camera_manager.lock().await;
+    let active_id = state.active_group_id.lock().await.clone();
+
+    let mut new_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
     let mut response_configs: HashMap<String, CameraConfigOutput> = HashMap::new();
 
     for (cam_id, input) in &request.camera_configs {
-        // Find the detected camera identity
-        let identity: CameraIdentity = all_cameras
-            .iter()
-            .find(|c| c.camera_id == *cam_id || c.camera_index == input.camera_index)
-            .cloned()
-            .ok_or_else(|| {
-                AppError::BadRequest(format!(
-                    "Camera '{}' (index {}) not found in detected devices",
-                    cam_id, input.camera_index
-                ))
-            })?;
+        // Prefer existing identity, fall back to detected, error if neither
+        let identity: CameraIdentity = if let Some(existing) = existing_identities.get(cam_id) {
+            existing.clone()
+        } else if let Some(ref detected_list) = detected {
+            detected_list
+                .iter()
+                .find(|c| c.camera_id == *cam_id || c.camera_index == input.camera_index)
+                .cloned()
+                .ok_or_else(|| {
+                    AppError::BadRequest(format!(
+                        "Camera '{}' (index {}) not found in detected devices",
+                        cam_id, input.camera_index
+                    ))
+                })?
+        } else {
+            return Err(AppError::BadRequest(format!(
+                "Camera '{}' not found in existing group and no detection run",
+                cam_id
+            )));
+        };
 
         let capture_config = CameraConfig {
             camera_id: identity.camera_id.clone(),
@@ -117,25 +209,34 @@ async fn create_or_update_group(
         };
 
         let output = CameraConfigOutput::from(&capture_config);
-
-        configs.push(CameraGroupConfig {
-            identity,
-            capture_config,
-        });
         response_configs.insert(cam_id.clone(), output);
+
+        new_configs.insert(
+            cam_id.clone(),
+            CameraGroupConfig {
+                identity,
+                capture_config,
+            },
+        );
     }
 
-    // Use CameraGroupManager to create or replace the active group
-    let mut manager = state.camera_manager.lock().await;
-
-    // Close existing active group if any
-    if let Some(old_id) = state.active_group_id.lock().await.take() {
-        let _ = manager.close_group(&old_id);
-    }
-
-    let group_id = manager
-        .create_or_update_group(configs, None)
-        .map_err(|e| AppError::Internal(format!("Failed to create camera group: {e}")))?;
+    let group_id = if let Some(ref existing_id) = active_id {
+        // Update existing group in-place via apply()
+        let group = manager
+            .get_group_mut(existing_id)
+            .ok_or_else(|| AppError::Internal("Active group not found in manager".into()))?;
+        group
+            .apply(new_configs)
+            .map_err(|e| AppError::Internal(format!("Failed to apply config update: {e}")))?;
+        existing_id.clone()
+    } else {
+        // No active group — create a fresh one
+        let configs: Vec<CameraGroupConfig> = new_configs.into_values().collect();
+        let gid = manager
+            .create_or_update_group(configs, None)
+            .map_err(|e| AppError::Internal(format!("Failed to create camera group: {e}")))?;
+        gid
+    };
 
     *state.active_group_id.lock().await = Some(group_id.clone());
 
@@ -147,6 +248,17 @@ async fn create_or_update_group(
 
 // ── Recording ──────────────────────────────────────────────────────────────
 
+/// Start recording on the active camera group
+#[utoipa::path(
+    post,
+    path = "/skellycam/camera/group/all/record/start",
+    request_body = StartRecordingRequest,
+    responses(
+        (status = 200, description = "Recording started", body = bool),
+        (status = 400, description = "No active group"),
+        (status = 500, description = "Recording start failed")
+    )
+)]
 async fn start_recording(
     State(state): State<Arc<AppState>>,
     Json(request): Json<StartRecordingRequest>,
@@ -163,28 +275,38 @@ async fn start_recording(
         .get_group_mut(&active_id)
         .ok_or_else(|| AppError::Internal("Active group not found in manager".into()))?;
 
-    let dir = if request.recording_directory.is_empty() {
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        format!("recordings_{timestamp}")
+    let output_dir = if request.recording_directory.is_empty() {
+        default_recording_dir()?
     } else {
-        request.recording_directory
+        let expanded = if request.recording_directory.starts_with('~') {
+            request
+                .recording_directory
+                .replace('~', &dirs::home_dir().unwrap_or_default().display().to_string())
+        } else {
+            request.recording_directory.clone()
+        };
+        expanded
     };
-
-    std::fs::create_dir_all(&dir)
-        .map_err(|e| AppError::Internal(format!("Failed to create recording dir: {e}")))?;
 
     let label = if request.recording_name.is_empty() {
-        None
+        Some(recording_timestamp_name())
     } else {
-        Some(request.recording_name)
+        Some(request.recording_name.clone())
     };
+
+    tracing::info!(
+        "[recording] starting — dir: {output_dir}   label: {}",
+        label.as_deref().unwrap_or("—")
+    );
+
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|e| AppError::Internal(format!("Failed to create recording dir '{output_dir}': {e}")))?;
+
+    eprintln!("[recording] dir created: {output_dir}");
 
     group
         .start_recording(RecordingParams {
-            output_dir: dir,
+            output_dir,
             label,
         })
         .map_err(|e| AppError::Internal(format!("Failed to start recording: {e}")))?;
@@ -192,6 +314,16 @@ async fn start_recording(
     Ok(Json(true))
 }
 
+/// Stop recording and return summary
+#[utoipa::path(
+    get,
+    path = "/skellycam/camera/group/all/record/stop",
+    responses(
+        (status = 200, description = "Recording stopped", body = StopRecordingResponse),
+        (status = 400, description = "No active group"),
+        (status = 500, description = "Recording stop failed")
+    )
+)]
 async fn stop_recording(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<StopRecordingResponse>, AppError> {
@@ -277,6 +409,15 @@ async fn stop_recording(
 
 // ── Pause / unpause ────────────────────────────────────────────────────────
 
+/// Toggle pause on the active camera group
+#[utoipa::path(
+    get,
+    path = "/skellycam/camera/group/all/pause_unpause",
+    responses(
+        (status = 200, description = "Pause toggled", body = bool),
+        (status = 400, description = "No active group")
+    )
+)]
 async fn toggle_pause_unpause(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<bool>, AppError> {
@@ -298,6 +439,14 @@ async fn toggle_pause_unpause(
 
 // ── Close all ──────────────────────────────────────────────────────────────
 
+/// Close all camera groups
+#[utoipa::path(
+    delete,
+    path = "/skellycam/camera/group/close/all",
+    responses(
+        (status = 200, description = "All groups closed", body = CloseAllResponse)
+    )
+)]
 async fn close_all_groups(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<CloseAllResponse>, AppError> {

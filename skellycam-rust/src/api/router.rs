@@ -9,10 +9,26 @@ use crate::websocket;
 
 use super::application_state::AppState;
 use super::camera_routes::camera_routes;
+use super::camera_routes::{
+    __path_close_all_groups, __path_create_or_update_group,
+    __path_detect_cameras_handler, __path_health_check, __path_shutdown,
+    __path_start_recording, __path_stop_recording,
+    __path_toggle_pause_unpause,
+};
 use super::models::*;
 
 #[derive(OpenApi)]
 #[openapi(
+    paths(
+        health_check,
+        shutdown,
+        detect_cameras_handler,
+        create_or_update_group,
+        start_recording,
+        stop_recording,
+        toggle_pause_unpause,
+        close_all_groups,
+    ),
     components(schemas(
         DetectedCamera,
         DetectedCamerasResponse,

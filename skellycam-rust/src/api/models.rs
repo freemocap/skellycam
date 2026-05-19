@@ -6,7 +6,6 @@ use utoipa::ToSchema;
 // ── Detection ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CameraFormatSchema {
     pub width: i32,
     pub height: i32,
@@ -28,7 +27,6 @@ impl From<&crate::camera::CameraFormatInfo> for CameraFormatSchema {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct DetectedCamera {
     pub index: i32,
     pub name: String,
@@ -75,7 +73,6 @@ pub struct DetectedCamerasResponse {
 /// backend doesn't use (color_channels, pixel_format, capture_fourcc,
 /// writer_fourcc) are accepted but ignored.
 #[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CameraConfigInput {
     pub camera_id: String,
     #[serde(default)]
@@ -147,14 +144,12 @@ fn default_width() -> i32 {
 /// `camera_configs` is a dict keyed by camera_id, matching the frontend's
 /// existing payload shape.
 #[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CameraGroupApplyRequest {
     pub camera_configs: HashMap<String, CameraConfigInput>,
 }
 
 /// Output format for a single camera config — matches Python `CameraConfig-Output`.
 #[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CameraConfigOutput {
     pub camera_id: String,
     pub camera_index: i32,
@@ -208,7 +203,6 @@ pub struct CreateCameraGroupResponse {
 // ── Recording ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct StartRecordingRequest {
     #[serde(default)]
     pub recording_name: String,

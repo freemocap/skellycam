@@ -151,27 +151,27 @@ async function createGroup(){
   log('Creating group: ['+indices+'] exposure='+exposure);
   document.getElementById('create-btn').disabled=true;
   try{
-    let cameraConfigs={};
+    let camera_configs={};
     for(let idx of indices){
       let cam=cameras.find(c=>c.index===idx);
       if(!cam)continue;
-      cameraConfigs[cam.camera_id]={
-        cameraId:cam.camera_id,
-        cameraIndex:cam.index,
-        cameraName:cam.name,
-        exposure:exposure,
-        framerate:-1.0,
-        rotation:-1
+      camera_configs[cam.camera_id]={
+        camera_id: cam.camera_id,
+        camera_index: cam.index,
+        camera_name: cam.name,
+        exposure: exposure,
+        framerate: -1.0,
+        rotation: -1
       };
     }
     let r=await fetch(BASE+'/skellycam/camera/group/apply',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({cameraConfigs})
+      body:JSON.stringify({camera_configs})
     });
     if(!r.ok){let t=await r.text();throw new Error(t)}
     let d=await r.json();
-    log('Group created: '+d.groupId+' ('+Object.keys(d.cameraConfigs).length+' cameras)');
+    log('Group created: '+d.group_id+' ('+Object.keys(d.camera_configs).length+' cameras)');
     document.getElementById('close-btn').disabled=false;
     document.getElementById('pause-btn').disabled=false;
     document.getElementById('record-btn').disabled=false;
@@ -209,7 +209,7 @@ async function stopRecording(){
   try{
     let r=await fetch(BASE+'/skellycam/camera/group/all/record/stop');
     let d=await r.json();
-    log('Recording stopped: '+d.numberOfFrames+' frames, '+d.totalDurationSec.toFixed(1)+'s, '+d.meanFramerate.toFixed(1)+' fps');
+    log('Recording stopped: '+d.number_of_frames+' frames, '+d.total_duration_sec.toFixed(1)+'s, '+d.mean_framerate.toFixed(1)+' fps');
     document.getElementById('record-btn').disabled=false;
     document.getElementById('stop-btn').disabled=true;
   }catch(e){log('Error: '+e.message)}
