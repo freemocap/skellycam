@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
-use crate::camera::{detect_cameras, CameraConfig};
+use crate::camera::{detect_cameras, CameraConfig, CameraIdentity};
 use crate::camera_group::{CameraGroup, CameraGroupConfig, CameraStatus};
 
 // ── PyO3 class ─────────────────────────────────────────────────────────────
@@ -32,6 +32,10 @@ impl PyO3CameraGroupManager {
     }
 
     /// Create a camera group from a Python dict mapping camera_id → config_dict.
+    ///
+    /// Detects all cameras, matches each config entry to a physical device by
+    /// `camera_index`, and starts a new `CameraGroup`. The group runs until
+    /// `close_all_groups()` is called or the manager is dropped.
     fn create_or_update_group(
         &mut self,
         configs: &Bound<'_, PyDict>,
@@ -49,31 +53,16 @@ impl PyO3CameraGroupManager {
 
         for (key, value) in configs.iter() {
             let python_camera_id: String = key.extract()?;
-
-            let camera_index: i32 = value
-                .getattr("get")
-                .and_then(|get| get.call1(("camera_index",)))
-                .or_else(|_| value.getattr("camera_index"))
-                .and_then(|v| v.extract())
-                .or_else(|_| value.get_item("camera_index")?.extract())?;
-
-            let camera_id: String =
-                get_field_string(&value, "camera_id", &python_camera_id);
-            let width: u32 = get_field_i32(&value, "width", 1280) as u32;
-            let height: u32 = get_field_i32(&value, "height", 720) as u32;
-            let exposure: i32 = get_field_i32(&value, "exposure", -7);
-            let exposure_mode: String =
-                get_field_string(&value, "exposure_mode", "MANUAL");
-            let framerate: f64 = get_field_f64(&value, "framerate", -1.0);
-            let rotation: i32 = get_field_i32(&value, "rotation", -1);
+            let parsed = parse_config_entry(&value, &python_camera_id)?;
 
             let mut identity = all_cameras
                 .iter()
-                .find(|c| c.camera_index == camera_index)
+                .find(|c| c.camera_index == parsed.camera_index as i32)
                 .cloned()
                 .ok_or_else(|| {
                     PyValueError::new_err(format!(
-                        "Camera index {camera_index} not found (available: {})",
+                        "Camera index {} not found (available: {})",
+                        parsed.camera_index,
                         all_cameras
                             .iter()
                             .map(|c| c.camera_index.to_string())
@@ -83,23 +72,7 @@ impl PyO3CameraGroupManager {
                 })?;
 
             identity.camera_id = python_camera_id;
-
-            rust_configs.insert(
-                camera_id.clone(),
-                CameraGroupConfig {
-                    capture_config: CameraConfig {
-                        camera_id,
-                        camera_index: camera_index as u32,
-                        width,
-                        height,
-                        exposure,
-                        exposure_mode,
-                        framerate,
-                        rotation,
-                    },
-                    identity,
-                },
-            );
+            rust_configs.insert(parsed.camera_id.clone(), parsed.into_group_config(identity));
         }
 
         if rust_configs.is_empty() {
@@ -112,8 +85,7 @@ impl PyO3CameraGroupManager {
                 PyRuntimeError::new_err(format!("Failed to start camera group: {e}"))
             })?;
 
-        let camera_statuses = group.camera_statuses();
-        self.camera_statuses = camera_statuses;
+        self.camera_statuses = group.camera_statuses();
 
         let group_id = uuid::Uuid::new_v4()
             .as_simple()
@@ -121,7 +93,6 @@ impl PyO3CameraGroupManager {
             .to_string();
 
         self.groups.insert(group_id.clone(), Mutex::new(group));
-
         Ok(group_id)
     }
 
@@ -193,57 +164,28 @@ impl PyO3CameraGroupManager {
 
         for (key, value) in configs.iter() {
             let python_camera_id: String = key.extract()?;
-            let camera_index: i32 = value
-                .getattr("get")
-                .and_then(|get| get.call1(("camera_index",)))
-                .or_else(|_| value.getattr("camera_index"))
-                .and_then(|v| v.extract())
-                .or_else(|_| value.get_item("camera_index")?.extract())?;
-
-            let camera_id: String = get_field_string(&value, "camera_id", &python_camera_id);
-            let width: u32 = get_field_i32(&value, "width", 1280) as u32;
-            let height: u32 = get_field_i32(&value, "height", 720) as u32;
-            let exposure: i32 = get_field_i32(&value, "exposure", -7);
-            let exposure_mode: String = get_field_string(&value, "exposure_mode", "MANUAL");
-            let framerate: f64 = get_field_f64(&value, "framerate", -1.0);
-            let rotation: i32 = get_field_i32(&value, "rotation", -1);
+            let parsed = parse_config_entry(&value, &python_camera_id)?;
 
             let identity = all_cameras
                 .iter()
-                .find(|c| c.camera_index == camera_index)
+                .find(|c| c.camera_index == parsed.camera_index as i32)
                 .cloned()
                 .unwrap_or_else(|| {
-                    crate::camera::CameraIdentity {
-                        camera_name: format!("Camera {camera_index}"),
-                        camera_index,
-                        camera_id: camera_id.clone(),
+                    CameraIdentity {
+                        camera_name: format!("Camera {}", parsed.camera_index),
+                        camera_index: parsed.camera_index as i32,
+                        camera_id: parsed.camera_id.clone(),
                         device_path: String::new(),
                         formats: vec![],
                     }
                 });
 
-            rust_configs.insert(
-                camera_id.clone(),
-                CameraGroupConfig {
-                    capture_config: CameraConfig {
-                        camera_id,
-                        camera_index: camera_index as u32,
-                        width,
-                        height,
-                        exposure,
-                        exposure_mode,
-                        framerate,
-                        rotation,
-                    },
-                    identity,
-                },
-            );
+            rust_configs.insert(parsed.camera_id.clone(), parsed.into_group_config(identity));
         }
 
         group.apply(rust_configs)
             .map_err(|e| PyRuntimeError::new_err(format!("Config apply failed: {e}")))?;
 
-        // Refresh cached camera statuses
         self.camera_statuses = group.camera_statuses();
         Ok(())
     }
@@ -382,6 +324,72 @@ impl Drop for PyO3CameraGroupManager {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+/// Parsed fields from one Python config dict entry (before identity resolution).
+struct ParsedConfigEntry {
+    camera_id: String,
+    camera_index: u32,
+    width: u32,
+    height: u32,
+    exposure: i32,
+    exposure_mode: String,
+    framerate: f64,
+    rotation: i32,
+}
+
+/// Extract config fields from a single Python dict value.
+///
+/// Handles both object-attribute access (`obj.camera_index`) and dict-key
+/// access (`obj["camera_index"]`), matching the dual getattr/get_item pattern
+/// Python developers expect from a Rust-backed API.
+fn parse_config_entry(
+    value: &Bound<'_, PyAny>,
+    python_camera_id: &str,
+) -> PyResult<ParsedConfigEntry> {
+    let camera_index: i32 = value
+        .getattr("get")
+        .and_then(|get| get.call1(("camera_index",)))
+        .or_else(|_| value.getattr("camera_index"))
+        .and_then(|v| v.extract())
+        .or_else(|_| value.get_item("camera_index")?.extract())?;
+
+    let camera_id = get_field_string(value, "camera_id", python_camera_id);
+    let width = get_field_i32(value, "width", 1280) as u32;
+    let height = get_field_i32(value, "height", 720) as u32;
+    let exposure = get_field_i32(value, "exposure", -7);
+    let exposure_mode = get_field_string(value, "exposure_mode", "MANUAL");
+    let framerate = get_field_f64(value, "framerate", -1.0);
+    let rotation = get_field_i32(value, "rotation", -1);
+
+    Ok(ParsedConfigEntry {
+        camera_id,
+        camera_index: camera_index as u32,
+        width,
+        height,
+        exposure,
+        exposure_mode,
+        framerate,
+        rotation,
+    })
+}
+
+impl ParsedConfigEntry {
+    fn into_group_config(self, identity: CameraIdentity) -> CameraGroupConfig {
+        CameraGroupConfig {
+            capture_config: CameraConfig {
+                camera_id: self.camera_id.clone(),
+                camera_index: self.camera_index,
+                width: self.width,
+                height: self.height,
+                exposure: self.exposure,
+                exposure_mode: self.exposure_mode,
+                framerate: self.framerate,
+                rotation: self.rotation,
+            },
+            identity,
+        }
+    }
+}
+
 fn get_field_i32(value: &Bound<'_, PyAny>, name: &str, default: i32) -> i32 {
     value
         .getattr(name)
@@ -445,3 +453,105 @@ fn recording_summary_to_pydict(
 }
 
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
+
+// ── Tests ───────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verify that `parse_config_entry` correctly extracts all fields from a
+    /// Python dict using the dual getattr/get_item access pattern.
+    #[test]
+    fn parse_config_entry_extracts_all_fields() {
+        pyo3::Python::initialize();
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("camera_index", 2_i32).unwrap();
+            dict.set_item("camera_id", "test_cam_01").unwrap();
+            dict.set_item("width", 640_i32).unwrap();
+            dict.set_item("height", 480_i32).unwrap();
+            dict.set_item("exposure", -5_i32).unwrap();
+            dict.set_item("exposure_mode", "AUTO").unwrap();
+            dict.set_item("framerate", 60.0_f64).unwrap();
+            dict.set_item("rotation", 1_i32).unwrap();
+
+            let parsed = parse_config_entry(&dict.as_borrowed(), "fallback_id")
+                .expect("parse_config_entry should succeed");
+
+            assert_eq!(parsed.camera_id, "test_cam_01");
+            assert_eq!(parsed.camera_index, 2);
+            assert_eq!(parsed.width, 640);
+            assert_eq!(parsed.height, 480);
+            assert_eq!(parsed.exposure, -5);
+            assert_eq!(parsed.exposure_mode, "AUTO");
+            assert_eq!(parsed.framerate, 60.0);
+            assert_eq!(parsed.rotation, 1);
+        });
+    }
+
+    /// Fields not present in the dict should get sensible defaults.
+    #[test]
+    fn parse_config_entry_missing_fields_use_defaults() {
+        pyo3::Python::initialize();
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("camera_index", 0_i32).unwrap();
+
+            let parsed = parse_config_entry(&dict.as_borrowed(), "fallback")
+                .expect("parse_config_entry should succeed");
+
+            assert_eq!(parsed.width, 1280);
+            assert_eq!(parsed.height, 720);
+            assert_eq!(parsed.exposure, -7);
+            assert_eq!(parsed.exposure_mode, "MANUAL");
+            assert_eq!(parsed.framerate, -1.0);
+            assert_eq!(parsed.rotation, -1);
+        });
+    }
+
+    /// When `camera_id` is absent, fall back to the Python dict key.
+    #[test]
+    fn parse_config_entry_falls_back_camera_id() {
+        pyo3::Python::initialize();
+        Python::attach(|py| {
+            let dict = PyDict::new(py);
+            dict.set_item("camera_index", 0_i32).unwrap();
+            // camera_id absent — should use the fallback
+
+            let parsed = parse_config_entry(&dict.as_borrowed(), "fallback_key")
+                .expect("parse_config_entry should succeed");
+
+            assert_eq!(parsed.camera_id, "fallback_key");
+        });
+    }
+
+    /// `ParsedConfigEntry::into_group_config` produces a valid CameraGroupConfig.
+    #[test]
+    fn into_group_config_builds_valid_config() {
+        let entry = ParsedConfigEntry {
+            camera_id: "cam_1".into(),
+            camera_index: 0,
+            width: 640,
+            height: 480,
+            exposure: -7,
+            exposure_mode: "MANUAL".into(),
+            framerate: 30.0,
+            rotation: -1,
+        };
+
+        let identity = CameraIdentity {
+            camera_name: "Test Cam".into(),
+            camera_index: 0,
+            camera_id: "cam_1".into(),
+            device_path: String::new(),
+            formats: vec![],
+        };
+
+        let cfg = entry.into_group_config(identity);
+        assert_eq!(cfg.capture_config.camera_id, "cam_1");
+        assert_eq!(cfg.capture_config.width, 640);
+        assert_eq!(cfg.capture_config.height, 480);
+        assert_eq!(cfg.capture_config.exposure, -7);
+    }
+}

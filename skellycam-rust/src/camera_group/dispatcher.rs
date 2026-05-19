@@ -12,7 +12,7 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -118,8 +118,8 @@ pub fn spawn_dispatcher(
             // ── Try to receive the next multiframe ──
             match multi_frame_receiver.try_recv() {
                 Ok(mut payload) => {
-                    static mut DISPATCH_COUNT: u64 = 0;
-                    let count = unsafe { DISPATCH_COUNT += 1; DISPATCH_COUNT };
+                    static DISPATCH_COUNT: AtomicU64 = AtomicU64::new(0);
+                    let count = DISPATCH_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
                     tracing::trace!(
                         "[DISPATCH mf#{count}] received {} frames",
                         payload.frames.len(),

@@ -8,39 +8,44 @@
 :root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d2991d;--subtle:#8b949e}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
-header{border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:20px}
+header{border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:16px}
 header h1{font-size:18px;font-weight:600;color:var(--green)}
-header .status{padding:3px 10px;border-radius:12px;font-size:12px;background:var(--surface);border:1px solid var(--border)}
+header .status{padding:2px 10px;border-radius:12px;font-size:12px;background:var(--surface);border:1px solid var(--border)}
 header .status.connected{background:#1a3a1a;border-color:var(--green);color:var(--green)}
 main{flex:1;display:flex;overflow:hidden}
-.panel{padding:16px;overflow-y:auto}
-.controls{width:340px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:14px}
-.preview{flex:1}
-h3{font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtle);margin-bottom:6px}
-button{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s}
+.panel{padding:12px;overflow-y:auto}
+.controls{width:340px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.preview{flex:1;display:flex;flex-direction:column}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--subtle);margin-bottom:4px}
+button{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;transition:all .15s}
 button:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
-button.primary:hover{opacity:.9}
 button.danger{background:var(--red);color:#fff;border-color:var(--red)}
 button:disabled{opacity:.35;pointer-events:none}
-.cam-list{display:flex;flex-direction:column;gap:3px;max-height:260px;overflow-y:auto}
-.cam-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid transparent}
+button.small{padding:3px 8px;font-size:11px}
+.cam-list{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto}
+.cam-row{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid transparent}
 .cam-row:hover{background:var(--surface)}
 .cam-row.selected{border-color:var(--green);background:#1a2a1a}
 .cam-row input[type=checkbox]{accent-color:var(--green)}
-.cam-row .idx{color:var(--subtle);min-width:24px}
-.cam-row .name{flex:1}
-.cam-row .id{color:var(--subtle);font-size:11px}
-.input-row{display:flex;align-items:center;gap:8px}
-.input-row label{font-size:12px;color:var(--subtle);min-width:60px}
-.input-row input,.input-row select{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:5px 8px;border-radius:4px;font-size:13px;width:80px}
-#frames{display:flex;flex-wrap:wrap;gap:12px;padding:8px}
-.frame-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
-.frame-card .label{padding:4px 8px;font-size:11px;color:var(--subtle);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
-.frame-card img{display:block;max-width:360px;max-height:270px}
-#log{font-size:11px;color:var(--subtle);font-family:monospace;max-height:120px;overflow-y:auto;border-top:1px solid var(--border);padding:8px;white-space:pre-wrap}
-.fps-badge{font-size:32px;font-weight:700;color:var(--yellow);text-align:center;padding:8px}
-footer{border-top:1px solid var(--border);padding:8px 20px;font-size:11px;color:var(--subtle);display:flex;gap:16px}
+.cam-row .idx{color:var(--subtle);min-width:20px}
+.cam-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cam-row .id{color:var(--subtle);font-size:10px}
+.setting-row{display:flex;align-items:center;gap:6px;font-size:12px;padding:2px 0}
+.setting-row label{color:var(--subtle);min-width:52px;font-size:11px}
+.setting-row input,.setting-row select{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:3px 5px;border-radius:3px;font-size:11px}
+.setting-row input[type=number]{width:54px}
+.setting-row input[type=range]{flex:1;accent-color:var(--accent);height:4px}
+.setting-row select{max-width:120px}
+.cam-settings-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;margin-bottom:6px}
+.cam-settings-card .cam-label{font-size:12px;color:var(--accent);margin-bottom:4px}
+#frames{display:flex;flex-wrap:wrap;gap:10px;padding:8px;flex:1;overflow-y:auto}
+.frame-card{border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface);max-width:360px}
+.frame-card .label{padding:3px 8px;font-size:10px;color:var(--subtle);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.frame-card img{display:block;max-width:320px;max-height:240px}
+#log{font-size:11px;color:var(--subtle);font-family:monospace;max-height:100px;overflow-y:auto;border-top:1px solid var(--border);padding:6px;white-space:pre-wrap}
+.fps-badge{font-size:32px;font-weight:700;color:var(--yellow);text-align:center;padding:4px}
+footer{border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--subtle);display:flex;gap:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -49,34 +54,29 @@ footer{border-top:1px solid var(--border);padding:8px 20px;font-size:11px;color:
   <h1>Skellycam</h1>
   <span id="ws-status" class="status">disconnected</span>
   <span style="flex:1"></span>
-  <span style="font-size:12px;color:var(--subtle)">localhost:53117</span>
+  <span style="font-size:11px;color:var(--subtle)">localhost:53117</span>
 </header>
 
 <main>
 <div class="panel controls">
   <div>
-    <h3>1. Cameras</h3>
+    <h3>1. Detect</h3>
     <button class="primary" onclick="detect()" id="detect-btn">Detect Cameras</button>
     <div class="cam-list" id="cam-list"></div>
-    <div style="margin-top:6px;font-size:11px;color:var(--subtle)">Selected: <span id="sel-count">0</span></div>
+    <div style="margin-top:4px;font-size:11px;color:var(--subtle)">Selected: <span id="sel-count">0</span></div>
   </div>
 
-  <div>
-    <h3>2. Settings</h3>
-    <div class="input-row">
-      <label>Exposure</label>
-      <input type="number" id="exposure" value="-7" min="-13" max="0">
-      <span style="font-size:10px;color:var(--subtle)">-13 to 0</span>
-    </div>
-    <div style="font-size:10px;color:var(--subtle);margin-top:3px">-13=1/8192s .. 0=1s. -7=1/128s (default). Lower = less blur.</div>
+  <div id="settings-panel" style="display:none">
+    <h3>2. Per-Camera Settings</h3>
+    <div id="cam-settings"></div>
   </div>
 
   <div>
     <h3>3. Group</h3>
     <button class="primary" onclick="createGroup()" id="create-btn" disabled>Create Group + Stream</button>
     <button onclick="togglePause()" id="pause-btn" disabled>Pause/Unpause</button>
-    <button onclick="startRecording()" id="record-btn" disabled>Start Recording</button>
-    <button onclick="stopRecording()" id="stop-btn" disabled>Stop Recording</button>
+    <button onclick="startRecording()" id="record-btn" disabled>Record</button>
+    <button onclick="stopRecording()" id="stop-btn" disabled>Stop Rec</button>
     <button class="danger" onclick="closeAll()" id="close-btn" disabled>Close All</button>
   </div>
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:8px 20px;font-size:11px;color:
 </div>
 
 <div class="preview">
-  <div class="fps-badge" id="fps">0.0 fps</div>
+  <div class="fps-badge" id="fps">— fps</div>
   <div id="frames"></div>
 </div>
 </main>
@@ -92,21 +92,42 @@ footer{border-top:1px solid var(--border);padding:8px 20px;font-size:11px;color:
 <footer>
   <span>POST /detect</span>
   <span>POST /group/apply</span>
-  <span>WS /websocket/connect</span>
+  <span>WS /connect</span>
   <span>POST /record/start</span>
   <span>GET /record/stop</span>
-  <span>GET /pause_unpause</span>
-  <span>DELETE /close/all</span>
+  <span>GET /pause</span>
+  <span>DELETE /close</span>
 </footer>
 
 <script>
 // ── State ──
 const BASE = '';
-let cameras = [], selected = new Set(), ws = null;
-let frameCount = 0, fpsStart = 0, fpsLast=0;
+let cameras = [], selected = new Set(), ws = null, activeGroupId = null;
+
+// Per-camera settings: { camera_id: { exposure, rotation, resolution, framerate } }
+let camSettings = {};
+
+// Available formats per camera (from detection): { camera_id: [ {width,height,fps,fourcc_str}, … ] }
+let camFormats = {};
+
+// Last-sent settings snapshot for dedup: { camera_id: { ... } }
+let lastSentSettings = {};
+
+// Debounce timer for config updates
+let debounceTimer = null;
+const DEBOUNCE_MS = 400;
+
+// ── FPS: rolling window of frame arrival times ──
+const FPS_WINDOW = 30;
+let frameTimestamps = [];
 
 // ── Log ──
-function log(msg){const el=document.getElementById('log');el.textContent+=msg+'\n';el.scrollTop=el.scrollHeight}
+function log(msg){
+  const el=document.getElementById('log');
+  const ts=new Date().toLocaleTimeString();
+  el.textContent+='['+ts+'] '+msg+'\n';
+  el.scrollTop=el.scrollHeight;
+}
 
 // ── Detect ──
 async function detect(){
@@ -117,6 +138,10 @@ async function detect(){
     if(!r.ok)throw new Error(r.status+' '+r.statusText);
     let d=await r.json();
     cameras=d.cameras;
+    // Store formats per camera
+    for(let cam of cameras){
+      camFormats[cam.camera_id]=cam.formats||[];
+    }
     renderCamList();
     log('Found '+d.cameras.length+' cameras');
   }catch(e){log('Error: '+e.message)}
@@ -144,37 +169,225 @@ function toggle(idx){
   renderCamList();
 }
 
-// ── Create Group ──
-async function createGroup(){
-  let indices=[...selected];
-  let exposure=parseInt(document.getElementById('exposure').value)||-7;
-  log('Creating group: ['+indices+'] exposure='+exposure);
-  document.getElementById('create-btn').disabled=true;
-  try{
-    let camera_configs={};
-    for(let idx of indices){
-      let cam=cameras.find(c=>c.index===idx);
-      if(!cam)continue;
-      camera_configs[cam.camera_id]={
-        camera_id: cam.camera_id,
-        camera_index: cam.index,
-        camera_name: cam.name,
-        exposure: exposure,
-        framerate: -1.0,
-        rotation: -1
-      };
+// ── Settings helpers ──
+function getDefaultSettings(cam){
+  // Pick highest-resolution MJPG format as default
+  let mjpg=null;
+  for(let f of(camFormats[cam.camera_id]||[])){
+    if(f.fourcc_str!=='MJPG')continue;
+    if(!mjpg||f.width*f.height>mjpg.width*mjpg.height)mjpg=f;
+  }
+  let w=mjpg?mjpg.width:1280;
+  let h=mjpg?mjpg.height:720;
+  return {
+    exposure: -7,
+    rotation: -1,
+    resolution: {width:w, height:h},
+    framerate: -1.0,
+    camera_id: cam.camera_id,
+    camera_index: cam.camera_index||cam.index,
+    camera_name: cam.name,
+  };
+}
+
+function initSettingsForCam(cam){
+  if(!camSettings[cam.camera_id]){
+    camSettings[cam.camera_id]=getDefaultSettings(cam);
+  }
+}
+
+function getResolutionOptions(cam_id){
+  let seen=new Set();
+  let opts=[];
+  for(let f of(camFormats[cam_id]||[])){
+    if(f.fourcc_str!=='MJPG')continue;
+    let key=f.width+'x'+f.height;
+    if(seen.has(key))continue;
+    seen.add(key);
+    opts.push({width:f.width,height:f.height});
+  }
+  // Sort by area descending
+  opts.sort((a,b)=>b.width*b.height-a.width*a.height);
+  return opts;
+}
+
+function getFramerateOptions(cam_id, width, height){
+  let opts=[];
+  for(let f of(camFormats[cam_id]||[])){
+    if(f.fourcc_str!=='MJPG')continue;
+    if(f.width===width&&f.height===height){
+      opts.push(f.fps);
     }
+  }
+  // Unique, sorted
+  return [...new Set(opts)].sort((a,b)=>a-b);
+}
+
+// ── Settings panel rendering ──
+function renderSettingsPanel(){
+  let el=document.getElementById('cam-settings');
+  let panel=document.getElementById('settings-panel');
+  let html='';
+  for(let idx of selected){
+    let cam=cameras.find(c=>c.index===idx);
+    if(!cam)continue;
+    initSettingsForCam(cam);
+    let s=camSettings[cam.camera_id];
+    let resOpts=getResolutionOptions(cam.camera_id);
+    let fpsOpts=getFramerateOptions(cam.camera_id,s.resolution.width,s.resolution.height);
+    let resKey=s.resolution.width+'x'+s.resolution.height;
+    html+='<div class="cam-settings-card">';
+    html+='<div class="cam-label">Cam '+cam.index+' — '+esc(cam.camera_id)+'</div>';
+    // Exposure
+    html+='<div class="setting-row">';
+    html+='<label>Exposure</label>';
+    html+='<input type="range" min="-13" max="0" value="'+s.exposure+'" ';
+    html+='oninput="onSettingChange(\''+cam.camera_id+'\',\'exposure\',parseInt(this.value))" ';
+    html+='onchange="onSettingChange(\''+cam.camera_id+'\',\'exposure\',parseInt(this.value))"> ';
+    html+='<span style="min-width:28px;font-size:11px">'+s.exposure+'</span></div>';
+    // Rotation
+    html+='<div class="setting-row">';
+    html+='<label>Rotation</label>';
+    html+='<select onchange="onSettingChange(\''+cam.camera_id+'\',\'rotation\',parseInt(this.value))">';
+    for(let [label,val] of [['None',-1],['90°',0],['180°',1],['270°',2]]){
+      html+='<option value="'+val+'"'+(s.rotation===val?' selected':'')+'>'+label+'</option>';
+    }
+    html+='</select></div>';
+    // Resolution
+    html+='<div class="setting-row">';
+    html+='<label>Resolution</label>';
+    html+='<select onchange="onResolutionChange(\''+cam.camera_id+'\',this.value)">';
+    for(let opt of resOpts){
+      let key=opt.width+'x'+opt.height;
+      let sel=key===resKey?' selected':'';
+      html+='<option value="'+key+'"'+sel+'>'+key+'</option>';
+    }
+    html+='</select></div>';
+    // Framerate
+    html+='<div class="setting-row">';
+    html+='<label>Framerate</label>';
+    html+='<select onchange="onSettingChange(\''+cam.camera_id+'\',\'framerate\',parseFloat(this.value))">';
+    for(let fps of fpsOpts){
+      html+='<option value="'+fps+'"'+(Math.abs(s.framerate-fps)<0.5?' selected':'')+'>'+fps+' fps</option>';
+    }
+    html+='<option value="-1"'+(s.framerate<0?' selected':'')+'>default</option>';
+    html+='</select></div>';
+    html+='</div>';
+  }
+  el.innerHTML=html;
+  panel.style.display=selected.size>0?'block':'none';
+}
+
+function onResolutionChange(cam_id, resStr){
+  let [w,h]=resStr.split('x').map(Number);
+  camSettings[cam_id].resolution={width:w, height:h};
+  // Reset framerate to default when resolution changes
+  camSettings[cam_id].framerate=-1.0;
+  renderSettingsPanel(); // refresh framerate dropdown
+  scheduleConfigUpdate();
+}
+
+function onSettingChange(cam_id, field, value){
+  camSettings[cam_id][field]=value;
+  // Update display values
+  renderSettingsPanel();
+  scheduleConfigUpdate();
+}
+
+function scheduleConfigUpdate(){
+  if(debounceTimer)clearTimeout(debounceTimer);
+  debounceTimer=setTimeout(sendConfigUpdate, DEBOUNCE_MS);
+}
+
+function settingsEqual(a, b){
+  return a.exposure===b.exposure
+    && a.rotation===b.rotation
+    && a.resolution.width===b.resolution.width
+    && a.resolution.height===b.resolution.height
+    && Math.abs(a.framerate-b.framerate)<0.05;
+}
+
+async function sendConfigUpdate(){
+  if(!activeGroupId||selected.size===0)return;
+
+  // Build camera_configs dict
+  let configs={};
+  let hasChanges=false;
+  for(let idx of selected){
+    let cam=cameras.find(c=>c.index===idx);
+    if(!cam)continue;
+    let s=camSettings[cam.camera_id];
+    if(!s)continue;
+    let last=lastSentSettings[cam.camera_id];
+    if(!last||!settingsEqual(s,last)){
+      hasChanges=true;
+      lastSentSettings[cam.camera_id]=JSON.parse(JSON.stringify(s));
+    }
+    configs[cam.camera_id]={
+      camera_id: s.camera_id,
+      camera_index: s.camera_index,
+      camera_name: s.camera_name,
+      exposure: s.exposure,
+      rotation: s.rotation,
+      framerate: s.framerate,
+      resolution: s.resolution,
+    };
+  }
+
+  if(!hasChanges)return;
+
+  try{
     let r=await fetch(BASE+'/skellycam/camera/group/apply',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({camera_configs})
+      body:JSON.stringify({camera_configs:configs})
     });
     if(!r.ok){let t=await r.text();throw new Error(t)}
     let d=await r.json();
-    log('Group created: '+d.group_id+' ('+Object.keys(d.camera_configs).length+' cameras)');
+    log('Config updated: '+d.group_id);
+  }catch(e){log('Config update error: '+e.message)}
+}
+
+// ── Create Group ──
+async function createGroup(){
+  document.getElementById('create-btn').disabled=true;
+
+  // Build camera_configs dict from current settings
+  let configs={};
+  for(let idx of selected){
+    let cam=cameras.find(c=>c.index===idx);
+    if(!cam)continue;
+    initSettingsForCam(cam);
+    let s=camSettings[cam.camera_id];
+    // Save baseline
+    lastSentSettings[cam.camera_id]=JSON.parse(JSON.stringify(s));
+    configs[cam.camera_id]={
+      camera_id: s.camera_id,
+      camera_index: s.camera_index,
+      camera_name: s.camera_name,
+      exposure: s.exposure,
+      rotation: s.rotation,
+      framerate: s.framerate,
+      resolution: s.resolution,
+    };
+  }
+
+  log('Creating group with '+Object.keys(configs).length+' cameras...');
+  try{
+    let r=await fetch(BASE+'/skellycam/camera/group/apply',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({camera_configs:configs})
+    });
+    if(!r.ok){let t=await r.text();throw new Error(t)}
+    let d=await r.json();
+    activeGroupId=d.group_id;
+    log('Group: '+d.group_id+' ('+Object.keys(d.camera_configs).length+' cameras)');
     document.getElementById('close-btn').disabled=false;
     document.getElementById('pause-btn').disabled=false;
     document.getElementById('record-btn').disabled=false;
+    // Show per-camera settings
+    renderSettingsPanel();
     connectWS();
   }catch(e){log('Error: '+e.message);document.getElementById('create-btn').disabled=false}
 }
@@ -209,7 +422,10 @@ async function stopRecording(){
   try{
     let r=await fetch(BASE+'/skellycam/camera/group/all/record/stop');
     let d=await r.json();
-    log('Recording stopped: '+d.number_of_frames+' frames, '+d.total_duration_sec.toFixed(1)+'s, '+d.mean_framerate.toFixed(1)+' fps');
+    log('Recording: '+d.number_of_frames+' frames, '+
+      d.total_duration_sec.toFixed(1)+'s, '+
+      d.mean_framerate.toFixed(1)+' fps');
+    log('Saved to: '+d.recording_path);
     document.getElementById('record-btn').disabled=false;
     document.getElementById('stop-btn').disabled=true;
   }catch(e){log('Error: '+e.message)}
@@ -225,7 +441,7 @@ function connectWS(){
     log('WebSocket connected');
     let s=document.getElementById('ws-status');
     s.textContent='connected';s.classList.add('connected');
-    frameCount=0;fpsStart=performance.now();
+    frameTimestamps=[];
   };
   ws.onmessage=handleBinary;
   ws.onclose=()=>{
@@ -234,6 +450,11 @@ function connectWS(){
     s.textContent='disconnected';s.classList.remove('connected');
     document.getElementById('create-btn').disabled=selected.size===0;
     document.getElementById('close-btn').disabled=true;
+    document.getElementById('pause-btn').disabled=true;
+    document.getElementById('record-btn').disabled=true;
+    document.getElementById('stop-btn').disabled=true;
+    activeGroupId=null;
+    document.getElementById('fps').textContent='— fps';
   };
   ws.onerror=()=>log('WebSocket error');
 }
@@ -244,6 +465,16 @@ function handleBinary(e){
   if(bytes.length<24)return;
   let msgType=bytes[0];
   if(msgType!==0)return;
+
+  // ── FPS: rolling window of arrival times ──
+  let now=performance.now();
+  frameTimestamps.push(now);
+  while(frameTimestamps.length>FPS_WINDOW)frameTimestamps.shift();
+  if(frameTimestamps.length>=2){
+    let elapsed=(now-frameTimestamps[0])/1000;
+    let fps=elapsed>0?(frameTimestamps.length-1)/elapsed:0;
+    document.getElementById('fps').textContent=fps.toFixed(1)+' fps';
+  }
 
   let frameNum=Number(view.getBigInt64(8,true));
   let numCams=view.getInt32(16,true);
@@ -283,14 +514,6 @@ function handleBinary(e){
     img.src=url;
     if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);
   }
-
-  frameCount++;
-  let now=performance.now();
-  if(now-fpsLast>250){
-    let dt=(now-fpsStart)/1000;
-    document.getElementById('fps').textContent=dt>0?(frameCount/dt).toFixed(1)+' fps':'';
-    fpsLast=now;
-  }
 }
 
 // ── Close ──
@@ -304,10 +527,14 @@ async function closeAll(){
     document.getElementById('pause-btn').disabled=true;
     document.getElementById('record-btn').disabled=true;
     document.getElementById('stop-btn').disabled=true;
+    document.getElementById('settings-panel').style.display='none';
+    activeGroupId=null;
+    lastSentSettings={};
+    camSettings={};
+    frameTimestamps=[];
     if(ws){ws.close();ws=null}
-    // Clear frames
     document.getElementById('frames').innerHTML='';
-    document.getElementById('fps').textContent='0.0 fps';
+    document.getElementById('fps').textContent='— fps';
   }catch(e){log('Error: '+e.message)}
 }
 

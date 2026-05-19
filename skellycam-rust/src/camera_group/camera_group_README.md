@@ -38,20 +38,15 @@ fn main() -> anyhow::Result<()> {
     let mut group = CameraGroup::new(configs);
     group.start()?;
 
-    // 4. Read synchronized multiframes
+    // 4. Read synchronized multiframes by polling the frontend payload
     for _ in 0..100 {
-        match group.try_recv_multiframe() {
-            Ok(payload) => {
-                println!("Multiframe {}: {} cameras, {} total bytes",
-                    payload.frame_number,
-                    payload.frames.len(),
-                    payload.frames.iter().map(|f| f.data.len()).sum::<usize>(),
-                );
-            }
-            Err(std::sync::mpsc::TryRecvError::Empty) => {
-                std::thread::sleep(std::time::Duration::from_millis(1));
-            }
-            Err(_) => break,
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        if let Some(payload) = group.latest_frontend_payload() {
+            println!("Multiframe {}: {} cameras, {} total bytes",
+                payload.frame_number,
+                // payload.jpeg_bytes is the encoded frontend binary
+                payload.jpeg_bytes.len(),
+            );
         }
     }
 
@@ -145,10 +140,14 @@ When paused, the gatherer still completes the full cycle through
 
 | File | Purpose |
 |---|---|
-| `camera_group.rs` | Public `CameraGroup` handle — the interface to the outside world |
-| `gatherer.rs` | Gatherer thread spawn + frame collection loop + statistics |
-| `sync_utils.rs` | `BreakableBarrier` — multi-thread synchronization primitive |
-| `types.rs` | Data types: `CameraGroupConfig`, `RecordingInfo` |
+| `camera_group.rs` | Public `CameraGroup` handle — lifecycle, frame polling, recording |
+| `gatherer.rs` | Gatherer thread — collects frames, hits barrier, assembles multiframes + stats |
+| `dispatcher.rs` | Dispatcher thread — encodes frontend payload, manages recording (ffmpeg+CSV) |
+| `sync_utils.rs` | `BreakableBarrier` — multi-thread synchronization with shutdown support |
+| `types.rs` | Data types: `CameraGroupConfig`, `DispatcherCommand`, `RecordingParams` |
+| `frontend_encoder.rs` | Binary protocol encoder for frontend WebSocket payloads |
+| `jpeg_transform.rs` | Lossless JPEG rotation via libjpeg-turbo `tjTransform` |
+| `recording_stats.rs` | Per-recording statistics aggregation |
 
 ## Public API
 
@@ -160,23 +159,28 @@ impl CameraGroup {
     pub fn apply(&mut self, configs: HashMap<String, CameraGroupConfig>) -> anyhow::Result<()>
     pub fn shutdown(&mut self) -> anyhow::Result<()>
 
-    // Frame reception
-    pub fn try_recv_multiframe(&self) -> Result<MultiFramePayload, TryRecvError>
-    pub fn recv_multiframe_timeout(&self, timeout: Duration) -> Result<MultiFramePayload, RecvTimeoutError>
+    // Frame polling (push-to-slot — dispatcher writes, you read)
+    pub fn latest_frontend_payload(&self) -> Option<FrontendPayload>
+    pub fn latest_raw_frames(&self) -> Option<Vec<RawFrame>>
+    pub fn latest_performance_snapshot(&self) -> Option<String>
 
     // Capture control
     pub fn pause(&mut self)
     pub fn unpause(&mut self)
     pub fn toggle_pause(&mut self)
     pub fn is_paused(&self) -> bool
+    pub fn is_alive(&self) -> bool
 
-    // Recording (placeholders)
-    pub fn start_recording(&mut self, info: RecordingInfo)
-    pub fn stop_recording(&mut self)
+    // Recording
+    pub fn start_recording(&mut self, params: RecordingParams) -> anyhow::Result<()>
+    pub fn stop_recording(&mut self) -> anyhow::Result<RecordingSummary>
     pub fn is_recording(&self) -> bool
 
     // Accessors
     pub fn camera_count(&self) -> usize
+    pub fn state(&self) -> CameraGroupState
+    pub fn group_id(&self) -> &str
+    pub fn camera_statuses(&self) -> Vec<CameraStatus>
 }
 ```
 

@@ -118,30 +118,49 @@ async fn create_or_update_group(
     // Build a HashMap<String, CameraGroupConfig> keyed by camera_id.
     // For an existing group, reuse stored identities. For new cameras
     // (either first create or adding to an existing group), detect.
-    let manager = state.camera_manager.lock().await;
-    let active_id = state.active_group_id.lock().await.clone();
+    //
+    // IMPORTANT: both locks are always dropped before detection and always
+    // re-acquired after. tokio Mutex is NOT reentrant — holding the lock
+    // across a second lock().await on the same Mutex deadlocks the task.
+    let existing_identities: HashMap<String, CameraIdentity> = {
+        let manager = state.camera_manager.lock().await;
+        let active_id = state.active_group_id.lock().await;
 
-    // Collect existing identities if we are updating an active group
-    let existing_identities: HashMap<String, CameraIdentity> = active_id
-        .as_ref()
-        .and_then(|id| manager.get_group(id))
-        .map(|g| {
-            g.camera_statuses()
-                .into_iter()
-                .map(|s| {
-                    let cid = s.config.camera_id.clone();
-                    let identity = CameraIdentity {
-                        camera_name: s.camera_name,
-                        camera_index: s.camera_index,
-                        camera_id: cid.clone(),
-                        device_path: s.device_path,
-                        formats: vec![],
-                    };
-                    (cid, identity)
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+        if let Some(ref gid) = *active_id {
+            tracing::info!("[apply] active group exists: {gid} — will update via apply()");
+        } else {
+            tracing::info!("[apply] no active group — will create new");
+        }
+
+        let identities = active_id
+            .as_ref()
+            .and_then(|id| manager.get_group(id))
+            .map(|g| {
+                let statuses = g.camera_statuses();
+                tracing::debug!(
+                    "[apply] loaded {} existing camera identities from group",
+                    statuses.len()
+                );
+                statuses
+                    .into_iter()
+                    .map(|s| {
+                        let cid = s.config.camera_id.clone();
+                        let identity = CameraIdentity {
+                            camera_name: s.camera_name,
+                            camera_index: s.camera_index,
+                            camera_id: cid.clone(),
+                            device_path: s.device_path,
+                            formats: vec![],
+                        };
+                        (cid, identity)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        // Both locks dropped here when they go out of scope
+        identities
+    };
 
     // Only re-detect for camera IDs not already in the existing group
     let need_detection: Vec<String> = request
@@ -151,22 +170,36 @@ async fn create_or_update_group(
         .cloned()
         .collect();
 
+    if !need_detection.is_empty() {
+        tracing::info!(
+            "[apply] {} new camera(s) need detection: {:?}",
+            need_detection.len(),
+            need_detection
+        );
+    } else {
+        tracing::debug!("[apply] all {} camera(s) already known — skipping detection", request.camera_configs.len());
+    }
+
     let detected = if !need_detection.is_empty() {
-        // Release locks during blocking detection call
-        drop(active_id);
-        drop(manager);
-        Some(
-            tokio::task::spawn_blocking(|| detect_cameras())
-                .await
-                .map_err(|e| AppError::Internal(format!("Camera detection panicked: {e}")))?
-                .map_err(|e| AppError::Internal(format!("Camera detection failed: {e}")))?,
-        )
+        let result: Result<Vec<CameraIdentity>, AppError> = tokio::task::spawn_blocking(|| detect_cameras())
+            .await
+            .map_err(|e| AppError::Internal(format!("Camera detection panicked: {e}")))?
+            .map_err(|e| AppError::Internal(format!("Camera detection failed: {e}")));
+        let cams = result?;
+        tracing::debug!("[apply] detection complete — {} cameras found", cams.len());
+        Some(cams)
     } else {
         None
     };
 
+    // Re-acquire locks now that detection is done
     let mut manager = state.camera_manager.lock().await;
     let active_id = state.active_group_id.lock().await.clone();
+
+    tracing::debug!(
+        "[apply] building config map for {} cameras",
+        request.camera_configs.len()
+    );
 
     let mut new_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
     let mut response_configs: HashMap<String, CameraConfigOutput> = HashMap::new();
@@ -221,20 +254,30 @@ async fn create_or_update_group(
     }
 
     let group_id = if let Some(ref existing_id) = active_id {
-        // Update existing group in-place via apply()
+        tracing::info!(
+            "[apply] updating existing group {existing_id} with {} cameras",
+            new_configs.len()
+        );
+        tracing::debug!(
+            "[apply] config diff — cameras: {:?}",
+            new_configs.keys().collect::<Vec<_>>()
+        );
         let group = manager
             .get_group_mut(existing_id)
             .ok_or_else(|| AppError::Internal("Active group not found in manager".into()))?;
         group
             .apply(new_configs)
             .map_err(|e| AppError::Internal(format!("Failed to apply config update: {e}")))?;
+        tracing::info!("[apply] group {existing_id} updated successfully");
         existing_id.clone()
     } else {
-        // No active group — create a fresh one
+        let cam_count = new_configs.len();
+        tracing::info!("[apply] creating new group with {cam_count} camera(s)");
         let configs: Vec<CameraGroupConfig> = new_configs.into_values().collect();
         let gid = manager
             .create_or_update_group(configs, None)
             .map_err(|e| AppError::Internal(format!("Failed to create camera group: {e}")))?;
+        tracing::info!("[apply] group {gid} created — {cam_count} cameras streaming");
         gid
     };
 
@@ -263,6 +306,13 @@ async fn start_recording(
     State(state): State<Arc<AppState>>,
     Json(request): Json<StartRecordingRequest>,
 ) -> Result<Json<bool>, AppError> {
+    tracing::debug!(
+        "[recording] request — dir: '{}'  name: '{}'  mic: {}",
+        request.recording_directory,
+        request.recording_name,
+        request.mic_device_index
+    );
+
     let active_id = state
         .active_group_id
         .lock()
@@ -276,7 +326,9 @@ async fn start_recording(
         .ok_or_else(|| AppError::Internal("Active group not found in manager".into()))?;
 
     let output_dir = if request.recording_directory.is_empty() {
-        default_recording_dir()?
+        let default = default_recording_dir()?;
+        tracing::info!("[recording] using default dir: {default}");
+        default
     } else {
         let expanded = if request.recording_directory.starts_with('~') {
             request
@@ -285,11 +337,14 @@ async fn start_recording(
         } else {
             request.recording_directory.clone()
         };
+        tracing::info!("[recording] using provided dir: {expanded}");
         expanded
     };
 
     let label = if request.recording_name.is_empty() {
-        Some(recording_timestamp_name())
+        let ts = recording_timestamp_name();
+        tracing::debug!("[recording] auto-generated label: {ts}");
+        Some(ts)
     } else {
         Some(request.recording_name.clone())
     };
@@ -339,9 +394,28 @@ async fn stop_recording(
         .get_group_mut(&active_id)
         .ok_or_else(|| AppError::Internal("Active group not found in manager".into()))?;
 
+    tracing::info!("[recording] stopping — group: {active_id}");
     let summary = group
         .stop_recording()
         .map_err(|e| AppError::Internal(format!("Failed to stop recording: {e}")))?;
+
+    tracing::info!(
+        "[recording] stopped — {} frames/camera, {} videos, {} CSVs",
+        summary.total_frames_per_camera,
+        summary.video_paths.len(),
+        summary.csv_paths.len()
+    );
+
+    for video_path in &summary.video_paths {
+        tracing::info!("[recording] video saved: {}", video_path.display());
+    }
+    for csv_path in &summary.csv_paths {
+        tracing::info!("[recording] timestamps saved: {}", csv_path.display());
+    }
+    tracing::info!(
+        "[recording] info JSON saved: {}",
+        summary.info_json_path.display()
+    );
 
     let total_frames = summary.total_frames_per_camera as i32;
     let recording_path = summary
@@ -433,8 +507,11 @@ async fn toggle_pause_unpause(
         .get_group_mut(&active_id)
         .ok_or_else(|| AppError::Internal("Active group not found in manager".into()))?;
 
+    let was_paused = group.is_paused();
     group.toggle_pause();
-    Ok(Json(group.is_paused()))
+    let now_paused = group.is_paused();
+    tracing::info!("[pause] group {active_id}: {was_paused} → {now_paused}");
+    Ok(Json(now_paused))
 }
 
 // ── Close all ──────────────────────────────────────────────────────────────
@@ -450,8 +527,38 @@ async fn toggle_pause_unpause(
 async fn close_all_groups(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<CloseAllResponse>, AppError> {
+    tracing::info!("[close] shutting down all camera groups");
     let mut manager = state.camera_manager.lock().await;
+    let count = manager.group_count();
+    tracing::debug!("[close] {} group(s) to close", count);
     manager.close_all_groups();
     *state.active_group_id.lock().await = None;
+    tracing::info!("[close] all groups closed");
     Ok(Json(CloseAllResponse { success: true }))
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/// Build the default recording directory: `~/skellycam_data/recordings/<timestamp>/`.
+fn default_recording_dir() -> Result<String, AppError> {
+    let home = dirs::home_dir()
+        .ok_or_else(|| AppError::Internal("Cannot determine home directory".into()))?;
+    let base = home.join("skellycam_data").join("recordings");
+    let dir = base.join(recording_timestamp_name());
+    Ok(dir.display().to_string())
+}
+
+/// Generate a filename-safe timestamp like `2026-05-19T12_34_56_gmt-4`.
+fn recording_timestamp_name() -> String {
+    let now: chrono::DateTime<chrono::Local> = chrono::Local::now();
+    let offset_secs = now.offset().local_minus_utc();
+    let offset_hours = offset_secs / 3600;
+    let sign = if offset_hours >= 0 { "" } else { "-" };
+    let abs_hours = offset_hours.abs();
+    format!(
+        "{}_gmt{}{}",
+        now.format("%Y-%m-%dT%H_%M_%S"),
+        sign,
+        abs_hours
+    )
 }

@@ -32,7 +32,8 @@ fn main() -> anyhow::Result<()> {
         rotation: -1,
     };
     let barrier = Arc::new(BreakableBarrier::new(2));
-    let camera = Camera::start(identity, config, barrier.clone())?;
+    let paused = Arc::new(AtomicBool::new(false));
+    let camera = Camera::start(identity, config, barrier.clone(), paused, 0)?;
 
     // 3. Read frames — poll in a loop, call barrier.wait() after each frame
     //    so the camera thread can continue its capture cycle.

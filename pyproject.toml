@@ -206,6 +206,9 @@ test     = { cmd = "pytest", help = "Run test suite" }
 [tool.pytest.ini_options]
 testpaths = ["skellycam/tests"]
 asyncio_mode = "auto"
+markers = [
+    "hardware: tests that require physical USB cameras (skipped in CI)",
+]
 
 # =============================================================================
 # Ruff linter config

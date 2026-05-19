@@ -42,19 +42,26 @@ unsafe extern "C" {
     fn tjFree(buffer: *mut u8);
 }
 
-// We don't use libc types; define c_ulong for Windows x86_64
+// `unsigned long` varies by platform ABI:
+//   Windows (LLP64): always 32 bits
+//   Linux/macOS (LP64): pointer-width — 64 bits on 64-bit, 32 bits on 32-bit
 #[allow(non_camel_case_types)]
 mod libc {
+    #[cfg(target_os = "windows")]
+    pub type c_ulong = u32;
+    #[cfg(all(not(target_os = "windows"), target_pointer_width = "64"))]
+    pub type c_ulong = u64;
+    #[cfg(all(not(target_os = "windows"), target_pointer_width = "32"))]
     pub type c_ulong = u32;
 }
 
 /// Losslessly rotate a JPEG byte buffer in the DCT domain.
 ///
-/// `rotation` follows the Python `RotationTypes` convention:
-///   -1 or 0  → no rotation (returns `None`)
-///    0 (CW 90) → TJXOP_ROT90
-///    1 (180)   → TJXOP_ROT180
-///    2 (CCW 90) → TJXOP_ROT270 (inverse of ROT90)
+/// `rotation` values (matching Python `RotationTypes` enum):
+///   -1  → no rotation (returns `None`)
+///    0  → CW 90  (TJXOP_ROT90)
+///    1  → 180    (TJXOP_ROT180)
+///    2  → CCW 90 (TJXOP_ROT270)
 ///
 /// Returns `Some(rotated_jpeg_bytes)` or `None` if no rotation needed.
 pub fn rotate_jpeg_lossless(jpeg_bytes: &[u8], rotation: i32) -> Option<Vec<u8>> {
