@@ -176,6 +176,7 @@ impl CameraGroup {
                 group_config.identity.clone(),
                 group_config.capture_config.clone(),
                 self.barrier.clone(),
+                self.paused.clone(),
                 0,
             )
             .map_err(|e| {
@@ -236,12 +237,16 @@ impl CameraGroup {
 
     /// Apply a new set of camera configs.
     ///
-    /// Diffs the new configs against the current set and applies changes:
+    /// Pauses the group, diffs the new configs against the current set, applies
+    /// changes (reconfigure / add camera / remove camera), then unpauses. This
+    /// ensures that the gatherer is idle and no cameras are blocked at the
+    /// barrier while `set_total()` or shutdown operations happen.
+    ///
     /// - **Changed configs** (same camera ID, different settings): sends
     ///   `Configure` command to the camera thread, which applies settings
     ///   on its existing COM context.
-    /// - **New/removed camera IDs**: error in Phase A (add/remove support
-    ///   coming in Phase B).
+    /// - **New cameras**: spawns the camera thread and notifies the gatherer.
+    /// - **Removed cameras**: shuts down the camera thread and notifies the gatherer.
     ///
     /// Calling with the same configs repeatedly is a no-op.
     ///
@@ -253,6 +258,11 @@ impl CameraGroup {
                 self.state
             );
         }
+
+        // Pause the gatherer before making any changes — cameras are not at
+        // the barrier while paused, so set_total() and shutdown() are safe.
+        self.pause();
+        std::thread::sleep(std::time::Duration::from_millis(100));
 
         // Compute the diff
         let mut changed = Vec::new();
@@ -306,6 +316,11 @@ impl CameraGroup {
                 removed.len()
             );
         }
+
+        // Resume frame flow now that all changes are applied
+        self.unpause();
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
         Ok(())
     }
 
@@ -397,11 +412,14 @@ impl CameraGroup {
 
     // ── Capture control ───────────────────────────────────────────────────
 
-    /// Pause frame output.
+    /// Pause frame capture and output.
     ///
-    /// Cameras continue running (the barrier is still released each cycle)
-    /// so they stay responsive to config changes and shutdown signals.
-    /// Only the downstream send of `MultiFramePayload` is suppressed.
+    /// Sets a shared atomic flag checked by every camera thread and the gatherer
+    /// at the end of each cycle. Cameras and the gatherer complete their current
+    /// cycle (so no partial frames exist) then spin in place checking for commands
+    /// and updates respectively. No frames are captured, no frame numbers advance,
+    /// and no thread is blocked at the barrier — safe to call `barrier.set_total()`
+    /// during subsequent `apply()` operations.
     pub fn pause(&mut self) {
         self.paused.store(true, Ordering::SeqCst);
     }
@@ -533,21 +551,24 @@ impl CameraGroup {
         let new_total = self.cameras.len() + 1 + 1; // existing + new + gatherer
         self.barrier.set_total(new_total);
 
-        // Inject current multiframe number so the new camera starts
-        // close to the existing cameras' frame count. Timing means it
-        // may be off by a few frames — the gatherer's skip_sync mechanism
-        // handles this.
+        // The payload's frame_number is the gatherer's step at assembly
+        // time. After the barrier releases, every camera increments
+        // frame_number past that value. Adding 1 matches what the
+        // existing cameras will send next — without this, the new
+        // camera is permanently one frame behind.
         let current_frame = self
             .latest_frontend_payload
             .lock()
             .ok()
             .and_then(|g| g.as_ref().map(|p| p.frame_number))
-            .unwrap_or(0);
+            .unwrap_or(0)
+            + 1;
 
         let mut camera = Camera::start(
             group_config.identity.clone(),
             group_config.capture_config.clone(),
             self.barrier.clone(),
+            self.paused.clone(),
             current_frame,
         )
         .map_err(|e| {

@@ -16,6 +16,7 @@
 //! The capture loop uses a `FrameStateMachine` from `frame_loop.rs` for
 //! frame-level substate tracking and automatic timestamp recording.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
@@ -44,6 +45,7 @@ pub fn spawn(
     identity: &CameraIdentity,
     config: &CameraConfig,
     barrier: Arc<BreakableBarrier>,
+    paused: Arc<AtomicBool>,
     start_frame_number: i64,
 ) -> anyhow::Result<(
     mpsc::Sender<CameraCommand>,
@@ -68,6 +70,7 @@ pub fn spawn(
             &event_sender,
             &frame_sender,
             &barrier,
+            &paused,
             start_frame_number,
         );
         if let Err(error) = result {
@@ -176,6 +179,7 @@ fn run_camera_thread(
     event_sender: &mpsc::Sender<CameraEvent>,
     frame_sender: &mpsc::SyncSender<FramePacket>,
     barrier: &BreakableBarrier,
+    paused: &Arc<AtomicBool>,
     start_frame_number: i64,
 ) -> anyhow::Result<()> {
     unsafe {
@@ -226,6 +230,32 @@ fn run_camera_thread(
                 }
                 CommandResult::None => {}
             }
+
+            // ── Paused spin ────────────────────────────────────────────
+            // Placed AFTER the previous cycle's barrier/increment so the
+            // camera has completed its last frame before spinning. Still
+            // checks commands so Configure/Shutdown remain responsive.
+            while paused.load(Ordering::SeqCst) {
+                match check_commands(command_receiver) {
+                    CommandResult::Shutdown => {
+                        tracing::info!("Camera {label}: shutdown while paused");
+                        Cap_closeStream(ctx, stream);
+                        Cap_releaseContext(ctx);
+                        return Ok(());
+                    }
+                    CommandResult::Configure(new_config) => {
+                        (stream, actual_width, actual_height) = apply_config(
+                            ctx, stream, label, &new_config, &active_config,
+                            actual_width, actual_height,
+                        );
+                        active_config = new_config;
+                    }
+                    CommandResult::None => {
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+                }
+            }
+            // ── End paused spin ────────────────────────────────────────
 
             // ── Spin on hasNewFrame ──
             let wait_start = std::time::Instant::now();

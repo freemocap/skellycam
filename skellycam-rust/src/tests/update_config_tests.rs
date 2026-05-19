@@ -97,7 +97,6 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
         let in_range = reported_range.contains(&exposure_value);
         let label = if in_range { "" } else { " [OUTSIDE REPORTED RANGE]" };
 
-        group.pause();
         let mut new_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
         for status in group.camera_statuses() {
             let mut new_cfg = status.config.clone();
@@ -121,7 +120,6 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
         }
         group.apply(new_configs)?;
         std::thread::sleep(std::time::Duration::from_millis(300));
-        group.unpause();
 
         let target = current_frame + 15;
         poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
@@ -269,7 +267,6 @@ fn apply_exposure_mode(
 ) {
     use std::collections::HashMap;
     use skellycam::camera_group::CameraGroupConfig;
-    group.pause();
     let mut new_configs = HashMap::new();
     for status in group.camera_statuses() {
         let mut new_cfg = status.config.clone();
@@ -288,7 +285,6 @@ fn apply_exposure_mode(
     }
     group.apply(new_configs).expect("apply exposure mode");
     std::thread::sleep(std::time::Duration::from_millis(500));
-    group.unpause();
 }
 
 // ── Resolution test ────────────────────────────────────────────────────────────
@@ -362,7 +358,6 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
 
     // Scan each resolution
     for &(width, height, fps) in &resolutions {
-        group.pause();
         let mut new_configs = HashMap::new();
         new_configs.insert(
             identity.camera_id.clone(),
@@ -379,7 +374,6 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
         );
         group.apply(new_configs)?;
         std::thread::sleep(std::time::Duration::from_millis(300));
-        group.unpause();
 
         let target = current_frame + 10;
         poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
@@ -489,7 +483,6 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
 
     // Scan each combo
     for &(fps, width, height) in &combos {
-        group.pause();
         let mut new_configs = HashMap::new();
         new_configs.insert(
             identity.camera_id.clone(),
@@ -506,7 +499,6 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
         );
         group.apply(new_configs)?;
         std::thread::sleep(std::time::Duration::from_millis(300));
-        group.unpause();
 
         let target = current_frame + 10;
         poll_frames(&mut group, &mut current_frame, &mut polls, target)?;

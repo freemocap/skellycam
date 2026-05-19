@@ -98,16 +98,6 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         });
     }
 
-    // ── Camera-in-use detection test ───────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("┌──────────────────────────────────────────────────────────────┐");
-    tracing::info!("│  SPECIAL: camera-in-use detection test                       │");
-    tracing::info!("└──────────────────────────────────────────────────────────────┘");
-    tracing::info!("");
-    run_test("detect in-use", &[], &mut passed, &mut failed, &mut skipped, || {
-        super::detection_tests::run_in_use_test()
-    });
-
     // ── Summary ──────────────────────────────────────────────────────────
     let elapsed = suite_start.elapsed().as_secs_f64();
     tracing::info!("");

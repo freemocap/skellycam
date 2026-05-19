@@ -16,6 +16,7 @@
 //! camera.shutdown()?;
 //! ```
 
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread::JoinHandle;
@@ -51,10 +52,11 @@ impl Camera {
         identity: CameraIdentity,
         config: CameraConfig,
         barrier: Arc<BreakableBarrier>,
+        paused: Arc<AtomicBool>,
         start_frame_number: i64,
     ) -> anyhow::Result<Self> {
         let (command_sender, event_receiver, frame_receiver, thread_handle) =
-            super::camera_thread::spawn(&identity, &config, barrier, start_frame_number)?;
+            super::camera_thread::spawn(&identity, &config, barrier, paused, start_frame_number)?;
 
         Ok(Self {
             command_sender,
@@ -244,7 +246,7 @@ mod tests {
 
         let barrier = Arc::new(BreakableBarrier::new(2)); // camera + test gatherer
         let camera =
-            Camera::start(identity.clone(), config.clone(), barrier.clone(), 0)
+            Camera::start(identity.clone(), config.clone(), barrier.clone(), Arc::new(AtomicBool::new(false)), 0)
                 .expect("Camera::start failed");
 
         let frame_count = 30;
@@ -347,7 +349,7 @@ mod tests {
 
         let barrier = Arc::new(BreakableBarrier::new(2));
         let camera =
-            Camera::start(identity.clone(), config.clone(), barrier.clone(), 0)
+            Camera::start(identity.clone(), config.clone(), barrier.clone(), Arc::new(AtomicBool::new(false)), 0)
                 .expect("Camera::start failed");
 
         // Read first batch with original exposure
@@ -408,7 +410,7 @@ mod tests {
 
         let barrier = Arc::new(BreakableBarrier::new(2));
         let camera =
-            Camera::start(identity.clone(), config, barrier.clone(), 0)
+            Camera::start(identity.clone(), config, barrier.clone(), Arc::new(AtomicBool::new(false)), 0)
                 .expect("Camera::start failed");
 
         let frames = collect_frames(&camera, &barrier, 5, Duration::from_secs(10));
@@ -462,7 +464,7 @@ mod tests {
 
         let barrier = Arc::new(BreakableBarrier::new(2));
         let camera =
-            Camera::start(identity.clone(), config.clone(), barrier.clone(), 0)
+            Camera::start(identity.clone(), config.clone(), barrier.clone(), Arc::new(AtomicBool::new(false)), 0)
                 .expect("Camera::start failed");
 
         assert_eq!(camera.identity().camera_id, identity.camera_id);

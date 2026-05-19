@@ -311,8 +311,8 @@ pub fn spawn_gatherer(
                         frames.push(packet);
                     }
                     Err(_) => {
-                        tracing::error!(
-                            "[gatherer] camera '{}' (index {}) disconnected at step {}",
+                        tracing::info!(
+                            "[gatherer] camera '{}' (index {}) disconnected at step {} — shutting down",
                             camera_id, index, step
                         );
                         disconnected = true;
@@ -371,23 +371,6 @@ pub fn spawn_gatherer(
             // ── AssemblingPayload ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::AssemblingPayload) {
                 tracing::error!("[gatherer] invalid state transition: {e}");
-            }
-
-            // Check if paused — if so, skip downstream send but continue the cycle.
-            if paused.load(Ordering::SeqCst) {
-                tracing::trace!("[GATHER step {step}] PAUSED — skipping downstream send");
-                if let Err(e) =
-                    gatherer_sm.transition_to(GathererState::SendingDownstream)
-                {
-                    tracing::error!("[gatherer] invalid state transition: {e}");
-                }
-                if let Err(e) =
-                    gatherer_sm.transition_to(GathererState::CollectingFrames)
-                {
-                    tracing::error!("[gatherer] invalid state transition: {e}");
-                }
-                step += 1;
-                continue;
             }
 
             // ── Assemble payload ──
@@ -540,6 +523,65 @@ pub fn spawn_gatherer(
             if let Err(e) = gatherer_sm.transition_to(GathererState::CollectingFrames) {
                 tracing::error!("[gatherer] invalid state transition: {e}");
             }
+
+            // ── Paused spin ────────────────────────────────────────────
+            // Placed AFTER the full cycle (recv → barrier → assemble → send
+            // downstream) so the gatherer has completed its work for this
+            // iteration before spinning. Drains AddCamera/RemoveCamera updates
+            // while paused so camera set changes are applied promptly.
+            while paused.load(Ordering::SeqCst) {
+                while let Ok(update) = update_receiver.try_recv() {
+                    match update {
+                        super::types::GathererUpdate::AddCamera {
+                            camera_id,
+                            frame_receiver,
+                        } => {
+                            tracing::info!(
+                                "[gatherer] added camera '{}' at step {} (while paused)",
+                                camera_id, step
+                            );
+                            frame_receivers.push((camera_id, frame_receiver));
+                            camera_count = frame_receivers.len();
+                            skip_sync_remaining = 3;
+                            per_camera_wait_for_frame.push(Vec::new());
+                            per_camera_jpeg_extract.push(Vec::new());
+                            per_camera_channel_send_wait.push(Vec::new());
+                            per_camera_cycle_total.push(Vec::new());
+                            camera_labels.push("?".to_string());
+                            camera_indices.push(-1);
+                            prev_loop_starts.push(None);
+                        }
+                        super::types::GathererUpdate::RemoveCamera { camera_id } => {
+                            tracing::debug!(
+                                "[gatherer] removing camera '{}' (while paused)",
+                                camera_id
+                            );
+                            if let Some(pos) =
+                                frame_receivers.iter().position(|(id, _)| *id == camera_id)
+                            {
+                                frame_receivers.remove(pos);
+                                per_camera_wait_for_frame.remove(pos);
+                                per_camera_jpeg_extract.remove(pos);
+                                per_camera_channel_send_wait.remove(pos);
+                                per_camera_cycle_total.remove(pos);
+                                camera_labels.remove(pos);
+                                camera_indices.remove(pos);
+                                prev_loop_starts.remove(pos);
+                            }
+                            camera_count = frame_receivers.len();
+                        }
+                    }
+                }
+                if camera_count == 0 {
+                    tracing::info!("[gatherer] no cameras left (while paused), exiting");
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            if camera_count == 0 {
+                break;
+            }
+            // ── End paused spin ────────────────────────────────────────
         }
 
         // ── Apply cooldown trim (drop last N samples from every Vec) ──

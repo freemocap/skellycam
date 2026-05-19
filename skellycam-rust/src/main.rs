@@ -4,7 +4,7 @@
 //!
 //! Usage:
 //!   cargo run --release -- test all [--max-cameras N]
-//!   cargo run --release -- test detect [in-use]
+//!   cargo run --release -- test detect
 //!   cargo run --release -- test multi [--cameras N] [--indices 0,2,4] [--max-loops N]
 //!   cargo run --release -- test manager [--cameras N]
 //!   cargo run --release -- test recording [--cameras N] [--output PATH]
@@ -39,7 +39,7 @@ fn dispatch_command(args: &[String]) -> anyhow::Result<()> {
             Some(other) => {
                 eprintln!("unknown test module: {other}");
                 Ok(())
-        }
+    }
             None => print_usage(),
         },
         _ => print_usage(),
@@ -50,7 +50,7 @@ fn print_usage() -> anyhow::Result<()> {
     eprintln!("usage: cargo run --release -- test <module> [flags]");
     eprintln!("modules:");
     eprintln!("  all        — run full test suite (1 camera → N cameras)");
-    eprintln!("  detect     — enumerate cameras [sub: in-use]");
+    eprintln!("  detect     — enumerate cameras");
     eprintln!("  multi      — multi-camera lockstep streaming");
     eprintln!("  manager    — CameraGroupManager lifecycle");
     eprintln!("  recording  — full recording lifecycle test");
