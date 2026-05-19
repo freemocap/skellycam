@@ -417,12 +417,12 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
 // ── Framerate test ─────────────────────────────────────────────────────────────
 
 fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
+    use std::collections::BTreeSet;
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
     let camera_index = parse_camera_index(args).unwrap_or(0);
-
     let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
@@ -432,42 +432,39 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
         .find(|c| c.camera_index == camera_index as i32)
         .ok_or_else(|| anyhow::anyhow!("Camera index {camera_index} not found"))?;
 
-    // Find two distinct MJPG framerate formats at the same resolution
-    let formats: Vec<_> = identity
+    // Collect unique (fps, width, height) combos across ALL MJPG formats,
+    // sorted by fps then resolution
+    let unique_combos: BTreeSet<(u32, u32, u32)> = identity
         .formats
         .iter()
         .filter(|f| f.fourcc_str == "MJPG")
+        .map(|f| (f.fps, f.width, f.height))
         .collect();
 
-    // Group by resolution, find a resolution with multiple framerates
-    let mut res_groups: HashMap<(u32, u32), Vec<&skellycam::camera::CameraFormatInfo>> =
-        HashMap::new();
-    for f in &formats {
-        res_groups.entry((f.width, f.height)).or_default().push(f);
-    }
-    let multi_fps = res_groups.iter().find(|(_, fs)| fs.len() >= 2);
-    let (res, fps_formats) = match multi_fps {
-        Some(r) => r,
-        None => anyhow::bail!("No resolution with multiple framerates found on this camera"),
-    };
+    let combos: Vec<(u32, u32, u32)> = unique_combos.into_iter().collect();
 
-    let (fps_low, fps_high) = if fps_formats[0].fps < fps_formats[1].fps {
-        (fps_formats[0], fps_formats[1])
-    } else {
-        (fps_formats[1], fps_formats[0])
+    if combos.is_empty() {
+        anyhow::bail!("No MJPG formats found");
+    }
+
+    let unique_fps: Vec<u32> = {
+        let mut fps_set: BTreeSet<u32> = combos.iter().map(|(fps, _, _)| *fps).collect();
+        fps_set.into_iter().collect()
     };
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!(
-        "  UPDATE FRAMERATE TEST — {} ({}x{} @{}fps → @{}fps)",
+        "  FRAMERATE SCAN — {} ({} unique fps × resolutions = {} combos)",
         identity.label(),
-        res.0, res.1,
-        fps_low.fps, fps_high.fps,
+        unique_fps.len(),
+        combos.len(),
     );
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
+    // Start at the lowest-fps, lowest-resolution combo
+    let first = &combos[0];
     let mut configs = HashMap::new();
     configs.insert(
         identity.camera_id.clone(),
@@ -475,12 +472,9 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
             capture_config: CameraConfig {
                 camera_id: identity.camera_id.clone(),
                 camera_index: identity.camera_index as u32,
-                width: res.0,
-                height: res.1,
-                exposure: -7,
-                exposure_mode: "MANUAL".into(),
-                framerate: fps_low.fps as f64,
-                rotation: -1,
+                width: first.1, height: first.2,
+                exposure: -7, exposure_mode: "MANUAL".into(),
+                framerate: first.0 as f64, rotation: -1,
             },
             identity: identity.clone(),
         },
@@ -490,54 +484,56 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
     group.start()?;
 
     let mut current_frame: i64 = -1;
-    let mut _polls: u64 = 0;
-    poll_frames(&mut group, &mut current_frame, &mut _polls, 60)?;
+    let mut polls: u64 = 0;
+    poll_frames(&mut group, &mut current_frame, &mut polls, 20)?;
 
-    let fps_before = measure_fps(&group, 30);
-    tracing::info!("  FPS before apply: {fps_before:.1} (expected ~{})", fps_low.fps);
-
-    // Pause, apply new framerate, unpause
-    group.pause();
-    let mut new_configs = HashMap::new();
-    new_configs.insert(
-        identity.camera_id.clone(),
-        CameraGroupConfig {
-            capture_config: CameraConfig {
-                camera_id: identity.camera_id.clone(),
-                camera_index: identity.camera_index as u32,
-                width: res.0,
-                height: res.1,
-                exposure: -7,
-                exposure_mode: "MANUAL".into(),
-                framerate: fps_high.fps as f64,
-                rotation: -1,
+    // Scan each combo
+    for &(fps, width, height) in &combos {
+        group.pause();
+        let mut new_configs = HashMap::new();
+        new_configs.insert(
+            identity.camera_id.clone(),
+            CameraGroupConfig {
+                capture_config: CameraConfig {
+                    camera_id: identity.camera_id.clone(),
+                    camera_index: identity.camera_index as u32,
+                    width, height, exposure: -7,
+                    exposure_mode: "MANUAL".into(),
+                    framerate: fps as f64, rotation: -1,
+                },
+                identity: identity.clone(),
             },
-            identity: identity.clone(),
-        },
-    );
-    group.apply(new_configs)?;
-    group.unpause();
-
-    let target = current_frame + 30;
-    poll_frames(&mut group, &mut current_frame, &mut _polls, target)?;
-
-    let fps_after = measure_fps(&group, 30);
-    tracing::info!("  FPS after apply: {fps_after:.1} (expected ~{})", fps_high.fps);
-
-    if fps_after > fps_before * 1.1 {
-        tracing::info!(
-            "  ✓ Framerate increased by {:.0}%",
-            (fps_after / fps_before - 1.0) * 100.0
         );
-    } else {
-        tracing::warn!(
-            "  ? Framerate did not change significantly ({fps_before:.1} → {fps_after:.1}) — \
-             mid-stream framerate change may require stream restart",
+        group.apply(new_configs)?;
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        group.unpause();
+
+        let target = current_frame + 10;
+        poll_frames(&mut group, &mut current_frame, &mut polls, target)?;
+
+        let cfg_fps = group.camera_statuses()
+            .first()
+            .map(|s| s.config.framerate)
+            .unwrap_or(-1.0);
+
+        let actual_dims = group.latest_raw_frames()
+            .and_then(|fs| fs.first().map(|f| format!("{}x{}", f.width, f.height)))
+            .unwrap_or_else(|| "no frame".to_string());
+
+        let expected_dims = format!("{width}x{height}");
+        let dims_match = actual_dims == expected_dims;
+
+        tracing::info!(
+            "  {}x{} @{:>2}fps  cfg_fps={:<4.0}  actual={}  {}",
+            width, height, fps, cfg_fps, actual_dims,
+            if dims_match { "✓" } else { "? stream restarted" },
         );
     }
 
+    tracing::info!("");
+
     group.shutdown()?;
-    tracing::info!("  FRAMERATE TEST COMPLETE");
+    tracing::info!("  FRAMERATE SCAN COMPLETE");
     tracing::info!("");
 
     Ok(())

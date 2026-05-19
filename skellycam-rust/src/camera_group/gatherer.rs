@@ -198,6 +198,7 @@ pub fn spawn_gatherer(
     thread::spawn(move || {
         let mut step: i64 = 0;
         let mut frame_receivers = frame_receivers;
+        let mut skip_sync_remaining: u32 = 0;
         let mut camera_count = frame_receivers.len();
 
         // ── Per-camera stats buckets (outer index = camera position 0..N) ──
@@ -243,12 +244,13 @@ pub fn spawn_gatherer(
                         camera_id,
                         frame_receiver,
                     } => {
-                        tracing::debug!(
+                        tracing::info!(
                             "[gatherer] added camera '{}' at step {}",
                             camera_id, step
                         );
                         frame_receivers.push((camera_id, frame_receiver));
                         camera_count = frame_receivers.len();
+                        skip_sync_remaining = 3; // skip a few cycles for lockstep catch-up
                         per_camera_wait_for_frame.push(Vec::new());
                         per_camera_jpeg_extract.push(Vec::new());
                         per_camera_channel_send_wait.push(Vec::new());
@@ -325,7 +327,7 @@ pub fn spawn_gatherer(
             }
 
             // ── Validate: ALL cameras must be on the same frame number ──
-            if camera_count > 1 {
+            if camera_count > 1 && skip_sync_remaining == 0 {
                 let first_fn = frames[0].frame_number;
                 for (i, frame) in frames.iter().enumerate().skip(1) {
                     if frame.frame_number != first_fn {
@@ -339,6 +341,9 @@ pub fn spawn_gatherer(
                 tracing::trace!(
                     "[GATHER step {step}] frame numbers OK: all cameras at frame#{first_fn}"
                 );
+            }
+            if skip_sync_remaining > 0 {
+                skip_sync_remaining -= 1;
             }
 
             // ── Snapshot camera labels + indices (cheap; only runs while "?") ──

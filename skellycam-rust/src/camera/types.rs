@@ -215,6 +215,8 @@ pub enum CameraCommand {
 #[derive(Debug)]
 pub enum CameraEvent {
     Error(String),
+    /// Sent after stabilization completes — the camera is in its capture loop.
+    Ready,
 }
 
 #[derive(Debug, Clone)]

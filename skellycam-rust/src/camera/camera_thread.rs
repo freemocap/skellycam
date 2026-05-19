@@ -44,6 +44,7 @@ pub fn spawn(
     identity: &CameraIdentity,
     config: &CameraConfig,
     barrier: Arc<BreakableBarrier>,
+    start_frame_number: i64,
 ) -> anyhow::Result<(
     mpsc::Sender<CameraCommand>,
     mpsc::Receiver<CameraEvent>,
@@ -67,6 +68,7 @@ pub fn spawn(
             &event_sender,
             &frame_sender,
             &barrier,
+            start_frame_number,
         );
         if let Err(error) = result {
             let _ = event_sender.send(CameraEvent::Error(format!(
@@ -94,6 +96,78 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
     }
 }
 
+/// Apply a new config to the running camera.
+///
+/// For exposure-only changes: just reconfigures exposure in-place.
+/// For resolution/framerate changes: closes the current stream, finds
+/// the best matching MJPG format, opens a new stream, and re-applies
+/// exposure on the new stream. The camera thread stays alive — only
+/// the internal CaptureStream is replaced.
+///
+/// Returns the (possibly new) stream, actual_width, and actual_height.
+unsafe fn apply_config(
+    ctx: CapContext,
+    stream: CapStream,
+    label: &str,
+    new_config: &CameraConfig,
+    old_config: &CameraConfig,
+    actual_width: u32,
+    actual_height: u32,
+) -> (CapStream, u32, u32) {
+    let needs_restart = actual_width != new_config.width
+        || actual_height != new_config.height
+        || (old_config.framerate - new_config.framerate).abs() > 0.1;
+
+    if needs_restart {
+        tracing::info!(
+            "Camera {label}: stream restart needed ({actual_width}x{actual_height} → {}x{})",
+            new_config.width, new_config.height,
+        );
+        unsafe { Cap_closeStream(ctx, stream) };
+
+        let format_info = match find_best_mjpg(
+            ctx,
+            new_config.camera_index,
+            new_config.width,
+            new_config.height,
+            new_config.framerate,
+            label,
+        ) {
+            Ok(f) => f,
+            Err(e) => {
+                tracing::error!("Camera {label}: failed to find format for new config: {e}");
+                // Reopen with the original format as fallback
+                match find_best_mjpg(ctx, old_config.camera_index, old_config.width, old_config.height, old_config.framerate, label) {
+                    Ok(f) => f,
+                    Err(_) => {
+                        tracing::error!("Camera {label}: fatal — cannot reopen stream");
+                        return (stream, actual_width, actual_height);
+                    }
+                }
+            }
+        };
+
+        let new_stream = match open_stream_raw(ctx, new_config.camera_index, label, &format_info) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("Camera {label}: failed to open new stream: {e}");
+                return (stream, actual_width, actual_height);
+            }
+        };
+
+        configure_exposure(ctx, new_stream, label, &new_config.exposure_mode, new_config.exposure);
+        tracing::info!(
+            "Camera {label}: stream restarted — {actual_width}x{actual_height} → {}x{}",
+            format_info.width, format_info.height,
+        );
+        (new_stream, format_info.width, format_info.height)
+    } else {
+        configure_exposure(ctx, stream, label, &new_config.exposure_mode, new_config.exposure);
+        tracing::info!("Camera {label}: applied config (exposure={})", new_config.exposure);
+        (stream, actual_width, actual_height)
+    }
+}
+
 fn run_camera_thread(
     config: CameraConfig,
     identity: &CameraIdentity,
@@ -102,6 +176,7 @@ fn run_camera_thread(
     event_sender: &mpsc::Sender<CameraEvent>,
     frame_sender: &mpsc::SyncSender<FramePacket>,
     barrier: &BreakableBarrier,
+    start_frame_number: i64,
 ) -> anyhow::Result<()> {
     unsafe {
         let ctx = Cap_createContext();
@@ -117,20 +192,21 @@ fn run_camera_thread(
             config.framerate,
             label,
         )?;
-        let stream =
+        let mut stream =
             open_stream_raw(ctx, config.camera_index, label, &format_info)?;
 
         configure_exposure(ctx, stream, label, &config.exposure_mode, config.exposure);
         stabilize_raw(ctx, stream, label);
 
-        let actual_width = format_info.width;
-        let actual_height = format_info.height;
+        let mut actual_width = format_info.width;
+        let mut actual_height = format_info.height;
 
         tracing::info!(
             "Camera {label}: capture loop raw-MJPEG ({actual_width}x{actual_height})",
         );
 
-        let mut frame_sm = FrameStateMachine::new(0);
+        let _ = event_sender.send(CameraEvent::Ready);
+        let mut frame_sm = FrameStateMachine::new(start_frame_number);
         let mut raw_buffer: Vec<u8> = Vec::new();
         let mut active_config = config;
 
@@ -142,10 +218,9 @@ fn run_camera_thread(
                     break;
                 }
                 CommandResult::Configure(new_config) => {
-                    tracing::info!("Camera {label}: applying new config");
-                    configure_exposure(
-                        ctx, stream, label,
-                        &new_config.exposure_mode, new_config.exposure,
+                    (stream, actual_width, actual_height) = apply_config(
+                        ctx, stream, label, &new_config, &active_config,
+                        actual_width, actual_height,
                     );
                     active_config = new_config;
                 }
@@ -163,9 +238,9 @@ fn run_camera_thread(
                         return Ok(());
                     }
                     CommandResult::Configure(new_config) => {
-                        configure_exposure(
-                            ctx, stream, label,
-                            &new_config.exposure_mode, new_config.exposure,
+                        (stream, actual_width, actual_height) = apply_config(
+                            ctx, stream, label, &new_config, &active_config,
+                            actual_width, actual_height,
                         );
                         active_config = new_config;
                     }

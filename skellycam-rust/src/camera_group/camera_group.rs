@@ -176,6 +176,7 @@ impl CameraGroup {
                 group_config.identity.clone(),
                 group_config.capture_config.clone(),
                 self.barrier.clone(),
+                0,
             )
             .map_err(|e| {
                 anyhow::anyhow!(
@@ -527,12 +528,32 @@ impl CameraGroup {
         camera_id: String,
         group_config: CameraGroupConfig,
     ) -> anyhow::Result<()> {
+        // Update barrier count BEFORE starting the camera so the
+        // new camera joins with the correct barrier total.
+        let new_total = self.cameras.len() + 1 + 1; // existing + new + gatherer
+        self.barrier.set_total(new_total);
+
+        // Inject current multiframe number so the new camera starts
+        // close to the existing cameras' frame count. Timing means it
+        // may be off by a few frames — the gatherer's skip_sync mechanism
+        // handles this.
+        let current_frame = self
+            .latest_frontend_payload
+            .lock()
+            .ok()
+            .and_then(|g| g.as_ref().map(|p| p.frame_number))
+            .unwrap_or(0);
+
         let mut camera = Camera::start(
             group_config.identity.clone(),
             group_config.capture_config.clone(),
             self.barrier.clone(),
+            current_frame,
         )
         .map_err(|e| {
+            // Revert barrier count on failure
+            let old_total = self.cameras.len() + 1;
+            self.barrier.set_total(old_total);
             anyhow::anyhow!(
                 "Failed to add camera '{}' ({}): {}",
                 camera_id,
@@ -542,9 +563,44 @@ impl CameraGroup {
         })?;
 
         let frame_receiver = camera.take_frame_receiver();
+
+        // Wait for the camera to finish stabilization and enter its
+        // capture loop before notifying the gatherer. Uses the Ready
+        // event to avoid consuming a frame from the channel.
+        tracing::info!(
+            "[CameraGroup {}] waiting for camera '{}' to stabilize...",
+            self.group_id, camera_id,
+        );
+        loop {
+            match camera.try_recv_event() {
+                Ok(crate::camera::CameraEvent::Ready) => {
+                    tracing::info!(
+                        "[CameraGroup {}] camera '{}' stabilization complete",
+                        self.group_id, camera_id,
+                    );
+                    break;
+                }
+                Ok(crate::camera::CameraEvent::Error(msg)) => {
+                    anyhow::bail!(
+                        "Camera '{}' error during stabilization: {msg}",
+                        camera_id
+                    );
+                }
+                Err(mpsc::TryRecvError::Empty) => {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                }
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    anyhow::bail!(
+                        "Camera '{}' disconnected during stabilization",
+                        camera_id
+                    );
+                }
+            }
+        }
+
         self.cameras.insert(camera_id.clone(), camera);
 
-        // Notify the gatherer about the new camera
+        // Now notify the gatherer — the camera is ready and streaming
         let update_sender = self
             .gatherer_update_sender
             .as_ref()
@@ -555,10 +611,6 @@ impl CameraGroup {
                 frame_receiver,
             })
             .map_err(|_| anyhow::anyhow!("Gatherer disconnected — cannot add camera"))?;
-
-        // Update barrier: old cameras + new one + gatherer
-        self.barrier
-            .set_total(self.cameras.len() + 1);
 
         tracing::info!(
             "[CameraGroup {}] added camera '{}' — {} total",
