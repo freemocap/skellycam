@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 
+use super::info_block;
 use crate::cli::CameraCountArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
@@ -19,12 +20,15 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     }
     let num = args.cameras.unwrap_or(all_cameras.len()).min(all_cameras.len());
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  LIFECYCLE TEST — {} camera{}", num, if num == 1 { "" } else { "s" });
-    tracing::info!("  start → stream ~30 frames → shutdown → verify clean");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  LIFECYCLE TEST — {} camera{}\n  start → stream ~30 frames → shutdown → verify clean\n══════════════════════════════════════════════════",
+            num,
+            if num == 1 { "" } else { "s" },
+        ),
+        "",
+    ]);
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
@@ -38,7 +42,7 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
                     height: 720,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
                 identity: identity.clone(),
@@ -94,14 +98,14 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     // Verify: group should be in Stopped state
     // (shutdown consumes the group so we can't call state())
 
-    tracing::info!("");
-    tracing::info!("  ✓ Lifecycle: start → stream → shutdown (clean)");
-    tracing::info!(
-        "    {num} camera(s)  |  {last_frame} frames  |  total {:.1}s",
-        start_ts.elapsed().as_secs_f64(),
-    );
-    tracing::info!("  LIFECYCLE TEST COMPLETE");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "  ✓ Lifecycle: start → stream → shutdown (clean)\n    {num} camera(s)  |  {last_frame} frames  |  total {:.1}s\n  LIFECYCLE TEST COMPLETE",
+            start_ts.elapsed().as_secs_f64(),
+        ),
+        "",
+    ]);
 
     Ok(())
 }

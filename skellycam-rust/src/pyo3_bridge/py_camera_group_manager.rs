@@ -567,7 +567,7 @@ mod tests {
             height: 480,
             exposure: -7,
             exposure_mode: "MANUAL".into(),
-            framerate: 30.0,
+            framerate: -1.0,
             rotation: -1,
         };
 

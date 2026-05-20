@@ -379,8 +379,7 @@ class RustCameraGroup:
         if group_data is None:
             return None
         frame_number, timestamp_ns, py_bytes = group_data
-        timestamp_s = float(timestamp_ns) / 1_000_000_000.0
-        return (int(frame_number), timestamp_s, bytearray(py_bytes))
+        return (int(frame_number), float(timestamp_ns), bytearray(py_bytes))
 
     async def start(self) -> None:
         pass
@@ -583,8 +582,7 @@ class RustCameraGroupManager:
             FrameNumberInt, MultiframeTimestampFloat, bytearray
         ]] = {}
         for group_id, (frame_number, timestamp_ns, py_bytes) in raw.items():
-            timestamp_s = float(timestamp_ns) / 1_000_000_000.0
-            result[group_id] = (int(frame_number), timestamp_s, bytearray(py_bytes))
+            result[group_id] = (int(frame_number), float(timestamp_ns), bytearray(py_bytes))
             # Track for framerate calculations (keep last 300 samples)
             if group_id not in self._framerate_timestamps:
                 self._framerate_timestamps[group_id] = []

@@ -58,7 +58,7 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
                     height: 720,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1, // start with no rotation
                 },
                 identity: identity.clone(),

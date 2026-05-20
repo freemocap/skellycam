@@ -176,19 +176,16 @@ function toggle(idx){
 
 // ── Settings helpers ──
 function getDefaultSettings(cam){
-  // Pick highest-resolution MJPG format as default
-  let mjpg=null;
-  for(let f of(camFormats[cam.camera_id]||[])){
-    if(f.fourcc_str!=='MJPG')continue;
-    if(!mjpg||f.width*f.height>mjpg.width*mjpg.height)mjpg=f;
-  }
-  let w=mjpg?mjpg.width:1280;
-  let h=mjpg?mjpg.height:720;
+  // Pick highest-FPS MJPG format as default (tiebreak by area descending)
+  let formats = getFormatOptions(cam.camera_id);
+  let best = formats[0]; // sorted FPS desc → area desc
+  let w = best.width;
+  let h = best.height;
   return {
     exposure: -7,
     rotation: -1,
     resolution: {width:w, height:h},
-    framerate: -1.0,
+    framerate: best.fps,
     camera_id: cam.camera_id,
     camera_index: cam.camera_index||cam.index,
     camera_name: cam.name,
@@ -201,31 +198,22 @@ function initSettingsForCam(cam){
   }
 }
 
-function getResolutionOptions(cam_id){
-  let seen=new Set();
-  let opts=[];
+function getFormatOptions(cam_id){
+  // Return all unique MJPG (width, height, fps) combos sorted by FPS desc → area desc
+  let formats = [];
+  let seen = new Set();
   for(let f of(camFormats[cam_id]||[])){
     if(f.fourcc_str!=='MJPG')continue;
-    let key=f.width+'x'+f.height;
+    let key = f.width + 'x' + f.height + '@' + f.fps;
     if(seen.has(key))continue;
     seen.add(key);
-    opts.push({width:f.width,height:f.height});
+    formats.push({width: f.width, height: f.height, fps: f.fps});
   }
-  // Sort by area descending
-  opts.sort((a,b)=>b.width*b.height-a.width*a.height);
-  return opts;
-}
-
-function getFramerateOptions(cam_id, width, height){
-  let opts=[];
-  for(let f of(camFormats[cam_id]||[])){
-    if(f.fourcc_str!=='MJPG')continue;
-    if(f.width===width&&f.height===height){
-      opts.push(f.fps);
-    }
-  }
-  // Unique, sorted
-  return [...new Set(opts)].sort((a,b)=>a-b);
+  formats.sort((a, b) => {
+    if(b.fps !== a.fps) return b.fps - a.fps;
+    return (b.width * b.height) - (a.width * a.height);
+  });
+  return formats;
 }
 
 // ── Settings panel rendering ──
@@ -238,9 +226,8 @@ function renderSettingsPanel(){
     if(!cam)continue;
     initSettingsForCam(cam);
     let s=camSettings[cam.camera_id];
-    let resOpts=getResolutionOptions(cam.camera_id);
-    let fpsOpts=getFramerateOptions(cam.camera_id,s.resolution.width,s.resolution.height);
-    let resKey=s.resolution.width+'x'+s.resolution.height;
+    let formatOpts=getFormatOptions(cam.camera_id);
+    let formatKey=s.resolution.width+'x'+s.resolution.height+'@'+s.framerate;
     html+='<div class="cam-settings-card">';
     html+='<div class="cam-label">Cam '+cam.index+' — '+esc(cam.camera_id)+'</div>';
     // Exposure
@@ -258,24 +245,15 @@ function renderSettingsPanel(){
       html+='<option value="'+val+'"'+(s.rotation===val?' selected':'')+'>'+label+'</option>';
     }
     html+='</select></div>';
-    // Resolution
+    // Format (single dropdown: FPS desc → area desc)
     html+='<div class="setting-row">';
-    html+='<label>Resolution</label>';
-    html+='<select onchange="onResolutionChange(\''+cam.camera_id+'\',this.value)">';
-    for(let opt of resOpts){
-      let key=opt.width+'x'+opt.height;
-      let sel=key===resKey?' selected':'';
-      html+='<option value="'+key+'"'+sel+'>'+key+'</option>';
+    html+='<label>Format</label>';
+    html+='<select onchange="onFormatChange(\''+cam.camera_id+'\',this.value)">';
+    for(let opt of formatOpts){
+      let key=opt.width+'x'+opt.height+'@'+opt.fps;
+      let sel=key===formatKey?' selected':'';
+      html+='<option value="'+key+'"'+sel+'>'+opt.width+'×'+opt.height+' @ '+opt.fps+' fps</option>';
     }
-    html+='</select></div>';
-    // Framerate
-    html+='<div class="setting-row">';
-    html+='<label>Framerate</label>';
-    html+='<select onchange="onSettingChange(\''+cam.camera_id+'\',\'framerate\',parseFloat(this.value))">';
-    for(let fps of fpsOpts){
-      html+='<option value="'+fps+'"'+(Math.abs(s.framerate-fps)<0.5?' selected':'')+'>'+fps+' fps</option>';
-    }
-    html+='<option value="-1"'+(s.framerate<0?' selected':'')+'>default</option>';
     html+='</select></div>';
     html+='</div>';
   }
@@ -283,12 +261,13 @@ function renderSettingsPanel(){
   panel.style.display=selected.size>0?'block':'none';
 }
 
-function onResolutionChange(cam_id, resStr){
-  let [w,h]=resStr.split('x').map(Number);
-  camSettings[cam_id].resolution={width:w, height:h};
-  // Reset framerate to default when resolution changes
-  camSettings[cam_id].framerate=-1.0;
-  renderSettingsPanel(); // refresh framerate dropdown
+function onFormatChange(cam_id, formatStr){
+  // Parse "WxH@FPS" → set both resolution and framerate atomically
+  let [wh, fpsStr] = formatStr.split('@');
+  let [w, h] = wh.split('x').map(Number);
+  camSettings[cam_id].resolution = {width: w, height: h};
+  camSettings[cam_id].framerate = parseFloat(fpsStr);
+  renderSettingsPanel();
   scheduleConfigUpdate();
 }
 

@@ -124,10 +124,6 @@ unsafe fn apply_config(
         || (old_config.framerate - new_config.framerate).abs() > 0.1;
 
     if needs_restart {
-        tracing::info!(
-            "Camera {label}: stream restart needed ({actual_width}x{actual_height} → {}x{})",
-            new_config.width, new_config.height,
-        );
          Cap_closeStream(ctx, stream) ;
 
         let format_info = match find_best_mjpg(
@@ -161,14 +157,15 @@ unsafe fn apply_config(
         };
 
         configure_exposure(ctx, new_stream, label, &new_config.exposure_mode, new_config.exposure);
-        tracing::info!(
-            "Camera {label}: stream restarted — {actual_width}x{actual_height} → {}x{}",
-            format_info.width, format_info.height,
+        tracing::debug!(
+            "Camera {label}: stream restarted — {actual_width}x{actual_height} @{:.0}fps → {}x{} @{}fps",
+            old_config.framerate,
+            format_info.width, format_info.height, format_info.fps,
         );
         (new_stream, format_info.width, format_info.height)
     } else {
         configure_exposure(ctx, stream, label, &new_config.exposure_mode, new_config.exposure);
-        tracing::info!("Camera {label}: applied config (exposure={})", new_config.exposure);
+        tracing::debug!("Camera {label}: applied config (exposure={})", new_config.exposure);
         (stream, actual_width, actual_height)
     }
 }}
@@ -298,18 +295,13 @@ fn run_camera_thread(
             // returned true — the hardware-ready instant, before any capture work.
             let frame_available_ns =
                 crate::timestamps::performance::performance_counter_nanoseconds();
-            tracing::trace!(
-                "[CAM {label}] frame#{} hasNewFrame=1  frame_avail_ns={frame_available_ns}",
-                frame_sm.frame_number(),
-            );
-
             // ── Capture the frame and copy bytes into a heap-owned Vec ──
             // Cap_getFrameSize and Cap_captureFrameRaw are not atomic — the
             // DirectShow callback thread can deliver a differently-sized
             // MJPEG frame between the two calls. Retry on buffer-too-small.
             let mut out_bytes: u32 = 0;
             let mut capture_ok = false;
-            for retry in 0..3 {
+            for _retry in 0..3 {
                 let mut frame_size: u32 = 0;
                 if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK
                     || frame_size == 0
@@ -321,10 +313,6 @@ fn run_camera_thread(
                     let _ = event_sender.send(CameraEvent::Error(msg));
                     break;
                 }
-                tracing::trace!(
-                    "[CAM {label}] frame#{} getFrameSize={frame_size} bytes  retry={retry}",
-                    frame_sm.frame_number(),
-                );
                 let needed = frame_size as usize;
                 if raw_buffer.len() < needed {
                     raw_buffer.resize(needed * 2, 0);
@@ -363,12 +351,6 @@ fn run_camera_thread(
             // `cap.read()` comparison metric.
             let post_jpeg_extract_ns =
                 crate::timestamps::performance::performance_counter_nanoseconds();
-            tracing::trace!(
-                "[CAM {label}] frame#{} captured {out_bytes} bytes (MJPEG)  jpeg_extract_ns={}",
-                frame_sm.frame_number(),
-                post_jpeg_extract_ns - frame_available_ns,
-            );
-
             if let Err(e) = frame_sm.begin_capture(frame_available_ns) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
@@ -393,19 +375,9 @@ fn run_camera_thread(
                 frame_number: frame_sm.frame_number(),
             };
 
-            tracing::trace!(
-                "[CAM {label}] frame#{} sending via channel...  pre_send_ns={}",
-                frame_sm.frame_number(),
-                frame_sm.timestamps.pre_send_ns,
-            );
             if frame_sender.send(packet).is_err() {
-                tracing::trace!("[CAM {label}] frame#{} channel send FAILED (disconnected)", frame_sm.frame_number());
                 break;
             }
-            tracing::trace!(
-                "[CAM {label}] frame#{} sent OK, FSM: Sending→AtBarrier",
-                frame_sm.frame_number(),
-            );
 
             if let Err(e) = frame_sm.transition_to(FrameState::AtBarrier) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
@@ -420,10 +392,6 @@ fn run_camera_thread(
             // (see note in camera/types.rs). `loop_start_ns` IS still stamped
             // because it marks the BEGINNING of the next iteration's frame
             // packet, which the gatherer can attribute correctly.
-            tracing::trace!(
-                "[CAM {label}] frame#{} ENTER barrier.wait()",
-                frame_sm.frame_number(),
-            );
             if !barrier.wait() {
                 tracing::info!("Camera {label}: barrier broken (shutdown)");
                 Cap_closeStream(ctx, stream);
@@ -436,12 +404,6 @@ fn run_camera_thread(
             // definition (the camera exits the barrier and immediately begins
             // the next capture cycle).
             frame_sm.timestamps.loop_start_ns = post_barrier_ns;
-            tracing::trace!(
-                "[CAM {label}] frame#{} EXIT barrier.wait()  loop_start_ns={}",
-                frame_sm.frame_number(),
-                post_barrier_ns,
-            );
-
             if let Err(e) = frame_sm.transition_to(FrameState::WaitingForFrame) {
                 tracing::error!("Camera {label}: invalid frame state transition: {e}");
             }
@@ -476,17 +438,17 @@ unsafe fn find_best_mjpg(
 
     let want_fps = requested_framerate > 0.0;
 
-    // Pass 1: exact resolution + framerate match
-    for f in 0..num_formats {
-        let mut info = CapFormatInfo::default();
-        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK {
-            if info.fourcc == FOURCC_MJPG
-                && info.width == requested_width
-                && info.height == requested_height
-            {
-                let fps_match = !want_fps || info.fps as f64 == requested_framerate;
-                if fps_match {
-                    tracing::info!(
+    if want_fps {
+        // Pass 1: exact resolution + framerate match
+        for f in 0..num_formats {
+            let mut info = CapFormatInfo::default();
+            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK {
+                if info.fourcc == FOURCC_MJPG
+                    && info.width == requested_width
+                    && info.height == requested_height
+                    && info.fps as f64 == requested_framerate
+                {
+                    tracing::trace!(
                         "Camera {label}: format {f} ({}x{} @{}fps MJPG) — exact match",
                         info.width, info.height, info.fps,
                     );
@@ -494,45 +456,88 @@ unsafe fn find_best_mjpg(
                 }
             }
         }
-    }
 
-    // Pass 2: exact resolution, any MJPG (pick best framerate)
-    let mut best: Option<(CapFormatID, CapFormatInfo)> = None;
-    for f in 0..num_formats {
-        let mut info = CapFormatInfo::default();
-        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
-            && info.fourcc == FOURCC_MJPG
-            && info.width == requested_width
-            && info.height == requested_height
-        {
-            match best {
-                None => best = Some((f as CapFormatID, info)),
-                Some((_, ref best_info)) => {
-                    let best_fps_diff = (best_info.fps as f64 - requested_framerate).abs();
-                    let this_fps_diff = (info.fps as f64 - requested_framerate).abs();
-                    if want_fps && this_fps_diff < best_fps_diff {
-                        best = Some((f as CapFormatID, info));
+        // Pass 2: exact resolution, any MJPG (pick closest framerate)
+        let mut best: Option<(CapFormatID, CapFormatInfo)> = None;
+        for f in 0..num_formats {
+            let mut info = CapFormatInfo::default();
+            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
+                && info.fourcc == FOURCC_MJPG
+                && info.width == requested_width
+                && info.height == requested_height
+            {
+                match best {
+                    None => best = Some((f as CapFormatID, info)),
+                    Some((_, ref best_info)) => {
+                        let best_fps_diff = (best_info.fps as f64 - requested_framerate).abs();
+                        let this_fps_diff = (info.fps as f64 - requested_framerate).abs();
+                        if this_fps_diff < best_fps_diff {
+                            best = Some((f as CapFormatID, info));
+                        }
                     }
                 }
             }
         }
-    }
-    if let Some((_fid, info)) = best {
-        tracing::info!(
-            "Camera {label}: format ({}x{} @{}fps MJPG) — resolution match",
-            info.width, info.height, info.fps,
-        );
-        return Ok(info);
-    }
+        if let Some((_fid, info)) = best {
+            tracing::trace!(
+                "Camera {label}: format ({}x{} @{}fps MJPG) — resolution match",
+                info.width, info.height, info.fps,
+            );
+            return Ok(info);
+        }
 
-    // Pass 3: any MJPG format (fallback)
-    for f in 0..num_formats {
-        let mut info = CapFormatInfo::default();
-        if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
-            && info.fourcc == FOURCC_MJPG
-        {
-            tracing::info!(
-                "Camera {label}: format {f} ({}x{} @{}fps MJPG) — best available",
+        // Pass 3: any MJPG format (closest framerate fallback)
+        let mut best: Option<(CapFormatID, CapFormatInfo)> = None;
+        for f in 0..num_formats {
+            let mut info = CapFormatInfo::default();
+            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
+                && info.fourcc == FOURCC_MJPG
+            {
+                match best {
+                    None => best = Some((f as CapFormatID, info)),
+                    Some((_, ref best_info)) => {
+                        let best_fps_diff = (best_info.fps as f64 - requested_framerate).abs();
+                        let this_fps_diff = (info.fps as f64 - requested_framerate).abs();
+                        if this_fps_diff < best_fps_diff {
+                            best = Some((f as CapFormatID, info));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((_fid, info)) = best {
+            tracing::trace!(
+                "Camera {label}: format {_fid} ({}x{} @{}fps MJPG) — best available",
+                info.width, info.height, info.fps,
+            );
+            return Ok(info);
+        }
+    } else {
+        // Framerate-first: scan ALL MJPG formats, pick highest FPS,
+        // break ties by highest pixel area (width × height).
+        let mut best: Option<(CapFormatID, CapFormatInfo)> = None;
+        for f in 0..num_formats {
+            let mut info = CapFormatInfo::default();
+            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
+                && info.fourcc == FOURCC_MJPG
+            {
+                match best {
+                    None => best = Some((f as CapFormatID, info)),
+                    Some((_, ref best_info)) => {
+                        if info.fps > best_info.fps
+                            || (info.fps == best_info.fps
+                                && info.width * info.height
+                                    > best_info.width * best_info.height)
+                        {
+                            best = Some((f as CapFormatID, info));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((_fid, info)) = best {
+            tracing::trace!(
+                "Camera {label}: format ({}x{} @{}fps MJPG) — framerate-first auto-select",
                 info.width, info.height, info.fps,
             );
             return Ok(info);
@@ -592,15 +597,13 @@ unsafe fn configure_exposure(
     let _ = unsafe {
         Cap_getPropertyLimits(ctx, stream, CAPPROPID_EXPOSURE, &mut min, &mut max, &mut default)
     };
-    tracing::info!("Camera {label}: exposure limits min={min} max={max} default={default}");
-
     if exposure_mode == "AUTO" {
         unsafe { Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 1) };
-        tracing::info!("Camera {label}: exposure set to AUTO");
+        tracing::debug!("Camera {label}: exposure set to AUTO (limits min={min} max={max} default={default})");
     } else {
         unsafe { Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 0) };
         unsafe { Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, target_exposure) };
-        tracing::info!("Camera {label}: exposure set to {target_exposure}");
+        tracing::debug!("Camera {label}: exposure set to {target_exposure} (limits min={min} max={max} default={default})");
     }
 }
 

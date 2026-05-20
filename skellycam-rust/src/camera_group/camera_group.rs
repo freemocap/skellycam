@@ -603,7 +603,8 @@ impl CameraGroup {
         // Wait for the camera to finish stabilization and enter its
         // capture loop before notifying the gatherer. Uses the Ready
         // event to avoid consuming a frame from the channel.
-        tracing::info!(
+        let stabilize_start = std::time::Instant::now();
+        tracing::debug!(
             "[CameraGroup {}] waiting for camera '{}' to stabilize...",
             self.group_id, camera_id,
         );
@@ -611,8 +612,9 @@ impl CameraGroup {
             match camera.try_recv_event() {
                 Ok(crate::camera::CameraEvent::Ready) => {
                     tracing::info!(
-                        "[CameraGroup {}] camera '{}' stabilization complete",
+                        "[CameraGroup {}] camera '{}' stabilized in {:.1}s",
                         self.group_id, camera_id,
+                        stabilize_start.elapsed().as_secs_f64()
                     );
                     break;
                 }
@@ -990,7 +992,7 @@ mod tests {
                     height: 480,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
             },
@@ -1030,7 +1032,7 @@ mod tests {
                     height: 480,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
             },
@@ -1072,7 +1074,7 @@ mod tests {
                     height: 480,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
             },
@@ -1111,7 +1113,7 @@ mod tests {
                     height: 480,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
             },
@@ -1133,7 +1135,7 @@ mod tests {
             height: 480,
             exposure: -7,
             exposure_mode: "MANUAL".into(),
-            framerate: 30.0,
+            framerate: -1.0,
             rotation: -1,
         };
 

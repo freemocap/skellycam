@@ -38,6 +38,10 @@ const STATS_COOLDOWN_MULTIFRAMES: usize = 1;
 /// representative sample without unbounded memory growth.
 const STATS_RING_BUFFER_LIMIT: usize = 300;
 
+/// Per-multiframe TRACE logs fire only every N steps to keep output readable.
+/// 30 multiframes ≈ 1 second at 30 fps.
+const PER_FRAME_LOG_MODULO: i64 = 30;
+
 /// Truncate a single stats Vec if it exceeds the ring-buffer limit.
 /// Drops from the front so the most recent samples are retained.
 fn truncate_ring<T>(v: &mut Vec<T>) {
@@ -290,28 +294,15 @@ pub fn spawn_gatherer(
                 break;
             }
 
-            tracing::trace!(
-                "[GATHER step {step}] CollectingFrames: waiting for {camera_count} camera(s)..."
-            );
             // ── CollectingFrames: recv() one frame from each camera ──
             let mut frames: Vec<FramePacket> = Vec::with_capacity(camera_count);
             let mut disconnected = false;
 
             for (index, (camera_id, receiver)) in frame_receivers.iter().enumerate() {
-                tracing::trace!(
-                    "[GATHER step {step}] blocking recv() for camera[{index}] id={camera_id}..."
-                );
                 match receiver.recv() {
                     Ok(mut packet) => {
                         packet.timestamps.gatherer_received_ns =
                             performance_counter_nanoseconds();
-                        tracing::trace!(
-                            "[GATHER step {step}] RECV camera[{index}] id={camera_id} \
-                             frame#{}  {:.1} KB  gatherer_recv_ns={}",
-                            packet.frame_number,
-                            packet.data.len() as f64 / 1024.0,
-                            packet.timestamps.gatherer_received_ns,
-                        );
                         frames.push(packet);
                     }
                     Err(_) => {
@@ -342,9 +333,6 @@ pub fn spawn_gatherer(
                         );
                     }
                 }
-                tracing::trace!(
-                    "[GATHER step {step}] frame numbers OK: all cameras at frame#{first_fn}"
-                );
             }
             if skip_sync_remaining > 0 {
                 skip_sync_remaining -= 1;
@@ -500,10 +488,17 @@ pub fn spawn_gatherer(
 
             step += 1;
 
-            tracing::trace!(
-                "[GATHER step {step}] sending payload with {} frames downstream...",
-                payload.frames.len(),
-            );
+            // ── Compact per-multiframe TRACE (every N steps only) ──
+            if step % PER_FRAME_LOG_MODULO == 0 {
+                let frame_info: Vec<String> = payload.frames.iter().map(|f| {
+                    format!("#{}:{}KB", f.frame_number, f.data.len() as f64 / 1024.0)
+                }).collect();
+                tracing::trace!(
+                    "[GATHER mf#{step}] {} cams | {}",
+                    payload.frames.len(),
+                    frame_info.join(" "),
+                );
+            }
 
             // ── Send downstream — capture post-send time for downstream_send stat ──
             let pre_send_downstream = gatherer_sm.timestamps.pre_send_downstream_ns;
@@ -521,7 +516,6 @@ pub fn spawn_gatherer(
                         .push((post_send_downstream_ns - pre_send_downstream) as f64);
                 }
             }
-            tracing::trace!("[GATHER step {step}] payload sent downstream OK");
 
             // ── SendingDownstream → CollectingFrames ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::CollectingFrames) {
@@ -636,10 +630,6 @@ pub fn spawn_gatherer(
 
 // ── Statistics printing ──────────────────────────────────────────────────────
 
-fn line(s: &str) {
-    tracing::info!("{}", s);
-}
-
 // ── Table-printing primitives ────────────────────────────────────────────────
 
 /// A simple table schema: one left-aligned name column plus one or more
@@ -651,34 +641,34 @@ struct TableSchema {
 }
 
 impl TableSchema {
-    fn print_header(&self, name_label: &str, headers: &[&str]) {
-        let mut s = String::from("  ");
-        s.push_str(&format!("{name_label:<w$}", w = self.name_w));
+    fn print_header(&self, out: &mut String, name_label: &str, headers: &[&str]) {
+        out.push_str("  ");
+        out.push_str(&format!("{name_label:<w$}", w = self.name_w));
         for (h, w) in headers.iter().zip(&self.cell_widths) {
-            s.push_str(" │ ");
-            s.push_str(&format!("{h:>cw$}", cw = *w));
+            out.push_str(" │ ");
+            out.push_str(&format!("{h:>cw$}", cw = *w));
         }
-        line(&s);
+        out.push('\n');
     }
 
-    fn print_separator(&self) {
-        let mut s = String::from("  ");
-        s.push_str(&"─".repeat(self.name_w));
+    fn print_separator(&self, out: &mut String) {
+        out.push_str("  ");
+        out.push_str(&"─".repeat(self.name_w));
         for w in &self.cell_widths {
-            s.push_str("─┼─");
-            s.push_str(&"─".repeat(*w));
+            out.push_str("─┼─");
+            out.push_str(&"─".repeat(*w));
         }
-        line(&s);
+        out.push('\n');
     }
 
-    fn print_row(&self, name: &str, cells: &[String]) {
-        let mut s = String::from("  ");
-        s.push_str(&format!("{name:<w$}", w = self.name_w));
+    fn print_row(&self, out: &mut String, name: &str, cells: &[String]) {
+        out.push_str("  ");
+        out.push_str(&format!("{name:<w$}", w = self.name_w));
         for (cell, w) in cells.iter().zip(&self.cell_widths) {
-            s.push_str(" │ ");
-            s.push_str(&format!("{cell:>cw$}", cw = *w));
+            out.push_str(" │ ");
+            out.push_str(&format!("{cell:>cw$}", cw = *w));
         }
-        line(&s);
+        out.push('\n');
     }
 }
 
@@ -726,6 +716,7 @@ fn per_camera_cells(
 /// Does NOT print the metric's prose description — see
 /// `FRAMERATE_METRIC_DEFINITIONS.md` at the crate root for that.
 fn print_per_camera_table(
+    out: &mut String,
     metric_name: &str,
     formula: &str,
     schema: &TableSchema,
@@ -734,23 +725,23 @@ fn print_per_camera_table(
     camera_labels: &[String],
     sort_order: &[usize],
 ) {
-    line(&format!("  {metric_name}  {formula}"));
+    out.push_str(&format!("  {metric_name}  {formula}\n"));
     let all_values: Vec<f64> = per_camera_values
         .iter()
         .flat_map(|v| v.iter().copied())
         .collect();
     if all_values.is_empty() {
-        line("    (insufficient samples)");
-        line("");
+        out.push_str("    (insufficient samples)\n\n");
         return;
     }
     let (div, unit) = auto_scale(&all_values);
 
     schema.print_header(
+        out,
         "Camera",
         &["Median", "Mean", "Std", "CV%", "% cycle", "n"],
     );
-    schema.print_separator();
+    schema.print_separator(out);
 
     // Accumulators for cross-camera summary rows.
     let mut acc_medians: Vec<f64> = Vec::new();
@@ -768,7 +759,7 @@ fn print_per_camera_table(
         let stats = match compute_stats(values) {
             Some(s) => s,
             None => {
-                schema.print_row(&label, &["(no samples)".to_string()]);
+                schema.print_row(out, &label, &["(no samples)".to_string()]);
                 continue;
             }
         };
@@ -791,7 +782,7 @@ fn print_per_camera_table(
             acc_pct_of_cycles.push(pct);
         }
 
-        schema.print_row(&label, &per_camera_cells(&stats, div, unit, pct_of_cycle));
+        schema.print_row(out, &label, &per_camera_cells(&stats, div, unit, pct_of_cycle));
     }
 
     if acc_medians.len() >= 2 {
@@ -814,10 +805,11 @@ fn print_per_camera_table(
                 .map_or("—".to_string(), |s| fmt_val(f(s) / div, unit))
         };
 
-        schema.print_separator();
+        schema.print_separator(out);
 
         // Mean camera — each column is the mean of the N per-camera values.
         schema.print_row(
+            out,
             "Mean camera",
             &[
                 val_cell(&s_med, |s| s.mean),
@@ -831,6 +823,7 @@ fn print_per_camera_table(
 
         // Median camera — each column is the median of the N per-camera values.
         schema.print_row(
+            out,
             "Median camera",
             &[
                 val_cell(&s_med, |s| s.median),
@@ -846,15 +839,15 @@ fn print_per_camera_table(
         let spread = acc_medians.iter().cloned().fold(f64::MIN, f64::max)
             - acc_medians.iter().cloned().fold(f64::MAX, f64::min);
         let across_cv = s_med.as_ref().map_or(0.0, |s| s.cv_pct);
-        schema.print_separator();
-        line(&format!(
-            "  Across cameras (of {n} per-camera medians):  spread {sp}  │  CV% {cv}",
+        schema.print_separator(out);
+        out.push_str(&format!(
+            "  Across cameras (of {n} per-camera medians):  spread {sp}  │  CV% {cv}\n",
             n = acc_medians.len(),
             sp = fmt_val(spread / div, unit),
             cv = fmt_pct(across_cv),
         ));
     }
-    line("");
+    out.push('\n');
 }
 
 
@@ -911,79 +904,83 @@ fn print_statistics(
         cell_widths: vec![10, 10, 10, 6, 8, 4],
     };
 
+    let mut out = String::new();
+
     // ── HEADER ──
-    line("");
-    line("═══════════════════════════════════════════════════════════════════════════════");
-    line("  GATHERER STATISTICS");
-    line(&format!(
-        "  {camera_count} camera{cs}, {step} multiframe{ms} observed",
+    out.push('\n');
+    out.push_str("═══════════════════════════════════════════════════════════════════════════════\n");
+    out.push_str("  GATHERER STATISTICS\n");
+    out.push_str(&format!(
+        "  {camera_count} camera{cs}, {step} multiframe{ms} observed\n",
         cs = if camera_count == 1 { "" } else { "s" },
         ms = if step == 1 { "" } else { "s" },
     ));
     match anchor_wall_clock_time() {
-        Some(t) => line(&format!(
-            "  T=0 anchored at {} (system wall-clock)",
+        Some(t) => out.push_str(&format!(
+            "  T=0 anchored at {} (system wall-clock)\n",
             format_wall_clock(t)
         )),
-        None => line("  T=0 anchored at <unknown — init_logging() was never called>"),
+        None => out.push_str("  T=0 anchored at <unknown — init_logging() was never called>\n"),
     };
-    line("  All timestamps below are nanoseconds since that anchor.");
-    line(&format!(
-        "  Samples retained: {} multiframes  (warmup excluded: {}; cooldown excluded: {})",
+    out.push_str("  All timestamps below are nanoseconds since that anchor.\n");
+    out.push_str(&format!(
+        "  Samples retained: {} multiframes  (warmup excluded: {}; cooldown excluded: {})\n",
         retained, excluded_warmup, excluded_cooldown
     ));
-    line("───────────────────────────────────────────────────────────────────────────────");
-    line("");
+    out.push_str("───────────────────────────────────────────────────────────────────────────────\n");
+    out.push('\n');
 
     // ── 1. THROUGHPUT ──
     // Two rows: rate (fps) and period (ms). Same throughput information
     // expressed two ways so it's easy to compare with the duration-valued
     // metrics in the other tables.
-    line("▸ THROUGHPUT ────────────────────────────────────────────────────────────────");
-    line("");
-    summary_schema.print_header("Metric", &summary_headers);
-    summary_schema.print_separator();
+    out.push_str("▸ THROUGHPUT ────────────────────────────────────────────────────────────────\n");
+    out.push('\n');
+    summary_schema.print_header(&mut out, "Metric", &summary_headers);
+    summary_schema.print_separator(&mut out);
     if let Some(stats) = compute_stats(&multiframe_fps) {
-        summary_schema.print_row("Multiframe FPS", &summary_cells(&stats, 1.0, "fps"));
+        summary_schema.print_row(&mut out, "Multiframe FPS", &summary_cells(&stats, 1.0, "fps"));
     } else {
-        summary_schema.print_row("Multiframe FPS", &["(insufficient samples)".to_string()]);
+        summary_schema.print_row(&mut out, "Multiframe FPS", &["(insufficient samples)".to_string()]);
     }
     if let Some(stats) = compute_stats(multiframe_interval_ns) {
         let (div, unit) = auto_scale(multiframe_interval_ns);
-        summary_schema.print_row("Multiframe duration", &summary_cells(&stats, div, unit));
+        summary_schema.print_row(&mut out, "Multiframe duration", &summary_cells(&stats, div, unit));
     } else {
         summary_schema.print_row(
+            &mut out,
             "Multiframe duration",
             &["(insufficient samples)".to_string()],
         );
     }
-    line("");
+    out.push('\n');
 
     // ── 2. INTRA-MULTIFRAME ALIGNMENT ──
-    line("▸ INTRA-MULTIFRAME ALIGNMENT  (one sample per multiframe) ───────────────────");
-    line("");
-    summary_schema.print_header("Metric", &summary_headers);
-    summary_schema.print_separator();
+    out.push_str("▸ INTRA-MULTIFRAME ALIGNMENT  (one sample per multiframe) ───────────────────\n");
+    out.push('\n');
+    summary_schema.print_header(&mut out, "Metric", &summary_headers);
+    summary_schema.print_separator(&mut out);
     if let Some(stats) = compute_stats(frame_arrival_spread_values) {
         let (div, unit) = auto_scale(frame_arrival_spread_values);
-        summary_schema.print_row("Frame arrival spread", &summary_cells(&stats, div, unit));
+        summary_schema.print_row(&mut out, "Frame arrival spread", &summary_cells(&stats, div, unit));
     }
     if let Some(stats) = compute_stats(thread_wakeup_spread_values) {
         let (div, unit) = auto_scale(thread_wakeup_spread_values);
-        summary_schema.print_row("Thread wakeup spread", &summary_cells(&stats, div, unit));
+        summary_schema.print_row(&mut out, "Thread wakeup spread", &summary_cells(&stats, div, unit));
     }
-    line("");
+    out.push('\n');
 
     // ── 3. PER-CAMERA LIFECYCLE ──
-    line(&format!(
-        "▸ PER-CAMERA LIFECYCLE  (one sample per camera per multiframe; {} total) ────",
+    out.push_str(&format!(
+        "▸ PER-CAMERA LIFECYCLE  (one sample per camera per multiframe; {} total) ────\n",
         total_per_camera_samples
     ));
-    line("  One table per metric. Each table: per-camera rows (ordered by");
-    line("  camera_index) + an across-cameras summary row computed over the");
-    line("  per-camera medians.");
-    line("");
+    out.push_str("  One table per metric. Each table: per-camera rows (ordered by\n");
+    out.push_str("  camera_index) + an across-cameras summary row computed over the\n");
+    out.push_str("  per-camera medians.\n");
+    out.push('\n');
     print_per_camera_table(
+        &mut out,
         "WAIT FOR FRAME",
         "(frame_available_ns − loop_start_ns)",
         &per_camera_schema,
@@ -993,6 +990,7 @@ fn print_statistics(
         &sort_order,
     );
     print_per_camera_table(
+        &mut out,
         "JPEG EXTRACT",
         "(post_jpeg_extract_ns − frame_available_ns)",
         &per_camera_schema,
@@ -1002,6 +1000,7 @@ fn print_statistics(
         &sort_order,
     );
     print_per_camera_table(
+        &mut out,
         "CHANNEL SEND WAIT",
         "(gatherer_received_ns − pre_send_ns)",
         &per_camera_schema,
@@ -1011,6 +1010,7 @@ fn print_statistics(
         &sort_order,
     );
     print_per_camera_table(
+        &mut out,
         "CYCLE TOTAL",
         "(loop_start_{N+1} − loop_start_N, per camera)",
         &per_camera_schema,
@@ -1021,13 +1021,13 @@ fn print_statistics(
     );
 
     // ── 4. GATHERER LOOP ──
-    line(&format!(
-        "▸ GATHERER LOOP  (one sample per multiframe; {} samples) ────────────────────",
+    out.push_str(&format!(
+        "▸ GATHERER LOOP  (one sample per multiframe; {} samples) ────────────────────\n",
         gatherer_frames_collection.len()
     ));
-    line("");
-    summary_schema.print_header("Metric", &summary_headers);
-    summary_schema.print_separator();
+    out.push('\n');
+    summary_schema.print_header(&mut out, "Metric", &summary_headers);
+    summary_schema.print_separator(&mut out);
     let gatherer_rows: [(&str, &[f64]); 4] = [
         ("Frames collection time", gatherer_frames_collection),
         ("Gatherer barrier wait", gatherer_barrier_wait_values),
@@ -1037,26 +1037,28 @@ fn print_statistics(
     for (name, values) in &gatherer_rows {
         if let Some(stats) = compute_stats(values) {
             let (div, unit) = auto_scale(values);
-            summary_schema.print_row(name, &summary_cells(&stats, div, unit));
+            summary_schema.print_row(&mut out, name, &summary_cells(&stats, div, unit));
         } else {
-            summary_schema.print_row(name, &["(insufficient samples)".to_string()]);
+            summary_schema.print_row(&mut out, name, &["(insufficient samples)".to_string()]);
         }
     }
-    line("");
+    out.push('\n');
 
     // ── 5. DEFINITIONS POINTER ──
-    line("▸ DEFINITIONS & METHODOLOGY ─────────────────────────────────────────────────");
-    line("");
+    out.push_str("▸ DEFINITIONS & METHODOLOGY ─────────────────────────────────────────────────\n");
+    out.push('\n');
     let definitions_path =
         concat!(env!("CARGO_MANIFEST_DIR"), "/FRAMERATE_METRIC_DEFINITIONS.md");
-    line(&format!(
-        "  See {definitions_path} for definitions of every metric"
+    out.push_str(&format!(
+        "  See {definitions_path} for definitions of every metric\n"
     ));
-    line("  above, the timestamp formulas behind them, and the methodology notes");
-    line("  (warmup/cooldown rationale, CV%, % of cycle semantics, etc.).");
-    line("");
-    line("═══════════════════════════════════════════════════════════════════════════════");
-    line("");
+    out.push_str("  above, the timestamp formulas behind them, and the methodology notes\n");
+    out.push_str("  (warmup/cooldown rationale, CV%, % of cycle semantics, etc.).\n");
+    out.push('\n');
+    out.push_str("═══════════════════════════════════════════════════════════════════════════════\n");
+    out.push('\n');
+
+    tracing::info!("\n{}", out);
 }
 
 // ── Performance snapshot (lightweight JSON for PyO3 bridge polling) ─────

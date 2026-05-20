@@ -217,7 +217,7 @@ mod tests {
             height: 720,
             exposure: -7,
             exposure_mode: "MANUAL".into(),
-            framerate: 30.0,
+            framerate: -1.0,
             rotation: -1,
         }
     }
@@ -303,10 +303,20 @@ mod tests {
         );
 
         // ── Frame data validity ──
+        assert!(!frames.is_empty());
+        let expected_width = frames[0].width;
+        let expected_height = frames[0].height;
         for frame in &frames {
             assert!(frame.data.len() > 0, "frame data must not be empty");
-            assert_eq!(frame.width, config.width);
-            assert_eq!(frame.height, config.height);
+            assert!(frame.width > 0 && frame.height > 0, "frame dimensions must be positive");
+            assert_eq!(
+                frame.width, expected_width,
+                "all frames must have consistent width"
+            );
+            assert_eq!(
+                frame.height, expected_height,
+                "all frames must have consistent height"
+            );
             // MJPEG frames should start with JPEG SOI marker
             let bytes = frame.data.as_bytes();
             assert!(

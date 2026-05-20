@@ -56,7 +56,7 @@ pub fn run_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
                     width: 1280, height: 720,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0, rotation: -1,
+                    framerate: -1.0, rotation: -1,
                 },
                 identity: identity.clone(),
             };
@@ -169,7 +169,7 @@ pub fn run_auto_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
                     width: 1280, height: 720,
                     exposure: -11,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0, rotation: -1,
+                    framerate: -1.0, rotation: -1,
                 },
                 identity: identity.clone(),
             };
@@ -591,7 +591,7 @@ pub fn run_add_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
                     camera_id: identity.camera_id.clone(),
                     camera_index: identity.camera_index as u32,
                     width: 1280, height: 720, exposure: -7,
-                    exposure_mode: "MANUAL".into(), framerate: 30.0, rotation: -1,
+                    exposure_mode: "MANUAL".into(), framerate: -1.0, rotation: -1,
                 },
                 identity: identity.clone(),
             };
@@ -633,7 +633,7 @@ pub fn run_add_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
                 camera_id: reserved.camera_id.clone(),
                 camera_index: reserved.camera_index as u32,
                 width: 1280, height: 720, exposure: -7,
-                exposure_mode: "MANUAL".into(), framerate: 30.0, rotation: -1,
+                exposure_mode: "MANUAL".into(), framerate: -1.0, rotation: -1,
             },
             identity: reserved.clone(),
         },
@@ -715,7 +715,7 @@ pub fn run_remove_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
                     camera_id: identity.camera_id.clone(),
                     camera_index: identity.camera_index as u32,
                     width: 1280, height: 720, exposure: -7,
-                    exposure_mode: "MANUAL".into(), framerate: 30.0, rotation: -1,
+                    exposure_mode: "MANUAL".into(), framerate: -1.0, rotation: -1,
                 },
                 identity: identity.clone(),
             };

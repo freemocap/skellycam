@@ -11,6 +11,7 @@
 
 use std::collections::HashMap;
 
+use super::info_block;
 use crate::cli::CameraCountArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
@@ -43,12 +44,15 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
         None => all_cameras.len(),
     };
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  PAUSE TEST — {} camera{}", num_cameras, if num_cameras == 1 { "" } else { "s" });
-    tracing::info!("  Phases: warmup={WARMUP_FRAMES} → pause={PAUSE_FRAMES} → unpause={UNPAUSE_FRAMES} → toggle={TOGGLE_FRAMES}");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  PAUSE TEST — {} camera{}\n  Phases: warmup={WARMUP_FRAMES} → pause={PAUSE_FRAMES} → unpause={UNPAUSE_FRAMES} → toggle={TOGGLE_FRAMES}\n══════════════════════════════════════════════════",
+            num_cameras,
+            if num_cameras == 1 { "" } else { "s" },
+        ),
+        "",
+    ]);
 
     // ── Build configs and start ────────────────────────────────────────────
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
@@ -63,7 +67,7 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
                     height: 720,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
                 identity: identity.clone(),
@@ -90,8 +94,10 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     tracing::info!("  Warmup complete at frame {current_frame}");
 
     // ── Phase 2: Pause ─────────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Pausing at frame {current_frame} ──");
+    info_block(&[
+        "",
+        &format!("  ── Pausing at frame {current_frame} ──"),
+    ]);
     group.pause();
     assert!(group.is_paused(), "is_paused() must be true after pause()");
 
@@ -122,8 +128,10 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     tracing::info!("  Pause verified: frame stalled at ~{pause_start_frame} (drift: {frame_drift} frames in {pause_polls} polls)");
 
     // ── Phase 3: Unpause ───────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Unpausing at frame {current_frame} ──");
+    info_block(&[
+        "",
+        &format!("  ── Unpausing at frame {current_frame} ──"),
+    ]);
     group.unpause();
     assert!(!group.is_paused(), "is_paused() must be false after unpause()");
 
@@ -142,8 +150,10 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     );
 
     // ── Phase 4: Toggle ────────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Toggle pause at frame {current_frame} ──");
+    info_block(&[
+        "",
+        &format!("  ── Toggle pause at frame {current_frame} ──"),
+    ]);
 
     // Toggle ON
     group.toggle_pause();
@@ -173,19 +183,20 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     tracing::info!("  Toggle OFF verified: frames resumed, now at frame {current_frame}");
 
     // ── Phase 5: Shutdown ──────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Shutting down ──");
+    info_block(&[
+        "",
+        "  ── Shutting down ──",
+    ]);
     group.shutdown()?;
     tracing::info!("  Shutdown complete.");
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  PAUSE TEST COMPLETE");
-    tracing::info!("  Cameras: {num_cameras}");
-    tracing::info!("  Final frame: {current_frame}");
-    tracing::info!("  Polls: {poll_count}");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  PAUSE TEST COMPLETE\n  Cameras: {num_cameras}\n  Final frame: {current_frame}\n  Polls: {poll_count}\n══════════════════════════════════════════════════",
+        ),
+        "",
+    ]);
 
     Ok(())
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use super::info_block;
 use std::time::{Duration, Instant};
 
 use crate::cli::MultiArgs;
@@ -48,7 +49,7 @@ pub fn run(args: &MultiArgs) -> anyhow::Result<()> {
                     height: 720,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
                 identity,
@@ -110,19 +111,20 @@ pub fn run(args: &MultiArgs) -> anyhow::Result<()> {
     let elapsed = first_frame_time
         .map(|t0| t0.elapsed().as_secs_f64())
         .unwrap_or(0.0);
-    tracing::info!("\n══════════════════════════════════════════════════");
-    tracing::info!("  Multi-Camera Summary");
-    tracing::info!("──────────────────────────────────────────────────");
-    tracing::info!("  Cameras:          {num_cameras}");
-    tracing::info!("  Multiframes:      {last_frame}");
-    tracing::info!("  Capture:          {elapsed:.1}s");
-    if elapsed > 0.0 {
-        tracing::info!(
-            "  Multiframe rate:  {:.1} fps",
+    let fps_line = if elapsed > 0.0 {
+        format!(
+            "\n  Multiframe rate:  {:.1} fps",
             (last_frame - 1) as f64 / elapsed
-        );
-    }
-    tracing::info!("══════════════════════════════════════════════════\n");
+        )
+    } else {
+        String::new()
+    };
+    info_block(&[
+        &format!(
+            "══════════════════════════════════════════════════\n  Multi-Camera Summary\n──────────────────────────────────────────────────\n  Cameras:          {num_cameras}\n  Multiframes:      {last_frame}\n  Capture:          {elapsed:.1}s{fps_line}\n══════════════════════════════════════════════════",
+        ),
+        "",
+    ]);
 
     tracing::info!("Shutting down...");
     group.shutdown()?;

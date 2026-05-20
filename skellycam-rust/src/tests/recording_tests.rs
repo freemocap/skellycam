@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use super::info_block;
 use crate::cli::RecordingArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig, RecordingParams};
@@ -55,13 +56,15 @@ pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
         None => all_cameras.len(),
     };
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  RECORDING TEST — {} camera{}", num_cameras, if num_cameras == 1 { "" } else { "s" });
-    tracing::info!("  Output base: {output_base}");
-    tracing::info!("  Phases: warmup={WARMUP_FRAMES} → record={RECORD_FRAMES} → post-record={POST_RECORD_FRAMES}");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  RECORDING TEST — {} camera{}\n  Output base: {output_base}\n  Phases: warmup={WARMUP_FRAMES} → record={RECORD_FRAMES} → post-record={POST_RECORD_FRAMES}\n══════════════════════════════════════════════════",
+            num_cameras,
+            if num_cameras == 1 { "" } else { "s" },
+        ),
+        "",
+    ]);
 
     // ── Build configs ──────────────────────────────────────────────────────
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
@@ -76,7 +79,7 @@ pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
                     height: 720,
                     exposure: -7,
                     exposure_mode: "MANUAL".into(),
-                    framerate: 30.0,
+                    framerate: -1.0,
                     rotation: -1,
                 },
                 identity: identity.clone(),
@@ -104,9 +107,11 @@ pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
 
     // ── Phase 2: Start Recording ───────────────────────────────────────────
     let target_frame = WARMUP_FRAMES;
-    tracing::info!("");
-    tracing::info!("  ── Starting recording at frame {target_frame} ──");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!("  ── Starting recording at frame {target_frame} ──"),
+        "",
+    ]);
 
     let recording_label = format!("cameras-{num_cameras}");
 
@@ -182,8 +187,10 @@ pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
     }
 
     // ── Phase 4: Stop Recording ────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Stopping recording at frame {current_frame} ──");
+    info_block(&[
+        "",
+        &format!("  ── Stopping recording at frame {current_frame} ──"),
+    ]);
 
     let summary = group.stop_recording()?;
     tracing::info!("  RecordingSummary:");

@@ -82,10 +82,10 @@ where
 
         // ── Location ──────────────────────────────────────────────
         let target = metadata.target();
-        let line = metadata
+        let loc = metadata
             .line()
-            .map(|l| l.to_string())
-            .unwrap_or_else(|| "?".to_string());
+            .map(|l| format!(":{l}"))
+            .unwrap_or_default();
 
         // ── Level (padded to 5 chars) ─────────────────────────────
         let level_padded = pad_level(metadata.level().as_str());
@@ -104,7 +104,7 @@ where
 
         write!(
             writer,
-            " |  {level_padded} |  {delta_ms} |  {target}:{line} |  {ts} |  PID:{pid}:{} |  TID:{tid}:{tname}\n",
+            " |  {level_padded} |  {delta_ms} |  {target}{loc} |  {ts} |  PID:{pid}:{} |  TID:{tid}:{tname}\n",
             self.process_name,
         )
     }

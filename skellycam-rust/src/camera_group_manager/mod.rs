@@ -89,12 +89,13 @@ impl CameraGroupManager {
 
     /// Shut down and remove all camera groups.
     pub fn close_all_groups(&mut self) {
+        let ids: Vec<String> = self.groups.keys().cloned().collect();
         tracing::info!(
-            "CameraGroupManager: closing all {} group(s)",
-            self.groups.len()
+            "CameraGroupManager: closing all {} group(s): [{}]",
+            ids.len(),
+            ids.join(", ")
         );
-        for (id, mut group) in self.groups.drain() {
-            tracing::info!("CameraGroupManager: closing group {id}");
+        for (_id, mut group) in self.groups.drain() {
             let _ = group.shutdown();
         }
     }

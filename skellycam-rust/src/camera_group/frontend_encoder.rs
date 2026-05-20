@@ -157,13 +157,7 @@ pub fn encode_multiframe(payload: &MultiFramePayload) -> Result<Vec<u8>, String>
     for frame in &payload.frames {
         match &frame.data {
             FrameData::Mjpg(jpeg_bytes) => {
-                let output = if let Some(rotated) =
-                    super::jpeg_transform::rotate_jpeg_lossless(jpeg_bytes, frame.rotation)
-                {
-                    rotated
-                } else {
-                    jpeg_bytes.clone()
-                };
+                let output = jpeg_bytes.clone();
                 let len = output.len();
                 jpegs.push(output);
                 display_widths.push(frame.width);

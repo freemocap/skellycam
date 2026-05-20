@@ -95,8 +95,8 @@ fn main() {
 
     // ── Set up artifact paths ─────────────────────────────────────────────
     // Paths embed the tag so you can always see which build is cached:
-    //   target/build-artifacts/{tag}/{archive_name}
-    //   target/build-artifacts/{tag}/{target_triple}/lib/
+    //   target/release/build-artifacts/{tag}/{archive_name}
+    //   target/release/build-artifacts/{tag}/{target_triple}/lib/
     let artifact_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let target_dir = artifact_dir
         .parent()  // out/

@@ -97,7 +97,50 @@ unsafe extern "C" {
     /// Fast, non-invasive probe: checks whether a camera is likely available
     /// for use. Returns CAPRESULT_OK if available, CAPRESULT_ERR if in use
     /// or unavailable, CAPRESULT_DEVICENOTFOUND if the index is out of range.
+    ///
+    /// WARNING: On Windows, DirectShow devices are shareable — this can return
+    /// CAPRESULT_OK even when another app is actively streaming from the camera.
+    /// For a definitive answer, use Cap_probeDevice or Cap_verifyDevice.
     pub fn Cap_isDeviceAvailable(ctx: CapContext, index: CapDeviceID) -> CapResult;
+
+    /// Invasive probe: opens the device, waits for a frame, closes it.
+    /// DEFINITIVE availability check. Powers on the sensor, may flash LED.
+    /// Takes ~500ms+ per camera.
+    /// Pass formatID=0 for the first available format, timeoutMs=0 for default 2000ms.
+    pub fn Cap_probeDevice(
+        ctx: CapContext,
+        index: CapDeviceID,
+        format_id: CapFormatID,
+        timeout_ms: u32,
+    ) -> CapResult;
+
+    /// Convenience: chains Cap_isDeviceAvailable + Cap_probeDevice in one call.
+    /// Returns CAPRESULT_OK only if the device can actually deliver frames.
+    /// Same side effects and timing as Cap_probeDevice.
+    pub fn Cap_verifyDevice(
+        ctx: CapContext,
+        index: CapDeviceID,
+        format_id: CapFormatID,
+        timeout_ms: u32,
+    ) -> CapResult;
+
+    /// Refresh the device list to reflect currently attached/removed cameras.
+    /// After calling, re-query device count and names (indices may change).
+    pub fn Cap_refreshDevices(ctx: CapContext) -> CapResult;
+
+    /// Check whether the device backing an open stream is still connected.
+    pub fn Cap_isDeviceStillConnected(ctx: CapContext, stream: CapStream) -> CapResult;
+
+    // ── Stream info ────────────────────────────────────────────────
+
+    /// Get the actual negotiated resolution of an open stream.
+    /// May differ from the requested format if the driver overrides it.
+    pub fn Cap_getStreamResolution(
+        ctx: CapContext,
+        stream: CapStream,
+        out_width: *mut u32,
+        out_height: *mut u32,
+    ) -> CapResult;
 
     // ── Raw MJPEG API (no RGB decode in capture loop) ──────────────
 

@@ -63,26 +63,44 @@ fn make_unique_id(
     hex[hex.len() - 4..].to_string()
 }
 
+/// Candidate camera found during Phase 1 enumeration — ready for Phase 2
+/// invasive probe.
+struct Candidate {
+    index: CapDeviceID,
+    display_name: String,
+    device_path: String,
+    short_id: String,
+    vid: Option<u16>,
+    pid: Option<u16>,
+    first_mjpg_format_id: CapFormatID,
+    num_formats: i32,
+    formats: Vec<CameraFormatInfo>,
+}
+
 /// Detect all DirectShow cameras attached to the system.
 ///
-/// Returns a list of `CameraDetection` values, each pairing a `CameraIdentity`
-/// with the result of a fast availability probe (`Cap_isDeviceAvailable`).
+/// Phase 1 (serial, fast ~1ms/device): enumerate names, paths, and formats.
+/// Phase 2 (parallel, slow ~500ms/device): invasive `Cap_verifyDevice` probe
+/// on each candidate with per-thread contexts. This is the ONLY reliable way
+/// to determine if a camera can actually deliver frames — DirectShow devices
+/// are shareable, so `Cap_isDeviceAvailable` alone returns false positives.
 pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
-    unsafe {
+    // ── Phase 1: Fast enumeration (serial) ───────────────────────────
+    let candidates = unsafe {
         let ctx = Cap_createContext();
         if ctx.is_null() {
             anyhow::bail!("Cap_createContext returned null during detection");
         }
 
         let device_count = Cap_getDeviceCount(ctx);
-        tracing::info!("  -- Camera Detection --");
-        tracing::info!("  openpnp-capture reports {device_count} device(s)\n");
+        tracing::info!(
+            "  -- Camera Detection --\n  openpnp-capture reports {device_count} device(s)\n"
+        );
 
-        let mut cameras: Vec<CameraDetection> = Vec::new();
+        let mut candidates: Vec<Candidate> = Vec::new();
         let mut filtered_no_formats: u32 = 0;
         let mut filtered_virtual: u32 = 0;
         let mut filtered_no_mjpg: u32 = 0;
-        let mut unavailable_count: u32 = 0;
 
         for index in 0..device_count {
             let display_name = cstr_to_string(Cap_getDeviceName(ctx, index))
@@ -93,7 +111,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
 
             // ── Filter: virtual cameras ──
             if display_name.to_lowercase().contains("virtual") {
-                tracing::info!(
+                tracing::debug!(
                     "    [{index}] \"{display_name}\" — VIRTUAL CAMERA, skipping"
                 );
                 filtered_virtual += 1;
@@ -102,7 +120,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
 
             // ── Filter: no formats ──
             if num_formats <= 0 {
-                tracing::info!(
+                tracing::debug!(
                     "    [{index}] \"{display_name}\" — NO FORMATS, skipping"
                 );
                 filtered_no_formats += 1;
@@ -115,10 +133,14 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
             let mut formats: Vec<CameraFormatInfo> =
                 Vec::with_capacity(num_formats as usize);
             let mut has_mjpg = false;
+            let mut first_mjpg_format_id: CapFormatID = 0;
             for f in 0..num_formats {
                 let mut info = CapFormatInfo::default();
                 if Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) == CAPRESULT_OK {
                     if info.fourcc == FOURCC_MJPG {
+                        if !has_mjpg {
+                            first_mjpg_format_id = f as CapFormatID;
+                        }
                         has_mjpg = true;
                     }
                     formats.push(CameraFormatInfo {
@@ -133,7 +155,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
 
             // ── Filter: no MJPG format ──
             if !has_mjpg {
-                tracing::info!(
+                tracing::debug!(
                     "    [{index}] \"{display_name}\" — NO MJPG FORMAT, skipping (has {} formats: {:?})",
                     num_formats,
                     formats.iter().map(|f| f.fourcc_str.as_str()).collect::<Vec<_>>()
@@ -142,57 +164,121 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
                 continue;
             }
 
-            // ── Availability probe (fast, non-invasive) ──
-            let available = Cap_isDeviceAvailable(ctx, index) == CAPRESULT_OK;
-            if !available {
-                unavailable_count += 1;
-            }
-
             let vid_str = vid.map_or("????".to_string(), |v| format!("{v:04x}"));
             let pid_str = pid.map_or("????".to_string(), |p| format!("{p:04x}"));
-            let avail_str = if available { "AVAILABLE" } else { "UNAVAILABLE" };
+            tracing::info!("[{index}] {display_name} id:[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats} MJPG  (probing...)");
 
-            tracing::info!("[{index}] {display_name} id:[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats} MJPG  {avail_str}");
-
-            cameras.push(CameraDetection {
-                identity: CameraIdentity {
-                    camera_name: display_name,
-                    camera_index: index as i32,
-                    camera_id: short_id,
-                    device_path,
-                    formats,
-                },
-                available,
+            candidates.push(Candidate {
+                index,
+                display_name,
+                device_path,
+                short_id,
+                vid,
+                pid,
+                first_mjpg_format_id,
+                num_formats,
+                formats,
             });
         }
 
-        Cap_releaseContext(ctx);
-
-        // ── Summary ──
+        // ── Phase 1 summary ──
         let total_filtered = filtered_virtual + filtered_no_formats + filtered_no_mjpg;
-        if total_filtered > 0 || unavailable_count > 0 {
-            tracing::info!("");
+        let mut summary = String::new();
+        if total_filtered > 0 {
+            summary.push('\n');
             if filtered_virtual > 0 {
-                tracing::info!("  -- {filtered_virtual} virtual camera(s) filtered --");
+                summary.push_str(&format!(
+                    "  -- {filtered_virtual} virtual camera(s) filtered --\n"
+                ));
             }
             if filtered_no_formats > 0 {
-                tracing::info!("  -- {filtered_no_formats} camera(s) filtered (no formats) --");
+                summary.push_str(&format!(
+                    "  -- {filtered_no_formats} camera(s) filtered (no formats) --\n"
+                ));
             }
             if filtered_no_mjpg > 0 {
-                tracing::info!("  -- {filtered_no_mjpg} camera(s) filtered (no MJPG format) --");
-            }
-            if unavailable_count > 0 {
-                tracing::warn!("  -- {unavailable_count} camera(s) detected but UNAVAILABLE (cannot connect) --");
+                summary.push_str(&format!(
+                    "  -- {filtered_no_mjpg} camera(s) filtered (no MJPG format) --\n"
+                ));
             }
         }
-        let available_count = cameras.len() as u32 - unavailable_count;
-        tracing::info!(
-            "\n  = {} camera(s) ready ({} available, {} unavailable) =\n",
-            cameras.len(),
+        summary.push_str(&format!(
+            "  = {} candidate(s) to probe =",
+            candidates.len()
+        ));
+        tracing::info!("\n{summary}\n");
+
+        Cap_releaseContext(ctx);
+        candidates
+    };
+
+    // ── Phase 2: Invasive probe (parallel, per-thread contexts) ─────
+    if candidates.is_empty() {
+        tracing::info!("  No cameras to probe.\n");
+        return Ok(Vec::new());
+    }
+
+    let results: Vec<CameraDetection> = std::thread::scope(|s| {
+        let mut handles = Vec::new();
+        for c in candidates {
+            handles.push(s.spawn(move || unsafe {
+                let tctx = Cap_createContext();
+                if tctx.is_null() {
+                    tracing::error!("Thread: Cap_createContext returned null");
+                    return CameraDetection {
+                        identity: CameraIdentity {
+                            camera_name: c.display_name,
+                            camera_index: c.index as i32,
+                            camera_id: c.short_id,
+                            device_path: c.device_path,
+                            formats: c.formats,
+                        },
+                        available: false,
+                    };
+                }
+                let available =
+                    Cap_verifyDevice(tctx, c.index, c.first_mjpg_format_id, 0) == CAPRESULT_OK;
+                Cap_releaseContext(tctx);
+
+                let avail_str = if available { "AVAILABLE" } else { "IN USE" };
+                let vid_str = c.vid.map_or("????".to_string(), |v| format!("{v:04x}"));
+                let pid_str = c.pid.map_or("????".to_string(), |p| format!("{p:04x}"));
+                tracing::info!(
+                    "[{}] {} id:[{}]  vid_{vid_str}  pid_{pid_str}  formats={} MJPG  {avail_str}",
+                    c.index, c.display_name, c.short_id, c.num_formats
+                );
+
+                CameraDetection {
+                    identity: CameraIdentity {
+                        camera_name: c.display_name,
+                        camera_index: c.index as i32,
+                        camera_id: c.short_id,
+                        device_path: c.device_path,
+                        formats: c.formats,
+                    },
+                    available,
+                }
+            }));
+        }
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+
+    // ── Final summary ──
+    let unavailable_count = results.iter().filter(|d| !d.available).count() as u32;
+    let available_count = results.len() as u32 - unavailable_count;
+    if unavailable_count > 0 {
+        tracing::warn!(
+            "\n  -- {unavailable_count} camera(s) detected but UNAVAILABLE (cannot connect) --\n  = {} camera(s) ready ({} available, {} unavailable) =\n",
+            results.len(),
             available_count,
             unavailable_count
         );
-
-        Ok(cameras)
+    } else {
+        tracing::info!(
+            "\n  = {} camera(s) ready (all available) =\n",
+            results.len()
+        );
     }
+
+    Ok(results)
 }

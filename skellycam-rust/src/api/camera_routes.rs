@@ -399,23 +399,24 @@ async fn stop_recording(
         .stop_recording()
         .map_err(|e| AppError::Internal(format!("Failed to stop recording: {e}")))?;
 
-    tracing::info!(
+    let mut lines: Vec<String> = Vec::new();
+    lines.push(format!(
         "[recording] stopped — {} frames/camera, {} videos, {} CSVs",
         summary.total_frames_per_camera,
         summary.video_paths.len(),
         summary.csv_paths.len()
-    );
-
+    ));
     for video_path in &summary.video_paths {
-        tracing::info!("[recording] video saved: {}", video_path.display());
+        lines.push(format!("[recording]   video: {}", video_path.display()));
     }
     for csv_path in &summary.csv_paths {
-        tracing::info!("[recording] timestamps saved: {}", csv_path.display());
+        lines.push(format!("[recording]   timestamps: {}", csv_path.display()));
     }
-    tracing::info!(
-        "[recording] info JSON saved: {}",
+    lines.push(format!(
+        "[recording]   info JSON: {}",
         summary.info_json_path.display()
-    );
+    ));
+    tracing::info!("\n{}", lines.join("\n"));
 
     let total_frames = summary.total_frames_per_camera as i32;
     let recording_path = summary
@@ -530,10 +531,9 @@ async fn close_all_groups(
     tracing::info!("[close] shutting down all camera groups");
     let mut manager = state.camera_manager.lock().await;
     let count = manager.group_count();
-    tracing::debug!("[close] {} group(s) to close", count);
     manager.close_all_groups();
     *state.active_group_id.lock().await = None;
-    tracing::info!("[close] all groups closed");
+    tracing::info!("[close] all {count} group(s) closed");
     Ok(Json(CloseAllResponse { success: true }))
 }
 
