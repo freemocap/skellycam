@@ -240,3 +240,4 @@ CLAUDE.md
 skellycam-ui/skellycam_server
 test_timestamps.json
 /skellycam-rust/src/camera_group/.claude/settings.local.json
+/skellycam-rust/.claude/settings.local.json
