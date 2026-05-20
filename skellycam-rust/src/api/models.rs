@@ -37,10 +37,12 @@ pub struct DetectedCamera {
     pub backend_name: Option<String>,
     pub formats: Vec<CameraFormatSchema>,
     pub camera_id: String,
+    pub available: bool,
 }
 
-impl From<crate::camera::CameraIdentity> for DetectedCamera {
-    fn from(c: crate::camera::CameraIdentity) -> Self {
+impl From<crate::camera::CameraDetection> for DetectedCamera {
+    fn from(d: crate::camera::CameraDetection) -> Self {
+        let c = d.identity;
         Self {
             index: c.camera_index,
             name: c.camera_name,
@@ -55,6 +57,7 @@ impl From<crate::camera::CameraIdentity> for DetectedCamera {
             backend_name: None,
             formats: c.formats.iter().map(CameraFormatSchema::from).collect(),
             camera_id: c.camera_id,
+            available: d.available,
         }
     }
 }

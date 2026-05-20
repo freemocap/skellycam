@@ -98,19 +98,25 @@ fn main() {
     //   target/build-artifacts/{tag}/{archive_name}
     //   target/build-artifacts/{tag}/{target_triple}/lib/
     let artifact_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let build_artifacts = artifact_dir
+    let target_dir = artifact_dir
         .parent()  // out/
         .and_then(|p| p.parent())  // build/
         .and_then(|p| p.parent())  // target/debug|release/
         .unwrap_or_else(|| {
             error!("Could not resolve target directory from OUT_DIR: {}", artifact_dir.display());
             std::process::exit(1);
-        })
-        .join("build-artifacts")
-        .join(&tag);
+        });
+    let build_artifacts_base = target_dir.join("build-artifacts");
+    let build_artifacts = build_artifacts_base.join(&tag);
+
+    // Sentinel file: forces Cargo to re-run build.rs on every invocation
+    // so get_latest_tag() always queries GitHub and catches new releases.
+    let sentinel = build_artifacts_base.join(".latest-resolved-tag");
+    println!("cargo:rerun-if-changed={}", sentinel.display());
 
     debug!(
         build_artifacts = %build_artifacts.display(),
+        sentinel = %sentinel.display(),
         "Artifact cache directory"
     );
 
@@ -302,6 +308,15 @@ fn main() {
             }
         }
     }
+
+    // ── Write sentinel to force re-run on next build ─────────────────────
+    fs::write(&sentinel, &tag).unwrap_or_else(|e| {
+        error!(
+            "Failed to write sentinel file '{}': {e}",
+            sentinel.display()
+        );
+    });
+    debug!(sentinel = %sentinel.display(), tag = %tag, "Wrote sentinel");
 
     info!("Skellycam build script complete");
 }

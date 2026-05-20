@@ -45,6 +45,9 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 # SHA hashing (camera ID generation — must match Python hashlib.sha256)
 sha2 = "0.10"
 
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
 # Error handling
 anyhow = "1"
 thiserror = "2"

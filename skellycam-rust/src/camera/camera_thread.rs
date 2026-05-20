@@ -61,7 +61,9 @@ pub fn spawn(
     let config = config.clone();
     let identity = identity.clone();
 
-    let thread_handle = thread::spawn(move || {
+    let thread_handle = thread::Builder::new()
+        .name(label.clone())
+        .spawn(move || {
         let result = run_camera_thread(
             config,
             &identity,
@@ -78,7 +80,7 @@ pub fn spawn(
                 "Camera {label} thread error: {error}"
             )));
         }
-    });
+    })?;
 
     Ok((command_sender, event_receiver, frame_receiver, thread_handle))
 }

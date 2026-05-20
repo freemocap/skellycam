@@ -7,24 +7,17 @@
 
 use std::collections::HashMap;
 
+use crate::cli::RotateArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig, RecordingParams};
 
 const FRAMES_PER_ROTATION: i64 = 20;
 const RECORD_FRAMES: i64 = 60;
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count: Option<u32> = args
-        .iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok());
-
+pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
     let output_base = args
-        .iter()
-        .position(|arg| arg == "--output")
-        .and_then(|pos| args.get(pos + 1))
-        .map(|s| s.to_string())
+        .output
+        .clone()
         .unwrap_or_else(|| {
             dirs::home_dir()
                 .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -34,14 +27,17 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
                 .to_string()
         });
 
-    let all_cameras = detect_cameras()?;
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
 
-    let num = camera_count
-        .unwrap_or(all_cameras.len() as u32)
-        .min(all_cameras.len() as u32) as usize;
+    let num = args.cameras
+        .unwrap_or(all_cameras.len())
+        .min(all_cameras.len());
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");

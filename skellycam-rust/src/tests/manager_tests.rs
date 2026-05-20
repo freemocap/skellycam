@@ -1,31 +1,29 @@
 use std::time::{Duration, Instant};
 
+use crate::cli::CameraCountArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::CameraGroupConfig;
 use skellycam::camera_group_manager::CameraGroupManager;
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count = args
-        .iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok());
-
-    let all_cameras = detect_cameras()?;
+pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
 
-    let camera_count = match camera_count {
+    let camera_count = match args.cameras {
         Some(n) => {
-            if n as usize > all_cameras.len() {
+            if n > all_cameras.len() {
                 anyhow::bail!(
                     "Requested {} cameras but only {} available",
                     n,
                     all_cameras.len()
                 );
             }
-            n as usize
+            n
         }
         None => all_cameras.len(),
     };

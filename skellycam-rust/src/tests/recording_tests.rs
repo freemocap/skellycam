@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::cli::RecordingArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig, RecordingParams};
 
@@ -19,18 +20,10 @@ const WARMUP_FRAMES: i64 = 60;
 const RECORD_FRAMES: i64 = 150;
 const POST_RECORD_FRAMES: i64 = 30;
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count = args
-        .iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok());
-
+pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
     let output_base = args
-        .iter()
-        .position(|arg| arg == "--output")
-        .and_then(|pos| args.get(pos + 1))
-        .map(|s| s.to_string())
+        .output
+        .clone()
         .unwrap_or_else(|| {
             let home = dirs::home_dir()
                 .unwrap_or_else(|| PathBuf::from("."));
@@ -40,21 +33,24 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
                 .to_string()
         });
 
-    let all_cameras = detect_cameras()?;
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
 
-    let num_cameras = match camera_count {
+    let num_cameras = match args.cameras {
         Some(n) => {
-            if n as usize > all_cameras.len() {
+            if n > all_cameras.len() {
                 anyhow::bail!(
                     "Requested {} cameras but only {} available",
                     n,
                     all_cameras.len()
                 );
             }
-            n as usize
+            n
         }
         None => all_cameras.len(),
     };

@@ -92,6 +92,13 @@ unsafe extern "C" {
         out_value: *mut u32,
     ) -> CapResult;
 
+    // ── Device availability ─────────────────────────────────────────
+
+    /// Fast, non-invasive probe: checks whether a camera is likely available
+    /// for use. Returns CAPRESULT_OK if available, CAPRESULT_ERR if in use
+    /// or unavailable, CAPRESULT_DEVICENOTFOUND if the index is out of range.
+    pub fn Cap_isDeviceAvailable(ctx: CapContext, index: CapDeviceID) -> CapResult;
+
     // ── Raw MJPEG API (no RGB decode in capture loop) ──────────────
 
     /// Open a stream in raw MJPEG mode. Takes a format_id (same as Cap_openStream)

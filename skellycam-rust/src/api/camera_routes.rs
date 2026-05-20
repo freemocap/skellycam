@@ -180,8 +180,8 @@ async fn create_or_update_group(
         tracing::debug!("[apply] all {} camera(s) already known — skipping detection", request.camera_configs.len());
     }
 
-    let detected = if !need_detection.is_empty() {
-        let result: Result<Vec<CameraIdentity>, AppError> = tokio::task::spawn_blocking(|| detect_cameras())
+    let detected: Option<Vec<crate::camera::CameraDetection>> = if !need_detection.is_empty() {
+        let result: Result<Vec<crate::camera::CameraDetection>, AppError> = tokio::task::spawn_blocking(|| detect_cameras())
             .await
             .map_err(|e| AppError::Internal(format!("Camera detection panicked: {e}")))?
             .map_err(|e| AppError::Internal(format!("Camera detection failed: {e}")));
@@ -211,8 +211,8 @@ async fn create_or_update_group(
         } else if let Some(ref detected_list) = detected {
             detected_list
                 .iter()
-                .find(|c| c.camera_id == *cam_id || c.camera_index == input.camera_index)
-                .cloned()
+                .find(|d| d.identity.camera_id == *cam_id || d.identity.camera_index == input.camera_index)
+                .map(|d| d.identity.clone())
                 .ok_or_else(|| {
                     AppError::BadRequest(format!(
                         "Camera '{}' (index {}) not found in detected devices",

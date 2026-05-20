@@ -7,43 +7,24 @@
 //!   test update add-camera [--cameras N]      — add a camera mid-stream
 //!   test update remove-camera [--cameras N]   — remove a camera mid-stream
 
+use crate::cli::{CameraCountArgs, ResolutionArgs, FramerateArgs};
 use skellycam::camera_group::CameraGroup;
-
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    match args.first().map(|s| s.as_str()) {
-Some("exposure") => run_exposure_test(&args[1..]),
-        Some("auto-exposure") => run_auto_exposure_test(&args[1..]),
-        Some("resolution") => run_resolution_test(&args[1..]),
-        Some("framerate") => run_framerate_test(&args[1..]),
-        Some("add-camera") => run_add_camera_test(&args[1..]),
-        Some("remove-camera") => run_remove_camera_test(&args[1..]),
-        Some(other) => {
-            eprintln!("unknown update subcommand: {other}");
-            eprintln!("available: exposure, auto-exposure, resolution, framerate, add-camera, remove-camera");
-            Ok(())
-        }
-        None => {
-            eprintln!("usage: cargo run --release -- test update <subcommand> [flags]");
-            eprintln!("available: exposure, auto-exposure, resolution, framerate, add-camera, remove-camera");
-            Ok(())
-        }
-    }
-}
 
 // ── Exposure test ──────────────────────────────────────────────────────────────
 
-fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
+pub fn run_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     use std::collections::HashMap;
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
 
-    let camera_count = parse_camera_count(args);
-
-    let all_cameras = detect_cameras()?;
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(all_cameras.len() as u32) as usize;
+    let num = args.cameras.unwrap_or(all_cameras.len());
 
     // The camera reports its hardware exposure range during stream open.
     // We detect it from the logs (min=-13 max=-1 default=-6 for these USB cams).
@@ -156,17 +137,19 @@ fn run_exposure_test(args: &[String]) -> anyhow::Result<()> {
 
 // ── Auto-Exposure test ────────────────────────────────────────────────────────
 
-fn run_auto_exposure_test(args: &[String]) -> anyhow::Result<()> {
+pub fn run_auto_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     use std::collections::HashMap;
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
 
-    let camera_count = parse_camera_count(args);
-    let all_cameras = detect_cameras()?;
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(all_cameras.len() as u32) as usize;
+    let num = args.cameras.unwrap_or(all_cameras.len());
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
@@ -289,21 +272,23 @@ fn apply_exposure_mode(
 
 // ── Resolution test ────────────────────────────────────────────────────────────
 
-fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
+pub fn run_resolution_test(args: &ResolutionArgs) -> anyhow::Result<()> {
     use std::collections::BTreeSet;
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
-    let camera_index = parse_camera_index(args).unwrap_or(0);
-    let all_cameras = detect_cameras()?;
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
     let identity = all_cameras
         .iter()
-        .find(|c| c.camera_index == camera_index as i32)
-        .ok_or_else(|| anyhow::anyhow!("Camera index {camera_index} not found"))?;
+        .find(|c| c.camera_index == args.camera_index as i32)
+        .ok_or_else(|| anyhow::anyhow!("Camera index {} not found", args.camera_index))?;
 
     // Collect all unique MJPG resolutions (deduplicated, sorted by pixel count)
     let unique_resolutions: BTreeSet<(u64, u32, u32, u32)> = identity
@@ -322,39 +307,28 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
         anyhow::bail!("No MJPG formats found");
     }
 
-    // Sample evenly; default to 5 when no --sample flag given so the
-    // scan stays fast. Pass --sample=0 to scan every resolution.
-    let sample = parse_sample_count(args).or(Some(5));
-    if let Some(n) = sample {
-        if n > 0 && resolutions.len() > n {
-            let step = resolutions.len() as f64 / n as f64;
-            let mut sampled = Vec::with_capacity(n);
-            sampled.push(resolutions[0]);
-            for i in 1..(n - 1) {
-                let idx = (i as f64 * step).round() as usize;
-                sampled.push(resolutions[idx.min(resolutions.len() - 2)]);
-            }
-            sampled.push(resolutions[resolutions.len() - 1]);
-            resolutions = sampled;
+    // Sample evenly; default to 5. Pass --sample=0 to scan every resolution.
+    let sample_n = args.sample;
+    if sample_n > 0 && resolutions.len() > sample_n {
+        let step = resolutions.len() as f64 / sample_n as f64;
+        let mut sampled = Vec::with_capacity(sample_n);
+        sampled.push(resolutions[0]);
+        for i in 1..(sample_n - 1) {
+            let idx = (i as f64 * step).round() as usize;
+            sampled.push(resolutions[idx.min(resolutions.len() - 2)]);
         }
+        sampled.push(resolutions[resolutions.len() - 1]);
+        resolutions = sampled;
     }
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
-    if let Some(n) = sample {
-        tracing::info!(
-            "  RESOLUTION SCAN — {} ({} of {} resolutions sampled)",
-            identity.label(),
-            resolutions.len(),
-            n,
-        );
-    } else {
-        tracing::info!(
-            "  RESOLUTION SCAN — {} ({} resolutions)",
-            identity.label(),
-            resolutions.len(),
-        );
-    }
+    tracing::info!(
+        "  RESOLUTION SCAN — {} ({} of {} resolutions sampled)",
+        identity.label(),
+        resolutions.len(),
+        sample_n,
+    );
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
@@ -436,21 +410,23 @@ fn run_resolution_test(args: &[String]) -> anyhow::Result<()> {
 
 // ── Framerate test ─────────────────────────────────────────────────────────────
 
-fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
+pub fn run_framerate_test(args: &FramerateArgs) -> anyhow::Result<()> {
     use std::collections::BTreeSet;
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
-    let camera_index = parse_camera_index(args).unwrap_or(0);
-    let all_cameras = detect_cameras()?;
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
     let identity = all_cameras
         .iter()
-        .find(|c| c.camera_index == camera_index as i32)
-        .ok_or_else(|| anyhow::anyhow!("Camera index {camera_index} not found"))?;
+        .find(|c| c.camera_index == args.camera_index as i32)
+        .ok_or_else(|| anyhow::anyhow!("Camera index {} not found", args.camera_index))?;
 
     // Collect unique (fps, width, height) combos across ALL MJPG formats,
     // sorted by fps then resolution
@@ -472,42 +448,30 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
         fps_set.into_iter().collect()
     };
 
-    // Sample evenly; default to 5 when no --sample flag given so the
-    // scan stays fast. Pass --sample=0 to scan every combo.
-    let sample = parse_sample_count(args).or(Some(5));
+    // Sample evenly; default to 5. Pass --sample=0 to scan every combo.
+    let sample_n = args.sample;
     let total_combos = combos.len();
-    if let Some(n) = sample {
-        if n > 0 && combos.len() > n {
-            let step = combos.len() as f64 / n as f64;
-            let mut sampled = Vec::with_capacity(n);
-            sampled.push(combos[0]);
-            for i in 1..(n - 1) {
-                let idx = (i as f64 * step).round() as usize;
-                sampled.push(combos[idx.min(combos.len() - 2)]);
-            }
-            sampled.push(combos[combos.len() - 1]);
-            combos = sampled;
+    if sample_n > 0 && combos.len() > sample_n {
+        let step = combos.len() as f64 / sample_n as f64;
+        let mut sampled = Vec::with_capacity(sample_n);
+        sampled.push(combos[0]);
+        for i in 1..(sample_n - 1) {
+            let idx = (i as f64 * step).round() as usize;
+            sampled.push(combos[idx.min(combos.len() - 2)]);
         }
+        sampled.push(combos[combos.len() - 1]);
+        combos = sampled;
     }
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");
-    if let Some(_n) = sample {
-        tracing::info!(
-            "  FRAMERATE SCAN — {} ({} unique fps × {} of {} combos sampled)",
-            identity.label(),
-            unique_fps.len(),
-            combos.len(),
-            total_combos,
-        );
-    } else {
-        tracing::info!(
-            "  FRAMERATE SCAN — {} ({} unique fps × {} combos)",
-            identity.label(),
-            unique_fps.len(),
-            combos.len(),
-        );
-    }
+    tracing::info!(
+        "  FRAMERATE SCAN — {} ({} unique fps × {} of {} combos sampled)",
+        identity.label(),
+        unique_fps.len(),
+        combos.len(),
+        total_combos,
+    );
     tracing::info!("══════════════════════════════════════════════════");
     tracing::info!("");
 
@@ -587,13 +551,16 @@ fn run_framerate_test(args: &[String]) -> anyhow::Result<()> {
 
 // ── Add-camera test ────────────────────────────────────────────────────────────
 
-fn run_add_camera_test(args: &[String]) -> anyhow::Result<()> {
+pub fn run_add_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
-    let all_cameras = detect_cameras()?;
-    let camera_count = parse_camera_count(args).unwrap_or(all_cameras.len() as u32);
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
+    let camera_count = args.cameras.unwrap_or(all_cameras.len()) as u32;
     if camera_count < 2 {
         anyhow::bail!("Need at least 2 cameras for add-camera test (one to start, one to add)");
     }
@@ -712,13 +679,16 @@ fn run_add_camera_test(args: &[String]) -> anyhow::Result<()> {
 
 // ── Remove-camera test ─────────────────────────────────────────────────────────
 
-fn run_remove_camera_test(args: &[String]) -> anyhow::Result<()> {
+pub fn run_remove_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     use skellycam::camera::{detect_cameras, CameraConfig};
     use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
     use std::collections::HashMap;
 
-    let all_cameras = detect_cameras()?;
-    let camera_count = parse_camera_count(args).unwrap_or(all_cameras.len() as u32);
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
+    let camera_count = args.cameras.unwrap_or(all_cameras.len()) as u32;
     if camera_count < 2 {
         anyhow::bail!("Need at least 2 cameras for remove-camera test");
     }
@@ -816,29 +786,6 @@ fn run_remove_camera_test(args: &[String]) -> anyhow::Result<()> {
     tracing::info!("");
 
     Ok(())
-}
-
-// ── Shared helpers ─────────────────────────────────────────────────────────────
-
-fn parse_camera_count(args: &[String]) -> Option<u32> {
-    args.iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok())
-}
-
-fn parse_camera_index(args: &[String]) -> Option<u32> {
-    args.iter()
-        .position(|arg| arg == "--camera-index")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok())
-}
-
-fn parse_sample_count(args: &[String]) -> Option<usize> {
-    args.iter()
-        .position(|arg| arg == "--sample")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<usize>().ok())
 }
 
 fn poll_frames(

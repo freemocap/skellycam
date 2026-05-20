@@ -197,7 +197,9 @@ pub fn spawn_gatherer(
     performance_snapshot: Arc<std::sync::Mutex<Option<String>>>,
 ) -> JoinHandle<()> {
     alive.store(true, Ordering::SeqCst);
-    thread::spawn(move || {
+    thread::Builder::new()
+        .name("gatherer".into())
+        .spawn(move || {
         let mut step: i64 = 0;
         let mut frame_receivers = frame_receivers;
         let mut skip_sync_remaining: u32 = 0;
@@ -629,6 +631,7 @@ pub fn spawn_gatherer(
         alive.store(false, Ordering::SeqCst);
         tracing::info!("[gatherer] exited after {step} steps");
     })
+    .expect("Failed to spawn gatherer thread")
 }
 
 // ── Statistics printing ──────────────────────────────────────────────────────

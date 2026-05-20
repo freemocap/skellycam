@@ -152,11 +152,16 @@ function renderCamList(){
   let el=document.getElementById('cam-list');
   el.innerHTML=cameras.map(c=>{
     let sel=selected.has(c.index)?' selected':'';
-    return `<div class="cam-row${sel}" onclick="toggle(${c.index})">
+    let availTag=c.available
+      ?'<span style="color:#0ff;font-size:10px;margin-left:4px" title="Available">available</span>'
+      :'<span style="color:var(--red);font-size:10px;margin-left:4px" title="Unavailable (cannot connect)">unavailable</span>';
+    let rowStyle=c.available?'':'opacity:0.55';
+    return `<div class="cam-row${sel}" onclick="toggle(${c.index})" style="${rowStyle}">
       <input type="checkbox" ${sel?'checked':''} tabindex="-1">
       <span class="idx">[${c.index}]</span>
       <span class="name">${esc(c.name)}</span>
       <span class="id">${c.camera_id}</span>
+      ${availTag}
     </div>`;
   }).join('');
   document.getElementById('sel-count').textContent=selected.size;

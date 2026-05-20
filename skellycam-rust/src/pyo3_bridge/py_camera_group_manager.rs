@@ -57,15 +57,15 @@ impl PyO3CameraGroupManager {
 
             let mut identity = all_cameras
                 .iter()
-                .find(|c| c.camera_index == parsed.camera_index as i32)
-                .cloned()
+                .find(|d| d.identity.camera_index == parsed.camera_index as i32)
+                .map(|d| d.identity.clone())
                 .ok_or_else(|| {
                     PyValueError::new_err(format!(
                         "Camera index {} not found (available: {})",
                         parsed.camera_index,
                         all_cameras
                             .iter()
-                            .map(|c| c.camera_index.to_string())
+                            .map(|d| d.identity.camera_index.to_string())
                             .collect::<Vec<_>>()
                             .join(", ")
                     ))
@@ -199,8 +199,8 @@ impl PyO3CameraGroupManager {
 
             let identity = all_cameras
                 .iter()
-                .find(|c| c.camera_index == parsed.camera_index as i32)
-                .cloned()
+                .find(|d| d.identity.camera_index == parsed.camera_index as i32)
+                .map(|d| d.identity.clone())
                 .unwrap_or_else(|| {
                     CameraIdentity {
                         camera_name: format!("Camera {}", parsed.camera_index),

@@ -1,44 +1,30 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use crate::cli::MultiArgs;
 use skellycam::camera::{detect_cameras, CameraConfig, CameraIdentity};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count = args
-        .iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok());
-
-    let explicit_indices: Option<Vec<u32>> = args
-        .iter()
-        .position(|arg| arg == "--indices")
-        .and_then(|pos| args.get(pos + 1))
-        .map(|s| s.split(',').filter_map(|n| n.trim().parse().ok()).collect());
-
-    let max_loops: i64 = args
-        .iter()
-        .position(|arg| arg == "--max-loops")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(60);
-
-    let all_cameras = detect_cameras()?;
+pub fn run(args: &MultiArgs) -> anyhow::Result<()> {
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
 
-    let indices: Vec<u32> = if let Some(explicit) = explicit_indices {
-        explicit
+    let indices: Vec<u32> = if let Some(ref explicit) = args.indices {
+        explicit.clone()
     } else {
-        let count = camera_count.unwrap_or(all_cameras.len() as u32) as usize;
+        let count = args.cameras.unwrap_or(all_cameras.len()) as usize;
         all_cameras
             .iter()
             .take(count)
             .map(|c| c.camera_index as u32)
             .collect()
     };
+    let max_loops = args.max_loops;
 
     let configs: HashMap<String, CameraGroupConfig> = indices
         .iter()

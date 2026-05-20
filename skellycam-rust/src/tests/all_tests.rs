@@ -7,20 +7,21 @@
 //! Each iteration creates a fresh CameraGroup, runs the applicable tests,
 //! and shuts down cleanly before moving to the next camera count.
 
+use crate::cli::{
+    AllArgs, CameraCountArgs, FramerateArgs, MultiArgs, RecordingArgs,
+    ResolutionArgs, RotateArgs,
+};
 use skellycam::camera::detect_cameras;
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let max_cameras = args
-        .iter()
-        .position(|arg| arg == "--max-cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<usize>().ok());
-
+pub fn run(args: &AllArgs) -> anyhow::Result<()> {
     let all_cameras = detect_cameras()?;
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected — cannot run any tests");
     }
-    let total = max_cameras.unwrap_or(all_cameras.len()).min(all_cameras.len());
+    let total = args
+        .max_cameras
+        .unwrap_or(all_cameras.len())
+        .min(all_cameras.len());
 
     tracing::info!("");
     tracing::info!("╔══════════════════════════════════════════════════════════════╗");
@@ -49,46 +50,50 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         tracing::info!("└──────────────────────────────────────────────────────────────┘");
         tracing::info!("");
 
+        let cc = CameraCountArgs { cameras: Some(camera_count) };
+        let multi = MultiArgs { cameras: Some(camera_count), indices: None, max_loops: 60 };
+        let rec = RecordingArgs { cameras: Some(camera_count), output: None };
+        let res = ResolutionArgs { camera_index: 0, sample: 5 };
+        let fps_res = FramerateArgs { camera_index: 0, sample: 5 };
+
         // ── Detect test (always runs) ──────────────────────────────────────
-        run_test("detect", &[], &mut passed, &mut failed, &mut skipped, || {
-            super::detection_tests::run(&[])
+        run_test("detect", &mut passed, &mut failed, || {
+            super::detection_tests::run()
         });
 
         // ── Lifecycle test (start → stream → shutdown) ─────────────────────
-        run_test("lifecycle", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-            super::lifecycle_tests::run(&[format!("--cameras={camera_count}")])
+        run_test("lifecycle", &mut passed, &mut failed, || {
+            super::lifecycle_tests::run(&cc)
         });
 
         // ── Recording test ─────────────────────────────────────────────────
-        run_test("recording", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-            super::recording_tests::run(&[format!("--cameras={camera_count}")])
+        run_test("recording", &mut passed, &mut failed, || {
+            super::recording_tests::run(&rec)
         });
 
         // ── Pause test ─────────────────────────────────────────────────────
-        run_test("pause", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-            super::pause_tests::run(&[format!("--cameras={camera_count}")])
+        run_test("pause", &mut passed, &mut failed, || {
+            super::pause_tests::run(&cc)
         });
 
         // ── Multi-camera streaming (60 frames) ─────────────────────────────
-        run_test("multi-camera", &[format!("--cameras={camera_count}"), "--max-loops".into(), "60".into()], &mut passed, &mut failed, &mut skipped, || {
-            super::multi_camera_tests::run(
-                &[format!("--cameras={camera_count}"), "--max-loops".into(), "60".into()]
-            )
+        run_test("multi-camera", &mut passed, &mut failed, || {
+            super::multi_camera_tests::run(&multi)
         });
 
         // ── Exposure test ───────────────────────────────────────────────────
-        run_test("update exposure", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-            super::update_config_tests::run(&["exposure".into(), format!("--cameras={camera_count}")])
+        run_test("update exposure", &mut passed, &mut failed, || {
+            super::update_config_tests::run_exposure_test(&cc)
         });
 
         // ── Multi-camera only tests (require 2+ cameras) ────────────────────
         if camera_count >= 2 {
-            run_test("update add-camera", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-                super::update_config_tests::run(&["add-camera".into(), format!("--cameras={camera_count}")])
+            run_test("update add-camera", &mut passed, &mut failed, || {
+                super::update_config_tests::run_add_camera_test(&cc)
             });
 
-            run_test("update remove-camera", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-                super::update_config_tests::run(&["remove-camera".into(), format!("--cameras={camera_count}")])
+            run_test("update remove-camera", &mut passed, &mut failed, || {
+                super::update_config_tests::run_remove_camera_test(&cc)
             });
         } else {
             let multi_tests = ["update add-camera", "update remove-camera"];
@@ -102,18 +107,18 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         }
 
         // ── Resolution sample (5 evenly spaced across supported formats) ────
-        run_test("update resolution", &[format!("--sample=5")], &mut passed, &mut failed, &mut skipped, || {
-            super::update_config_tests::run(&["resolution".into(), "--sample".into(), "5".into()])
+        run_test("update resolution", &mut passed, &mut failed, || {
+            super::update_config_tests::run_resolution_test(&res)
         });
 
         // ── Framerate sample (5 evenly spaced across supported formats) ─────
-        run_test("update framerate", &[format!("--sample=5")], &mut passed, &mut failed, &mut skipped, || {
-            super::update_config_tests::run(&["framerate".into(), "--sample".into(), "5".into()])
+        run_test("update framerate", &mut passed, &mut failed, || {
+            super::update_config_tests::run_framerate_test(&fps_res)
         });
 
         // ── Manager test ───────────────────────────────────────────────────
-        run_test("manager", &[format!("--cameras={camera_count}")], &mut passed, &mut failed, &mut skipped, || {
-            super::manager_tests::run(&[format!("--cameras={camera_count}")])
+        run_test("manager", &mut passed, &mut failed, || {
+            super::manager_tests::run(&cc)
         });
     }
 
@@ -124,12 +129,14 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
     tracing::info!("└──────────────────────────────────────────────────────────────┘");
     tracing::info!("");
 
-    run_test("rotate", &[], &mut passed, &mut failed, &mut skipped, || {
-        super::rotation_tests::run(&[])
+    run_test("rotate", &mut passed, &mut failed, || {
+        super::rotation_tests::run(&RotateArgs { cameras: None, output: None })
     });
 
-    run_test("auto-exposure", &[], &mut passed, &mut failed, &mut skipped, || {
-        super::update_config_tests::run(&["auto-exposure".into()])
+    run_test("auto-exposure", &mut passed, &mut failed, || {
+        super::update_config_tests::run_auto_exposure_test(
+            &CameraCountArgs { cameras: None },
+        )
     });
 
     // ── Summary ──────────────────────────────────────────────────────────
@@ -175,7 +182,6 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
         tracing::info!("║                                                                    ║");
         let suffix = if total == 1 { "" } else { "s" };
         tracing::info!("║  Tests run (per iteration, 1→{total} camera{suffix}):{:40}║", "");
-        // Collect unique test names in order of first appearance
         let mut seen: Vec<&str> = Vec::new();
         for name in &passed {
             if !seen.contains(&name.as_str()) {
@@ -220,10 +226,8 @@ pub fn run(args: &[String]) -> anyhow::Result<()> {
 
 fn run_test(
     name: &str,
-    _display_args: &[String],
     passed: &mut Vec<String>,
     failed: &mut Vec<String>,
-    _skipped: &mut Vec<String>,
     test_fn: impl FnOnce() -> anyhow::Result<()>,
 ) {
     let start = std::time::Instant::now();

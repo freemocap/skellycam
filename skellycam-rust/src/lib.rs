@@ -3,6 +3,7 @@ pub mod camera;
 pub mod camera_group;
 pub mod camera_group_manager;
 pub mod decode;
+pub mod logging;
 pub mod recording;
 pub mod timestamps;
 pub mod frontend_payload;
@@ -36,8 +37,10 @@ pub fn init_logging(log_level: &str) {
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(log_level));
 
+    let format = logging::SkellyFormat::new();
+
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)
-        .with_target(false)
+        .event_format(format)
         .try_init();
 }

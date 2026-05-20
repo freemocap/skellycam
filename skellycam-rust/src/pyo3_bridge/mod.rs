@@ -48,19 +48,21 @@ fn _skellycam_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 /// Detect all available cameras and return a list of dicts with
-/// `camera_index`, `display_name`, `unique_identifier`, and `device_path`.
+/// `camera_index`, `display_name`, `unique_identifier`, `device_path`,
+/// `formats`, and `available`.
 #[pyfunction]
 fn detect_cameras(py: Python<'_>) -> pyo3::PyResult<Vec<Py<PyDict>>> {
-    let cameras = crate::camera::detect_cameras()
+    let detections = crate::camera::detect_cameras()
         .map_err(|e| {
             pyo3::exceptions::PyRuntimeError::new_err(format!(
                 "Camera detection failed: {e}"
             ))
         })?;
 
-    let mut result = Vec::with_capacity(cameras.len());
-    for cam in cameras {
+    let mut result = Vec::with_capacity(detections.len());
+    for det in detections {
         let d = PyDict::new(py);
+        let cam = &det.identity;
 
         let format_dicts: Vec<Py<PyDict>> = cam
             .formats
@@ -78,10 +80,11 @@ fn detect_cameras(py: Python<'_>) -> pyo3::PyResult<Vec<Py<PyDict>>> {
         let formats_list = PyList::new(py, format_dicts)?;
 
         d.set_item("camera_index", cam.camera_index)?;
-        d.set_item("display_name", cam.camera_name)?;
-        d.set_item("unique_identifier", cam.camera_id)?;
-        d.set_item("device_path", cam.device_path)?;
+        d.set_item("display_name", &cam.camera_name)?;
+        d.set_item("unique_identifier", &cam.camera_id)?;
+        d.set_item("device_path", &cam.device_path)?;
         d.set_item("formats", formats_list)?;
+        d.set_item("available", det.available)?;
         result.push(d.into());
     }
 

@@ -131,6 +131,18 @@ impl CameraIdentity {
     }
 }
 
+/// Result of detecting a single camera — identity plus availability probe.
+///
+/// `available` is true when `Cap_isDeviceAvailable` returned `CAPRESULT_OK`,
+/// meaning the camera is likely free to open. This is a fast, non-invasive
+/// Tier 1 check — it does not power on the sensor. The Tier 2 definitive
+/// check happens at `Cap_openStream` time.
+#[derive(Debug, Clone)]
+pub struct CameraDetection {
+    pub identity: CameraIdentity,
+    pub available: bool,
+}
+
 /// Multi-camera synchronized payload with gatherer-level timestamps.
 #[derive(Debug)]
 pub struct MultiFramePayload {

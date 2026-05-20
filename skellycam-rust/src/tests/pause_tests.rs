@@ -11,6 +11,7 @@
 
 use std::collections::HashMap;
 
+use crate::cli::CameraCountArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
 
@@ -19,28 +20,25 @@ const PAUSE_FRAMES: i64 = 60;
 const UNPAUSE_FRAMES: i64 = 60;
 const TOGGLE_FRAMES: i64 = 20;
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count = args
-        .iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<u32>().ok());
-
-    let all_cameras = detect_cameras()?;
+pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
 
-    let num_cameras = match camera_count {
+    let num_cameras = match args.cameras {
         Some(n) => {
-            if n as usize > all_cameras.len() {
+            if n > all_cameras.len() {
                 anyhow::bail!(
                     "Requested {} cameras but only {} available",
                     n,
                     all_cameras.len()
                 );
             }
-            n as usize
+            n
         }
         None => all_cameras.len(),
     };

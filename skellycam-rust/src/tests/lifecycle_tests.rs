@@ -5,21 +5,19 @@
 
 use std::collections::HashMap;
 
+use crate::cli::CameraCountArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig};
 
-pub fn run(args: &[String]) -> anyhow::Result<()> {
-    let camera_count = args
-        .iter()
-        .position(|arg| arg == "--cameras")
-        .and_then(|pos| args.get(pos + 1))
-        .and_then(|s| s.parse::<usize>().ok());
-
-    let all_cameras = detect_cameras()?;
+pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
+    let all_cameras: Vec<_> = detect_cameras()?
+        .into_iter()
+        .map(|d| d.identity)
+        .collect();
     if all_cameras.is_empty() {
         anyhow::bail!("No cameras detected");
     }
-    let num = camera_count.unwrap_or(all_cameras.len()).min(all_cameras.len());
+    let num = args.cameras.unwrap_or(all_cameras.len()).min(all_cameras.len());
 
     tracing::info!("");
     tracing::info!("══════════════════════════════════════════════════");

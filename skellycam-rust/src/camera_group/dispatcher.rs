@@ -65,7 +65,9 @@ pub fn spawn_dispatcher(
     latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
 ) -> JoinHandle<()> {
-    thread::spawn(move || {
+    thread::Builder::new()
+        .name("dispatcher".into())
+        .spawn(move || {
         // Recording state (only Some while recording)
         let mut video_recorders: Option<Vec<VideoRecorder>> = None;
         let mut csv_writers: Option<Vec<CsvWriter>> = None;
@@ -267,6 +269,7 @@ pub fn spawn_dispatcher(
             }
         }
     })
+    .expect("Failed to spawn dispatcher thread")
 }
 
 // ── Recording lifecycle helpers ────────────────────────────────────────────

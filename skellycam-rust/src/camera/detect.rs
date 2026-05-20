@@ -7,7 +7,7 @@
 use sha2::{Digest, Sha256};
 
 use super::ffi::*;
-use super::types::{CameraFormatInfo, CameraIdentity};
+use super::types::{CameraDetection, CameraFormatInfo, CameraIdentity};
 
 /// Convert a FOURCC u32 to its 4-character string representation.
 /// FOURCC codes are stored little-endian in the u32: byte 0 = char 0, etc.
@@ -65,9 +65,9 @@ fn make_unique_id(
 
 /// Detect all DirectShow cameras attached to the system.
 ///
-/// Returns a list of `CameraIdentity` values, each representing a physical
-/// camera with its available formats and a unique 4-char hex ID.
-pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
+/// Returns a list of `CameraDetection` values, each pairing a `CameraIdentity`
+/// with the result of a fast availability probe (`Cap_isDeviceAvailable`).
+pub fn detect_cameras() -> anyhow::Result<Vec<CameraDetection>> {
     unsafe {
         let ctx = Cap_createContext();
         if ctx.is_null() {
@@ -78,10 +78,11 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
         tracing::info!("  -- Camera Detection --");
         tracing::info!("  openpnp-capture reports {device_count} device(s)\n");
 
-        let mut cameras: Vec<CameraIdentity> = Vec::new();
+        let mut cameras: Vec<CameraDetection> = Vec::new();
         let mut filtered_no_formats: u32 = 0;
         let mut filtered_virtual: u32 = 0;
         let mut filtered_no_mjpg: u32 = 0;
+        let mut unavailable_count: u32 = 0;
 
         for index in 0..device_count {
             let display_name = cstr_to_string(Cap_getDeviceName(ctx, index))
@@ -141,20 +142,27 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
                 continue;
             }
 
+            // ── Availability probe (fast, non-invasive) ──
+            let available = Cap_isDeviceAvailable(ctx, index) == CAPRESULT_OK;
+            if !available {
+                unavailable_count += 1;
+            }
+
             let vid_str = vid.map_or("????".to_string(), |v| format!("{v:04x}"));
             let pid_str = pid.map_or("????".to_string(), |p| format!("{p:04x}"));
+            let avail_str = if available { "AVAILABLE" } else { "UNAVAILABLE" };
 
-            tracing::info!("    [{index}] \"{display_name}\"");
-            tracing::info!(
-                "           -> id=[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats} MJPG"
-            );
+            tracing::info!("[{index}] {display_name} id:[{short_id}]  vid_{vid_str}  pid_{pid_str}  formats={num_formats} MJPG  {avail_str}");
 
-            cameras.push(CameraIdentity {
-                camera_name: display_name,
-                camera_index: index as i32,
-                camera_id: short_id,
-                device_path,
-                formats,
+            cameras.push(CameraDetection {
+                identity: CameraIdentity {
+                    camera_name: display_name,
+                    camera_index: index as i32,
+                    camera_id: short_id,
+                    device_path,
+                    formats,
+                },
+                available,
             });
         }
 
@@ -162,7 +170,7 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
 
         // ── Summary ──
         let total_filtered = filtered_virtual + filtered_no_formats + filtered_no_mjpg;
-        if total_filtered > 0 {
+        if total_filtered > 0 || unavailable_count > 0 {
             tracing::info!("");
             if filtered_virtual > 0 {
                 tracing::info!("  -- {filtered_virtual} virtual camera(s) filtered --");
@@ -173,10 +181,16 @@ pub fn detect_cameras() -> anyhow::Result<Vec<CameraIdentity>> {
             if filtered_no_mjpg > 0 {
                 tracing::info!("  -- {filtered_no_mjpg} camera(s) filtered (no MJPG format) --");
             }
+            if unavailable_count > 0 {
+                tracing::warn!("  -- {unavailable_count} camera(s) detected but UNAVAILABLE (cannot connect) --");
+            }
         }
+        let available_count = cameras.len() as u32 - unavailable_count;
         tracing::info!(
-            "\n  = {} camera(s) ready (all MJPG) =\n",
-            cameras.len()
+            "\n  = {} camera(s) ready ({} available, {} unavailable) =\n",
+            cameras.len(),
+            available_count,
+            unavailable_count
         );
 
         Ok(cameras)

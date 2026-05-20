@@ -226,7 +226,11 @@ mod tests {
 
     #[test]
     fn detect_cameras_finds_at_least_one() {
-        let identities = detect_cameras().expect("detect_cameras failed");
+        let identities: Vec<CameraIdentity> = detect_cameras()
+            .expect("detect_cameras failed")
+            .into_iter()
+            .map(|d| d.identity)
+            .collect();
         assert!(
             !identities.is_empty(),
             "Expected at least one camera attached to the system"
@@ -240,7 +244,11 @@ mod tests {
 
     #[test]
     fn full_lifecycle_read_frames_and_framerate() {
-        let identities = detect_cameras().expect("detect_cameras failed");
+        let identities: Vec<CameraIdentity> = detect_cameras()
+            .expect("detect_cameras failed")
+            .into_iter()
+            .map(|d| d.identity)
+            .collect();
         let identity = &identities[0];
         let config = make_config(identity);
 
@@ -343,7 +351,11 @@ mod tests {
 
     #[test]
     fn configure_mid_stream_changes_exposure() {
-        let identities = detect_cameras().expect("detect_cameras failed");
+        let identities: Vec<CameraIdentity> = detect_cameras()
+            .expect("detect_cameras failed")
+            .into_iter()
+            .map(|d| d.identity)
+            .collect();
         let identity = &identities[0];
         let config = make_config(identity);
 
@@ -404,7 +416,11 @@ mod tests {
 
     #[test]
     fn frame_timestamps_are_populated() {
-        let identities = detect_cameras().expect("detect_cameras failed");
+        let identities: Vec<CameraIdentity> = detect_cameras()
+            .expect("detect_cameras failed")
+            .into_iter()
+            .map(|d| d.identity)
+            .collect();
         let identity = &identities[0];
         let config = make_config(identity);
 
@@ -458,7 +474,11 @@ mod tests {
 
     #[test]
     fn identity_and_config_accessors() {
-        let identities = detect_cameras().expect("detect_cameras failed");
+        let identities: Vec<CameraIdentity> = detect_cameras()
+            .expect("detect_cameras failed")
+            .into_iter()
+            .map(|d| d.identity)
+            .collect();
         let identity = &identities[0];
         let config = make_config(identity);
 
