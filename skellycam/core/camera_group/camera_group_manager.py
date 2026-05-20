@@ -221,6 +221,128 @@ class CameraGroupManager:
 
 # ── Rust PyO3 adapter ──────────────────────────────────────────────────────
 
+
+@dataclass
+class _RustStatsAdapter:
+    """Lightweight adapter mimicking numpy recarray fields consumed by the
+    stop-recording HTTP route's ``_stats_summary()`` helper.
+
+    Mirrors the attribute interface of the numpy recarrays produced by
+    ``calculate_statistics()`` — specifically ``median_value``, ``mean_value``,
+    ``standard_deviation_value``, ``min_value``, and ``max_value``.
+    """
+    median_value: float
+    mean_value: float
+    standard_deviation_value: float
+    min_value: float
+    max_value: float
+
+
+@dataclass
+class _RustRecordingTimestampsStats:
+    """Return type adapter — same attribute names as ``RecordingTimestampsStats``
+    so the stop-recording HTTP route can unpack it without branching on backend."""
+    recording_info: "RecordingInfo"
+    number_of_cameras: int
+    number_of_frames: int
+    total_duration_sec: float
+    framerate_stats: _RustStatsAdapter
+    frame_duration_stats: _RustStatsAdapter
+    inter_camera_grab_range_ms: _RustStatsAdapter
+
+
+def _parse_rust_stats(stats_dict: dict | None) -> _RustStatsAdapter:
+    """Convert a single ``StatsSummary`` dict (from JSON) to a _RustStatsAdapter.
+
+    The Rust ``StatsSummary`` keys are: median, mean, std, min, max, cv_pct, n.
+    We drop cv_pct and n since they are not in the Python stats interface.
+    """
+    if stats_dict is None:
+        return _RustStatsAdapter(0.0, 0.0, 0.0, 0.0, 0.0)
+    return _RustStatsAdapter(
+        median_value=float(stats_dict.get("median", 0.0)),
+        mean_value=float(stats_dict.get("mean", 0.0)),
+        standard_deviation_value=float(stats_dict.get("std", 0.0)),
+        min_value=float(stats_dict.get("min", 0.0)),
+        max_value=float(stats_dict.get("max", 0.0)),
+    )
+
+
+def _convert_rust_recording_summary(
+    summary: dict,
+) -> tuple["RecordingInfo", _RustRecordingTimestampsStats]:
+    """Parse a single Rust ``RecordingSummary`` dict into Python adapter objects.
+
+    The Rust bridge returns a dict with keys:
+        total_frames_per_camera, video_paths, csv_paths, info_json_path, stats_json
+    """
+    import json
+
+    info_json_path = summary.get("info_json_path", "")
+    recording_info = RecordingInfo(
+        recording_name="unknown",
+        recording_directory="",
+    )
+    if info_json_path:
+        try:
+            with open(info_json_path, "r") as f:
+                info_data = json.load(f)
+            rec_name = info_data.get("recording_directory", "unknown")
+            recording_info = RecordingInfo(
+                recording_name=rec_name,
+                recording_directory=info_data.get("recording_directory", ""),
+                mic_device_index=-1,
+            )
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    stats_json = summary.get("stats_json")
+    stats = {}
+    if stats_json:
+        try:
+            stats = json.loads(stats_json)
+        except json.JSONDecodeError:
+            pass
+
+    multiframe_fps = _parse_rust_stats(stats.get("multiframe_fps"))
+    multiframe_duration_ns = stats.get("multiframe_duration_ns")
+    frame_arrival_spread = stats.get("frame_arrival_spread")
+
+    if multiframe_duration_ns:
+        frame_duration = _RustStatsAdapter(
+            median_value=float(multiframe_duration_ns.get("median", 0.0)) / 1_000_000.0,
+            mean_value=float(multiframe_duration_ns.get("mean", 0.0)) / 1_000_000.0,
+            standard_deviation_value=float(multiframe_duration_ns.get("std", 0.0)) / 1_000_000.0,
+            min_value=float(multiframe_duration_ns.get("min", 0.0)) / 1_000_000.0,
+            max_value=float(multiframe_duration_ns.get("max", 0.0)) / 1_000_000.0,
+        )
+        total_duration_sec = float(multiframe_duration_ns.get("mean", 0.0)) * stats.get("total_multiframes", 0) / 1_000_000_000.0
+    else:
+        frame_duration = _RustStatsAdapter(0.0, 0.0, 0.0, 0.0, 0.0)
+        total_duration_sec = 0.0
+
+    inter_camera_sync = _parse_rust_stats(frame_arrival_spread)
+    if frame_arrival_spread:
+        inter_camera_sync = _RustStatsAdapter(
+            median_value=float(frame_arrival_spread.get("median", 0.0)) / 1_000_000.0,
+            mean_value=float(frame_arrival_spread.get("mean", 0.0)) / 1_000_000.0,
+            standard_deviation_value=float(frame_arrival_spread.get("std", 0.0)) / 1_000_000.0,
+            min_value=float(frame_arrival_spread.get("min", 0.0)) / 1_000_000.0,
+            max_value=float(frame_arrival_spread.get("max", 0.0)) / 1_000_000.0,
+        )
+
+    ts_stats = _RustRecordingTimestampsStats(
+        recording_info=recording_info,
+        number_of_cameras=len(summary.get("video_paths", [])),
+        number_of_frames=int(summary.get("total_frames_per_camera", 0)),
+        total_duration_sec=total_duration_sec,
+        framerate_stats=multiframe_fps,
+        frame_duration_stats=frame_duration,
+        inter_camera_grab_range_ms=inter_camera_sync,
+    )
+    return recording_info, ts_stats
+
+
 class RustCameraGroup:
     """Lightweight adapter wrapping a Rust camera group, exposing the same
     interface as ``CameraGroup`` for WebSocket and HTTP route compatibility."""
@@ -264,7 +386,9 @@ class RustCameraGroup:
         pass
 
     async def close(self) -> None:
-        self._native.close_all_groups()
+        """Mark this group as closed. Actual Rust group shutdown is handled
+        by ``RustCameraGroupManager.close_all_camera_groups()``."""
+        pass
 
     # ── Lifecycle ──────────────────────────────────────────────────────
 
@@ -295,10 +419,11 @@ class RustCameraGroup:
         else:
             raise TypeError(f"Expected RecordingInfo, got {type(recording_info)}")
 
-    async def stop_recording(self):
-        result = self._native.stop_recording()
-        group_data = result.get(self._group_id, {})
-        return group_data
+    async def stop_recording(self) -> tuple["RecordingInfo", _RustRecordingTimestampsStats]:
+        """Stop recording for this group and return (RecordingInfo, stats)."""
+        raw_result = self._native.stop_recording()
+        group_data = raw_result.get(self._group_id, {})
+        return _convert_rust_recording_summary(group_data)
 
     async def pause_unpause(self, await_state_change=True):
         # Toggle: check current state from the native manager
@@ -435,9 +560,16 @@ class RustCameraGroupManager:
         logger.info(f"Started recording for all Rust camera groups → {recording_info.recording_directory}")
 
     async def stop_recording_all_groups(self) -> list[tuple["RecordingInfo", "RecordingTimestampsStats"]]:
-        result = self._native.stop_recording()
-        logger.info(f"Stopped recording for {len(result)} Rust camera group(s)")
-        return []  # TODO: convert RecordingSummary back to RecordingInfo/RecordingTimestampsStats
+        import json
+        raw_result = self._native.stop_recording()
+        logger.info(f"Stopped recording for {len(raw_result)} Rust camera group(s)")
+
+        results: list[tuple[RecordingInfo, _RustRecordingTimestampsStats]] = []
+        for group_id, summary in raw_result.items():
+            recording_info, ts_stats = _convert_rust_recording_summary(summary)
+            results.append((recording_info, ts_stats))
+
+        return results
 
     def get_latest_frontend_payloads(
         self,

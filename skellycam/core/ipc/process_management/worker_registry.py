@@ -7,7 +7,8 @@ import os
 import signal
 import threading
 import time
-from typing import Callable, Optional
+from beartype.typing import Callable
+from typing import Optional
 
 from skellycam.core.ipc.process_management.managed_worker import (
     ManagedWorker,

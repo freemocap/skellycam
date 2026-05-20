@@ -1,5 +1,6 @@
 import enum
-from typing import Tuple, Self, Any
+from beartype.typing import Tuple
+from typing import Self, Any
 
 import cv2
 import numpy as np

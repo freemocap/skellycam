@@ -28,7 +28,8 @@ import os
 import signal
 import threading
 from enum import Enum
-from typing import Callable, Optional
+from beartype.typing import Callable
+from typing import Optional
 
 from skellycam import LOG_LEVEL
 from skellylogs import configure_logging

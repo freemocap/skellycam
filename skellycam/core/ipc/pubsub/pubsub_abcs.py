@@ -3,7 +3,7 @@ import multiprocessing
 from abc import ABC
 from dataclasses import dataclass, field
 from multiprocessing.process import parent_process
-from typing import Type
+from beartype.typing import Type
 
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_100ms

@@ -1,4 +1,4 @@
-from typing import Hashable
+from beartype.typing import Hashable
 
 from pydantic import BaseModel
 

@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import List, Tuple
+from beartype.typing import List, Tuple
 
 import cv2
 import numpy as np

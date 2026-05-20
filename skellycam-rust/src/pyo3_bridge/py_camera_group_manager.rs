@@ -124,6 +124,37 @@ impl PyO3CameraGroupManager {
         result.into()
     }
 
+    /// Poll for latest raw per-camera JPEG bytes across all groups.
+    ///
+    /// Returns a dict mapping group_id → dict of camera_id → frame metadata.
+    /// Each camera dict contains: camera_index, width, height, jpeg_bytes.
+    /// These are the raw MJPEG bytes from the camera, before any frontend
+    /// encoding or wire-format packing — suitable for direct image validation.
+    fn get_latest_raw_frames(
+        &self,
+        py: Python<'_>,
+    ) -> Py<PyDict> {
+        let result = PyDict::new(py);
+
+        for (group_id, group_mutex) in &self.groups {
+            let group = group_mutex.lock().unwrap();
+            if let Some(raw_frames) = group.latest_raw_frames() {
+                let group_dict = PyDict::new(py);
+                for frame in &raw_frames {
+                    let frame_dict = PyDict::new(py);
+                    let _ = frame_dict.set_item("camera_index", frame.camera_index);
+                    let _ = frame_dict.set_item("width", frame.width);
+                    let _ = frame_dict.set_item("height", frame.height);
+                    let _ = frame_dict.set_item("jpeg_bytes", PyBytes::new(py, &frame.jpeg_bytes));
+                    let _ = group_dict.set_item(frame.camera_id.as_str(), frame_dict);
+                }
+                let _ = result.set_item(group_id.as_str(), group_dict);
+            }
+        }
+
+        result.into()
+    }
+
     /// Pause all camera groups (suppress downstream frame sends).
     fn pause(&self) {
         for group_mutex in self.groups.values() {

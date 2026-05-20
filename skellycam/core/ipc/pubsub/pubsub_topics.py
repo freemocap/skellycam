@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Type
+from beartype.typing import Type
 
 import numpy as np
 

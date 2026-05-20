@@ -100,6 +100,7 @@ def _poll_until_frames(manager, target_count, timeout_secs=15):
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 @requires_rust
+@pytest.mark.hardware
 class TestDetectCameras:
     """Camera detection via the PyO3 bridge."""
 
@@ -121,6 +122,7 @@ class TestDetectCameras:
 
 
 @requires_rust
+@pytest.mark.hardware
 class TestGroupLifecycle:
     """Create → poll → shutdown cycle."""
 
@@ -211,8 +213,67 @@ class TestGroupLifecycle:
 
         manager.close_all_groups()
 
+    @requires_cameras
+    def test_apply_configs_update_exposure(self):
+        """Apply a new exposure value to a running group; frames continue to flow."""
+        manager = _skellycam_rust.CameraGroupManager()
+        configs = _make_config_dict(_CAMERAS[0])
+
+        group_id = manager.create_or_update_group(configs)
+        _poll_until_frames(manager, 5)
+
+        # Change exposure from -7 to -5
+        updated = {
+            _CAMERAS[0]["unique_identifier"]: {
+                "camera_index": _CAMERAS[0]["camera_index"],
+                "camera_id": _CAMERAS[0]["unique_identifier"],
+                "width": 1280,
+                "height": 720,
+                "exposure": -5,
+                "exposure_mode": "MANUAL",
+                "framerate": -1.0,
+                "rotation": -1,
+            }
+        }
+        manager.apply_configs(group_id, updated)
+
+        # Frames should still flow after config change
+        _poll_until_frames(manager, 5)
+        manager.close_all_groups()
+
+    @requires_cameras
+    def test_detect_then_apply_matches_api_flow(self):
+        """Detect cameras, build a config dict from detection result, apply it."""
+        cameras = _skellycam_rust.detect_cameras()
+        assert len(cameras) > 0
+
+        # Build a config dict exactly like the HTTP /group/apply endpoint
+        cam = cameras[0]
+        configs = {
+            cam["unique_identifier"]: {
+                "camera_id": cam["unique_identifier"],
+                "camera_index": cam["camera_index"],
+                "width": 1280,
+                "height": 720,
+                "exposure": -7,
+                "exposure_mode": "MANUAL",
+                "framerate": -1.0,
+                "rotation": -1,
+            }
+        }
+
+        manager = _skellycam_rust.CameraGroupManager()
+        group_id = manager.create_or_update_group(configs)
+        assert isinstance(group_id, str)
+        assert len(group_id) == 6
+
+        # Verify frames flow from the detected-and-applied camera
+        _poll_until_frames(manager, 10)
+        manager.close_all_groups()
+
 
 @requires_rust
+@pytest.mark.hardware
 class TestRecording:
     """Recording lifecycle via the PyO3 bridge."""
 
@@ -242,5 +303,68 @@ class TestRecording:
             assert "total_frames_per_camera" in summary
             assert "video_paths" in summary
             assert "csv_paths" in summary
+
+        manager.close_all_groups()
+
+    @requires_cameras
+    def test_full_record_cycle_returns_stop_recording_response(self):
+        """Start → stream 60 frames → stop → verify result matches StopRecordingResponse schema."""
+        import tempfile
+
+        manager = _skellycam_rust.CameraGroupManager()
+        configs = _make_config_dict(_CAMERAS[0])
+        group_id = manager.create_or_update_group(configs)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager.start_recording(output_dir=tmpdir, label="schema_test")
+            _poll_until_frames(manager, 60)
+            result = manager.stop_recording()
+
+            assert group_id in result
+            summary = result[group_id]
+
+            # All keys required by the OpenAPI StopRecordingResponse
+            required_keys = [
+                "total_frames_per_camera",
+                "video_paths",
+                "csv_paths",
+                "info_json_path",
+            ]
+            for key in required_keys:
+                assert key in summary, f"Missing key in stop_recording result: {key}"
+
+            # total_frames_per_camera should be a positive integer
+            assert isinstance(summary["total_frames_per_camera"], int)
+            assert summary["total_frames_per_camera"] > 0
+
+            # video_paths should be a non-empty list of strings
+            assert isinstance(summary["video_paths"], list)
+            assert len(summary["video_paths"]) > 0
+
+        manager.close_all_groups()
+
+    @requires_cameras
+    def test_record_creates_video_files(self):
+        """Start recording, stream frames, stop — verify .mp4 files exist on disk."""
+        import tempfile
+        import os as _os
+
+        manager = _skellycam_rust.CameraGroupManager()
+        configs = _make_config_dict(_CAMERAS[0])
+        manager.create_or_update_group(configs)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager.start_recording(output_dir=tmpdir, label="file_test")
+            _poll_until_frames(manager, 60)
+            result = manager.stop_recording()
+
+            group_ids = list(result.keys())
+            assert len(group_ids) > 0
+            summary = result[group_ids[0]]
+
+            for video_path in summary.get("video_paths", []):
+                assert _os.path.isfile(video_path), f"Video file not found: {video_path}"
+                file_size = _os.path.getsize(video_path)
+                assert file_size > 0, f"Video file is empty: {video_path}"
 
         manager.close_all_groups()
