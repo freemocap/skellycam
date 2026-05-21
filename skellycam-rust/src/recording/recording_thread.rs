@@ -22,7 +22,7 @@
 //! ```
 
 use std::path::PathBuf;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use std::thread::{self, JoinHandle};
 
 use crate::camera::{CameraIdentity, FrameLifecycleTimestamps};
@@ -40,7 +40,7 @@ use crate::timestamps::CsvWriter;
 /// `MultiFramePayload`.
 pub struct RecordingFrameData {
     pub camera_index: usize,
-    pub jpeg_bytes: Vec<u8>,
+    pub jpeg_bytes: Arc<[u8]>,
     pub frame_number: i64,
     /// `frame_available_ns` from the camera thread — the grab timestamp.
     pub grab_timestamp_ns: i64,
@@ -202,22 +202,50 @@ fn run(receiver: mpsc::Receiver<RecordingCommand>) {
                     recorder_configs.len()
                 );
 
-                // ── Spawn all ffmpeg processes (THE work moved off the dispatcher) ──
-                let mut recs = Vec::with_capacity(recorder_configs.len());
-                for cfg in recorder_configs {
-                    match VideoRecorder::spawn(cfg) {
-                        Ok(r) => recs.push(r),
-                        Err(e) => {
-                            tracing::error!(
-                                "[recording_thread] failed to spawn recorder: {e}"
-                            );
-                            for r in recs {
-                                drop(r);
-                            }
+                // ── Create output directories (moved here from dispatcher hot thread) ──
+                for cfg in &recorder_configs {
+                    if let Some(parent) = cfg.output_path.parent() {
+                        if let Err(e) = std::fs::create_dir_all(parent) {
+                            tracing::error!("[recording_thread] failed to create output dir: {e}");
                             return;
                         }
                     }
                 }
+                for path in &writer_paths {
+                    if let Some(parent) = path.parent() {
+                        if let Err(e) = std::fs::create_dir_all(parent) {
+                            tracing::error!("[recording_thread] failed to create timestamps dir: {e}");
+                            return;
+                        }
+                    }
+                }
+
+                // ── Spawn all ffmpeg processes in parallel ──
+                let n = recorder_configs.len();
+                let mut slot: Vec<Option<VideoRecorder>> = (0..n).map(|_| None).collect();
+                std::thread::scope(|s| {
+                    let handles: Vec<_> = recorder_configs
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, cfg)| s.spawn(move || (i, VideoRecorder::spawn(cfg))))
+                        .collect();
+                    for handle in handles {
+                        match handle.join() {
+                            Ok((i, Ok(r))) => slot[i] = Some(r),
+                            Ok((i, Err(e))) => tracing::error!(
+                                "[recording_thread] failed to spawn recorder {i}: {e}"
+                            ),
+                            Err(_) => tracing::error!(
+                                "[recording_thread] recorder spawn thread panicked"
+                            ),
+                        }
+                    }
+                });
+                if slot.iter().any(|r| r.is_none()) {
+                    tracing::error!("[recording_thread] one or more recorders failed — aborting");
+                    return;
+                }
+                let recs: Vec<VideoRecorder> = slot.into_iter().flatten().collect();
 
                 // ── Create CSV writers ──
                 let mut wrs = Vec::with_capacity(writer_paths.len());

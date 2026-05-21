@@ -36,6 +36,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     let mut frontend_tracker = FramerateTracker::new("Display");
     let mut last_frontend_send: Option<Instant> = None;
     let mut last_framerate_report = Instant::now();
+    let mut last_camera_fps: Option<f64> = None;
 
     loop {
         // ── Which group is currently active? ──
@@ -64,6 +65,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                         payload.frame_number,
                     );
                     last_frame_number = payload.frame_number;
+                    if payload.camera_fps > 0.0 {
+                        last_camera_fps = Some(payload.camera_fps);
+                    }
 
                     let now = Instant::now();
                     if let Some(prev) = last_frontend_send {
@@ -91,6 +95,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                     camera_group_id: group_id.clone(),
                     backend_framerate: backend_tracker.snapshot_and_reset(),
                     frontend_framerate: frontend_tracker.snapshot_and_reset(),
+                    camera_fps: last_camera_fps,
                 };
                 if let Ok(json) = serde_json::to_string(&message) {
                     if socket.send(Message::Text(json.into())).await.is_err() {

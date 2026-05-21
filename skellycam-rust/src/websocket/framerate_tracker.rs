@@ -23,6 +23,9 @@ pub struct FramerateUpdateMessage {
     pub camera_group_id: String,
     pub backend_framerate: Option<CurrentFramerate>,
     pub frontend_framerate: Option<CurrentFramerate>,
+    /// True camera capture rate from consecutive `frame_available_ns` timestamps.
+    /// Immune to dispatcher stalls — holds the last computed value during stalls.
+    pub camera_fps: Option<f64>,
 }
 
 pub struct FramerateTracker {

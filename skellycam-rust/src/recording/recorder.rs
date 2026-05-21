@@ -40,7 +40,7 @@ impl Default for VideoRecorderConfig {
             input_format: "image2pipe".into(),
             input_codec: "mjpeg".into(),
             output_codec: "libx264".into(),
-            preset: "medium".into(),
+            preset: "ultrafast".into(),
             crf: 18,
             pix_fmt: "yuv420p".into(),
         }
