@@ -47,6 +47,21 @@ impl Default for VideoRecorderConfig {
     }
 }
 
+/// Pure-data config bundle for deferred `VideoRecorder` creation.
+///
+/// Contains everything `VideoRecorder::new()` needs without performing any
+/// I/O or process spawn. Constructed on the dispatcher thread (fast) and
+/// consumed by the recording thread's Setup handler (where ffmpeg spawns).
+#[derive(Debug, Clone)]
+pub struct RecorderSpawnConfig {
+    pub output_path: PathBuf,
+    pub identity: CameraIdentity,
+    pub width: u32,
+    pub height: u32,
+    pub target_fps: f32,
+    pub config: VideoRecorderConfig,
+}
+
 /// Timestamp record for a single frame written to video.
 ///
 /// This maps to one row in the per-camera timestamp CSV and provides
@@ -138,6 +153,22 @@ impl VideoRecorder {
             frame_count: 0,
             timestamps: Vec::new(),
         })
+    }
+
+    /// Spawn an ffmpeg subprocess from a pre-built config.
+    ///
+    /// Called by the recording thread's Setup handler. Delegates to `new()`
+    /// but takes a single config struct, keeping the call site clean when
+    /// processing a `Vec<RecorderSpawnConfig>`.
+    pub fn spawn(config: RecorderSpawnConfig) -> anyhow::Result<Self> {
+        Self::new(
+            config.output_path,
+            &config.identity,
+            config.width,
+            config.height,
+            config.target_fps,
+            &config.config,
+        )
     }
 
     /// Write one MJPEG frame to ffmpeg's stdin.

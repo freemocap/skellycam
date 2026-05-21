@@ -25,9 +25,9 @@ use crate::camera_group::jpeg_transform::rotate_jpeg_lossless;
 use crate::camera_group::recording_stats::RecordingStats;
 use crate::recording::finalizer::RecordingSummary;
 use crate::recording::{
-    RecordingFrameData, RecordingHandle, VideoRecorder, spawn_recording_thread,
+    RecorderSpawnConfig, RecordingFrameData, RecordingHandle,
+    VideoRecorderConfig, spawn_recording_thread,
 };
-use crate::timestamps::CsvWriter;
 
 use super::types::{DispatcherCommand, SharedConfigMap};
 
@@ -147,21 +147,24 @@ pub fn spawn_dispatcher(
             match multi_frame_receiver.try_recv() {
                 Ok(mut payload) => {
 
-                    // ── Deferred recorder creation (first multiframe after StartRecording) ──
+                    // ── Deferred recorder setup (first multiframe after StartRecording) ──
+                    // Builds spawn configs (fast, no ffmpeg spawn) then enqueues
+                    // a Setup command so the recording thread spawns ffmpeg on its
+                    // own thread. Returns immediately — the dispatcher never blocks.
                     if pending_recording.is_some() {
                         let params = pending_recording.take().unwrap();
-                        match create_recorders(
+                        match build_recorder_configs(
                             &params,
                             &payload,
                             &shared_configs,
                         ) {
-                            Ok((recorders, writers, session_dir, infos)) => {
+                            Ok((recorder_configs, csv_paths, session_dir, infos)) => {
                                 let camera_count = payload.frames.len();
                                 let dir_display = session_dir.display().to_string();
                                 recording_stats = Some(RecordingStats::new(camera_count));
                                 recording_handle = Some(spawn_recording_thread(
-                                    recorders,
-                                    writers,
+                                    recorder_configs,
+                                    csv_paths,
                                     session_dir,
                                     infos,
                                 ));
@@ -172,7 +175,7 @@ pub fn spawn_dispatcher(
                             }
                             Err(e) => {
                                 tracing::error!(
-                                    "[dispatcher] failed to create recorders: {e}"
+                                    "[dispatcher] failed to build recorder configs: {e}"
                                 );
                                 recording_active.store(false, Ordering::SeqCst);
                             }
@@ -281,24 +284,24 @@ pub fn spawn_dispatcher(
 
 // ── Recording lifecycle helpers ────────────────────────────────────────────
 
-/// Create per-camera `VideoRecorder` and `CsvWriter` from the first multiframe.
+/// Build per-camera recorder spawn configs from the first multiframe.
 ///
-/// Creates a timestamped session subdirectory inside `params.output_dir`,
-/// then sets up per-camera video and CSV files inside it.
-/// Returns the recorders, writers, session directory path, and camera identity
-/// info needed by the finalizer.
-fn create_recorders(
+/// Computes the session directory, output paths, and all parameters needed to
+/// spawn ffmpeg — but does NOT spawn processes or open CSV files. Returns
+/// configs; the recording thread performs the actual spawn via its Setup handler.
+///
+/// `fs::create_dir_all` stays here (sub-millisecond filesystem metadata) so
+/// output-directory errors are caught before `recording_active` is set to true.
+fn build_recorder_configs(
     params: &super::types::RecordingParams,
     payload: &MultiFramePayload,
     shared_configs: &SharedConfigMap,
 ) -> anyhow::Result<(
-    Vec<VideoRecorder>,
-    Vec<CsvWriter>,
+    Vec<RecorderSpawnConfig>,
+    Vec<PathBuf>,
     PathBuf,
     Vec<(CameraIdentity, u32, u32)>,
 )> {
-    use crate::recording::VideoRecorderConfig;
-
     let session_name = {
         let now = chrono::Local::now();
         let gmt_offset = now.offset().local_minus_utc() / 3600;
@@ -314,8 +317,8 @@ fn create_recorders(
     fs::create_dir_all(&videos_dir)?;
     fs::create_dir_all(&timestamps_dir)?;
 
-    let mut recorders = Vec::with_capacity(payload.frames.len());
-    let mut writers = Vec::with_capacity(payload.frames.len());
+    let mut recorder_configs = Vec::with_capacity(payload.frames.len());
+    let mut csv_paths = Vec::with_capacity(payload.frames.len());
     let mut infos: Vec<(CameraIdentity, u32, u32)> =
         Vec::with_capacity(payload.frames.len());
 
@@ -345,23 +348,20 @@ fn create_recorders(
             })
             .unwrap_or(30.0);
 
-        let recorder = VideoRecorder::new(
-            video_path,
-            identity,
-            frame.width,
-            frame.height,
+        recorder_configs.push(RecorderSpawnConfig {
+            output_path: video_path,
+            identity: identity.clone(),
+            width: frame.width,
+            height: frame.height,
             target_fps,
-            &VideoRecorderConfig::default(),
-        )?;
+            config: VideoRecorderConfig::default(),
+        });
 
-        let csv_writer = CsvWriter::new(csv_path)?;
-
-        recorders.push(recorder);
-        writers.push(csv_writer);
+        csv_paths.push(csv_path);
         infos.push((identity.clone(), frame.width, frame.height));
     }
 
-    Ok((recorders, writers, session_dir, infos))
+    Ok((recorder_configs, csv_paths, session_dir, infos))
 }
 
 use crate::camera::FrameData;
