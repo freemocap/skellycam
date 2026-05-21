@@ -1,4 +1,5 @@
 pub mod all_tests;
+pub mod api_server_tests;
 pub mod detection_tests;
 pub mod lifecycle_tests;
 pub mod manager_tests;

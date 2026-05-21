@@ -204,6 +204,14 @@ impl CameraGroup {
             frame_receivers.push((id.clone(), camera.take_frame_receiver()));
         }
 
+        // Collect shared camera configs for the dispatcher — the dispatcher
+        // reads actual negotiated framerates from these when creating recorders.
+        let shared_configs: super::types::SharedConfigMap = self
+            .cameras
+            .iter()
+            .map(|(id, camera)| (id.clone(), camera.shared_config()))
+            .collect();
+
         // Unbounded channel — gatherer never blocks on send
         let (multi_frame_sender, multi_frame_receiver) = mpsc::channel();
         let (update_sender, update_receiver) = mpsc::channel::<GathererUpdate>();
@@ -225,6 +233,7 @@ impl CameraGroup {
             self.latest_frontend_payload.clone(),
             self.latest_raw_frames.clone(),
             self.recording_active.clone(),
+            shared_configs,
         );
 
         self.gatherer_handle = Some(gatherer_handle);
@@ -311,6 +320,21 @@ impl CameraGroup {
 
         // Store new configs
         self.configs = new_configs;
+
+        // Push updated shared config refs to the dispatcher so it sees
+        // actual framerates for any newly added or reconfigured cameras.
+        if !added.is_empty() || !changed.is_empty() {
+            let updated_configs: super::types::SharedConfigMap = self
+                .cameras
+                .iter()
+                .map(|(id, camera)| (id.clone(), camera.shared_config()))
+                .collect();
+            if let Some(ref sender) = self.dispatcher_control_sender {
+                let _ = sender.send(super::types::DispatcherCommand::UpdateConfigs {
+                    configs: updated_configs,
+                });
+            }
+        }
 
         let total = changed.len() + added.len() + removed.len();
         if total > 0 {
@@ -1052,45 +1076,6 @@ mod tests {
 
         group.toggle_pause();
         assert!(!group.is_paused());
-    }
-
-    #[test]
-    fn camera_group_recording_placeholders() {
-        let mut configs = HashMap::new();
-        configs.insert(
-            "cam_1".to_string(),
-            CameraGroupConfig {
-                identity: crate::camera::CameraIdentity {
-                    camera_name: "Test Cam".into(),
-                    camera_index: 0,
-                    camera_id: "cam_1".into(),
-                    device_path: String::new(),
-                    formats: Vec::new(),
-                },
-                capture_config: CameraConfig {
-                    camera_id: "cam_1".into(),
-                    camera_index: 0,
-                    width: 640,
-                    height: 480,
-                    exposure: -7,
-                    exposure_mode: "MANUAL".into(),
-                    framerate: -1.0,
-                    rotation: -1,
-                },
-            },
-        );
-
-        let mut group = CameraGroup::new(configs);
-        assert!(!group.is_recording());
-
-        let _ = group.start_recording(RecordingParams {
-            output_dir: "/tmp/test".into(),
-            label: Some("test_session".into()),
-        });
-        assert!(group.is_recording());
-
-        let _ = group.stop_recording();
-        assert!(!group.is_recording());
     }
 
     #[test]

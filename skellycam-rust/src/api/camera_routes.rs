@@ -381,7 +381,7 @@ async fn start_recording(
 )]
 async fn stop_recording(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<StopRecordingResponse>, AppError> {
+) -> Result<Json<Vec<StopRecordingResponse>>, AppError> {
     let active_id = state
         .active_group_id
         .lock()
@@ -450,7 +450,7 @@ async fn stop_recording(
         (0.0, 0.0)
     };
 
-    Ok(Json(StopRecordingResponse {
+    Ok(Json(vec![StopRecordingResponse {
         recording_name,
         recording_path,
         number_of_cameras: summary.video_paths.len() as i32,
@@ -479,7 +479,7 @@ async fn stop_recording(
             min: 0.0,
             max: 0.0,
         },
-    }))
+    }]))
 }
 
 // ── Pause / unpause ────────────────────────────────────────────────────────
@@ -522,19 +522,19 @@ async fn toggle_pause_unpause(
     delete,
     path = "/skellycam/camera/group/close/all",
     responses(
-        (status = 200, description = "All groups closed", body = CloseAllResponse)
+        (status = 200, description = "All groups closed", body = bool)
     )
 )]
 async fn close_all_groups(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<CloseAllResponse>, AppError> {
+) -> Result<Json<bool>, AppError> {
     tracing::info!("[close] shutting down all camera groups");
     let mut manager = state.camera_manager.lock().await;
     let count = manager.group_count();
     manager.close_all_groups();
     *state.active_group_id.lock().await = None;
     tracing::info!("[close] all {count} group(s) closed");
-    Ok(Json(CloseAllResponse { success: true }))
+    Ok(Json(true))
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

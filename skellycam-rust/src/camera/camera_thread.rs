@@ -43,7 +43,7 @@ const STABILIZATION_FRAMES: u32 = 30;
 /// configure, stabilize).
 pub fn spawn(
     identity: &CameraIdentity,
-    config: &CameraConfig,
+    shared_config: Arc<std::sync::Mutex<CameraConfig>>,
     barrier: Arc<BreakableBarrier>,
     paused: Arc<AtomicBool>,
     start_frame_number: i64,
@@ -58,14 +58,13 @@ pub fn spawn(
     let (frame_sender, frame_receiver) = mpsc::sync_channel::<FramePacket>(1);
 
     let label = identity.label();
-    let config = config.clone();
     let identity = identity.clone();
 
     let thread_handle = thread::Builder::new()
         .name(label.clone())
         .spawn(move || {
         let result = run_camera_thread(
-            config,
+            shared_config,
             &identity,
             &label,
             &command_receiver,
@@ -118,6 +117,7 @@ unsafe fn apply_config(
     old_config: &CameraConfig,
     actual_width: u32,
     actual_height: u32,
+    shared_config: &Arc<std::sync::Mutex<CameraConfig>>,
 ) -> (CapStream, u32, u32) { unsafe {
     let needs_restart = actual_width != new_config.width
         || actual_height != new_config.height
@@ -157,6 +157,14 @@ unsafe fn apply_config(
         };
 
         configure_exposure(ctx, new_stream, label, &new_config.exposure_mode, new_config.exposure);
+
+        // Write actual negotiated settings back to shared config
+        if let Ok(mut guard) = shared_config.lock() {
+            guard.framerate = format_info.fps as f64;
+            guard.width = format_info.width;
+            guard.height = format_info.height;
+        }
+
         tracing::debug!(
             "Camera {label}: stream restarted — {actual_width}x{actual_height} @{:.0}fps → {}x{} @{}fps",
             old_config.framerate,
@@ -171,7 +179,7 @@ unsafe fn apply_config(
 }}
 
 fn run_camera_thread(
-    config: CameraConfig,
+    shared_config: Arc<std::sync::Mutex<CameraConfig>>,
     identity: &CameraIdentity,
     label: &str,
     command_receiver: &mpsc::Receiver<CameraCommand>,
@@ -187,31 +195,46 @@ fn run_camera_thread(
             anyhow::bail!("Cap_createContext returned null");
         }
 
+        let initial_config = {
+            shared_config.lock().unwrap().clone()
+        };
+
         let format_info = find_best_mjpg(
             ctx,
-            config.camera_index,
-            config.width,
-            config.height,
-            config.framerate,
+            initial_config.camera_index,
+            initial_config.width,
+            initial_config.height,
+            initial_config.framerate,
             label,
         )?;
-        let mut stream =
-            open_stream_raw(ctx, config.camera_index, label, &format_info)?;
 
-        configure_exposure(ctx, stream, label, &config.exposure_mode, config.exposure);
+        // Write actual negotiated settings back to shared config so that
+        // external consumers (recording path, API responses) see the real values.
+        {
+            let mut guard = shared_config.lock().unwrap();
+            guard.framerate = format_info.fps as f64;
+            guard.width = format_info.width;
+            guard.height = format_info.height;
+        }
+
+        let mut stream =
+            open_stream_raw(ctx, initial_config.camera_index, label, &format_info)?;
+
+        configure_exposure(ctx, stream, label, &initial_config.exposure_mode, initial_config.exposure);
         stabilize_raw(ctx, stream, label);
 
         let mut actual_width = format_info.width;
         let mut actual_height = format_info.height;
 
         tracing::info!(
-            "Camera {label}: capture loop raw-MJPEG ({actual_width}x{actual_height})",
+            "Camera {label}: capture loop raw-MJPEG ({actual_width}x{actual_height} @{}fps)",
+            format_info.fps,
         );
 
         let _ = event_sender.send(CameraEvent::Ready);
         let mut frame_sm = FrameStateMachine::new(start_frame_number);
         let mut raw_buffer: Vec<u8> = Vec::new();
-        let mut active_config = config;
+        let mut active_config = initial_config;
 
         loop {
             // ── Process pending commands ──
@@ -223,9 +246,17 @@ fn run_camera_thread(
                 CommandResult::Configure(new_config) => {
                     (stream, actual_width, actual_height) = apply_config(
                         ctx, stream, label, &new_config, &active_config,
-                        actual_width, actual_height,
+                        actual_width, actual_height, &shared_config,
                     );
                     active_config = new_config;
+                    // Pull actual negotiated framerate/width/height from the
+                    // shared config (written by apply_config for restarts, or
+                    // by Camera::configure for exposure-only changes).
+                    if let Ok(guard) = shared_config.lock() {
+                        active_config.framerate = guard.framerate;
+                        active_config.width = guard.width;
+                        active_config.height = guard.height;
+                    }
                 }
                 CommandResult::None => {}
             }
@@ -245,9 +276,17 @@ fn run_camera_thread(
                     CommandResult::Configure(new_config) => {
                         (stream, actual_width, actual_height) = apply_config(
                             ctx, stream, label, &new_config, &active_config,
-                            actual_width, actual_height,
+                            actual_width, actual_height, &shared_config,
                         );
                         active_config = new_config;
+                    // Pull actual negotiated framerate/width/height from the
+                    // shared config (written by apply_config for restarts, or
+                    // by Camera::configure for exposure-only changes).
+                    if let Ok(guard) = shared_config.lock() {
+                        active_config.framerate = guard.framerate;
+                        active_config.width = guard.width;
+                        active_config.height = guard.height;
+                    }
                     }
                     CommandResult::None => {
                         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -269,9 +308,17 @@ fn run_camera_thread(
                     CommandResult::Configure(new_config) => {
                         (stream, actual_width, actual_height) = apply_config(
                             ctx, stream, label, &new_config, &active_config,
-                            actual_width, actual_height,
+                            actual_width, actual_height, &shared_config,
                         );
                         active_config = new_config;
+                    // Pull actual negotiated framerate/width/height from the
+                    // shared config (written by apply_config for restarts, or
+                    // by Camera::configure for exposure-only changes).
+                    if let Ok(guard) = shared_config.lock() {
+                        active_config.framerate = guard.framerate;
+                        active_config.width = guard.width;
+                        active_config.height = guard.height;
+                    }
                     }
                     CommandResult::None => {}
                 }
@@ -513,8 +560,36 @@ unsafe fn find_best_mjpg(
             return Ok(info);
         }
     } else {
-        // Framerate-first: scan ALL MJPG formats, pick highest FPS,
-        // break ties by highest pixel area (width × height).
+        // No specific framerate requested — prioritize resolution match.
+        // Pass 1: exact MJPG resolution match (any framerate).
+        let mut best: Option<(CapFormatID, CapFormatInfo)> = None;
+        for f in 0..num_formats {
+            let mut info = CapFormatInfo::default();
+            if unsafe { Cap_getFormatInfo(ctx, index, f as CapFormatID, &mut info) } == CAPRESULT_OK
+                && info.fourcc == FOURCC_MJPG
+                && info.width == requested_width
+                && info.height == requested_height
+            {
+                match best {
+                    None => best = Some((f as CapFormatID, info)),
+                    Some((_, ref best_info)) => {
+                        if info.fps > best_info.fps {
+                            best = Some((f as CapFormatID, info));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((_fid, info)) = best {
+            tracing::trace!(
+                "Camera {label}: format ({}x{} @{}fps MJPG) — resolution match (no framerate target)",
+                info.width, info.height, info.fps,
+            );
+            return Ok(info);
+        }
+
+        // Pass 2: if resolution not found in MJPG, fall back to any MJPG,
+        // picking highest FPS with tie-break on pixel area.
         let mut best: Option<(CapFormatID, CapFormatInfo)> = None;
         for f in 0..num_formats {
             let mut info = CapFormatInfo::default();
@@ -537,7 +612,7 @@ unsafe fn find_best_mjpg(
         }
         if let Some((_fid, info)) = best {
             tracing::trace!(
-                "Camera {label}: format ({}x{} @{}fps MJPG) — framerate-first auto-select",
+                "Camera {label}: format ({}x{} @{}fps MJPG) — resolution not matched, highest-FPS fallback",
                 info.width, info.height, info.fps,
             );
             return Ok(info);
@@ -591,6 +666,17 @@ unsafe fn configure_exposure(
     exposure_mode: &str,
     target_exposure: i32,
 ) {
+    // USB UVC cameras report min=-13 max=-1, but only -11..-5 produce
+    // meaningful exposure changes. Values outside this range are either
+    // clamped by the hardware (full black at ≤-11, full bright at ≥-5)
+    // or produce unreliable results.
+    let clamped = target_exposure.clamp(-11, -5);
+    if clamped != target_exposure {
+        tracing::debug!(
+            "Camera {label}: exposure {target_exposure} clamped to {clamped} (valid range -11..-5)"
+        );
+    }
+
     let mut min: i32 = 0;
     let mut max: i32 = 0;
     let mut default: i32 = 0;
@@ -602,8 +688,8 @@ unsafe fn configure_exposure(
         tracing::debug!("Camera {label}: exposure set to AUTO (limits min={min} max={max} default={default})");
     } else {
         unsafe { Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 0) };
-        unsafe { Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, target_exposure) };
-        tracing::debug!("Camera {label}: exposure set to {target_exposure} (limits min={min} max={max} default={default})");
+        unsafe { Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, clamped) };
+        tracing::debug!("Camera {label}: exposure set to {clamped} (limits min={min} max={max} default={default})");
     }
 }
 

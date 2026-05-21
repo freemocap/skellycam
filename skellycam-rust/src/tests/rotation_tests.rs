@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 
+use super::info_block;
 use crate::cli::RotateArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::{CameraGroup, CameraGroupConfig, RecordingParams};
@@ -39,12 +40,14 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
         .unwrap_or(all_cameras.len())
         .min(all_cameras.len());
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  ROTATION TEST — {} camera{}", num, if num == 1 { "" } else { "s" });
-    tracing::info!("  Testing: rotation=-1 → 0 → 1 → 2 → 0(record) → -1");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  ROTATION TEST — {} camera{}\n  Testing: rotation=-1 → 0 → 1 → 2 → 0(record) → -1\n══════════════════════════════════════════════════",
+            num, if num == 1 { "" } else { "s" }
+        ),
+        "",
+    ]);
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
@@ -76,15 +79,13 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
     tracing::info!("  Stabilized at frame {current_frame}");
 
     // ── Baseline: no rotation ──────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── rotation=-1 (no rotation) ──");
+    tracing::info!("\n  ── rotation=-1 (no rotation) ──");
     let baseline_size = sample_payload_size(&group);
     tracing::info!("  Payload size: {baseline_size:.1} KB");
     verify_rotation_all(&group, -1);
 
     // ── Rotation 0 (90° CW) ───────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── rotation=0 (90° CW) ──");
+    tracing::info!("\n  ── rotation=0 (90° CW) ──");
     apply_rotation(&mut group, &all_cameras, 0);
     let target = current_frame + FRAMES_PER_ROTATION;
     poll_to(&mut group, &mut current_frame, &mut polls, target)?;
@@ -93,8 +94,7 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
     verify_rotation_all(&group, 0);
 
     // ── Rotation 1 (180°) ─────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── rotation=1 (180°) ──");
+    tracing::info!("\n  ── rotation=1 (180°) ──");
     apply_rotation(&mut group, &all_cameras, 1);
     let target = current_frame + FRAMES_PER_ROTATION;
     poll_to(&mut group, &mut current_frame, &mut polls, target)?;
@@ -103,8 +103,7 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
     verify_rotation_all(&group, 1);
 
     // ── Rotation 2 (270° CCW) ─────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── rotation=2 (270° CCW) ──");
+    tracing::info!("\n  ── rotation=2 (270° CCW) ──");
     apply_rotation(&mut group, &all_cameras, 2);
     let target = current_frame + FRAMES_PER_ROTATION;
     poll_to(&mut group, &mut current_frame, &mut polls, target)?;
@@ -113,8 +112,7 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
     verify_rotation_all(&group, 2);
 
     // ── Rotation 0 (90° CW) + Recording ───────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── rotation=0 (90° CW) + RECORDING ──");
+    tracing::info!("\n  ── rotation=0 (90° CW) + RECORDING ──");
     apply_rotation(&mut group, &all_cameras, 0);
     let target = current_frame + 10;
     poll_to(&mut group, &mut current_frame, &mut polls, target)?;
@@ -176,25 +174,24 @@ pub fn run(args: &RotateArgs) -> anyhow::Result<()> {
     }
 
     // ── Back to no rotation ────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── rotation=-1 (back to no rotation) ──");
+    tracing::info!("\n  ── rotation=-1 (back to no rotation) ──");
     apply_rotation(&mut group, &all_cameras, -1);
     let target = current_frame + 10;
     poll_to(&mut group, &mut current_frame, &mut polls, target)?;
     verify_rotation_all(&group, -1);
 
     // ── Shutdown ───────────────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Shutting down ──");
+    tracing::info!("\n  ── Shutting down ──");
     group.shutdown()?;
     tracing::info!("  Shutdown complete.");
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  ROTATION TEST COMPLETE");
-    tracing::info!("  Payload sizes: baseline={baseline_size:.1}K  90={rot90_size:.1}K  180={rot180_size:.1}K  270={rot270_size:.1}K");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  ROTATION TEST COMPLETE\n  Payload sizes: baseline={baseline_size:.1}K  90={rot90_size:.1}K  180={rot180_size:.1}K  270={rot270_size:.1}K\n══════════════════════════════════════════════════",
+        ),
+        "",
+    ]);
 
     Ok(())
 }

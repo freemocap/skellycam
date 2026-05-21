@@ -39,7 +39,7 @@ pub struct Camera {
     event_receiver: mpsc::Receiver<CameraEvent>,
     thread_handle: Option<JoinHandle<()>>,
     identity: CameraIdentity,
-    config: std::sync::Mutex<CameraConfig>,
+    config: Arc<std::sync::Mutex<CameraConfig>>,
 }
 
 impl Camera {
@@ -55,8 +55,9 @@ impl Camera {
         paused: Arc<AtomicBool>,
         start_frame_number: i64,
     ) -> anyhow::Result<Self> {
+        let shared_config = Arc::new(std::sync::Mutex::new(config));
         let (command_sender, event_receiver, frame_receiver, thread_handle) =
-            super::camera_thread::spawn(&identity, &config, barrier, paused, start_frame_number)?;
+            super::camera_thread::spawn(&identity, shared_config.clone(), barrier, paused, start_frame_number)?;
 
         Ok(Self {
             command_sender,
@@ -64,7 +65,7 @@ impl Camera {
             event_receiver,
             thread_handle: Some(thread_handle),
             identity,
-            config: std::sync::Mutex::new(config),
+            config: shared_config,
         })
     }
 
@@ -134,6 +135,16 @@ impl Camera {
     /// The camera's active configuration (cloned from the latest known state).
     pub fn config(&self) -> CameraConfig {
         self.config.lock().unwrap().clone()
+    }
+
+    /// Shared reference to the camera's active configuration.
+    ///
+    /// The camera thread updates `framerate` (and potentially `width`/`height`)
+    /// with the actual negotiated values after format selection. External
+    /// consumers (e.g. the dispatcher for recording) can read the live config
+    /// through this reference.
+    pub fn shared_config(&self) -> Arc<std::sync::Mutex<CameraConfig>> {
+        self.config.clone()
     }
 
     /// The frame receiver, for use in select!/polling multiplexed with other cameras.

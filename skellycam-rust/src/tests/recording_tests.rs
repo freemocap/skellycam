@@ -224,33 +224,39 @@ pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
 
     // ── Phase 5: Post-Record (current_frame..current_frame+POST_RECORD_FRAMES) ──
     let post_end = current_frame + POST_RECORD_FRAMES;
-    tracing::info!("");
-    tracing::info!("  ── Post-record phase ({} frames) ──", POST_RECORD_FRAMES);
+    info_block(&[
+        "",
+        &format!("  ── Post-record phase ({POST_RECORD_FRAMES} frames) ──"),
+    ]);
     poll_until_frame(&mut group, &mut current_frame, &mut poll_count, post_end)?;
 
     // ── Phase 6: Shutdown ──────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Shutting down ──");
+    info_block(&[
+        "",
+        "  ── Shutting down ──",
+    ]);
     group.shutdown()?;
     tracing::info!("  Shutdown complete.");
 
     // ── Phase 7: Verify disk output ────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  DISK VERIFICATION");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        "══════════════════════════════════════════════════",
+        "  DISK VERIFICATION",
+        "══════════════════════════════════════════════════",
+        "",
+    ]);
 
     verify_disk_output(&summary, expected_frames)?;
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  RECORDING TEST COMPLETE");
-    tracing::info!("  Cameras: {num_cameras}");
-    tracing::info!("  Frames per camera: {}", summary.total_frames_per_camera);
-    tracing::info!("  Polls: {poll_count}");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  RECORDING TEST COMPLETE\n  Cameras: {num_cameras}\n  Frames per camera: {}\n  Polls: {poll_count}\n══════════════════════════════════════════════════",
+            summary.total_frames_per_camera,
+        ),
+        "",
+    ]);
 
     Ok(())
 }

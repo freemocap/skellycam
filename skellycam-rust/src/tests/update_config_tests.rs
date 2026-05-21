@@ -7,6 +7,7 @@
 //!   test update add-camera [--cameras N]      — add a camera mid-stream
 //!   test update remove-camera [--cameras N]   — remove a camera mid-stream
 
+use super::info_block;
 use crate::cli::{CameraCountArgs, ResolutionArgs, FramerateArgs};
 use skellycam::camera_group::CameraGroup;
 
@@ -37,13 +38,14 @@ pub fn run_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     // Sort so we sweep from darkest (lowest number) to brightest
     test_values.sort();
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  EXPOSURE RANGE SCAN — {} camera{}", num, if num == 1 { "" } else { "s" });
-    tracing::info!("  Reported range: {}..=-1", reported_range.first().unwrap());
-    tracing::info!("  Testing: {} values (reported range + outside-range probes)", test_values.len());
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  EXPOSURE RANGE SCAN — {} camera{}\n  Reported range: {}..=-1\n  Testing: {} values (reported range + outside-range probes)\n══════════════════════════════════════════════════",
+            num, if num == 1 { "" } else { "s" }, reported_range.first().unwrap(), test_values.len()
+        ),
+        "",
+    ]);
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
@@ -126,11 +128,8 @@ pub fn run_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
         prev_lum = Some(luminance);
     }
 
-    tracing::info!("");
-
     group.shutdown()?;
-    tracing::info!("  EXPOSURE RANGE SCAN COMPLETE");
-    tracing::info!("");
+    tracing::info!("\n  EXPOSURE RANGE SCAN COMPLETE\n");
 
     Ok(())
 }
@@ -151,12 +150,14 @@ pub fn run_auto_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     }
     let num = args.cameras.unwrap_or(all_cameras.len());
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  AUTO-EXPOSURE TEST — {} camera{}", num, if num == 1 { "" } else { "s" });
-    tracing::info!("  MANUAL dark → AUTO (should brighten) → MANUAL bright → AUTO (should darken)");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  AUTO-EXPOSURE TEST — {} camera{}\n  MANUAL dark → AUTO (should brighten) → MANUAL bright → AUTO (should darken)\n══════════════════════════════════════════════════",
+            num, if num == 1 { "" } else { "s" }
+        ),
+        "",
+    ]);
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
@@ -223,10 +224,9 @@ pub fn run_auto_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
         if darkened { "✓ darkened" } else { "? didn't darken significantly" });
 
     // ── Summary ───────────────────────────────────────────────────────
-    tracing::info!("");
-    tracing::info!("  ── Summary ──");
-    tracing::info!("  dark MANUAL={dark_lum:.2} → AUTO={auto_from_dark:.2} (target: brighten)");
-    tracing::info!("  bright MANUAL={bright_lum:.2} → AUTO={auto_from_bright:.2} (target: darken)");
+    tracing::info!(
+        "\n  ── Summary ──\n  dark MANUAL={dark_lum:.2} → AUTO={auto_from_dark:.2} (target: brighten)\n  bright MANUAL={bright_lum:.2} → AUTO={auto_from_bright:.2} (target: darken)"
+    );
 
     if auto_from_dark < 1.0 && auto_from_bright < 1.0 {
         tracing::warn!("  ? AUTO barely changed from either extreme — camera may not support auto-exposure");
@@ -235,8 +235,7 @@ pub fn run_auto_exposure_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     }
 
     group.shutdown()?;
-    tracing::info!("  AUTO-EXPOSURE TEST COMPLETE");
-    tracing::info!("");
+    tracing::info!("  AUTO-EXPOSURE TEST COMPLETE\n");
 
     Ok(())
 }
@@ -321,16 +320,14 @@ pub fn run_resolution_test(args: &ResolutionArgs) -> anyhow::Result<()> {
         resolutions = sampled;
     }
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!(
-        "  RESOLUTION SCAN — {} ({} of {} resolutions sampled)",
-        identity.label(),
-        resolutions.len(),
-        sample_n,
-    );
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  RESOLUTION SCAN — {} ({} of {} resolutions sampled)\n══════════════════════════════════════════════════",
+            identity.label(), resolutions.len(), sample_n
+        ),
+        "",
+    ]);
 
     // Start at the lowest resolution
     let first = &resolutions[0];
@@ -399,11 +396,8 @@ pub fn run_resolution_test(args: &ResolutionArgs) -> anyhow::Result<()> {
         );
     }
 
-    tracing::info!("");
-
     group.shutdown()?;
-    tracing::info!("  RESOLUTION SCAN COMPLETE");
-    tracing::info!("");
+    tracing::info!("\n  RESOLUTION SCAN COMPLETE\n");
 
     Ok(())
 }
@@ -463,17 +457,14 @@ pub fn run_framerate_test(args: &FramerateArgs) -> anyhow::Result<()> {
         combos = sampled;
     }
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!(
-        "  FRAMERATE SCAN — {} ({} unique fps × {} of {} combos sampled)",
-        identity.label(),
-        unique_fps.len(),
-        combos.len(),
-        total_combos,
-    );
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  FRAMERATE SCAN — {} ({} unique fps × {} of {} combos sampled)\n══════════════════════════════════════════════════",
+            identity.label(), unique_fps.len(), combos.len(), total_combos
+        ),
+        "",
+    ]);
 
     // Start at the lowest-fps, lowest-resolution combo
     let first = &combos[0];
@@ -540,11 +531,8 @@ pub fn run_framerate_test(args: &FramerateArgs) -> anyhow::Result<()> {
         );
     }
 
-    tracing::info!("");
-
     group.shutdown()?;
-    tracing::info!("  FRAMERATE SCAN COMPLETE");
-    tracing::info!("");
+    tracing::info!("\n  FRAMERATE SCAN COMPLETE\n");
 
     Ok(())
 }
@@ -576,11 +564,14 @@ pub fn run_add_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     let start_count = (camera_count - 1) as usize;
     let reserved = &all_cameras[start_count]; // camera to add later
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  ADD-CAMERA TEST — start with {start_count}, add '{}'", reserved.label());
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  ADD-CAMERA TEST — start with {start_count}, add '{}'\n══════════════════════════════════════════════════",
+            reserved.label()
+        ),
+        "",
+    ]);
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
@@ -670,9 +661,7 @@ pub fn run_add_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     );
 
     group.shutdown()?;
-    tracing::info!("  Shutdown complete.");
-    tracing::info!("  ADD-CAMERA TEST COMPLETE");
-    tracing::info!("");
+    tracing::info!("  Shutdown complete.\n  ADD-CAMERA TEST COMPLETE\n");
 
     Ok(())
 }
@@ -700,11 +689,13 @@ pub fn run_remove_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
         );
     }
 
-    tracing::info!("");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("  REMOVE-CAMERA TEST — start with {camera_count}, remove one");
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "══════════════════════════════════════════════════\n  REMOVE-CAMERA TEST — start with {camera_count}, remove one\n══════════════════════════════════════════════════"
+        ),
+        "",
+    ]);
 
     let configs: HashMap<String, CameraGroupConfig> = all_cameras
         .iter()
@@ -781,9 +772,7 @@ pub fn run_remove_camera_test(args: &CameraCountArgs) -> anyhow::Result<()> {
     tracing::info!("  ✓ Camera '{camera_to_remove}' removed from statuses");
 
     group.shutdown()?;
-    tracing::info!("  Shutdown complete.");
-    tracing::info!("  REMOVE-CAMERA TEST COMPLETE");
-    tracing::info!("");
+    tracing::info!("  Shutdown complete.\n  REMOVE-CAMERA TEST COMPLETE\n");
 
     Ok(())
 }

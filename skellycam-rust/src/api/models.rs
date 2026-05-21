@@ -62,7 +62,7 @@ impl From<crate::camera::CameraDetection> for DetectedCamera {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct DetectedCamerasResponse {
     pub cameras: Vec<DetectedCamera>,
 }
@@ -75,7 +75,7 @@ pub struct DetectedCamerasResponse {
 /// frontend can send the same payload to either backend. Fields the Rust
 /// backend doesn't use (color_channels, pixel_format, capture_fourcc,
 /// writer_fourcc) are accepted but ignored.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CameraConfigInput {
     pub camera_id: String,
     #[serde(default)]
@@ -127,7 +127,7 @@ fn default_rotation() -> i32 {
 }
 
 /// Simple width/height pair matching `ImageResolution` in the Python API.
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct ResolutionInput {
     #[serde(default = "default_height")]
     pub height: i32,
@@ -146,13 +146,13 @@ fn default_width() -> i32 {
 ///
 /// `camera_configs` is a dict keyed by camera_id, matching the frontend's
 /// existing payload shape.
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CameraGroupApplyRequest {
     pub camera_configs: HashMap<String, CameraConfigInput>,
 }
 
 /// Output format for a single camera config — matches Python `CameraConfig-Output`.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CameraConfigOutput {
     pub camera_id: String,
     pub camera_index: i32,
@@ -197,7 +197,7 @@ impl From<&crate::camera::CameraConfig> for CameraConfigOutput {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CreateCameraGroupResponse {
     pub group_id: String,
     pub camera_configs: HashMap<String, CameraConfigOutput>,
@@ -219,7 +219,7 @@ fn default_mic_index() -> i32 {
     -1
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct StopRecordingResponse {
     pub recording_name: String,
     pub recording_path: String,
@@ -233,7 +233,7 @@ pub struct StopRecordingResponse {
     pub inter_camera_grab_range_ms_stats: StatsSummary,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct StatsSummary {
     pub median: f64,
     pub mean: f64,
@@ -242,9 +242,3 @@ pub struct StatsSummary {
     pub max: f64,
 }
 
-// ── Close ──────────────────────────────────────────────────────────────────
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct CloseAllResponse {
-    pub success: bool,
-}

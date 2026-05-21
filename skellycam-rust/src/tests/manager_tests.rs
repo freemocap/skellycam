@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+use super::info_block;
 use crate::cli::CameraCountArgs;
 use skellycam::camera::{detect_cameras, CameraConfig};
 use skellycam::camera_group::CameraGroupConfig;
@@ -28,13 +29,14 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
         None => all_cameras.len(),
     };
 
-    tracing::info!("══════════════════════════════════════════════════");
-    tracing::info!(
-        "  CAMERA GROUP MANAGER TEST — {} camera{}",
-        camera_count,
-        if camera_count == 1 { "" } else { "s" }
-    );
-    tracing::info!("══════════════════════════════════════════════════\n");
+    info_block(&[
+        &format!(
+            "══════════════════════════════════════════════════\n  CAMERA GROUP MANAGER TEST — {} camera{}\n══════════════════════════════════════════════════",
+            camera_count,
+            if camera_count == 1 { "" } else { "s" },
+        ),
+        "",
+    ]);
 
     let mut manager = CameraGroupManager::new();
 
@@ -57,9 +59,14 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
         .collect();
 
     let group_id = manager.create_or_update_group(configs, None)?;
-    tracing::info!("  Created group: {group_id}");
-    tracing::info!("  Active groups: {:?}", manager.list_groups());
-    tracing::info!("  Group count: {}\n", manager.group_count());
+    info_block(&[
+        &format!(
+            "  Created group: {group_id}\n  Active groups: {:?}\n  Group count: {}",
+            manager.list_groups(),
+            manager.group_count(),
+        ),
+        "",
+    ]);
 
     let state = manager.to_state_dict();
     let state_json = serde_json::to_string_pretty(&state)?;
@@ -74,12 +81,11 @@ pub fn run(args: &CameraCountArgs) -> anyhow::Result<()> {
     }
     let frame_count = (start.elapsed().as_millis() / 10) as u64;
 
-    tracing::info!("  ── Results ──");
-    tracing::info!("  Polls: {frame_count}");
-    tracing::info!("  Cameras in group: {camera_count}");
+    tracing::info!(
+        "\n  ── Results ──\n  Polls: {frame_count}\n  Cameras in group: {camera_count}"
+    );
 
     manager.close_group(&group_id)?;
-    tracing::info!("  Shutdown complete.");
-    tracing::info!("══════════════════════════════════════════════════\n");
+    tracing::info!("  Shutdown complete.\n══════════════════════════════════════════════════\n");
     Ok(())
 }

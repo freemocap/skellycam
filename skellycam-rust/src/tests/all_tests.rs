@@ -7,6 +7,7 @@
 //! Each iteration creates a fresh CameraGroup, runs the applicable tests,
 //! and shuts down cleanly before moving to the next camera count.
 
+use super::info_block;
 use crate::cli::{
     AllArgs, CameraCountArgs, FramerateArgs, MultiArgs, RecordingArgs,
     ResolutionArgs, RotateArgs,
@@ -23,18 +24,17 @@ pub fn run(args: &AllArgs) -> anyhow::Result<()> {
         .unwrap_or(all_cameras.len())
         .min(all_cameras.len());
 
-    tracing::info!("");
-    tracing::info!("╔══════════════════════════════════════════════════════════════╗");
-    tracing::info!("║           SKELLYCAM RUST — FULL TEST SUITE                   ║");
-    tracing::info!("╠══════════════════════════════════════════════════════════════╣");
-    tracing::info!("║  Cameras detected: {:<43}║", all_cameras.len());
-    tracing::info!("║  Test iterations:  1 → {:<43}║", total);
-    tracing::info!("╚══════════════════════════════════════════════════════════════╝");
-    tracing::info!("");
+    info_block(&[
+        "",
+        &format!(
+            "╔══════════════════════════════════════════════════════════════╗\n║           SKELLYCAM RUST — FULL TEST SUITE                   ║\n╠══════════════════════════════════════════════════════════════╣\n║  Cameras detected: {:<43}║\n║  Test iterations:  1 → {:<43}║\n╚══════════════════════════════════════════════════════════════╝",
+            all_cameras.len(), total
+        ),
+        "",
+    ]);
 
     if total == 1 {
-        tracing::warn!("⚠  Only 1 camera detected — multi-camera tests will be skipped.");
-        tracing::info!("");
+        tracing::warn!("⚠  Only 1 camera detected — multi-camera tests will be skipped.\n");
     }
 
     let mut passed: Vec<String> = Vec::new();
@@ -43,12 +43,16 @@ pub fn run(args: &AllArgs) -> anyhow::Result<()> {
     let suite_start = std::time::Instant::now();
 
     for camera_count in 1..=total {
-        tracing::info!("");
-        tracing::info!("┌──────────────────────────────────────────────────────────────┐");
-        tracing::info!("│  ITERATION {camera_count}/{total}: testing with {camera_count} camera(s){:width$}│",
-            "", width = 48_usize.saturating_sub(format!("  ITERATION {camera_count}/{total}: testing with {camera_count} camera(s)").len()));
-        tracing::info!("└──────────────────────────────────────────────────────────────┘");
-        tracing::info!("");
+        let header_text = format!("  ITERATION {camera_count}/{total}: testing with {camera_count} camera(s)");
+        let pad = 48_usize.saturating_sub(header_text.len());
+        info_block(&[
+            "",
+            &format!(
+                "┌──────────────────────────────────────────────────────────────┐\n│ {header_text}{:pad$}│\n└──────────────────────────────────────────────────────────────┘",
+                ""
+            ),
+            "",
+        ]);
 
         let cc = CameraCountArgs { cameras: Some(camera_count) };
         let multi = MultiArgs { cameras: Some(camera_count), indices: None, max_loops: 60 };
@@ -123,11 +127,11 @@ pub fn run(args: &AllArgs) -> anyhow::Result<()> {
     }
 
     // ── Camera-count-independent tests (run once) ───────────────────────────
-    tracing::info!("");
-    tracing::info!("┌──────────────────────────────────────────────────────────────┐");
-    tracing::info!("│  CAMERA-COUNT-INDEPENDENT TESTS                               │");
-    tracing::info!("└──────────────────────────────────────────────────────────────┘");
-    tracing::info!("");
+    info_block(&[
+        "",
+        "┌──────────────────────────────────────────────────────────────┐\n│  CAMERA-COUNT-INDEPENDENT TESTS                               │\n└──────────────────────────────────────────────────────────────┘",
+        "",
+    ]);
 
     run_test("rotate", &mut passed, &mut failed, || {
         super::rotation_tests::run(&RotateArgs { cameras: None, output: None })
@@ -139,49 +143,49 @@ pub fn run(args: &AllArgs) -> anyhow::Result<()> {
         )
     });
 
+    run_test("api-server", &mut passed, &mut failed, || {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(4)
+            .enable_all()
+            .build()?;
+        rt.block_on(super::api_server_tests::run())
+    });
+
     // ── Summary ──────────────────────────────────────────────────────────
     let elapsed = suite_start.elapsed().as_secs_f64();
-    tracing::info!("");
-    tracing::info!("╔══════════════════════════════════════════════════════════════════╗");
-    tracing::info!("║           SKELLYCAM RUST — TEST SUITE RESULTS                     ║");
-    tracing::info!("╠══════════════════════════════════════════════════════════════════╣");
-    tracing::info!(
+    let mut summary_lines: Vec<String> = Vec::new();
+    summary_lines.push(String::new()); // leading blank
+    summary_lines.push("╔══════════════════════════════════════════════════════════════════╗".to_string());
+    summary_lines.push("║           SKELLYCAM RUST — TEST SUITE RESULTS                     ║".to_string());
+    summary_lines.push("╠══════════════════════════════════════════════════════════════════╣".to_string());
+    summary_lines.push(format!(
         "║  Cameras:   {:<3} detected,  {:<3} available,   max {:<3} tested             ║",
         all_cameras.len(), all_cameras.len(), total,
-    );
-    tracing::info!(
+    ));
+    summary_lines.push(format!(
         "║  Duration:  {:.0}s  ({:.1} min)                                      ║",
         elapsed, elapsed / 60.0,
-    );
-    tracing::info!("╠══════════════════════════════════════════════════════════════════╣");
-    tracing::info!(
+    ));
+    summary_lines.push("╠══════════════════════════════════════════════════════════════════╣".to_string());
+    summary_lines.push(format!(
         "║  Iterations: {}  |  Tests per iteration: {}                             ║",
         total,
         passed.len() / total,
-    );
-    tracing::info!(
+    ));
+    summary_lines.push(format!(
         "║  Camera-count-independent tests: {}                                    ║",
-        2, // rotate + auto-exposure
-    );
-    tracing::info!("╠══════════════════════════════════════════════════════════════════╣");
-    tracing::info!(
-        "║  ✓  {:>3} passed                                                       ║",
-        passed.len(),
-    );
-    tracing::info!(
-        "║  ✗  {:>3} failed                                                       ║",
-        failed.len(),
-    );
-    tracing::info!(
-        "║  ⏭  {:>3} skipped                                                      ║",
-        skipped.len(),
-    );
-    tracing::info!("╠══════════════════════════════════════════════════════════════════╣");
+        3, // rotate + auto-exposure + api-server
+    ));
+    summary_lines.push("╠══════════════════════════════════════════════════════════════════╣".to_string());
+    summary_lines.push(format!("║  ✓  {:>3} passed                                                       ║", passed.len()));
+    summary_lines.push(format!("║  ✗  {:>3} failed                                                       ║", failed.len()));
+    summary_lines.push(format!("║  ⏭  {:>3} skipped                                                      ║", skipped.len()));
+    summary_lines.push("╠══════════════════════════════════════════════════════════════════╣".to_string());
 
     if !passed.is_empty() {
-        tracing::info!("║                                                                    ║");
+        summary_lines.push("║                                                                    ║".to_string());
         let suffix = if total == 1 { "" } else { "s" };
-        tracing::info!("║  Tests run (per iteration, 1→{total} camera{suffix}):{:40}║", "");
+        summary_lines.push(format!("║  Tests run (per iteration, 1→{total} camera{suffix}):{:40}║", ""));
         let mut seen: Vec<&str> = Vec::new();
         for name in &passed {
             if !seen.contains(&name.as_str()) {
@@ -190,27 +194,29 @@ pub fn run(args: &AllArgs) -> anyhow::Result<()> {
         }
         for name in &seen {
             let count = passed.iter().filter(|n| n.as_str() == *name).count();
-            tracing::info!("║    ✓  {name:<52}  x{count}  ║");
+            summary_lines.push(format!("║    ✓  {name:<52}  x{count}  ║"));
         }
     }
 
     if !failed.is_empty() {
-        tracing::info!("║                                                                    ║");
-        tracing::info!("║  FAILURES:                                                         ║");
+        summary_lines.push("║                                                                    ║".to_string());
+        summary_lines.push("║  FAILURES:                                                         ║".to_string());
         for name in &failed {
-            tracing::info!("║    ✗  {name:<56}║");
+            summary_lines.push(format!("║    ✗  {name:<56}║"));
         }
     }
 
     if !skipped.is_empty() {
-        tracing::info!("║                                                                    ║");
-        tracing::info!("║  SKIPPED:                                                          ║");
+        summary_lines.push("║                                                                    ║".to_string());
+        summary_lines.push("║  SKIPPED:                                                          ║".to_string());
         for name in &skipped {
-            tracing::info!("║    ⏭  {name:<56}║");
+            summary_lines.push(format!("║    ⏭  {name:<56}║"));
         }
     }
-    tracing::info!("╚══════════════════════════════════════════════════════════════════╝");
-    tracing::info!("");
+    summary_lines.push("╚══════════════════════════════════════════════════════════════════╝".to_string());
+    summary_lines.push(String::new()); // trailing blank
+
+    tracing::info!("\n{}", summary_lines.join("\n"));
 
     if !failed.is_empty() {
         eprintln!(
@@ -235,14 +241,13 @@ fn run_test(
     match test_fn() {
         Ok(()) => {
             let elapsed = start.elapsed().as_secs_f64();
-            tracing::info!("  ✓ PASS: {name} ({elapsed:.1}s)");
+            tracing::info!("  ✓ PASS: {name} ({elapsed:.1}s)\n");
             passed.push(name.to_string());
         }
         Err(e) => {
             let elapsed = start.elapsed().as_secs_f64();
-            tracing::error!("  ✗ FAIL: {name} ({elapsed:.1}s) — {e}");
+            tracing::error!("  ✗ FAIL: {name} ({elapsed:.1}s) — {e}\n");
             failed.push(name.to_string());
         }
     }
-    tracing::info!("");
 }

@@ -68,6 +68,12 @@ dirs = "6"
 # Streaming CSV
 csv = "1"
 
+# HTTP client (API integration tests)
+reqwest = { version = "0.12", features = ["json"] }
+# WebSocket client (API integration tests)
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
 # ffmpeg auto-download
 ffmpeg-sidecar = "2"
 

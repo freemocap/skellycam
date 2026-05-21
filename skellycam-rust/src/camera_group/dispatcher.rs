@@ -26,7 +26,7 @@ use crate::recording::finalizer;
 use crate::recording::VideoRecorder;
 use crate::timestamps::CsvWriter;
 
-use super::types::DispatcherCommand;
+use super::types::{DispatcherCommand, SharedConfigMap};
 
 // ── Frontend payload type ─────────────────────────────────────────────────
 
@@ -64,6 +64,7 @@ pub fn spawn_dispatcher(
     latest_payload: Arc<Mutex<Option<FrontendPayload>>>,
     latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
+    mut shared_configs: SharedConfigMap,
 ) -> JoinHandle<()> {
     thread::Builder::new()
         .name("dispatcher".into())
@@ -99,6 +100,13 @@ pub fn spawn_dispatcher(
                         let _ = response_tx.send(summary);
                         tracing::info!("[dispatcher] recording stopped");
                     }
+                    DispatcherCommand::UpdateConfigs { configs } => {
+                        shared_configs = configs;
+                        tracing::debug!(
+                            "[dispatcher] updated configs: {} cameras",
+                            shared_configs.len()
+                        );
+                    }
                     DispatcherCommand::Shutdown => {
                         // Clean up any in-progress recording
                         if recording_active.load(Ordering::SeqCst) {
@@ -127,6 +135,7 @@ pub fn spawn_dispatcher(
                         match create_recorders(
                             &params,
                             &payload,
+                            &shared_configs,
                         ) {
                             Ok((recorders, writers, session_dir, infos)) => {
                                 let camera_count = payload.frames.len();
@@ -277,6 +286,7 @@ pub fn spawn_dispatcher(
 fn create_recorders(
     params: &super::types::RecordingParams,
     payload: &MultiFramePayload,
+    shared_configs: &SharedConfigMap,
 ) -> anyhow::Result<(
     Vec<VideoRecorder>,
     Vec<CsvWriter>,
@@ -315,12 +325,28 @@ fn create_recorders(
         let video_path = videos_dir.join(format!("{camera_label}_{label}.mp4"));
         let csv_path = timestamps_dir.join(format!("{camera_label}_timestamps.csv"));
 
+        // Look up the actual negotiated framerate from the shared camera config.
+        // The camera thread writes the real FPS here after find_best_mjpg.
+        // Fall back to 30.0 if the config hasn't been populated yet (shouldn't
+        // happen — recording always starts after cameras are running).
+        let target_fps = shared_configs
+            .get(&identity.camera_id)
+            .and_then(|cfg| {
+                let guard = cfg.lock().ok()?;
+                if guard.framerate > 0.0 {
+                    Some(guard.framerate as f32)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(30.0);
+
         let recorder = VideoRecorder::new(
             video_path,
             identity,
             frame.width,
             frame.height,
-            30.0, // target FPS for ffmpeg
+            target_fps,
             &VideoRecorderConfig::default(),
         )?;
 

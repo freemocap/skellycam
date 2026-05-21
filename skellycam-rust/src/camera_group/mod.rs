@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use crate::camera::MultiFramePayload;
 
-pub use types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingParams};
+pub use types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingParams, SharedConfigMap};
 pub use camera_group::{
     CameraGroup, CameraGroupState, CameraStatus, GathererInvalidTransition,
     GathererState, GathererStateMachine, GathererTimestamps,

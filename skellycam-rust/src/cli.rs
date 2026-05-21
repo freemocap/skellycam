@@ -44,6 +44,8 @@ pub enum TestModule {
     Recording(RecordingArgs),
     /// Pause / unpause / toggle test
     Pause(CameraCountArgs),
+    /// API server integration tests (HTTP + WebSocket)
+    Api,
     /// Lossless JPEG rotation test (0/90/180/270 + record)
     Rotate(RotateArgs),
     /// Config update tests

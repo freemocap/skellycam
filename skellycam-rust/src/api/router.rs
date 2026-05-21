@@ -38,7 +38,6 @@ use super::models::*;
         CreateCameraGroupResponse,
         StartRecordingRequest,
         StopRecordingResponse,
-        CloseAllResponse,
     )),
     info(
         title = "Skellycam API",

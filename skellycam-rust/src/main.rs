@@ -51,6 +51,13 @@ fn dispatch_test(module: cli::TestModule) -> anyhow::Result<()> {
         TestModule::Manager(a) => tests::manager_tests::run(&a),
         TestModule::Recording(a) => tests::recording_tests::run(&a),
         TestModule::Pause(a) => tests::pause_tests::run(&a),
+        TestModule::Api => {
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(4)
+                .enable_all()
+                .build()?;
+            rt.block_on(tests::api_server_tests::run())
+        }
         TestModule::Rotate(a) => tests::rotation_tests::run(&a),
         TestModule::Update { module } => dispatch_update(module),
     }
