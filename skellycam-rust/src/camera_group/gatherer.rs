@@ -899,8 +899,14 @@ fn print_statistics(
         cell_widths: vec![10, 10, 10, 6, 10, 10, 4],
     };
     let summary_headers = ["Median", "Mean", "Std", "CV%", "Min", "Max", "n"];
+    let max_label_len = camera_labels
+        .iter()
+        .map(|l| l.len())
+        .max()
+        .unwrap_or(0)
+        .max(26);
     let per_camera_schema = TableSchema {
-        name_w: 26,
+        name_w: max_label_len,
         cell_widths: vec![10, 10, 10, 6, 8, 4],
     };
 

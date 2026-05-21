@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
@@ -9,6 +9,10 @@ use axum::routing::get;
 use axum::Router;
 
 use crate::api::application_state::AppState;
+use crate::websocket::framerate_tracker::{FramerateTracker, FramerateUpdateMessage};
+
+const POLL_INTERVAL_MS: u64 = 10;
+const FRAMERATE_SEND_INTERVAL_MS: u64 = 250;
 
 pub fn websocket_route() -> Router<Arc<AppState>> {
     Router::new().route(
@@ -25,47 +29,82 @@ async fn websocket_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
-    let active_id = {
-        state.active_group_id.lock().await.clone()
-    };
-
-    let Some(group_id) = active_id else {
-        let _ = socket
-            .send(Message::Text("no active camera group".into()))
-            .await;
-        return;
-    };
-
+    let mut last_group_id: Option<String> = None;
     let mut last_frame_number: i64 = -1;
 
+    let mut backend_tracker = FramerateTracker::new("Server");
+    let mut frontend_tracker = FramerateTracker::new("Display");
+    let mut last_frontend_send: Option<Instant> = None;
+    let mut last_framerate_report = Instant::now();
+
     loop {
-        // Poll the active group's latest frontend payload
-        let payload = {
-            let manager = state.camera_manager.lock().await;
-            manager
-                .get_group(&group_id)
-                .and_then(|g| g.latest_frontend_payload())
+        // ── Which group is currently active? ──
+        let active_id = {
+            state.active_group_id.lock().await.clone()
         };
 
-        if let Some(payload) = payload {
-            if payload.frame_number > last_frame_number {
-                last_frame_number = payload.frame_number;
-                if socket
-                    .send(Message::Binary(payload.jpeg_bytes.into()))
-                    .await
-                    .is_err()
-                {
-                    break;
+        if active_id != last_group_id {
+            last_group_id = active_id.clone();
+            last_frame_number = -1;
+        }
+
+        // ── Poll for a new frame (if a group is active) ──
+        if let Some(ref group_id) = active_id {
+            let payload = {
+                let manager = state.camera_manager.lock().await;
+                manager
+                    .get_group(group_id)
+                    .and_then(|g| g.latest_frontend_payload())
+            };
+
+            if let Some(payload) = payload {
+                if payload.frame_number > last_frame_number {
+                    backend_tracker.record_backend_frame(
+                        payload.timestamp_ns,
+                        payload.frame_number,
+                    );
+                    last_frame_number = payload.frame_number;
+
+                    let now = Instant::now();
+                    if let Some(prev) = last_frontend_send {
+                        let duration_ms = now.duration_since(prev).as_secs_f64() * 1000.0;
+                        frontend_tracker.record_frontend_frame(duration_ms);
+                    }
+                    last_frontend_send = Some(now);
+
+                    if socket
+                        .send(Message::Binary(payload.jpeg_bytes.into()))
+                        .await
+                        .is_err()
+                    {
+                        break;
+                    }
                 }
+            }
+
+            // ── Send framerate update at ~4 Hz ──
+            if last_framerate_report.elapsed()
+                >= Duration::from_millis(FRAMERATE_SEND_INTERVAL_MS)
+            {
+                let message = FramerateUpdateMessage {
+                    message_type: "framerate_update".to_string(),
+                    camera_group_id: group_id.clone(),
+                    backend_framerate: backend_tracker.snapshot_and_reset(),
+                    frontend_framerate: frontend_tracker.snapshot_and_reset(),
+                };
+                if let Ok(json) = serde_json::to_string(&message) {
+                    if socket.send(Message::Text(json.into())).await.is_err() {
+                        break;
+                    }
+                }
+                last_framerate_report = Instant::now();
             }
         }
 
-        // Check shutdown flag
         if state.shutdown_flag.load(Ordering::SeqCst) {
             break;
         }
 
-        // ~10ms poll interval (~100 Hz max relay rate)
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        tokio::time::sleep(Duration::from_millis(POLL_INTERVAL_MS)).await;
     }
 }

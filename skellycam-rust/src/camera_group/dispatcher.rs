@@ -4,11 +4,12 @@
 //! via an unbounded channel, processes them, and stores the encoded frontend
 //! payload for external polling.
 //!
-//! When recording is active, also feeds per-camera MJPEG frames to ffmpeg
-//! (VideoRecorder) and writes per-frame timestamp CSV rows (CsvWriter).
+//! When recording is active, per-camera JPEG frames are extracted and sent
+//! via an unbounded channel to a dedicated recording thread — so the dispatcher
+//! never blocks on ffmpeg pipe writes or CSV fsyncs.
 //!
-//! Spin-waits on both the multiframe channel and the control channel — never
-//! blocks on either, so config changes and recording commands are responsive.
+//! Spin-waits on the multiframe channel, the control channel, AND the recording
+//! channel — never blocks, so config changes and recording commands stay responsive.
 
 use std::fs;
 use std::path::PathBuf;
@@ -22,8 +23,10 @@ use crate::camera::{CameraIdentity, MultiFramePayload};
 use crate::camera_group::frontend_encoder::encode_multiframe;
 use crate::camera_group::jpeg_transform::rotate_jpeg_lossless;
 use crate::camera_group::recording_stats::RecordingStats;
-use crate::recording::finalizer;
-use crate::recording::VideoRecorder;
+use crate::recording::finalizer::RecordingSummary;
+use crate::recording::{
+    RecordingFrameData, RecordingHandle, VideoRecorder, spawn_recording_thread,
+};
 use crate::timestamps::CsvWriter;
 
 use super::types::{DispatcherCommand, SharedConfigMap};
@@ -70,12 +73,9 @@ pub fn spawn_dispatcher(
         .name("dispatcher".into())
         .spawn(move || {
         // Recording state (only Some while recording)
-        let mut video_recorders: Option<Vec<VideoRecorder>> = None;
-        let mut csv_writers: Option<Vec<CsvWriter>> = None;
+        let mut recording_handle: Option<RecordingHandle> = None;
         let mut recording_stats: Option<RecordingStats> = None;
         let mut pending_recording: Option<super::types::RecordingParams> = None;
-        let mut recording_dir: Option<PathBuf> = None;
-        let mut camera_infos: Option<Vec<(CameraIdentity, u32, u32)>> = None;
 
         loop {
             // ── Drain all pending commands ──
@@ -90,13 +90,35 @@ pub fn spawn_dispatcher(
                     }
                     DispatcherCommand::StopRecording { response_tx } => {
                         recording_active.store(false, Ordering::SeqCst);
-                        let summary = finalize_recording_session(
-                            &mut video_recorders,
-                            &mut csv_writers,
-                            recording_stats.take(),
-                            recording_dir.take(),
-                            camera_infos.take(),
-                        );
+                        let stats_summary = recording_stats.take().map(|s| s.finalize());
+                        let summary = if let Some(handle) = recording_handle.take() {
+                            match handle.stop(stats_summary) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    tracing::error!(
+                                        "[dispatcher] recording thread stop error: {e}"
+                                    );
+                                    RecordingSummary {
+                                        total_frames_per_camera: 0,
+                                        video_paths: Vec::new(),
+                                        csv_paths: Vec::new(),
+                                        info_json_path: PathBuf::new(),
+                                        stats: None,
+                                    }
+                                }
+                            }
+                        } else {
+                            tracing::warn!(
+                                "[dispatcher] StopRecording but no recording handle"
+                            );
+                            RecordingSummary {
+                                total_frames_per_camera: 0,
+                                video_paths: Vec::new(),
+                                csv_paths: Vec::new(),
+                                info_json_path: PathBuf::new(),
+                                stats: stats_summary,
+                            }
+                        };
                         let _ = response_tx.send(summary);
                         tracing::info!("[dispatcher] recording stopped");
                     }
@@ -111,13 +133,9 @@ pub fn spawn_dispatcher(
                         // Clean up any in-progress recording
                         if recording_active.load(Ordering::SeqCst) {
                             recording_active.store(false, Ordering::SeqCst);
-                            let _ = finalize_recording_session(
-                                &mut video_recorders,
-                                &mut csv_writers,
-                                recording_stats.take(),
-                                recording_dir.take(),
-                                camera_infos.take(),
-                            );
+                            if let Some(handle) = recording_handle.take() {
+                                handle.shutdown();
+                            }
                         }
                         tracing::info!("[dispatcher] shutting down");
                         return;
@@ -141,10 +159,12 @@ pub fn spawn_dispatcher(
                                 let camera_count = payload.frames.len();
                                 let dir_display = session_dir.display().to_string();
                                 recording_stats = Some(RecordingStats::new(camera_count));
-                                video_recorders = Some(recorders);
-                                csv_writers = Some(writers);
-                                recording_dir = Some(session_dir);
-                                camera_infos = Some(infos);
+                                recording_handle = Some(spawn_recording_thread(
+                                    recorders,
+                                    writers,
+                                    session_dir,
+                                    infos,
+                                ));
                                 recording_active.store(true, Ordering::SeqCst);
                                 tracing::info!(
                                     "[dispatcher] recording started → {dir_display} ({camera_count} cameras)",
@@ -221,43 +241,27 @@ pub fn spawn_dispatcher(
                         );
                     }
 
-                    // ── Recording: feed per-camera frames ──
+                    // ── Recording: send per-camera frames to recording thread ──
                     if recording_active.load(Ordering::SeqCst) {
                         let post_encode_ns =
                             crate::timestamps::performance::performance_counter_nanoseconds();
 
-                        if let (Some(recorders), Some(writers), Some(stats)) = (
-                            video_recorders.as_mut(),
-                            csv_writers.as_mut(),
-                            recording_stats.as_mut(),
-                        ) {
-                            for (i, frame) in payload.frames.iter().enumerate() {
-                                if let (Some(recorder), Some(writer)) =
-                                    (recorders.get_mut(i), writers.get_mut(i))
-                                {
-                                    let bytes = frame.data.as_bytes();
-                                    let now =
-                                        crate::timestamps::performance::performance_counter_nanoseconds();
-                                    if let Err(e) = recorder.feed_frame(
-                                        bytes,
-                                        frame.frame_number,
-                                        frame.timestamps.frame_available_ns,
-                                        now,
-                                    ) {
-                                        tracing::error!(
-                                            "[dispatcher] recorder error for camera {i}: {e}"
-                                        );
-                                    }
-                                    if let Err(e) = writer.write_row(
-                                        frame.frame_number,
-                                        &frame.timestamps,
-                                    ) {
-                                        tracing::error!(
-                                            "[dispatcher] CSV write error for camera {i}: {e}"
-                                        );
-                                    }
-                                }
-                            }
+                        if let (Some(handle), Some(stats)) =
+                            (recording_handle.as_ref(), recording_stats.as_mut())
+                        {
+                            let frames: Vec<RecordingFrameData> = payload
+                                .frames
+                                .iter()
+                                .enumerate()
+                                .map(|(i, frame)| RecordingFrameData {
+                                    camera_index: i,
+                                    jpeg_bytes: frame.data.as_bytes().to_vec(),
+                                    frame_number: frame.frame_number,
+                                    grab_timestamp_ns: frame.timestamps.frame_available_ns,
+                                    timestamps: frame.timestamps.clone(),
+                                })
+                                .collect();
+                            handle.send_frames(frames, post_encode_ns);
                             stats.push_multiframe(&payload, post_encode_ns);
                         }
                     }
@@ -358,113 +362,6 @@ fn create_recorders(
     }
 
     Ok((recorders, writers, session_dir, infos))
-}
-
-/// Finalize all recorders, compute stats, and build the recording summary.
-///
-/// Finishes each recorder and CSV writer, then delegates to
-/// `finalizer::finalize_recording()` which validates frame counts across
-/// cameras and writes `recording_info.json`.
-fn finalize_recording_session(
-    video_recorders: &mut Option<Vec<VideoRecorder>>,
-    csv_writers: &mut Option<Vec<CsvWriter>>,
-    recording_stats: Option<RecordingStats>,
-    recording_dir: Option<PathBuf>,
-    camera_infos: Option<Vec<(CameraIdentity, u32, u32)>>,
-) -> finalizer::RecordingSummary {
-    let stats = recording_stats.map(|s| s.finalize());
-
-    // Default empty summary in case recorders were never created
-    let empty_summary = finalizer::RecordingSummary {
-        total_frames_per_camera: 0,
-        video_paths: Vec::new(),
-        csv_paths: Vec::new(),
-        info_json_path: PathBuf::new(),
-        stats: stats.clone(),
-    };
-
-    let (Some(recorders), Some(writers), Some(session_dir), Some(infos)) = (
-        video_recorders.take(),
-        csv_writers.take(),
-        recording_dir,
-        camera_infos,
-    ) else {
-        return empty_summary;
-    };
-
-    let mut video_paths = Vec::with_capacity(recorders.len());
-    let mut csv_paths = Vec::with_capacity(writers.len());
-
-    for recorder in recorders {
-        let frame_count = recorder.frame_count();
-        let path = recorder.output_path().to_path_buf();
-        match recorder.finish() {
-            Ok(timestamps) => {
-                video_paths.push(path);
-                tracing::info!(
-                    "[dispatcher] recorder finished: {frame_count} frames, {} timestamps",
-                    timestamps.len()
-                );
-            }
-            Err(e) => {
-                tracing::error!("[dispatcher] recorder finish error: {e}");
-            }
-        }
-    }
-
-    for writer in writers {
-        match writer.finish() {
-            Ok(path) => {
-                csv_paths.push(path);
-            }
-            Err(e) => {
-                tracing::error!("[dispatcher] CSV finish error: {e}");
-            }
-        }
-    }
-
-    if infos.len() != video_paths.len() || infos.len() != csv_paths.len() {
-        tracing::error!(
-            "[dispatcher] mismatch: {} camera infos, {} videos, {} CSVs — skipping recording_info.json",
-            infos.len(),
-            video_paths.len(),
-            csv_paths.len(),
-        );
-        return finalizer::RecordingSummary {
-            total_frames_per_camera: 0,
-            video_paths,
-            csv_paths,
-            info_json_path: PathBuf::new(),
-            stats,
-        };
-    }
-
-    let total = video_paths.len() as u64;
-    match finalizer::finalize_recording(
-        &session_dir,
-        &infos,
-        &video_paths,
-        &csv_paths,
-        stats,
-    ) {
-        Ok(summary) => {
-            tracing::info!(
-                "[dispatcher] recording_info.json written → {}",
-                summary.info_json_path.display(),
-            );
-            summary
-        }
-        Err(e) => {
-            tracing::error!("[dispatcher] finalize_recording error: {e}");
-            finalizer::RecordingSummary {
-                total_frames_per_camera: total,
-                video_paths,
-                csv_paths,
-                info_json_path: PathBuf::new(),
-                stats: None,
-            }
-        }
-    }
 }
 
 use crate::camera::FrameData;
