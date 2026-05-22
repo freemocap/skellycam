@@ -10,6 +10,7 @@ use axum::Router;
 
 use crate::api::application_state::AppState;
 use crate::websocket::framerate_tracker::{FramerateTracker, FramerateUpdateMessage};
+use crate::websocket::log_relay;
 
 const POLL_INTERVAL_MS: u64 = 10;
 const FRAMERATE_SEND_INTERVAL_MS: u64 = 250;
@@ -37,6 +38,26 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     let mut last_frontend_send: Option<Instant> = None;
     let mut last_framerate_report = Instant::now();
     let mut last_camera_fps: Option<f64> = None;
+
+    // ── Log relay: bridge broadcast → mpsc for non-blocking drain ──
+    let (log_tx, mut log_rx) = tokio::sync::mpsc::channel::<String>(256);
+    if let Some(mut broadcast_rx) = log_relay::subscribe() {
+        tokio::spawn(async move {
+            loop {
+                match broadcast_rx.recv().await {
+                    Ok(msg) => {
+                        if log_tx.send(msg).await.is_err() {
+                            break; // receiver dropped
+                        }
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                        continue;
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+    }
 
     loop {
         // ── Which group is currently active? ──
@@ -103,6 +124,13 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                     }
                 }
                 last_framerate_report = Instant::now();
+            }
+        }
+
+        // ── Drain pending log messages (non-blocking) ──
+        while let Ok(msg) = log_rx.try_recv() {
+            if socket.send(Message::Text(msg.into())).await.is_err() {
+                return; // client disconnected
             }
         }
 

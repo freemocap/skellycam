@@ -194,7 +194,7 @@ class WebsocketServer:
             skipped_previous = False
             while self.should_continue:
                 await await_10ms()
-                if self.check_frame_acknowledgment_status():
+                if self.check_frame_acknowledgment_status() or True:
                     if skipped_previous:  # skip an extra frame if there was backpressure from frontend
                         skipped_previous = False
                     else:

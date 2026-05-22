@@ -507,12 +507,11 @@ class RustCameraGroupManager:
     async def create_or_update_camera_group(self, camera_configs: CameraConfigs) -> RustCameraGroup:
         configs_dict: dict[str, dict] = {}
         for camera_id, config in camera_configs.items():
-            resolution = config.resolution
             configs_dict[camera_id] = {
                 "camera_id": camera_id,
                 "camera_index": config.camera_index,
-                "width": resolution.width,
-                "height": resolution.height,
+                "width": config.resolution.width,
+                "height": config.resolution.height,
                 "exposure": config.exposure,
                 "exposure_mode": config.exposure_mode,
                 "framerate": config.framerate,

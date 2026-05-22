@@ -166,34 +166,109 @@ impl CameraGroup {
             );
         }
 
-        let camera_count = self.configs.len();
+        let requested_count = self.configs.len();
         tracing::info!(
             "[CameraGroup {}] starting {} camera(s)",
-            self.group_id, camera_count
+            self.group_id, requested_count
         );
 
-        // Create barrier: one slot per camera + one for the gatherer
-        self.barrier = Arc::new(BreakableBarrier::new(camera_count + 1));
+        // Start paused — successful cameras spin in the paused loop after
+        // setup and never reach barrier.wait(), giving us time to sort out
+        // which ones actually opened the hardware.
+        self.paused.store(true, Ordering::SeqCst);
 
-        // Spawn each camera via Camera::start()
+        // Barrier: one slot per camera + one for the gatherer
+        self.barrier = Arc::new(BreakableBarrier::new(requested_count + 1));
+
+        // Spawn all camera threads
+        let mut spawn_failures: Vec<String> = Vec::new();
         for (camera_id, group_config) in &self.configs {
-            let camera = Camera::start(
+            match Camera::start(
                 group_config.identity.clone(),
                 group_config.capture_config.clone(),
                 self.barrier.clone(),
                 self.paused.clone(),
                 0,
-            )
-            .map_err(|e| {
-                anyhow::anyhow!(
-                    "Failed to start camera '{}' ({}): {}",
-                    camera_id,
-                    group_config.identity.label(),
-                    e
-                )
-            })?;
-            self.cameras.insert(camera_id.clone(), camera);
+            ) {
+                Ok(camera) => {
+                    self.cameras.insert(camera_id.clone(), camera);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "[CameraGroup {}] thread spawn failed for '{}' ({}): {}",
+                        self.group_id,
+                        camera_id,
+                        group_config.identity.label(),
+                        e
+                    );
+                    spawn_failures.push(camera_id.clone());
+                }
+            }
         }
+        for id in &spawn_failures {
+            self.configs.remove(id);
+        }
+
+        if self.cameras.is_empty() {
+            self.paused.store(false, Ordering::SeqCst);
+            anyhow::bail!(
+                "All {} camera(s) failed to spawn — no cameras available",
+                requested_count
+            );
+        }
+
+        // Wait for each camera to finish hardware setup (stream open +
+        // 30-frame stabilization). Cameras that succeed send Ready then
+        // enter the paused spin; cameras that fail send Error instead.
+        let stabilize_timeout = std::time::Duration::from_secs(15);
+        let mut stabilization_failures: Vec<String> = Vec::new();
+        for (camera_id, camera) in &self.cameras {
+            match camera.wait_until_ready(stabilize_timeout) {
+                Ok(()) => {}
+                Err(msg) => {
+                    tracing::warn!(
+                        "[CameraGroup {}] camera '{}' hardware setup failed: {}",
+                        self.group_id, camera_id, msg
+                    );
+                    stabilization_failures.push(camera_id.clone());
+                }
+            }
+        }
+
+        // Clean up failed cameras
+        for id in &stabilization_failures {
+            self.configs.remove(id);
+            if let Some(camera) = self.cameras.remove(id) {
+                let _ = camera.shutdown();
+            }
+        }
+
+        if self.cameras.is_empty() {
+            self.paused.store(false, Ordering::SeqCst);
+            anyhow::bail!(
+                "All {} camera(s) failed hardware setup — no cameras available",
+                requested_count
+            );
+        }
+
+        let total_failures = spawn_failures.len() + stabilization_failures.len();
+        if total_failures > 0 {
+            tracing::warn!(
+                "[CameraGroup {}] {} of {} camera(s) failed, continuing with {}",
+                self.group_id,
+                total_failures,
+                requested_count,
+                self.cameras.len()
+            );
+        }
+
+        // Correct the barrier count — no cameras are at barrier.wait()
+        // because all successful cameras are spinning in the paused loop.
+        let camera_count = self.cameras.len();
+        self.barrier.set_total(camera_count + 1);
+
+        // Release cameras into the capture loop
+        self.paused.store(false, Ordering::SeqCst);
 
         // Collect frame receivers from each camera for the gatherer.
         // After take_frame_receiver(), the Camera handle's try_recv_frame()
@@ -624,41 +699,21 @@ impl CameraGroup {
 
         let frame_receiver = camera.take_frame_receiver();
 
-        // Wait for the camera to finish stabilization and enter its
-        // capture loop before notifying the gatherer. Uses the Ready
-        // event to avoid consuming a frame from the channel.
         let stabilize_start = std::time::Instant::now();
         tracing::debug!(
             "[CameraGroup {}] waiting for camera '{}' to stabilize...",
             self.group_id, camera_id,
         );
-        loop {
-            match camera.try_recv_event() {
-                Ok(crate::camera::CameraEvent::Ready) => {
-                    tracing::info!(
-                        "[CameraGroup {}] camera '{}' stabilized in {:.1}s",
-                        self.group_id, camera_id,
-                        stabilize_start.elapsed().as_secs_f64()
-                    );
-                    break;
-                }
-                Ok(crate::camera::CameraEvent::Error(msg)) => {
-                    anyhow::bail!(
-                        "Camera '{}' error during stabilization: {msg}",
-                        camera_id
-                    );
-                }
-                Err(mpsc::TryRecvError::Empty) => {
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    anyhow::bail!(
-                        "Camera '{}' disconnected during stabilization",
-                        camera_id
-                    );
-                }
-            }
-        }
+        camera
+            .wait_until_ready(std::time::Duration::from_secs(15))
+            .map_err(|msg| {
+                anyhow::anyhow!("Camera '{}' stabilization failed: {msg}", camera_id)
+            })?;
+        tracing::info!(
+            "[CameraGroup {}] camera '{}' stabilized in {:.1}s",
+            self.group_id, camera_id,
+            stabilize_start.elapsed().as_secs_f64()
+        );
 
         self.cameras.insert(camera_id.clone(), camera);
 

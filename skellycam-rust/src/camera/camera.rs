@@ -20,6 +20,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use std::time::Duration;
 
 use crate::camera_group::sync_utils::BreakableBarrier;
 
@@ -108,6 +109,28 @@ impl Camera {
     /// an error, or `TryRecvError::Empty` if no events are pending.
     pub fn try_recv_event(&self) -> Result<CameraEvent, mpsc::TryRecvError> {
         self.event_receiver.try_recv()
+    }
+
+    /// Block until the camera sends `Ready` or `Error`, with a timeout.
+    ///
+    /// Camera setup (stream open + 30-frame stabilization) takes roughly
+    /// 1 second at 30 fps. On hardware failure the error event arrives in
+    /// milliseconds — the OS rejects the stream open immediately. The
+    /// timeout is a safety net for pathological cases.
+    ///
+    /// Returns `Ok(())` on `Ready`, or `Err(reason)` on `Error`, timeout,
+    /// or channel disconnect.
+    pub fn wait_until_ready(&self, timeout: Duration) -> Result<(), String> {
+        match self.event_receiver.recv_timeout(timeout) {
+            Ok(CameraEvent::Ready) => Ok(()),
+            Ok(CameraEvent::Error(msg)) => Err(msg),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                Err("timed out waiting for camera to stabilize".into())
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                Err("camera thread disconnected before Ready".into())
+            }
+        }
     }
 
     /// Send the shutdown signal and wait for the capture thread to finish.

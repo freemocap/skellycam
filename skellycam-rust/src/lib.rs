@@ -27,20 +27,34 @@ pub const DEFAULT_LOG_LEVEL: &str = "skellycam=debug,info";
 /// timestamping subsystem runs — no separate clock-anchor call required
 /// at any other site.
 ///
+/// The subscriber is composed of two layers:
+///
+/// 1. **SkellyFormat** — writes pipe-delimited text lines to stderr
+///    (the existing terminal log output).
+/// 2. **LogRelayLayer** — pushes JSON `LogRecordModel` dicts onto a
+///    `broadcast::channel` for WebSocket relay to the frontend.
+///
 /// Both `try_init()` (logging) and `anchor_performance_clock()` (timestamps)
 /// are idempotent — subsequent calls are no-ops.
 pub fn init_logging(log_level: &str) {
     use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::layer::{Layer, SubscriberExt};
+    use tracing_subscriber::util::SubscriberInitExt;
 
     timestamps::performance::anchor_performance_clock();
+
+    // Initialise the log-relay broadcast channel before any events fire.
+    websocket::log_relay::init_log_relay();
 
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(log_level));
 
-    let format = logging::SkellyFormat::new();
-
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .event_format(format)
+    let _ = tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .event_format(logging::SkellyFormat::new())
+                .with_filter(filter),
+        )
+        .with(websocket::log_relay::LogRelayLayer::new())
         .try_init();
 }

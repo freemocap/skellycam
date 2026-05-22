@@ -108,6 +108,12 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
 /// exposure on the new stream. The camera thread stays alive — only
 /// the internal CaptureStream is replaced.
 ///
+/// When `exposure_mode` is `"RECOMMEND"`, this function runs a luminance
+/// calibration sweep before applying the config — measuring brightness at
+/// each exposure setting and picking the one closest to midrange. The
+/// resolved values (`"MANUAL"` + the recommended exposure) are written to
+/// `shared_config` so the caller can propagate them to `active_config`.
+///
 /// Returns the (possibly new) stream, actual_width, and actual_height.
 unsafe fn apply_config(
     ctx: CapContext,
@@ -119,6 +125,18 @@ unsafe fn apply_config(
     actual_height: u32,
     shared_config: &Arc<std::sync::Mutex<CameraConfig>>,
 ) -> (CapStream, u32, u32) { unsafe {
+    // Resolve RECOMMEND → MANUAL via luminance calibration.
+    let (exposure_mode, exposure_value) = if new_config.exposure_mode == "RECOMMEND" {
+        let recommended = calibrate_luminance(ctx, stream, label);
+        if let Ok(mut guard) = shared_config.lock() {
+            guard.exposure_mode = "MANUAL".to_string();
+            guard.exposure = recommended;
+        }
+        ("MANUAL".to_string(), recommended)
+    } else {
+        (new_config.exposure_mode.clone(), new_config.exposure)
+    };
+
     let needs_restart = actual_width != new_config.width
         || actual_height != new_config.height
         || (old_config.framerate - new_config.framerate).abs() > 0.1;
@@ -156,7 +174,7 @@ unsafe fn apply_config(
             }
         };
 
-        configure_exposure(ctx, new_stream, label, &new_config.exposure_mode, new_config.exposure);
+        configure_exposure(ctx, new_stream, label, &exposure_mode, exposure_value);
 
         // Write actual negotiated settings back to shared config
         if let Ok(mut guard) = shared_config.lock() {
@@ -172,8 +190,8 @@ unsafe fn apply_config(
         );
         (new_stream, format_info.width, format_info.height)
     } else {
-        configure_exposure(ctx, stream, label, &new_config.exposure_mode, new_config.exposure);
-        tracing::debug!("Camera {label}: applied config (exposure={})", new_config.exposure);
+        configure_exposure(ctx, stream, label, &exposure_mode, exposure_value);
+        tracing::debug!("Camera {label}: applied config (exposure={exposure_value} mode={exposure_mode})");
         (stream, actual_width, actual_height)
     }
 }}
@@ -256,6 +274,8 @@ fn run_camera_thread(
                         active_config.framerate = guard.framerate;
                         active_config.width = guard.width;
                         active_config.height = guard.height;
+                        active_config.exposure_mode = guard.exposure_mode.clone();
+                        active_config.exposure = guard.exposure;
                     }
                 }
                 CommandResult::None => {}
@@ -286,6 +306,8 @@ fn run_camera_thread(
                         active_config.framerate = guard.framerate;
                         active_config.width = guard.width;
                         active_config.height = guard.height;
+                        active_config.exposure_mode = guard.exposure_mode.clone();
+                        active_config.exposure = guard.exposure;
                     }
                     }
                     CommandResult::None => {
@@ -318,6 +340,8 @@ fn run_camera_thread(
                         active_config.framerate = guard.framerate;
                         active_config.width = guard.width;
                         active_config.height = guard.height;
+                        active_config.exposure_mode = guard.exposure_mode.clone();
+                        active_config.exposure = guard.exposure;
                     }
                     }
                     CommandResult::None => {}
@@ -657,6 +681,152 @@ unsafe fn open_stream_raw(
         info.width, info.height,
     );
     Ok(stream)
+}
+
+/// Luminance calibration: sweep the exposure range, measure mean ITU-R BT.601
+/// luminance at each setting, and return the exposure value that produces
+/// brightness closest to the target (127.5, half of the 0–255 range).
+///
+/// Applies a -1 offset after finding the midrange exposure — favouring a
+/// slightly darker (faster) shutter to reduce motion blur. Mocap tracking
+/// prefers bright environments and short exposures.
+///
+/// # Luminance measurement: ITU-R BT.601
+///
+/// The brightness of each captured frame is measured by decoding the MJPEG
+/// frame to RGB, then computing the **weighted** mean luminance as defined
+/// in the ITU-R BT.601 standard:
+///
+/// ```text
+/// Y = 0.299·R + 0.587·G + 0.114·B
+/// ```
+///
+/// This formula is often described as *perceptual* because the human retina
+/// has far more green-sensitive cone cells than red or blue — green light
+/// looks brighter to us at the same physical intensity. But the weights
+/// also align with **camera sensor physics**: the Bayer-pattern colour
+/// filter array on a typical CMOS sensor has 50% green photosites, 25%
+/// red, and 25% blue. The green channel captures twice as many samples and
+/// therefore has roughly √2 better signal-to-noise ratio (SNR) than the
+/// red or blue channels.
+///
+/// A naive `(R + G + B) / 3` mean would give the noisy blue channel (25%
+/// of sensels, poorest SNR under typical indoor tungsten/LED lighting) an
+/// equal vote. The weighted luma de-emphasises the channels with worse SNR
+/// and reflects the physical sampling density of the sensor itself — it is
+/// the same calculation used in every JPEG encoder, video codec, and
+/// television broadcast since the 1980s.
+///
+/// For the purpose of exposure calibration, the exact weighting matters
+/// less than you might think: we are ranking exposure values by distance
+/// from a fixed target, and any monotonic brightness measure will produce
+/// the same ranking. But the BT.601 weights are both technically correct
+/// (matching sensor physics) and already battle-tested in the codebase.
+unsafe fn calibrate_luminance(ctx: CapContext, stream: CapStream, label: &str) -> i32 {
+    const TARGET_BRIGHTNESS: f64 = 127.5;
+    const SETTLE_FRAMES: u32 = 10;
+    const EXPOSURE_OFFSET: i32 = -1;
+
+    let mut best_exposure: i32 = -7; // fallback default
+    let mut best_diff: f64 = f64::MAX;
+    let mut buffer: Vec<u8> = Vec::new();
+
+    for exposure in (-11..=-5).rev() {
+        if check_shutdown_for_stabilize() {
+            tracing::info!("Camera {label}: luminance calibration aborted (shutdown)");
+            break;
+        }
+
+        // Set manual exposure for this sweep step
+        unsafe {
+            Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 0);
+            Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, exposure);
+        }
+
+        // Drain settle frames so the camera adjusts to the new exposure
+        for _ in 0..SETTLE_FRAMES {
+            if check_shutdown_for_stabilize() {
+                break;
+            }
+            loop {
+                if unsafe { Cap_hasNewFrame(ctx, stream) } != 0 {
+                    break;
+                }
+                std::thread::yield_now();
+            }
+            let mut frame_size: u32 = 0;
+            if unsafe { Cap_getFrameSize(ctx, stream, &mut frame_size) } != CAPRESULT_OK
+                || frame_size == 0
+            {
+                continue;
+            }
+            if buffer.len() < frame_size as usize {
+                buffer.resize(frame_size as usize, 0);
+            }
+            let mut out_bytes: u32 = 0;
+            unsafe {
+                Cap_captureFrameRaw(
+                    ctx, stream,
+                    buffer.as_mut_ptr(), frame_size,
+                    &mut out_bytes,
+                );
+            }
+        }
+
+        // Capture one measurement frame
+        loop {
+            if check_shutdown_for_stabilize() {
+                break;
+            }
+            if unsafe { Cap_hasNewFrame(ctx, stream) } != 0 {
+                break;
+            }
+            std::thread::yield_now();
+        }
+        if check_shutdown_for_stabilize() {
+            break;
+        }
+
+        let mut frame_size: u32 = 0;
+        if unsafe { Cap_getFrameSize(ctx, stream, &mut frame_size) } == CAPRESULT_OK
+            && frame_size > 0
+        {
+            if buffer.len() < frame_size as usize {
+                buffer.resize(frame_size as usize, 0);
+            }
+            let mut out_bytes: u32 = 0;
+            unsafe {
+                Cap_captureFrameRaw(
+                    ctx, stream,
+                    buffer.as_mut_ptr(), frame_size,
+                    &mut out_bytes,
+                );
+            }
+            let jpeg_bytes = &buffer[..out_bytes as usize];
+            if let Ok((_w, _h, rgb)) =
+                crate::decode::mjpeg_to_rgb(jpeg_bytes)
+            {
+                let luminance = crate::decode::mean_luminance(&rgb);
+                let diff = (TARGET_BRIGHTNESS - luminance).abs();
+                tracing::debug!(
+                    "Camera {label}: exposure={exposure} luminance={luminance_str} diff={diff_str}",
+                    luminance_str = format!("{:.1}", luminance),
+                    diff_str = format!("{:.1}", diff),
+                );
+                if diff < best_diff {
+                    best_diff = diff;
+                    best_exposure = exposure;
+                }
+            }
+        }
+    }
+
+    let recommended = (best_exposure + EXPOSURE_OFFSET).clamp(-11, -5);
+    tracing::info!(
+        "Camera {label}: luminance calibration complete — best_exposure={best_exposure} diff={diff_str} recommended={recommended}",
+        diff_str = format!("{:.1}", best_diff),
+    );
+    recommended
 }
 
 unsafe fn configure_exposure(

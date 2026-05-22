@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 # PyO3 — Python bindings
-pyo3 = { version = "0.28", features = ["extension-module"] }
+pyo3 = { version = "0.28" }
 
 # Bridge Rust tracing/log to Python logging
 log = "0.4"
@@ -84,3 +84,10 @@ ffmpeg-sidecar = "2"
 ureq = { version = "3" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# The python-bindings feature gates `pyo3/extension-module` so rust-analyzer can
+# analyze without linking against Python (avoids spurious E0425 / "cannot find
+# type PyResult" errors). Default builds include the python-bindings feature.
+[features]
+default = ["python-bindings"]
+python-bindings = ["pyo3/extension-module"]
