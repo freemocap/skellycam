@@ -171,10 +171,51 @@ function applyFilters(entries: LogRecord[], selectedLevels: string[], searchText
 }
 
 // ---------------------------------------------------------------------------
-// LogTerminal
+// Collapsed summary view
 // ---------------------------------------------------------------------------
 
-export const LogTerminal = () => {
+const LogCollapsedView = ({ getLogStore }: { getLogStore: ReturnType<typeof useServer>["getLogStore"] }) => {
+    const { t } = useTranslation();
+    const [lastEntry, setLastEntry] = useState<LogRecord | null>(null);
+
+    useEffect(() => {
+        const poll = () => {
+            const snap = getLogStore().getSnapshot();
+            const entries = snap.entries;
+            setLastEntry(entries.length > 0 ? entries[entries.length - 1] : null);
+        };
+        poll();
+        const id = setInterval(poll, LOG_POLL_INTERVAL_MS);
+        return () => clearInterval(id);
+    }, [getLogStore]);
+
+    if (!lastEntry) return (
+        <div className="log-collapsed-summary flex items-center h-full gap-1">
+            <p className="text bg text-gray">{t("serverLogs")}</p>
+        </div>
+    );
+
+    const level = lastEntry.levelname.toLowerCase();
+    const firstLine = lastEntry.message.split("\n")[0];
+
+    return (
+        <div className="log-collapsed-summary flex items-center h-full gap-1 overflow-hidden">
+            <p className="text bg text-gray">{t("serverLogs")}</p>
+            <p className="text sm text-gray">|</p>
+            <span className={clsx("log-level-badge", level)}>{lastEntry.levelname}</span>
+            <span className="log-timestamp">{lastEntry.asctime}</span>
+            <span className="log-message-text text-nowrap overflow-hidden" style={{ textOverflow: "ellipsis" }}>
+                {firstLine}
+            </span>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
+// LogTerminal (full view)
+// ---------------------------------------------------------------------------
+
+const LogTerminalFull = () => {
     const { t } = useTranslation();
     const { getLogStore } = useServer();
 
@@ -384,4 +425,10 @@ export const LogTerminal = () => {
             </div>
         </div>
     );
+};
+
+export const LogTerminal = ({ isCollapsed = false }: { isCollapsed?: boolean }) => {
+    const { getLogStore } = useServer();
+    if (isCollapsed) return <LogCollapsedView getLogStore={getLogStore} />;
+    return <LogTerminalFull />;
 };

@@ -29,6 +29,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
 
     const leftPanelRef = useRef<ImperativePanelHandle>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isBottomCollapsed, setIsBottomCollapsed] = useState(false);
 
     const handleToggleCollapse = useCallback(() => {
         const panel = leftPanelRef.current;
@@ -139,8 +140,10 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
             defaultSize={13}
             minSize={10}
             collapsedSize={4}
+            onCollapse={() => setIsBottomCollapsed(true)}
+            onExpand={() => setIsBottomCollapsed(false)}
           >
-            <BottomPanelContent />
+            <BottomPanelContent isCollapsed={isBottomCollapsed} />
           </Panel>
         </PanelGroup>
       </div>

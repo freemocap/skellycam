@@ -182,7 +182,7 @@
   "server": "Server",
   "display": "Display",
   "rawMessage": "Raw message",
-  "cameraPerformanceMetrics": "Camera Performance Metrics",
+  "cameraPerformanceMetrics": "Camera Performance",
   "serverLogs": "Server Logs",
   "sortBy": "Sort {{direction}}",
   "waitingForCameraStreams": "Waiting for camera streams...",
