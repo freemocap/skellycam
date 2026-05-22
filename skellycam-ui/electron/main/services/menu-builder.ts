@@ -143,6 +143,21 @@ function buildFileMenu(t: MenuLabels, locales: LocaleEntry[], currentLocale: str
     };
 }
 
+function buildEditMenu(): MenuItemConstructorOptions {
+    return {
+        label: 'Edit',
+        submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'selectAll' },
+        ],
+    };
+}
+
 function buildViewMenu(t: MenuLabels): MenuItemConstructorOptions {
     return {
         label: t.menuView,
@@ -323,6 +338,7 @@ export function buildApplicationMenu(params: MenuBuildParams = {}): void {
     }
 
     template.push(buildFileMenu(t, locales, currentLocale));
+    template.push(buildEditMenu());
     template.push(buildViewMenu(t));
     template.push(buildCameraMenu(t));
     template.push(buildRecordingMenu(t));

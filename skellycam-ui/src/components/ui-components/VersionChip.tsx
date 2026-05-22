@@ -73,7 +73,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
                 )}
             />
             <ButtonSm
-                text="View all versions"
+                text="Releases"
                 onClick={() => window.open(EXTERNAL_URLS.GITHUB_RELEASES, '_blank')}
                 textColor = "text-white"
                 className="externallink"

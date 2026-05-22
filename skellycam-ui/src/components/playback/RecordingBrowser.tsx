@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { backendFetch } from '@/services/electron-ipc/backend-fetch';
+import { useElectronIPC } from '@/services';
 import { useTranslation } from 'react-i18next';
 import ButtonSm from '../ui-components/ButtonSm';
 import SubactionHeader from '../ui-components/SubactionHeader';
@@ -171,6 +172,7 @@ const SORT_OPTIONS: { value: SortField; labelKey: string }[] = [
 
 export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingLoaded, initialLoadPath }) => {
     const { t } = useTranslation();
+    const { api, isElectron } = useElectronIPC();
 
     // Data state
     const [recordings, setRecordings] = useState<RecordingEntry[]>([]);
@@ -307,6 +309,12 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         loadRecording({ name: recName, path: trimmed, video_count: 0 });
     }, [manualPath, loadRecording]);
 
+    const handleBrowseDirectory = useCallback(async () => {
+        if (!isElectron || !api) return;
+        const result: string | null = await api.fileSystem.selectDirectory.mutate();
+        if (result) setManualPath(result);
+    }, [api, isElectron]);
+
     // -----------------------------------------------------------------------
     // Sort controls
     // -----------------------------------------------------------------------
@@ -325,6 +333,14 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         <div className="flex playback-page-content has-videos flex flex-col gap-2 p-2 h-full overflow-hidden">
             {/* Manual path row */}
             <div className="load-group flex flex-row flex-wrap gap-1 items-center">
+                <ButtonSm
+                    iconClass="subfolder-icon"
+                    text=""
+                    textColor="text-gray"
+                    onClick={handleBrowseDirectory}
+                    buttonType={!isElectron ? "disabled" : ""}
+                    title={t("browseForDirectory")}
+                />
                 <div className="input-with-string flex-1">
                     <input
                         className="input-field"
@@ -343,7 +359,6 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     onClick={handleLoadManualPath}
                     disabled={!manualPath.trim() || isLoadingRecording}
                     iconClass={isLoadingRecording && !loadingPath ? 'loader-icon' : ''}
-                    
                 />
             </div>
 
