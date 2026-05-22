@@ -49,12 +49,19 @@ pub fn init_logging(log_level: &str) {
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(log_level));
 
+    // Clone the filter so each layer gets its own — `with_filter`
+    // consumes the filter.  Both layers use the same directive string
+    // (e.g. "skellycam=debug,info"), so terminal output and WebSocket
+    // relay see the same events.
     let _ = tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .event_format(logging::SkellyFormat::new())
+                .with_filter(filter.clone()),
+        )
+        .with(
+            websocket::log_relay::LogRelayLayer::new()
                 .with_filter(filter),
         )
-        .with(websocket::log_relay::LogRelayLayer::new())
         .try_init();
 }
