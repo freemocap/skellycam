@@ -138,13 +138,13 @@ export const RecordingCompleteDialog: React.FC = () => {
                     <ButtonSm
                         text="Open in Playback"
                         iconClass="stream-icon"
-                        textColor="text-gray"
+                        buttonType="primary"
+                        textColor="text-white"
                         onClick={handleOpenInPlayback}
                     />
                     <ButtonSm
                         text="Close"
-                        buttonType="primary"
-                        textColor="text-white"
+                        textColor="text-gray"
                         onClick={handleClose}
                     />
                 </div>
