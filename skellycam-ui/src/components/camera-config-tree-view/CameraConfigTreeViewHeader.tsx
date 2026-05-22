@@ -34,7 +34,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
     return (
         <div className="camera-tree-header" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-1 flex-1">
-                <span className="icon stream-icon icon-size-16" />
+                <span className="icon stream-icon icon-size-20" />
                 <p className="text bg text-white flex-1">{t('camerasCount', { count: cameraCount })}</p>
             </div>
 

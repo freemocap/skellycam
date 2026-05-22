@@ -237,9 +237,9 @@
   transition: background-color var(--speed-1);
 }
 
-.camera-item-row:hover {
+/* .camera-item-row:hover {
   background-color: var(--gray-700);
-}
+} */
 
 .camera-item-row.expanded {
   background-color: var(--gray-700);
@@ -250,24 +250,17 @@
 .camera-status-available  { color: var(--blue-800); }
 .camera-status-error      { color: var(--red-500); }
 
-.camera-status-badge {
-  padding: 1px 5px;
-  border-radius: 2px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
 
-.camera-status-badge.camera-status-connected  { background-color: var(--green-100); color: #000; }
-.camera-status-badge.camera-status-available  { background-color: var(--blue-800);  color: #fff; }
-.camera-status-badge.camera-status-error      { background-color: var(--red-500);   color: #fff; }
+.camera-status-connected  { background-color: var(--green-100); color: #000; }
+.camera-status-available  { background-color: var(--blue-800);  color: #fff; }
+.camera-status-error      { background-color: var(--red-500);   color: #fff; }
 
 /* Config summary chips */
 .camera-config-chip {
   padding: 0 4px;
   border: 1px solid var(--gray-600);
   border-radius: 2px;
-  font-size: 0.6rem;
+ 
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -375,13 +368,13 @@
 }
 
 /* Popup overlay for long values like directory paths */
-.directory-input-popup {
+/* .directory-input-popup {
   min-width: 320px;
-}
+} */
 
 .directory-input-popup input.input-field {
   width: 100%;
-  min-width: 280px;
+  /* min-width: 280px; */
 }
 
 .recording-countdown {
@@ -411,11 +404,6 @@
 .recording-row-disabled {
   opacity: 0.4;
   pointer-events: none;
-}
-
-.recording-name {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-weight: 600;
 }
 
 .sort-select {
@@ -542,7 +530,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px;
+  padding: 4px 8px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
   opacity: 0;
   transition: opacity 0.15s ease;

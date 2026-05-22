@@ -74,3 +74,40 @@
   --log-critical: #ff0000;
   --log-critical-alpha: rgba(255, 0, 0, 0.1);
 }
+
+
+
+
+
+/* =========================
+   BORDER COLORS
+   ========================= */
+.border-black {
+  border-color: var(--gray-500);
+}
+
+.border-mid-black {
+  border-color: var(--gray-600);
+}
+
+.border-red {
+  border-color: var(--red-500);
+}
+
+.border-blue {
+  border-color: var(--blue-800);
+}
+
+.border-pink {
+  border-color: var(--pink-500);
+}
+
+.border-white {
+  border-color: var(--gray-100);
+}
+
+
+.button.card:hover {
+  background-color: var(--gray-700);
+  transition: background-color var(--speed-1) ease-in-out;
+}

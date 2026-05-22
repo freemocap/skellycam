@@ -290,7 +290,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
         const states = isElectron ? [serverState, wsState] : [wsState];
         if (states.every((s) => s === STATES.CONNECTED)) return { text: t('connected'), iconClass: 'connected-icon' };
         if (states.some((s) => s === STATES.CONNECTING)) return { text: t('connecting'), iconClass: 'loader-icon' };
-        if (states.some((s) => s === STATES.CONNECTED)) return { text: 'Partially Connected', iconClass: 'connected-icon' };
+        if (states.some((s) => s === STATES.CONNECTED)) return { text: 'Connected', iconClass: 'connected-icon' };
         return { text: 'Not Connected', iconClass: 'warning-icon' };
     };
 
@@ -320,7 +320,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                 onClick={() => setSettingsOpen(true)}
                 title={overallStatus.text + cameraCountSuffix}
             >
-                <span className={`icon icon-size-16 ${overallStatus.iconClass}`} />
+                <span className={`icon icon-size-20 ${overallStatus.iconClass}`} />
                 <ConnectionSettingsModal
                     open={settingsOpen}
                     onClose={() => setSettingsOpen(false)}
@@ -372,7 +372,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                         {isElectron && (
                             <div className="gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
                                 <div className="text-container overflow-hidden flex items-center gap-1">
-                                    <span className={`icon icon-size-16 ${rowIconClass(serverState)}`} />
+                                    <span className={`icon icon-size-20 ${rowIconClass(serverState)}`} />
                                     <p className="text text-nowrap text-left bg">Python server</p>
                                 </div>
                                 <ToggleButtonComponent
@@ -388,7 +388,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                         {/* WebSocket row */}
                         <div className="gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
                             <div className="text-container overflow-hidden flex items-center gap-1">
-                                <span className={`icon icon-size-16 ${rowIconClass(wsState)}`} />
+                                <span className={`icon icon-size-20 ${rowIconClass(wsState)}`} />
                                 <p className="text text-nowrap text-left bg">Websocket</p>
                             </div>
                             <ToggleButtonComponent
@@ -407,7 +407,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                                 className="button icon-button"
                                 onClick={(e) => { e.stopPropagation(); setSettingsOpen(true); }}
                             >
-                                <span className="icon settings-icon icon-size-16" />
+                                <span className="icon settings-icon icon-size-20" />
                             </button>
                         </div>
                     </div>

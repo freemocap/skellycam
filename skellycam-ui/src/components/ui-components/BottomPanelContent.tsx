@@ -6,8 +6,8 @@ import FramerateViewerPanel from "@/components/framerate-viewer/FrameRateViewer"
 
 export default function BottomPanelContent() {
     return (
-        <div className="bottom-info-container border-1 border-mid-black br-2 flex h-full overflow-hidden">
-            <PanelGroup className="console-area p-1" direction="horizontal" style={{direction: "ltr"}}>
+        <div className="bottom-info-container br-2 flex h-full overflow-hidden">
+            <PanelGroup className="console-area p-0" direction="horizontal" style={{direction: "ltr"}}>
                 <Panel className="camera-performance-metric-container bg-middark bg-darkgray p-1 br-1" defaultSize={30} minSize={15}>
                     <FramerateViewerPanel />
                 </Panel>

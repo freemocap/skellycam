@@ -6,6 +6,7 @@ import { cameraSelectionToggled } from '@/store/slices/cameras/cameras-slice';
 import { selectCameraById } from '@/store/slices/cameras/cameras-selectors';
 import { CameraView } from './CameraView';
 import { CameraGridSettingsModal } from './CameraGridSettingsModal';
+import Checkbox from '@/components/ui-components/Checkbox';
 
 interface CameraGridCellProps {
     cameraId: string;
@@ -38,13 +39,14 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
 
             {/* Overlay header — fades in on hover */}
             <div className="camera-cell-overlay">
-                <button
-                    className="button icon-button camera-cell-toggle"
-                    onClick={(e) => { e.stopPropagation(); dispatch(cameraSelectionToggled(cameraId)); }}
-                    title={camera.selected ? 'Deselect camera' : 'Select camera'}
-                >
-                    <span className={clsx('icon icon-size-16', camera.selected ? 'connected-icon' : 'warning-icon')} />
-                </button>
+                <Checkbox
+                    label=""
+                    checked={camera.selected}
+                    onChange={(e) => {
+                        e.stopPropagation();
+                        dispatch(cameraSelectionToggled(cameraId));
+                    }}
+                />
 
                 <div className="flex-1" />
 
@@ -55,7 +57,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
                     onMouseDown={e => e.stopPropagation()}
                     title="Camera settings"
                 >
-                    <span className={clsx('icon icon-size-16', settingsOpen ? 'close-icon' : 'settings-icon')} />
+                    <span className={clsx('icon icon-size-20', settingsOpen ? 'close-icon' : 'settings-icon')} />
                 </button>
             </div>
 

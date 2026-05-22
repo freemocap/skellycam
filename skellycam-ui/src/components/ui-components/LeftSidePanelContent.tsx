@@ -23,24 +23,24 @@ const CollapsedToolbar: React.FC<{
     const {t} = useTranslation();
 
     return (
-        <div className="flex flex-col items-center w-full h-full pt-1 gap-1" style={{backgroundColor: 'var(--gray-800)'}}>
+        <div className="collapsed-sidebar items-center flex flex-col items-center w-full h-full pt-1 gap-1"       >
             <button
                 className="button icon-button"
                 onClick={onToggleCollapse}
                 title={t('expandSidebar')}
             >
-                <span className="text sm">☰</span>
+                <span className="icon icon-size-20 expand-icon text sm"></span>
             </button>
 
             <ServerConnectionStatus compact />
 
             <button
-                className={`button icon-button record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
+                className={`collapsed-start-recording-btn br-1 button icon-button record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
                 onClick={onRecordClick}
                 disabled={noCameras && !isRecording}
                 title={isRecording ? t('stopRecording') : t('startRecording')}
             >
-                <span className={`icon icon-size-16 ${isRecording ? 'close-icon' : 'record-icon'}`} />
+                <span className={`icon icon-size-20 ${isRecording ? 'close-icon' : 'record-icon'}`} />
             </button>
         </div>
     );
@@ -82,32 +82,34 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
 
             {/* Always mounted — display:none preserves component state when collapsed */}
             <div
-                className="inner flex flex-col bg-darkgray br-2 w-full h-full overflow-y-auto overflow-x-hidden"
+                className="inner flex gap-1 flex-col bg-darkgray br-2 w-full h-full"
                 style={{ display: isCollapsed ? 'none' : 'flex' }}
             >
                 {/* Header row */}
                 <div
                     className="flex items-center gap-1 px-1 py-1"
-                    style={{
-                        borderBottom: '1px solid var(--gray-600)',
-                        minHeight: 40,
-                    }}
+                    // style={{
+                    //     borderBottom: '1px solid var(--gray-600)',
+                    //     minHeight: 40,
+                    // }}
                 >
+
+                    <div 
+                    data-warning="service-unavailable"
+                    className="flex-1 overflow-hidden" style={{minWidth: 0}}>
+                        <ServerConnectionStatus />
+                    </div>
                     <button
                         className="button icon-button"
                         onClick={onToggleCollapse}
                         title={t('collapseSidebar')}
                     >
-                        <span className="text sm">✕</span>
+                        <span className="icon icon-size-20 collapse-icon"></span>
                     </button>
-
-                    <div className="flex-1 overflow-hidden" style={{minWidth: 0}}>
-                        <ServerConnectionStatus />
-                    </div>
                 </div>
 
                 {/* Main content */}
-                <div className="flex flex-col gap-1 pt-1 pb-4 flex-1 overflow-hidden">
+                <div className="side-action-main-container h-full flex flex-col gap-1 flex-1 overflow-hidden">
                     <RecordingInfoPanel/>
                     <CameraConfigSidebarPanel/>
                 </div>

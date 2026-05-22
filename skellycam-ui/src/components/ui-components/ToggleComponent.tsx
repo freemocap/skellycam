@@ -33,14 +33,14 @@ const ToggleComponent: React.FC<ToggleProps> = ({
 
   return (
     <div
-      className={`button toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25 ${className} ${
+      className={`min-w-full button toggle-button gap-1 p-1 br-1 flex justify-content-space-between items-center h-25 ${className} ${
         disabled ? "disabled" : ""
       }`}
       onClick={handleToggle}
     >
       <div className="text-container overflow-hidden flex items-center gap-1">
         {iconClass && (
-          <span className={`icon icon-size-16 ${iconClass}`}></span>
+          <span className={`icon icon-size-20 ${iconClass}`}></span>
         )}
         <p
           className={clsx(

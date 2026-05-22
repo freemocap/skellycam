@@ -7,8 +7,7 @@ import ButtonSm from '@/components/ui-components/ButtonSm';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector, selectCameras } from '@/store';
-import { camerasConnectOrUpdate, detectCameras, pauseUnpauseCameras } from '@/store/slices/cameras/cameras-thunks';
-import { selectIsPaused } from '@/store/slices/cameras/cameras-selectors';
+import { camerasConnectOrUpdate, detectCameras } from '@/store/slices/cameras/cameras-thunks';
 
 interface CameraSettings { columns: number | null; }
 
@@ -28,7 +27,6 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
     const { t } = useTranslation();
     const dispatch = useAppDispatch();
     const cameras = useAppSelector(selectCameras);
-    const isPaused = useAppSelector(selectIsPaused);
 
     useEffect(() => {
         if (isConnected && cameras.length === 0) {
@@ -108,7 +106,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                     onClick={handleToggle}
                     title={isOpen ? t("closeSettings") : t("gridSettings")}
                 >
-                    <span className={clsx("icon icon-size-16", isOpen ? "close-icon" : "settings-icon")} />
+                    <span className={clsx("icon icon-size-20", isOpen ? "close-icon" : "settings-icon")} />
                 </button>
                 {isOpen && panel}
             </>
@@ -117,8 +115,8 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
 
     return (
       <>
-        <div className="mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between">
-          <div className="all-actions-components flex flex-row">
+        <div className="mode-header live-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex-row flex flex-end">
+          {/* <div className="all-actions-components flex flex-row">
             <div className="stream-actions-container flex flex-row gap-1 items-center">
               <ButtonSm
                 text="Stream"
@@ -126,23 +124,16 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
                 textColor="text-white"
                 onClick={() => {}}
               />
-              <button
-                className="button icon-button"
-                onClick={() => dispatch(pauseUnpauseCameras())}
-                title={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
-              >
-                <span className={clsx('icon icon-size-16', isPaused ? 'play-icon' : 'pause-icon')} />
-              </button>
             </div>
             <div className='configure-camera-action-container text-white text md text-align-left flex flex-row items-center gap-1'>
                    <p className='text-nowrap items-center flex flex-row flex-inline gap-1 text-gray'><span className='tag'>{connectedCameraIds.length}</span>Connected Cameras</p>
                    
                    <button className="button icon-button"
                         onClick={() => dispatch(camerasConnectOrUpdate())}>
-                        <span className="icon icon-size-16 scan-icon" />
+                        <span className="icon icon-size-20 scan-icon" />
                     </button>
             </div>
-          </div>
+          </div> */}
           <div className="settings-overlay-trigger"></div>
           <button
             className="button icon-button br-1"
@@ -151,7 +142,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
           >
             <span
               className={clsx(
-                "icon icon-size-16",
+                "icon icon-size-20",
                 isOpen ? "close-icon" : "grid2-icon",
               )}
             />

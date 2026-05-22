@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { useAutoUpdate } from '@/hooks/useAutoUpdate';
 import { EXTERNAL_URLS } from '@/constants/external-urls';
+import ButtonSm from '@/components/ui-components/ButtonSm';
 
 interface VersionChipProps {
     variant?: 'compact' | 'full';
@@ -52,34 +53,35 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
     if (!version) return null;
 
     return (
-        <div className={`version-button-container pos-abs flex flex-row items-center gap-2${className ? ` ${className}` : ''}`} style={style}>
-            <button
-                className={clsx("version-badge", showSuccess && "success")}
+        <div className={`version-button-container pos-abs flex flex-row items-center gap-4${className ? ` ${className}` : ''}`} style={style}>
+            <ButtonSm
+                text={`v${version}`}
                 onClick={checkForUpdate}
+                textColor='text-white'
                 disabled={isChecking}
-                title={t('checkForUpdates')}
-            >
-    <span
-        className={clsx(
-            "icon icon-size-16",
-            isChecking
-                ? "updateAvailable-icon"
-                : showSuccess
-                ? "upToDate-icon"
-                : "checkUpdate-icon"
-        )}
-    />
-    v{version}
-</button>
-
-            <button
-                className="button icon icon-size-16 github-icon"
+                tooltip={true}
+                tooltipText={t('checkForUpdates')}
+                tooltipPosition="pos-top"
+                className={clsx("version-badge", showSuccess && "success")}
+                iconClass={clsx(
+                    "icon icon-size-20",
+                    isChecking
+                        ? "updateAvailable-icon"
+                        : showSuccess
+                        ? "upToDate-icon"
+                        : "checkUpdate-icon"
+                )}
+            />
+            <ButtonSm
+                text="View all versions"
                 onClick={() => window.open(EXTERNAL_URLS.GITHUB_RELEASES, '_blank')}
-                title="GitHub Releases"
-            >
-                <span className="icon icon-size-16 externallink-icon" />
-                
-            </button>
+                textColor = "text-white"
+                className="externallink"
+                tooltip={true}
+                tooltipText="view all releases on GitHub"
+                tooltipPosition="pos-top"
+            />
+
 
             {toast && (
                 <div className={clsx("toast-notification", toast.type)}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TextSelector from '@/components/ui-components/TextSelector';
+import SubactionHeader from '@/components/ui-components/SubactionHeader';
 
 interface RecordingNamePreviewProps {
     name: string;
@@ -16,7 +17,7 @@ export const RecordingNamePreview: React.FC<RecordingNamePreviewProps> = ({
     const { t } = useTranslation();
     return (
         <div className="flex flex-col gap-1">
-            <p className="text sm text-gray">Recording Name</p>
+            <SubactionHeader text="Recording Name" />
             {!isRecording ? (
                 <TextSelector
                     value={name}

@@ -9,6 +9,8 @@ import clsx from 'clsx';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { useTranslation } from 'react-i18next';
+import ButtonSm from '../ui-components/ButtonSm';
+import SubactionHeader from '../ui-components/SubactionHeader';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -320,9 +322,9 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
     // Render
     // -----------------------------------------------------------------------
     return (
-        <div className="flex flex-col gap-2 p-2 h-full overflow-hidden">
+        <div className="flex playback-page-content has-videos flex flex-col gap-2 p-2 h-full overflow-hidden">
             {/* Manual path row */}
-            <div className="flex gap-1 items-center">
+            <div className="load-group flex flex-row flex-wrap gap-1 items-center">
                 <div className="input-with-string flex-1">
                     <input
                         className="input-field"
@@ -335,32 +337,32 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                         disabled={isLoadingRecording}
                     />
                 </div>
-                <button
-                    className="button sm"
+                <ButtonSm
+                    className='secondary'
+                    text={t('load')}
                     onClick={handleLoadManualPath}
                     disabled={!manualPath.trim() || isLoadingRecording}
-                >
-                    {isLoadingRecording && !loadingPath
-                        ? <span className="icon loader-icon icon-size-16" />
-                        : <span className="icon stream-icon icon-size-16" />}
-                    {t('load')}
-                </button>
+                    iconClass={isLoadingRecording && !loadingPath ? 'loader-icon' : ''}
+                    
+                />
             </div>
 
             {/* Error */}
-            {error && <p className="text sm text-error">{error}</p>}
+            {error && <p className="flex flex-row text sm text-error">{error}</p>}
 
             {/* Header bar */}
-            <div className="flex items-center justify-content-space-between gap-1 flex-wrap">
-                <div className="flex items-center gap-1">
-                    <p className="text bg text-white">{t('recordings')}</p>
-                    {recordings.length > 0 && (
-                        <span className="camera-status-badge">
-                            {filterText ? `${filteredSorted.length} / ${recordings.length}` : recordings.length}
-                        </span>
-                    )}
-                </div>
-                <div className="flex items-center gap-1">
+            <div className="recording-group flex flex-row mt-3 flex-wrap flex-start items-center gap-1 justify-content-space-between">
+                
+                    <div className="flex header-holder-for-recording items-center gap-1">
+                        {recordings.length > 0 && (
+                            <p className="tag camera-status-badge">
+                                {filterText ? `${filteredSorted.length} / ${recordings.length}` : recordings.length}
+                            </p>
+                        )}
+                        <SubactionHeader text={t('recordings')} />
+                    </div>
+                
+                <div className="flex flex-wrap flex-row items-center gap-1 justify-content-space-between min-w-full">
                     <div className="input-with-string">
                         <input
                             className="input-field"
@@ -380,36 +382,37 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                             </option>
                         ))}
                     </select>
-                    <button
-                        className="button icon-button"
+                    <ButtonSm
+                        text={sortDir === 'desc' ? '↓' : '↑'}
                         onClick={toggleSortDir}
                         title="Toggle sort direction"
-                    >
-                        {sortDir === 'desc' ? '↓' : '↑'}
-                    </button>
-                    <button
-                        className="button sm"
+                    />
+                    <ButtonSm
+                        text={t('refresh')}
                         onClick={fetchRecordings}
                         disabled={isLoadingList}
-                    >
-                        <span className="icon rotate-icon icon-size-16" />{t('refresh')}
-                    </button>
+                        iconClass="rotate-icon"
+                    />
                 </div>
             </div>
 
             {/* List */}
             {isLoadingList ? (
                 <div className="flex items-center justify-center py-4">
-                    <span className="icon loader-icon icon-size-16" />
+                    <span className="icon loader-icon icon-size-20" />
                 </div>
             ) : filteredSorted.length === 0 ? (
-                <p className="text sm text-gray text-center p-4">
-                    {recordings.length === 0
-                        ? t('noRecordingsFound')
-                        : 'No recordings match your filter.'}
-                </p>
+                
+                <div className='recording-warning-container flex flex-col flex-wrap p-2 m-4 text-center gap-1 items-center justify-center br-2 '>
+                    <span className="icon warning-icon icon-size-32" />
+                    <p className="text md text-white text-center">
+                        {recordings.length === 0
+                            ? t('noRecordingsFound')
+                            : 'No recordings match your filter.'}
+                    </p>
+                </div>
             ) : (
-                <div className="recording-list flex-1 overflow-y border-1 border-black br-1">
+                <div className="recording-list flex-1 overflow-y border-1 border-black br-2 p-2">
                     {filteredSorted.map((rec) => (
                         <RecordingRow
                             key={rec.path}
@@ -443,42 +446,42 @@ const RecordingRow: React.FC<RecordingRowProps> = React.memo(
 
         return (
             <div
-                className={clsx("recording-row toggle-button flex flex-col gap-1 p-2", isAnyLoading && !isLoading && "recording-row-disabled")}
+                className={clsx("br-1 recording-row text-left toggle-button flex text-white flex-col flex-start gap-1 p-2", isAnyLoading && !isLoading && "recording-row-disabled")}
                 onClick={!isAnyLoading ? onClick : undefined}
             >
                 <div className="flex items-center gap-1">
                     {isLoading
-                        ? <span className="icon loader-icon icon-size-16" />
-                        : <span className="icon import-icon icon-size-16" />}
-                    <p className="text sm recording-name">{rec.name}</p>
+                        ? <span className="icon loader-icon icon-size-12" />
+                        : <span className="icon load-icon icon-size-12" />}
+                    <p className="text md recording-name">{rec.name}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text sm text-gray" title="Camera streams">
+                <div className="flex flex-wrap flex-row justify-content-space-between gap-2 items-center">
+                    <span className="text md text-gray" title="Camera streams">
                         {rec.video_count} cam{rec.video_count !== 1 ? 's' : ''}
                     </span>
                     {rec.total_size_bytes != null && rec.total_size_bytes > 0 && (
-                        <span className="text sm text-gray" title="Total size">
+                        <span className="text md text-gray" title="Total size">
                             {formatBytes(rec.total_size_bytes)}
                         </span>
                     )}
                     {rec.duration_seconds != null && rec.duration_seconds > 0 && (
-                        <span className="text sm text-gray" title="Duration">
+                        <span className="text md text-gray" title="Duration">
                             {formatDuration(rec.duration_seconds)}
                         </span>
                     )}
                     {rec.total_frames != null && rec.total_frames > 0 && (
-                        <span className="camera-config-chip" title={t('frameCountPerCamera')}>
+                        <span className="camera-config-chip text-gray" title={t('frameCountPerCamera')}>
                             {rec.total_frames.toLocaleString()} frames
                         </span>
                     )}
                     {rec.fps != null && rec.fps > 0 && (
-                        <span className="camera-config-chip" title={t('recordingCaptureFps')}>
+                        <span className="camera-config-chip text-gray" title={t('recordingCaptureFps')}>
                             {rec.fps} fps
                         </span>
                     )}
                     {parsedDate && (
                         <span
-                            className="text sm text-gray"
+                            className="text md text-gray"
                             style={{ fontStyle: 'italic' }}
                             title={parsedDate.toLocaleString()}
                         >

@@ -70,7 +70,7 @@ export const LanguageSwitcher: React.FC = () => {
 
                 {/* Dropdown */}
                 {open && (
-                    <div className="language-dropdown-panel dropdown-container border-1 border-black elevated-sharp bg-dark br-2 reveal slide-down">
+                    <div className="language-dropdown-panel dropdown-container border-1 border-black elevated-sharp bg-dark br-2 reveal slide-up">
                         <div className="flex flex-col p-1 gap-1 bg-middark br-1">
                             {Object.entries(SUPPORTED_LOCALES).map(([code, { label, englishName, flag }]) => (
                                 <button
@@ -96,7 +96,7 @@ export const LanguageSwitcher: React.FC = () => {
                     href={EXTERNAL_URLS.TRANSLATION_LOCALES}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={clsx("translation-badge", badgeClass)}
+                    className={clsx("translation-badge pos-abs", badgeClass)}
                     title={translationSource === "ai-generated" ? t("aiTranslatedTooltip") : t("humanValidatedTooltip")}
                 >
                     <span className="text sm">{sourceLabel}</span>

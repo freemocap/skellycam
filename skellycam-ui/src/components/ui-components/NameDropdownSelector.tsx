@@ -62,7 +62,7 @@ const NameDropdownSelector: React.FC<NameDropdownSelectorProps> = ({
 
       {/* Dropdown */}
       {open && (
-        <div className="dropdown-container border-1 border-black elevated-sharp pos-abs flex flex-col right-0 p-1 bg-dark br-2 z-1 reveal slide-down">
+        <div className="mic-dropdown-container mt-1 left-0 dropdown-container border-1 border-black elevated-sharp pos-abs flex flex-col right-0 p-1 bg-dark br-2 z-1 reveal slide-down">
           <div className="flex flex-col right-0 p-1 gap-2 bg-middark br-1 z-1">
             {options.map((option, index) => (
               <button

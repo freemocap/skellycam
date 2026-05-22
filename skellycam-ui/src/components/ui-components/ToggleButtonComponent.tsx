@@ -51,9 +51,9 @@ const ToggleButtonComponent: React.FC<ToggleButtonComponentProps> = ({
         extraClasses
       )}
     >
-      {iconClass && <span className={`icon icon-size-16 ${iconClass}`} />}
+      {iconClass && <span className={`icon icon-size-20 ${iconClass}`} />}
       <p className={`${textColor} text md text-align-left`}>{text}</p>
-      {rightSideIcon && <span className={`icon icon-size-16 ${rightSideIcon}`} />}
+      {rightSideIcon && <span className={`icon icon-size-20 ${rightSideIcon}`} />}
     </button>
   );
 };

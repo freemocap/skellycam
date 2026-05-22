@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectConnectedCameras } from "@/store/slices/cameras/cameras-selectors";
 import { camerasConnectOrUpdate } from "@/store/slices/cameras/cameras-thunks";
+import CameraEmptyState from "@/components/ui-components/camerasEmptyState";
 
 const GRID_COLS = 12;
 const MARGIN: [number, number] = [4, 4];
@@ -144,17 +145,16 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
         return Math.max(30, (containerHeight - totalMargin) / tiling.rows);
     }, [containerHeight, tiling.rows]);
 
-    if (connectedCameraIds.length === 0) {
+    if (sortedConnectedCameraIds.length === 0) {
         return (
-            <div ref={containerRef} className="camera-grid-container camera-grid-empty">
-                <p className="text bg text-gray">{t("noCamerasConnected")}</p>
-                <p className="text sm text-gray">{t("waitingForCameraStreams")}</p>
+            <div ref={containerRef} className="camera-grid-empty-state-container camera-grid-container">
+                <CameraEmptyState />
             </div>
         );
     }
 
     return (
-        <div ref={containerRef} className="camera-grid-container">
+        <div ref={containerRef} className="camera-grid-custom mt-1 br-2 camera-grid-container">
             <ReactGridLayout
                 width={containerWidth}
                 layout={layout}

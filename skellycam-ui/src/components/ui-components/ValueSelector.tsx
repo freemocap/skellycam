@@ -112,9 +112,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
       const rect = buttonRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
       const style: React.CSSProperties = {
-        position: 'fixed',
-        right: window.innerWidth - rect.right,
-        zIndex: 200,
+       
       };
       if (spaceBelow < POPUP_HEIGHT + 8) {
         style.bottom = window.innerHeight - rect.top + 4;
@@ -140,7 +138,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
 
       {/* Tooltip */}
       {open && (
-        <div className="border-1 border-black elevated-sharp flex flex-row p-1 bg-dark br-2 reveal slide-down" style={popupStyle}>
+        <div className="value-selector-container border-1 border-black elevated-sharp pos-abs flex flex-row right-0 p-1 bg-dark br-2 z-1 reveal slide-down">
           <div className="flex right-0 p-2 gap-2 bg-middark br-1 z-1">
             {/* Minus button */}
             <button
@@ -149,7 +147,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
                 currentValue <= min ? "deactivated" : ""
               }`}
             >
-              <span className="icon minus-icon icon-size-16"></span>
+              <span className="icon minus-icon icon-size-20"></span>
             </button>
 
             {/* Input */}
@@ -169,7 +167,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
                 currentValue >= max ? "deactivated" : ""
               }`}
             >
-              <span className="icon plus-icon icon-size-16"></span>
+              <span className="icon plus-icon icon-size-20"></span>
             </button>
           </div>
         </div>

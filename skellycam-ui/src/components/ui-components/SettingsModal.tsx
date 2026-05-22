@@ -60,7 +60,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onClose }) =
                 <div className="flex justify-content-space-between items-center">
                     <p className="text bg text-white">{t('settings')}</p>
                     <button className="button icon-button" onClick={onClose}>
-                        <span className="icon close-icon icon-size-16" />
+                        <span className="icon close-icon icon-size-20" />
                     </button>
                 </div>
 

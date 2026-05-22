@@ -61,7 +61,7 @@ export default function DropdownButton({
       {open && (
         <div
           ref={popupRef}
-          className="reveal slide-down dropdown-container border-1 border-black bg-middark br-2 flex flex-col gap-1 p-1"
+          className="reveal slide-down elevated-sharp dropdown-container border-1 border-black bg-middark br-2 flex flex-col gap-1 p-1"
           style={popupStyle}
         >
           {dropdownItems}

@@ -5,6 +5,7 @@ import NameDropdownSelector from './ui-components/NameDropdownSelector';
 import SubactionHeader from './ui-components/SubactionHeader';
 import useDraggableTooltips from '@/hooks/useDraggableTooltips';
 import type { ExecutableCandidate } from './ServerConnectionStatus';
+import IconButton from './ui-components/iconButton';
 
 interface ConnectionSettingsModalProps {
     open: boolean;
@@ -100,9 +101,10 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                 {/* Header */}
                 <div className="flex justify-content-space-between items-center">
                     <p className="text bg text-white">Connection Settings</p>
-                    <button className="button icon-button" onClick={onClose}>
-                        <span className="icon close-icon icon-size-16" />
-                    </button>
+                    <IconButton
+                        icon="close-icon"
+                        onClick={onClose}
+                     />
                 </div>
 
                 {/* ── Server Process Section (Electron only) ── */}
@@ -146,7 +148,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                                 disabled={serverRunning || serverLoading}
                                 title={t('browseForExecutable')}
                             >
-                                <span className="icon import-icon icon-size-16" />
+                                <span className="icon import-icon icon-size-20" />
                             </button>
                             <button
                                 className="button icon-button br-1 border-1 border-black"
@@ -154,7 +156,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                                 disabled={serverRunning || candidatesLoading}
                                 title={t('refreshCandidates')}
                             >
-                                <span className={`icon rotate-icon icon-size-16 ${candidatesLoading ? 'loader-icon' : ''}`} />
+                                <span className={`icon rotate-icon icon-size-20 ${candidatesLoading ? 'loader-icon' : ''}`} />
                             </button>
                         </div>
 

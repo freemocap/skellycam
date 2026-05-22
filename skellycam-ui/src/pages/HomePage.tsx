@@ -71,7 +71,7 @@ export const HomePage: React.FC = () => {
     }, [navigate]);
 
     return (
-        <div className="home-page overflow-hidden flex-1 bg-middark br-1 flex flex-row gap-3 p-2">
+        <div className="home-page overflow-hidden flex-1 br-1 flex flex-row gap-3 p-2">
             {/* Left column — logo + language/version */}
             <div className="flex flex-1 flex-col">
                 <div className="splash-image-container flex-1" />
