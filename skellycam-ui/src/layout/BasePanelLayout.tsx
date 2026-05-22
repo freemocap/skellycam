@@ -1,6 +1,7 @@
 // skellycam-ui/src/layout/BasePanelLayout.tsx
-import React, {useCallback, useRef, useState} from "react";
+import React, {useCallback, useEffect, useRef, useState} from "react";
 import {ImperativePanelHandle, Panel, PanelGroup, PanelResizeHandle} from "react-resizable-panels";
+import {useNavigate} from "react-router-dom";
 import {LeftSidePanelContent} from "@/components/ui-components/LeftSidePanelContent";
 import BottomPanelContent from "@/components/ui-components/BottomPanelContent";
 import {useMenuActions} from "@/hooks/useMenuActions";
@@ -11,10 +12,20 @@ import {useServer} from "@/services/server/ServerContextProvider";
 import {ConnectionState} from "@/services/server/server-helpers/websocket-connection";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
-    const { connectionState } = useServer();
+    const { connectionState, connectedCameraIds } = useServer();
     const showServiceUI = connectionState !== ConnectionState.CONNECTED;
-    const isFailed = connectionState === ConnectionState.FAILED;
-    const isConnected = connectionState === ConnectionState.CONNECTED;
+    const isFailed = connectionState === ConnectionState.FAILED
+        || connectionState === ConnectionState.RECONNECTING;
+    const showConnectCameras = connectionState === ConnectionState.CONNECTED && connectedCameraIds.length === 0;
+
+    const navigate = useNavigate();
+    const prevCameraCountRef = useRef(0);
+    useEffect(() => {
+        if (prevCameraCountRef.current === 0 && connectedCameraIds.length > 0) {
+            navigate('/cameras');
+        }
+        prevCameraCountRef.current = connectedCameraIds.length;
+    }, [connectedCameraIds.length]);
 
     const leftPanelRef = useRef<ImperativePanelHandle>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -65,7 +76,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
           
         >
                     <PromptTooltip
-                        show={isConnected}
+                        show={showConnectCameras}
                         title="Connect Cameras"
                         text="Make sure you have at least one camera plugged in, then hit Connect to start streaming."
                         position="pos-right"
