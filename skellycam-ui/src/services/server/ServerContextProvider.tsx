@@ -10,6 +10,7 @@ import {LogStore, LogRecord} from "@/services/server/server-helpers/log-store";
 
 interface ServerContextValue {
     isConnected: boolean;
+    connectionState: ConnectionState;
     connect: () => void;
     disconnect: () => void;
     send: (data: string | object) => void;
@@ -69,6 +70,7 @@ function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
 export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Reactive state - only updates when camera list actually changes
     const [isConnected, setIsConnected] = useState<boolean>(false);
+    const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
     const [connectedCameraIds, setConnectedCameraIds] = useState<string[]>([]);
 
     // Service instances
@@ -128,6 +130,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         const handleStateChange = (newState: ConnectionState): void => {
             const connected = newState === ConnectionState.CONNECTED;
             setIsConnected(connected);
+            setConnectionState(newState);
 
             if (newState === ConnectionState.DISCONNECTED || newState === ConnectionState.FAILED) {
                 canvasManagerRef.current?.terminateAllWorkers();
@@ -312,6 +315,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
 
     const contextValue = useMemo(() => ({
         isConnected,
+        connectionState,
         connect,
         disconnect,
         send,
@@ -322,7 +326,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         getLogStore,
         connectedCameraIds,
         updateServerConnection,
-    }), [isConnected, connectedCameraIds, connect, disconnect, send, setCanvasForCamera, getFps, getServerFps, getFramerateStore, getLogStore, updateServerConnection]);
+    }), [isConnected, connectionState, connectedCameraIds, connect, disconnect, send, setCanvasForCamera, getFps, getServerFps, getFramerateStore, getLogStore, updateServerConnection]);
 
     return (
         <ServerContext.Provider value={contextValue}>

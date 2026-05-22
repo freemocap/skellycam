@@ -83,12 +83,6 @@ useEffect(() => {
   setIsVisible(show);
 }, [show]);
 
-useEffect(() => {
-  if (!isVisible) {
-    __floatingOnboardingUnmount();
-  }
-}, [isVisible]);
-
   if (!isVisible) return null;
 
   const variantClasses = {

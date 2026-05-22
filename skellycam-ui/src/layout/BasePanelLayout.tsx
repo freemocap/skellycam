@@ -7,8 +7,15 @@ import {useMenuActions} from "@/hooks/useMenuActions";
 import {useKeyboardShortcuts} from "@/hooks/useKeyboardShortcuts";
 import {FloatingOnboarding} from "@/hooks/floatingOnboarding";
 import PromptTooltip from "@/components/ui-components/promptTooltip";
+import {useServer} from "@/services/server/ServerContextProvider";
+import {ConnectionState} from "@/services/server/server-helpers/websocket-connection";
 
 export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
+    const { connectionState } = useServer();
+    const showServiceUI = connectionState !== ConnectionState.CONNECTED;
+    const isFailed = connectionState === ConnectionState.FAILED;
+    const isConnected = connectionState === ConnectionState.CONNECTED;
+
     const leftPanelRef = useRef<ImperativePanelHandle>(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -39,21 +46,17 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
         
         >
                     <PromptTooltip
-                        show={
-                          false
-                        } // add condition when to show the prompt tooltip
-                        title="Service Unavailable"
-                        text="Make sure you have the service running"
-                        
-                        button={true}
+                        show={showServiceUI}
+                        title={isFailed ? "Service Unavailable" : "Connecting..."}
+                        text={isFailed
+                            ? "Make sure you have the service running"
+                            : "Websocket connecting, app functions will be available once connection is made"}
+                        button={isFailed}
                         buttonText="Learn how to set up"
                         onButtonClick={() => window.open("https://github.com/freemocap/freemocap", "_blank")}
-
                         position="pos-bottom"
-                        variant="warning"
-                        onClose={() => {
-                        // console.log("Tooltip closed");
-                        }}
+                        variant={isFailed ? "warning" : "default"}
+                        onClose={() => {}}
                     />
         </FloatingOnboarding>
         <FloatingOnboarding
@@ -62,16 +65,12 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
           
         >
                     <PromptTooltip
-                        show={
-                          true
-                        } // add condition when to show the prompt tooltip
+                        show={isConnected}
                         title="Connect Cameras"
                         text="Make sure you have at least one camera plugged in, then hit Connect to start streaming."
                         position="pos-right"
                         variant="boarding"
-                        onClose={() => {
-                        // console.log("Tooltip closed");
-                        }}
+                        onClose={() => {}}
                     />
         </FloatingOnboarding>
         <PanelGroup
