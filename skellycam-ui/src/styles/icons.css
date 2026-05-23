@@ -9,7 +9,7 @@
 
 4. Add the icon to `icons.css` as a variable so it can be reused easily throughout the design system.
 
-5. Update `app.css` and use the same icon variable you just created as a class.
+5. Update the same file in the bottom of `icon.css` and use the same icon variable you just created as a class.
 
 Note:
 The FreeMoCap design system uses icons as CSS background images.
@@ -56,7 +56,8 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --expand-icon: url("../assets/icons/expand_icon.svg");
   --collapse-icon: url("../assets/icons/collapse_icon.svg");
   --copy-icon: url("../assets/icons/copy_icon.svg");
-
+  --mic-icon: url("../assets/icons/mic_icon.svg");
+  --mic-active-icon: url("../assets/icons/mic_active_icon.svg");
   --processmocap-icon: url("../assets/icons/processmocap_icon.svg");
   --video-icon: url("../assets/icons/video_icon.svg");
   --record-icon: url("../assets/icons/record_icon.svg");
@@ -88,6 +89,15 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 
 
   /* icon type */
+.close-icon {
+  background-image: var(--close-icon);
+}
+.mic-icon {
+  background-image: var(--mic-icon);
+}
+.mic-active-icon {
+  background-image: var(--mic-active-icon);
+}
 .close-icon {
   background-image: var(--close-icon);
 }
