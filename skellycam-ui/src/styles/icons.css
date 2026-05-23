@@ -63,6 +63,11 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --record-icon: url("../assets/icons/record_icon.svg");
   --calibrate-icon: url("../assets/icons/calibrate_icon.svg");
   --back-icon: url("../assets/icons/back_icon.svg");
+  --frameforward-icon: url("../assets/icons/frameforward_icon.svg");
+  --framebackward-icon: url("../assets/icons/framebackward_icon.svg");
+  --loop-icon: url("../assets/icons/loop_icon.svg");
+  --skipbackward-icon: url("../assets/icons/skipbackward_icon.svg");
+  --skipforward-icon: url("../assets/icons/skipforward_icon.svg");
 
   --learn-icon: url("../assets/icons/learn_icon.svg");
   --discord-icon: url("../assets/icons/discord_icon.svg");
@@ -229,6 +234,21 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 .copy-icon {
   background-image: var(--copy-icon);
+}
+.loop-icon {
+  background-image: var(--loop-icon);
+}
+.frameforward-icon {
+  background-image: var(--frameforward-icon);
+}
+.framebackward-icon {
+  background-image: var(--framebackward-icon);
+}
+.skipforward-icon {
+  background-image: var(--skipforward-icon);
+}
+.skipbackward-icon {
+  background-image: var(--skipbackward-icon);
 }
 
 .loader-icon {

@@ -1172,3 +1172,365 @@ animation: fadeIn, scaleIn;
   max-width:  400px;
   min-width:  400px;
 }
+
+/* =========================================
+   PLAYBACK CONTROLS STYLES
+========================================= */
+
+/* Timeline Scrubber Container */
+.playback-timeline-scrubber {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 33px;
+  padding: 4px 8px;
+  background-color: var(--gray-800);
+  border-radius: 4px;
+  border: 1px solid var(--gray-700);
+}
+
+/* Timeline Start Time - positioned inside left */
+.playback-timeline-start-time {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  white-space: nowrap;
+  min-width: 48px;
+  text-align: left;
+}
+
+/* Timeline End Time - positioned inside right */
+.playback-timeline-end-time {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  white-space: nowrap;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* Frame Counter - centered always */
+.playback-timeline-frame-counter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: var(--gray-100);
+  white-space: nowrap;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Timeline Track (progress bar container) */
+.playback-timeline-track {
+  position: relative;
+  flex: 1;
+  height: 33px;
+  min-height: 33px;
+  background-color: var(--gray-700);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Timeline Progress Bar (blue line showing playhead progress) */
+.playback-timeline-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  min-height: 33px;
+  background-color: var(--blue-700);
+  border-radius: 4px;
+  transition: width 0.05s linear;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Timeline Input Range */
+.playback-timeline-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  z-index: 3;
+}
+
+.playback-timeline-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 4px;
+  height: 33px;
+  background-color: white;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.playback-timeline-input::-moz-range-thumb {
+  width: 4px;
+  height: 33px;
+  background-color: white;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.playback-timeline-input::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.playback-timeline-input::-moz-range-progress {
+  background: transparent;
+  height: 100%;
+}
+
+/* Hover state for playhead */
+.playback-timeline-track:hover .playback-timeline-input::-webkit-slider-thumb {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  width: 6px;
+  transition: all 0.2s ease;
+}
+
+.playback-timeline-track:hover .playback-timeline-input::-moz-range-thumb {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+  width: 6px;
+  transition: all 0.2s ease;
+}
+
+/* Active state for playhead */
+.playback-timeline-input:active::-webkit-slider-thumb {
+  box-shadow: 0 0 12px rgba(255, 255, 255, 1);
+  width: 8px;
+}
+
+.playback-timeline-input:active::-moz-range-thumb {
+  box-shadow: 0 0 12px rgba(255, 255, 255, 1);
+  width: 8px;
+}
+
+/* =========================================
+   PLAYBACK CONTROLS GROUPS
+========================================= */
+
+/* Step & Skip Group */
+.playback-controls-group-step-skip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background-color: var(--gray-800);
+  border-radius: 4px;
+  /* border: 1px solid var(--gray-700); */
+}
+
+/* Info & Settings Group */
+.playback-controls-group-info-settings {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background-color: var(--gray-800);
+  border-radius: 4px;
+  border: 1px solid var(--gray-700);
+}
+
+/* =========================================
+   PLAYBACK SPEED SELECT
+========================================= */
+
+.playback-speed-select {
+  min-width: 50px;
+  height: 28px;
+  padding: 4px 8px;
+  background-color: var(--gray-700);
+  color: var(--gray-100);
+  border: 1px solid var(--gray-600);
+  border-radius: 3px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.playback-speed-select:hover {
+  background-color: var(--gray-600);
+  border-color: var(--gray-500);
+}
+
+.playback-speed-select:focus {
+  outline: none;
+  border-color: var(--blue-700);
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+.playback-speed-select:active {
+  background-color: var(--gray-700);
+}
+
+/* =========================================
+   PLAYBACK BUTTONS (using IconButton)
+========================================= */
+
+/* Base styles for all playback icon buttons */
+.playback-btn-skip-back,
+.playback-btn-frame-back,
+.playback-btn-play,
+.playback-btn-frame-forward,
+.playback-btn-skip-forward,
+.playback-btn-loop,
+.playback-btn-info,
+.playback-btn-settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 4px;
+  background-color: var(--gray-700);
+  color: var(--gray-100);
+  /* border: 1px solid var(--gray-600); */
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+/* Hover state for buttons */
+/* .playback-btn-skip-back:hover,
+.playback-btn-frame-back:hover,
+.playback-btn-play:hover,
+.playback-btn-frame-forward:hover,
+.playback-btn-skip-forward:hover,
+.playback-btn-loop:hover,
+.playback-btn-info:hover,
+.playback-btn-settings:hover {
+  background-color: var(--gray-600);
+  border-color: var(--gray-500);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+} */
+
+/* Active/press state */
+/* .playback-btn-skip-back:active,
+.playback-btn-frame-back:active,
+.playback-btn-play:active,
+.playback-btn-frame-forward:active,
+.playback-btn-skip-forward:active,
+.playback-btn-loop:active,
+.playback-btn-info:active,
+.playback-btn-settings:active {
+  transform: translateY(0px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+} */
+
+/* Play button special styling */
+.playback-btn-play {
+  background-color: var(--green-900);
+  border-color: var(--green-800);
+  color: var(--green-100);
+  min-width: 36px;
+  height: 36px;
+}
+
+.playback-btn-play:hover {
+  background-color: var(--green-800);
+  border-color: var(--green-700);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.playback-btn-play.playing {
+  background-color: var(--orange-600);
+  border-color: var(--orange-500);
+  color: var(--orange-100);
+}
+
+.playback-btn-play.playing:hover {
+  background-color: var(--orange-500);
+  border-color: var(--orange-400);
+}
+
+/* =========================================
+   PLAYBACK FPS BADGE
+========================================= */
+
+.playback-fps-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-400);
+  background-color: var(--gray-700);
+  border: 1px solid var(--gray-600);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* =========================================
+   PLAYBACK SYNC INFO PANEL
+========================================= */
+
+.playback-sync-info {
+  padding: 8px;
+  background-color: var(--gray-700);
+  border: 1px solid var(--gray-600);
+  border-radius: 4px;
+  animation: slideDown 0.2s ease;
+}
+
+.playback-sync-title {
+  color: var(--gray-300);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   PLAYBACK SETTINGS POPUP
+========================================= */
+
+.playback-settings-popup {
+  animation: fadeIn 0.15s ease, scaleIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
+  }
+}

@@ -4,6 +4,7 @@ import SegmentedControl from '@/components/ui-components/SegmentedControl';
 import DesignerCheckbox from '@/components/ui-components/Checkbox';
 import type { PlaybackSettings } from './SyncedVideoPlayer';
 import { useTranslation } from 'react-i18next';
+import IconButton from '@/components/ui-components/IconButton';
 
 interface PlaybackControlsProps {
     isPlaying: boolean;
@@ -101,79 +102,101 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
     }, [settingsOpen]);
 
     return (
-        <div className="playback-controls flex flex-col gap-1 px-2 py-1">
-            {/* Seek slider row */}
-            <div className="flex items-center gap-2">
-                <span
-                    className="playback-timecode"
-                    title={t('estimatedTime')}
-                >
+        <div className="playback-controls flex flex-col gap-2 px-2 py-1">
+            {/* Timeline Scrubber */}
+            <div className="playback-timeline-scrubber flex items-center gap-2">
+                <span className="playback-timeline-start-time" title={t('estimatedTime')}>
                     ~{formatTime(currentTime)}
                 </span>
 
-                <input
-                    type="range"
-                    dir="ltr"
-                    className="playback-slider flex-1"
-                    min={0}
-                    max={Math.max(totalFrames - 1, 1)}
-                    step={1}
-                    value={currentFrame}
-                    onChange={(e) => onSeekDrag(Number(e.target.value))}
-                    onMouseUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
-                    onTouchEnd={(e) => onSeekCommit(Number(e.currentTarget.value))}
-                />
+                <div className="playback-timeline-track flex-1 relative">
+                    {/* Blue progress bar showing playhead position */}
+                    <div 
+                        className="playback-timeline-progress"
+                        style={{ width: `${totalFrames > 0 ? (currentFrame / (totalFrames - 1)) * 100 : 0}%` }}
+                    />
+                    
+                    <input
+                        type="range"
+                        dir="ltr"
+                        className="playback-timeline-input"
+                        min={0}
+                        max={Math.max(totalFrames - 1, 1)}
+                        step={1}
+                        value={currentFrame}
+                        onChange={(e) => onSeekDrag(Number(e.target.value))}
+                        onMouseUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
+                        onTouchEnd={(e) => onSeekCommit(Number(e.currentTarget.value))}
+                    />
+                    
+                    <div className="playback-timeline-frame-counter">
+                        {currentFrame} / {totalFrames}
+                    </div>
+                </div>
 
-                <span
-                    className="playback-timecode text-gray"
-                    title={t('estimatedDuration')}
-                >
+                <span className="playback-timeline-end-time text-gray" title={t('estimatedDuration')}>
                     ~{formatTime(duration)}
                 </span>
             </div>
 
-            {/* Transport row */}
-            <div className="flex items-center justify-center gap-1">
-                {/* Left: frame info */}
-                <div className="flex items-center gap-2 playback-info-left">
-                    <span className="playback-frame-badge" title="Current frame">
-                        Frame {currentFrame} / {totalFrames}
+            {/* Transport Controls Row */}
+            <div className="flex items-center justify-center gap-2">
+                {/* Recording FPS Badge - Left side */}
+                {recordingFps != null && recordingFps > 0 && (
+                    <span className="playback-fps-badge" title={t('recordingCaptureFps')}>
+                        rec: {recordingFps} fps
                     </span>
-                    {recordingFps != null && recordingFps > 0 && (
-                        <span className="playback-fps-badge" title={t('recordingCaptureFps')}>
-                            rec: {recordingFps} fps
-                        </span>
-                    )}
+                )}
+
+                {/* Step & Skip Group */}
+                <div className="playback-controls-group-step-skip flex items-center gap-1">
+                    <IconButton
+                        onClick={onSeekToStart}
+                        title={t('jumpToStart')}
+                        className="playback-btn-skip-back icon skipbackward-icon icon-size-20"
+                    >
+                    </IconButton>
+
+                    <IconButton
+                        onClick={() => onFrameStep(-1)}
+                        title={t('previousFrame')}
+                        className="playback-btn-frame-back icon framebackward-icon icon-size-20"
+                    >
+                    </IconButton>
+
+                    <IconButton
+                        onClick={onPlayPause}
+                        title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+                        className={clsx('playback-btn-play icon icon-size-20', isPlaying ? 'pause-icon' : 'play-icon', isPlaying && 'playing')}
+                    >
+                    </IconButton>
+
+                    <IconButton
+                        onClick={() => onFrameStep(1)}
+                        title={t('nextFrame')}
+                        className="playback-btn-frame-forward icon frameforward-icon icon-size-20"
+                    >
+                    </IconButton>
+
+                    <IconButton
+                        onClick={onSeekToEnd}
+                        title={t('jumpToEnd')}
+                        className="playback-btn-skip-forward icon skipforward-icon icon-size-20"
+                    >
+                    </IconButton>
                 </div>
 
-                {/* Center: transport buttons */}
-                <button className="button icon-button playback-transport" onClick={onSeekToStart} title={t('jumpToStart')}>⏮</button>
-                <button className="button icon-button playback-transport" onClick={() => onFrameStep(-1)} title={t('previousFrame')}>◀</button>
+                {/* Loop & Speed Group */}
+                <div className="playback-controls-group-loop-speed flex items-center gap-1">
+                    <IconButton
+                        onClick={onToggleLoop}
+                        title={isLooping ? t('loopOn') : t('loopOff')}
+                        className={clsx('playback-btn-loop icon loop-icon icon-size-20', isLooping && 'activated')}
+                    >
+                    </IconButton>
 
-                <button
-                    className={clsx('button icon-button playback-play-btn', isPlaying && 'playing')}
-                    onClick={onPlayPause}
-                    title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
-                >
-                    {isPlaying ? '⏸' : '▶'}
-                </button>
-
-                <button className="button icon-button playback-transport" onClick={() => onFrameStep(1)} title={t('nextFrame')}>▶</button>
-                <button className="button icon-button playback-transport" onClick={onSeekToEnd} title={t('jumpToEnd')}>⏭</button>
-
-                <button
-                    className={clsx('button icon-button playback-transport', isLooping && 'activated')}
-                    onClick={onToggleLoop}
-                    title={isLooping ? t('loopOn') : t('loopOff')}
-                >
-                    ↺
-                </button>
-
-                {/* Right: speed + settings */}
-                <div className="flex items-center gap-1 playback-info-right">
-                    <span className="text sm text-gray">Speed:</span>
                     <select
-                        className="sort-select input-field"
+                        className="playback-speed-select"
                         value={playbackRate}
                         onChange={(e) => onPlaybackRateChange(Number(e.target.value))}
                         title={t('playbackSpeed')}
@@ -182,23 +205,24 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                             <option key={rate} value={rate}>{rate}×</option>
                         ))}
                     </select>
+                </div>
 
-                    <button
-                        className={clsx('button icon-button playback-transport', syncInfoOpen && 'activated')}
+                {/* Info & Settings Group */}
+                <div className="playback-controls-group-info-settings flex items-center gap-1">
+                    <IconButton
                         onClick={() => setSyncInfoOpen((prev) => !prev)}
                         title={t('syncInfo')}
+                        className={clsx('playback-btn-info icon warning-icon icon-size-20', syncInfoOpen && 'activated')}
                     >
-                        ℹ
-                    </button>
+                    </IconButton>
 
-                    <button
+                    <IconButton
                         ref={settingsButtonRef}
-                        className={clsx('button icon-button playback-transport', settingsOpen && 'activated')}
                         onClick={handleOpenSettings}
                         title={t('playbackSettings')}
+                        className={clsx('playback-btn-settings icon settings-icon icon-size-20', settingsOpen && 'activated')}
                     >
-                        ⚙
-                    </button>
+                    </IconButton>
                 </div>
             </div>
 
