@@ -61,7 +61,7 @@ export const RecordingPathTreeItem: React.FC<RecordingPathTreeItemProps> = ({
         {/* Base folder row */}
         <div className="flex items-center gap-1">
             <button
-                className="button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
+                className="select-path button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
                 onClick={handleSelectDirectory}
                 title="Click to select recording folder"
                 disabled={!isElectron}

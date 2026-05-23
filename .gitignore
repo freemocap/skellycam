@@ -244,3 +244,7 @@ skellycam-ui/package-lock.json
 skellycam-ui/package-lock.json
 skellycam-ui/package-lock.json
 uv.lock
+tsconfig.json
+package.json
+index.ts
+bun.lock
