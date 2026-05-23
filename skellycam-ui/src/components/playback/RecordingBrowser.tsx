@@ -338,7 +338,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                 >
                     <span className="icon subfolder-icon icon-size-20" />
                     <p className="recording-path-preview text-wrap flex-1 text md">
-                        {manualPath || (t('browseForDirectory') || 'Browse for recording folder...')}
+                        {manualPath ||  'Select recording folder'  || 'Browse for recording folder...'}
                     </p>
                 </button>
             </div>
