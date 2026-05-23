@@ -81,9 +81,7 @@
 .primary {
   background-color: var(--red-500);
 }
-.tertiary {
-  background-color: var(--gray-500);
-}
+
 .tertiary > p {
   color: var(--gray-100);
 }

@@ -292,13 +292,28 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   justify-content: center;
 }
 
+/* button icons variants */
+.primary {
+  background-color: var(--red-500);
+}
+.icon-button.tertiary {
+  background-color: transparent;
+}
+.icon-button.tertiary:hover {
+  filter: brightness(1.2);
+}
+
+.primary:hover {
+  background-color: var(--red-800);
+}
+
 .icon-button:hover>.icon {
   filter: brightness(1);
  
 
   transition: filter var(--speed-1) ease-in-out;
 }
-.icon-button:hover:not(.secondary)  {
+.icon-button:hover:not(.secondary,.tertiary) {
  
   background-color: var(--gray-600);
   /* filter animation out */

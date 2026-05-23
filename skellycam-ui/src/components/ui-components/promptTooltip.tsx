@@ -133,6 +133,7 @@ const handleClose = () => {
           <IconButton
             icon="close-icon"
             onClick={handleClose}
+            className="tertiary"
           />
         </div>
 
