@@ -7,6 +7,9 @@ import DropdownButton from './ui-components/DropdownButton';
 import ToggleButtonComponent from './ui-components/ToggleButtonComponent';
 import { STATES } from './ui-components/states';
 import { ConnectionSettingsModal } from './ConnectionSettingsModal';
+import IconButton from './ui-components/iconButton';
+import buttonSm from './ui-components/ButtonSm';
+
 
 export interface ExecutableCandidate {
     name: string;
@@ -315,12 +318,13 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
 
     if (compact) {
         return (
-            <button
-                className="button icon-button"
-                onClick={() => setSettingsOpen(true)}
-                title={overallStatus.text + cameraCountSuffix}
-            >
-                <span className={`icon icon-size-20 ${overallStatus.iconClass}`} />
+            <>
+                <IconButton
+                    icon={overallStatus.iconClass}
+                    onClick={() => setSettingsOpen(true)}
+                    tooltip={true}
+                    tooltipText={overallStatus.text + cameraCountSuffix}
+                />
                 <ConnectionSettingsModal
                     open={settingsOpen}
                     onClose={() => setSettingsOpen(false)}
@@ -353,7 +357,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                     handleHostPortKeyDown={handleHostPortKeyDown}
                     handleToggleWsConnected={handleToggleWsConnected}
                 />
-            </button>
+            </>
         );
     }
 
@@ -403,12 +407,12 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                         {/* Footer: help text + settings trigger */}
                         <div className="flex flex-row p-1 gap-1 items-center justify-content-space-between">
                             <p className="text-left text">Having trouble connecting? Learn how to connect...</p>
-                            <button
-                                className="button icon-button"
-                                onClick={(e) => { e.stopPropagation(); setSettingsOpen(true); }}
-                            >
-                                <span className="icon settings-icon icon-size-20" />
-                            </button>
+                            <IconButton
+                                icon="settings-icon"
+                                onClick={() => setSettingsOpen(true)}
+                                tooltip={true}
+                                tooltipText="Settings"
+                            />
                         </div>
                     </div>
                 }

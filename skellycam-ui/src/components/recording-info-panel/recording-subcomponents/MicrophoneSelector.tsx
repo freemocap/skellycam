@@ -76,6 +76,10 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                     onClick={detectMicrophones}
                     buttonType={disabled || loading ? "disabled" : ""}
                     title={t("refreshMicrophoneList")}
+
+                    tooltip={true}
+                    tooltipPosition="pos-left"
+                    tooltipText={t("refreshMicrophoneList")}
                 />
             </div>
             {error && (
