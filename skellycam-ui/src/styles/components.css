@@ -81,6 +81,9 @@
 .primary {
   background-color: var(--red-500);
 }
+.primary > p {
+  color: var(--gray-100);
+}
 
 .tertiary > p {
   color: var(--gray-100);
@@ -272,7 +275,7 @@ button.rotate-button {
 .segmented-control-button>p.text.sm {
   /* small size */
   min-height: 22px;
-  line-height: 22px;
+  line-height: 16px;
   padding: 0;
 }
 

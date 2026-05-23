@@ -454,26 +454,26 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                             </div>
 
                             {/* Launch / Stop / Reset */}
-                            <div className="flex gap-1">
+                            <div className="launch-section flex flex-row flex-wrap gap-1">
                                 <ButtonSm
                                     text="Launch"
                                     onClick={() => startServer()}
                                     disabled={serverRunning || serverLoading}
-                                    className="flex-1 justify-center primary"
+                                    className="primary flex-1"
                                     title={t('Launch')}
                                 />
                                 <ButtonSm
                                     text="Stop"
                                     onClick={() => stopServer()}
                                     disabled={!serverRunning || serverLoading}
-                                    className="flex-1 justify-center secondary"
+                                    className="secondary flex-1"
                                     title={t('Stop')}
                                 />
                                 <ButtonSm
                                     text="Reset"
                                     onClick={() => resetServer()}
                                     disabled={!serverRunning || serverLoading}
-                                    className="flex-1 justify-center"
+                                    className="flex-1"
                                     title={t('Reset')}
                                 />
                             </div>
