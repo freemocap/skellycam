@@ -91,10 +91,25 @@
         left: 0,
       });
 
-    // NEW:
+
+    // =========================================================
+// CHILD VISIBILITY DETECTION
+// =========================================================
+
+const childShouldRender =
+  isValidElement(children)
+    ? children.props.show !== false
+    : true;
+
+    
     // Internal auto-unmount state
     const [isActive, setIsActive] =
       useState(true);
+      useEffect(() => {
+  if (childShouldRender) {
+    setIsActive(true);
+  }
+}, [childShouldRender]);
 
     // =========================================================
     // CONFIG AREA
@@ -421,6 +436,8 @@
       };
     }, [targetElement]);
 
+
+
     // =========================================================
     // AUTO-INJECT UNMOUNT CALLBACK
     // =========================================================
@@ -445,11 +462,12 @@
 
     if (!mounted) return null;
 
-    if (!show) return null;
+   if (!show || !childShouldRender)
+    return null;
 
     if (!targetElement) return null;
 
-    // NEW:
+    
     // Auto-remove container
     if (!isActive) return null;
 
