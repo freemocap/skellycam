@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import ButtonSm from '../ui-components/ButtonSm';
 import SubactionHeader from '../ui-components/SubactionHeader';
 
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -330,17 +331,18 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         <div className="flex playback-page-content has-videos flex flex-col gap-2 p-2 h-full overflow-hidden">
             {/* Manual path row */}
             <div className="load-group flex flex-row flex-wrap gap-1 items-center">
-                <button
-                    className="select-path button sm bg-middark br-1 border-1 border-black flex items-center gap-1 text-left flex-1"
-                    onClick={handleBrowseDirectory}
-                    title="Click to select recording folder"
-                    disabled={!isElectron}
-                >
-                    <span className="icon subfolder-icon icon-size-20" />
-                    <p className="recording-path-preview text-wrap flex-1 text md">
-                        {manualPath ||  'Select recording folder'  || 'Browse for recording folder...'}
-                    </p>
-                </button>
+                <div calassName="flex flex-row gap-1 items-center">
+                    <SubactionHeader text="Folder Directory" />
+                    <ButtonSm
+                        iconClass="subfolder-icon"
+                        text={manualPath || 'Select recording folder'}
+                        onClick={handleBrowseDirectory}
+                        title="Click to select recording folder"
+                        disabled={!isElectron}
+                        className="select-path bg-middark border-1 border-black flex-1"
+                        textClass="text-wrap flex-1"
+                    />
+                </div>
             </div>
 
             {/* Error */}
@@ -381,13 +383,21 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     <ButtonSm
                         text={sortDir === 'desc' ? '↓' : '↑'}
                         onClick={toggleSortDir}
-                        title="Toggle sort direction"
+                        
+
+                        tooltip={true}
+                        tooltipText={sortDir === 'desc' ? t('sortDescending') : t('sortAscending')}
+                        tooltipPosition="pos-bottom"
                     />
                     <ButtonSm
                         text={t('refresh')}
                         onClick={fetchRecordings}
                         disabled={isLoadingList}
                         iconClass="rotate-icon"
+
+                        tooltip={true}
+                        tooltipText={t('refreshList')}
+                        tooltipPosition="pos-bottom"
                     />
                 </div>
             </div>
