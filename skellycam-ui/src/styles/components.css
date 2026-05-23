@@ -156,7 +156,7 @@ button.rotate-button {
 }
 
 .button.sm:not(.primary, .secondary, .activated):hover {
-  background-color: var(--gray-700);
+  background-color: var(--gray-600);
   transition: background-color var(--speed-1) ease-in-out;
 
 }
@@ -173,7 +173,8 @@ button.rotate-button {
   input,
   button.active,
   .toggle-button, .rotate-button):active {
-  transform: scale(96%);
+  transform:  scale(99%);
+  transform: translateY(1px);
 
 }
 

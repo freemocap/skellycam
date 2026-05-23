@@ -86,7 +86,8 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                               iconClass={isLoading ? 'loader-icon' : 'stream-icon'}
                               onClick={handleUpdate}
                               textColor = "text-black"
-                              className="secondary"
+                              className={isLoading ? 'disabled' : 'secondary'}
+                              
                                 tooltip={true}
                                 tooltipText="Connect to Cameras"
                                 tooltipPosition="pos-bottom"

@@ -83,7 +83,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                 />
             </div>
             {error && (
-                <p className="error-messagetext sm text-error text-nowrap overflow-hidden" style={{ textOverflow: 'ellipsis' }} title={error}>
+                <p className="error-message text sm text-error text-nowrap overflow-hidden" style={{ textOverflow: 'ellipsis' }} title={error}>
                     {error}
                 </p>
             )}

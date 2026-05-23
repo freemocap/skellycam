@@ -344,6 +344,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                 iconClass: overallStatus.iconClass,
                 rightSideIcon: 'dropdown',
                 textColor: 'text-gray',
+                className: 'full-width',
             }}
             dropdownItems={
                 <div className="connection-container flex flex-col p-1 gap-2 br-1 bg-darkgray border-1 border-mid-black">
