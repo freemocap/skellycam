@@ -322,10 +322,107 @@ button.rotate-button {
   background-color: var(--gray-800);
   /* border-bottom: 1.5px solid var(--gray-600); */
 }
+
+/* Resizable panel handles  --------------------- */
 .resizable-component { 
 
   background-color: transparent!important;
 }
+
+.resizable-component {
+  position: relative;
+  background: transparent;
+  transition:
+    background-color 0.2s ease,
+    width 0.15s ease,
+    height 0.15s ease;
+}
+
+/*
+   CENTER INDICATOR
+*/
+
+/* Vertical divider (left/right resize) */
+.resizable-component[data-panel-group-direction="horizontal"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--gray-500);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Horizontal divider (top/bottom resize) */
+.resizable-component[data-panel-group-direction="vertical"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--gray-500);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* 
+   HOVER
+ */
+
+.resizable-component:hover::before {
+  opacity: 1;
+  background: var(--gray-300);
+}
+
+/* Slightly enlarge handle area on hover */
+.resizable-component[data-panel-group-direction="horizontal"]:hover {
+  width: 8px !important;
+}
+
+.resizable-component[data-panel-group-direction="vertical"]:hover {
+  height: 8px !important;
+}
+
+/* =========================================
+   DRAGGING STATE
+========================================= */
+
+/* react-resizable-panels adds this attribute */
+.resizable-component[data-resize-handle-state="drag"] {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Wider while dragging */
+.resizable-component[data-panel-group-direction="horizontal"][data-resize-handle-state="drag"] {
+  width: 10px !important;
+}
+
+.resizable-component[data-panel-group-direction="vertical"][data-resize-handle-state="drag"] {
+  height: 10px !important;
+}
+
+/* Make center indicator brighter/larger while dragging */
+.resizable-component[data-resize-handle-state="drag"]::before {
+  opacity: 1;
+  background: white;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+
+
 /* ---- Welcome Page ---- */
 .welcome-modal {
 width: 680px;
