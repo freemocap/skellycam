@@ -24,13 +24,26 @@
   --green-900: #022701;
 
   /* Red Shades */
+  --red-100: #ffe1e8;
+  --red-200: #ffc7d3;
+  --red-300: #ff9db2;
+  --red-400: #ff5f84;
   --red-500: #d7184b;
   --red-600: #a01238;
   --red-700: #860e2e;
   --red-800: #720925;
+  --red-900: #4f0619;
 
   /* Warning/Orange */
+  --warning-100: #ffe8cc;
+  --warning-200: #ffd8a8;
+  --warning-300: #ffc078;
+  --warning-400: #ffa94d;
   --warning-500: #e64900;
+  --warning-600: #d9480f;
+  --warning-700: #bf400d;
+  --warning-800: #99330b;
+  --warning-900: #662207;
 
   /* Blue Shades */
   --blue-100: #aed9f7;
