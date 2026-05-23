@@ -106,7 +106,7 @@ export function FloatingOnboarding({
 
   // const OFFSET_Y = 0;
 
-  const Z_INDEX = 999999;
+  const Z_INDEX = 99;
 
   const POSITION_TRANSITION =
     "top 0.01s linear, left 0.01s linear";

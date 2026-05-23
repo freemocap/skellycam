@@ -68,7 +68,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
       {options.map((option) => (
         <button
           key={option.value}
-          className={`segmented-control-button justify-center button gap-1 br-1 flex-inline items-center ${
+          className={`segmented-control-button justify-center button pl-2 pr-2 gap-1 br-1 flex-inline items-center ${
             activeValue === option.value
               ? "active text-white bg-dark"
               : "idle text-gray"

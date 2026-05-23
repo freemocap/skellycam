@@ -5,10 +5,12 @@ import { useElectronIPC } from '@/services';
 import { DEFAULT_HOST, DEFAULT_PORT } from '@/services/server/server-helpers/server-urls';
 import DropdownButton from './ui-components/DropdownButton';
 import ToggleButtonComponent from './ui-components/ToggleButtonComponent';
+import ToggleComponent from './ui-components/ToggleComponent';
+import SubactionHeader from './ui-components/SubactionHeader';
+import SegmentedControl from './ui-components/SegmentedControl';
 import { STATES } from './ui-components/states';
-import { ConnectionSettingsModal } from './ConnectionSettingsModal';
 import IconButton from './ui-components/iconButton';
-import buttonSm from './ui-components/ButtonSm';
+import ButtonSm from './ui-components/ButtonSm';
 
 
 export interface ExecutableCandidate {
@@ -64,6 +66,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
     const [portDraft, setPortDraft] = useState(String(serverPort));
 
     // Transient state
+    const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const [serverRunning, setServerRunning] = useState(false);
     const [serverLoading, setServerLoading] = useState(false);
     const [currentExePath, setCurrentExePath] = useState<string | null>(null);
@@ -71,7 +74,6 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
     const [candidatesLoading, setCandidatesLoading] = useState(false);
     const [processInfo, setProcessInfo] = useState<{ pid: number | undefined; killed: boolean } | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [settingsOpen, setSettingsOpen] = useState(false);
 
     const autoLaunchFiredRef = useRef(false);
     const serverLaunchingRef = useRef(false);
@@ -318,137 +320,221 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
 
     if (compact) {
         return (
-            <>
-                <IconButton
-                    icon={overallStatus.iconClass}
-                    onClick={() => setSettingsOpen(true)}
-                    tooltip={true}
-                    tooltipText={overallStatus.text + cameraCountSuffix}
-                />
-                <ConnectionSettingsModal
-                    open={settingsOpen}
-                    onClose={() => setSettingsOpen(false)}
-                    isElectron={isElectron}
-                    autoLaunchServer={autoLaunchServer}
-                    handleToggleAutoLaunch={handleToggleAutoLaunch}
-                    serverRunning={serverRunning}
-                    serverLoading={serverLoading}
-                    processInfo={processInfo}
-                    candidates={candidates}
-                    candidatesLoading={candidatesLoading}
-                    selectedExePath={selectedExePath}
-                    setSelectedExePath={setSelectedExePath}
-                    browseForExecutable={browseForExecutable}
-                    refreshCandidates={refreshCandidates}
-                    startServer={startServer}
-                    stopServer={stopServer}
-                    resetServer={resetServer}
-                    currentExePath={currentExePath}
-                    error={error}
-                    isConnected={isConnected}
-                    autoConnectWs={autoConnectWs}
-                    handleToggleAutoConnectWs={handleToggleAutoConnectWs}
-                    connectedCameraIds={connectedCameraIds}
-                    hostDraft={hostDraft}
-                    portDraft={portDraft}
-                    setHostDraft={setHostDraft}
-                    setPortDraft={setPortDraft}
-                    applyHostPort={applyHostPort}
-                    handleHostPortKeyDown={handleHostPortKeyDown}
-                    handleToggleWsConnected={handleToggleWsConnected}
-                />
-            </>
+            <IconButton
+                icon={overallStatus.iconClass}
+                tooltip={true}
+                tooltipText={overallStatus.text + cameraCountSuffix}
+            />
         );
     }
 
+    const validCandidates = candidates.filter((c) => c.isValid);
+    const executableOptions = [
+        ...validCandidates.map((c) => ({ label: c.name, value: c.path })),
+        ...candidates.filter((c) => !c.isValid).map((c) => ({ label: `${c.name} (invalid)`, value: c.path })),
+    ];
+
+    const serverStatusColor = serverRunning ? 'bg-pink' : 'bg-red';
+    const wsStatusColor = isConnected ? 'bg-pink' : 'bg-red';
+
     return (
-        <>
-            <DropdownButton
-                buttonProps={{
-                    text: overallStatus.text + cameraCountSuffix,
-                    iconClass: overallStatus.iconClass,
-                    rightSideIcon: 'dropdown',
-                    textColor: 'text-gray',
-                }}
-                dropdownItems={
-                    <div className="connection-container flex flex-col p-1 gap-1 br-1 bg-darkgray border-1 border-mid-black">
-                        {/* Python server row (Electron only) */}
-                        {isElectron && (
-                            <div className="gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
-                                <div className="text-container overflow-hidden flex items-center gap-1">
-                                    <span className={`icon icon-size-20 ${rowIconClass(serverState)}`} />
-                                    <p className="text text-nowrap text-left bg">Python server</p>
-                                </div>
-                                <ToggleButtonComponent
-                                    state={serverState}
-                                    {...toggleConfig}
-                                    textColor="text-white"
-                                    onConnect={startServer}
-                                    onDisconnect={stopServer}
+        <DropdownButton
+            buttonProps={{
+                text: overallStatus.text + cameraCountSuffix,
+                iconClass: overallStatus.iconClass,
+                rightSideIcon: 'dropdown',
+                textColor: 'text-gray',
+            }}
+            dropdownItems={
+                <div className="connection-container flex flex-col p-1 gap-2 br-1 bg-darkgray border-1 border-mid-black">
+                     <div className="group-0 connection-group flex flex-col gap-1 bg-middark br-1 p-1">
+                    {/* ── Quick Toggle Rows ── */}
+                    {/* Python server row (Electron only) */}
+                    {isElectron && (
+                       
+                                    <div className="row-1 gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
+                                        <div className="text-container overflow-hidden flex items-center gap-1">
+                                            <span className={`icon icon-size-20 ${rowIconClass(serverState)}`} />
+                                            <p className="text text-nowrap text-left bg">Python server</p>
+                                        </div>
+                                        <ToggleButtonComponent
+                                            state={serverState}
+                                            {...toggleConfig}
+                                            textColor="text-white"
+                                            onConnect={startServer}
+                                            onDisconnect={stopServer}
+                                        />
+                                    </div>
+                                )}
+
+                                    {/* WebSocket row */}
+                                    <div className="row-2 gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
+                                        <div className="text-container overflow-hidden flex items-center gap-1">
+                                            <span className={`icon icon-size-20 ${rowIconClass(wsState)}`} />
+                                            <p className="text text-nowrap text-left bg">Websocket</p>
+                                        </div>
+                                        <ToggleButtonComponent
+                                            state={wsState}
+                                            {...toggleConfig}
+                                            textColor="text-white"
+                                            onConnect={() => { setAutoConnectWs(true); connect(); }}
+                                            onDisconnect={() => { setAutoConnectWs(false); disconnect(); }}
+                                        />
+                                    </div>
+                        </div>
+
+                    {/* ── Advanced Settings Toggle ── */}
+                    <div className="flex flex-row flex-wrap justify-content-center pl-1 pr-1 ">
+                        <ButtonSm
+                            text={showAdvancedSettings ? 'Hide settings and preferences' : 'Show settings and preferences'}
+                            onClick={() => setShowAdvancedSettings((prev) => !prev)}
+                            iconClass="settings-icon"
+                            
+                            className="full-width text-center"
+                            rightSideIcon = "dropdown"
+
+
+                        />
+                    </div>
+
+                    {/* ── Detailed Settings Sections ── */}
+                    {showAdvancedSettings && (
+                    <>
+                    {/* ── Server Process Section (Electron only) ── */}
+                    {isElectron && (
+                        <div className="server-process-section bg-middark flex flex-col gap-1 br-1 p-2">
+                            <SubactionHeader text="Server Process" />
+
+                            <ToggleComponent
+                                text={t('autoLaunch')}
+                                isToggled={autoLaunchServer}
+                                onToggle={handleToggleAutoLaunch}
+                            />
+
+                            {/* Status */}
+                            <div className="flex items-center gap-1 p-1">
+                                <div
+                                    className={`${serverStatusColor} br-5`}
+                                    style={{ width: 8, height: 8, flexShrink: 0 }}
+                                />
+                                <p className="text sm text-gray">
+                                    {serverRunning ? t('running') : t('stopped')}
+                                    {processInfo?.pid ? ` (PID: ${processInfo.pid})` : ''}
+                                </p>
+                            </div>
+
+                            {/* Executable selector */}
+                            <div className="flex flex-col gap-1 p-1">
+                                <p className="text md text-nowrap">{t('executable')}</p>
+                                <SegmentedControl
+                                    options={executableOptions}
+                                    value={selectedExePath}
+                                    onChange={setSelectedExePath}
+                                    size="sm"
+                                    className="segmented-control-sm gap-2"
                                 />
                             </div>
-                        )}
 
-                        {/* WebSocket row */}
-                        <div className="gap-1 p-1 br-1 flex justify-content-space-between items-center h-25">
-                            <div className="text-container overflow-hidden flex items-center gap-1">
-                                <span className={`icon icon-size-20 ${rowIconClass(wsState)}`} />
-                                <p className="text text-nowrap text-left bg">Websocket</p>
+                            {/* Browse + Refresh */}
+                            <div className="flex gap-1">
+                                <IconButton
+                                    icon="import-icon"
+                                    onClick={browseForExecutable}
+                                    disabled={serverRunning || serverLoading}
+                                    title={t('browseForExecutable')}
+                                />
+                                <IconButton
+                                    icon="rotate-icon"
+                                    onClick={refreshCandidates}
+                                    disabled={serverRunning || candidatesLoading}
+                                    title={t('refreshCandidates')}
+                                    className={candidatesLoading ? 'loader-icon' : ''}
+                                />
                             </div>
-                            <ToggleButtonComponent
-                                state={wsState}
-                                {...toggleConfig}
-                                textColor="text-white"
-                                onConnect={() => { setAutoConnectWs(true); connect(); }}
-                                onDisconnect={() => { setAutoConnectWs(false); disconnect(); }}
-                            />
-                        </div>
 
-                        {/* Footer: help text + settings trigger */}
-                        <div className="flex flex-row p-1 gap-1 items-center justify-content-space-between">
-                            <p className="text-left text">Having trouble connecting? Learn how to connect...</p>
-                            <IconButton
-                                icon="settings-icon"
-                                onClick={() => setSettingsOpen(true)}
-                                tooltip={true}
-                                tooltipText="Settings"
-                            />
+                            {/* Launch / Stop / Reset */}
+                            <div className="flex gap-1">
+                                <ButtonSm
+                                    text="Launch"
+                                    onClick={() => startServer()}
+                                    disabled={serverRunning || serverLoading}
+                                    className="flex-1 justify-center primary"
+                                    title={t('Launch')}
+                                />
+                                <ButtonSm
+                                    text="Stop"
+                                    onClick={() => stopServer()}
+                                    disabled={!serverRunning || serverLoading}
+                                    className="flex-1 justify-center secondary"
+                                    title={t('Stop')}
+                                />
+                                <ButtonSm
+                                    text="Reset"
+                                    onClick={() => resetServer()}
+                                    disabled={!serverRunning || serverLoading}
+                                    className="flex-1 justify-center"
+                                    title={t('Reset')}
+                                />
+                            </div>
+
+                            {/* Running path */}
+                            {currentExePath && (
+                                <p className="text sm text-gray text-nowrap overflow-hidden" title={currentExePath}>
+                                    {t('runningPath', { path: currentExePath })}
+                                </p>
+                            )}
+
+                            {/* Error */}
+                            {error && (
+                                <p className="text sm text-warning">{error}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── WebSocket Section ── */}
+                    <div className="websocket-section bg-middark flex flex-col gap-1 br-1 p-2">
+                        <SubactionHeader text="Websocket Connection" />
+
+                        <ToggleComponent
+                            text={t('autoConnect')}
+                            isToggled={autoConnectWs}
+                            onToggle={handleToggleAutoConnectWs}
+                        />
+
+                        {/* Host / Port inputs */}
+                        <div className="flex gap-1">
+                            <div className="input-with-string flex-3">
+                                <input
+                                    className="input-field"
+                                    placeholder={t('host')}
+                                    value={hostDraft}
+                                    onChange={(e) => setHostDraft(e.target.value)}
+                                    onBlur={applyHostPort}
+                                    onKeyDown={handleHostPortKeyDown}
+                                    disabled={isConnected}
+                                />
+                            </div>
+                            <div className="input-with-unit">
+                                <input
+                                    className="input-field numeric-input"
+                                    type="number"
+                                    placeholder={t('port')}
+                                    value={portDraft}
+                                    min={1}
+                                    max={65535}
+                                    onChange={(e) => setPortDraft(e.target.value)}
+                                    onBlur={applyHostPort}
+                                    onKeyDown={handleHostPortKeyDown}
+                                    disabled={isConnected}
+                                />
+                            </div>
                         </div>
                     </div>
-                }
-            />
-            <ConnectionSettingsModal
-                open={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
-                isElectron={isElectron}
-                autoLaunchServer={autoLaunchServer}
-                handleToggleAutoLaunch={handleToggleAutoLaunch}
-                serverRunning={serverRunning}
-                serverLoading={serverLoading}
-                processInfo={processInfo}
-                candidates={candidates}
-                candidatesLoading={candidatesLoading}
-                selectedExePath={selectedExePath}
-                setSelectedExePath={setSelectedExePath}
-                browseForExecutable={browseForExecutable}
-                refreshCandidates={refreshCandidates}
-                startServer={startServer}
-                stopServer={stopServer}
-                resetServer={resetServer}
-                currentExePath={currentExePath}
-                error={error}
-                isConnected={isConnected}
-                autoConnectWs={autoConnectWs}
-                handleToggleAutoConnectWs={handleToggleAutoConnectWs}
-                connectedCameraIds={connectedCameraIds}
-                hostDraft={hostDraft}
-                portDraft={portDraft}
-                setHostDraft={setHostDraft}
-                setPortDraft={setPortDraft}
-                applyHostPort={applyHostPort}
-                handleHostPortKeyDown={handleHostPortKeyDown}
-                handleToggleWsConnected={handleToggleWsConnected}
-            />
-        </>
+                    </>
+                    )}
+
+                </div>
+            }
+        />
     );
 };

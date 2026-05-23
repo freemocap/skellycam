@@ -1062,3 +1062,12 @@ animation: fadeIn, scaleIn;
   border-bottom: 6px solid transparent;
   border-right: 6px solid black;
 }
+
+.connection-status-dropdown {
+  position: fixed;
+  top: 32px;
+  left: 8px;
+  z-index: 100;
+  max-width:  400px;
+  min-width:  400px;
+}
