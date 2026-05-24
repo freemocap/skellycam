@@ -1,8 +1,9 @@
 //! Build script: download pre-built openpnp-capture + turbojpeg static libs
 //! from the latest GitHub Release on the `jonmatthis/openpnp-capture` fork.
 //!
-//! Archives are cached in `target/build-artifacts/` — incremental builds
-//! skip the download entirely.
+//! Every build queries the GitHub API for the latest release tag. If a newer
+//! tag is found, the new artifact is downloaded. Archives already cached in
+//! `target/build-artifacts/{tag}/` skip the download (same version, not stale).
 
 use std::env;
 use std::fs;
@@ -50,11 +51,17 @@ fn main() {
             error!("║  openpnp-capture pre-built libraries are not yet available  ║");
             error!("║  for target: {target:<46}║", target = target);
             error!("║                                                              ║");
-            error!("║  Currently supported:                                        ║");
-            error!("║    x86_64-pc-windows-msvc                                    ║");
-            error!("║    aarch64-pc-windows-msvc                                   ║");
+            error!("║  Currently supported target triples:                         ║");
+            error!("║    Windows:                                                  ║");
+            error!("║      x86_64-pc-windows-msvc                                  ║");
+            error!("║      aarch64-pc-windows-msvc                                 ║");
+            error!("║    macOS:                                                    ║");
+            error!("║      x86_64-apple-darwin     (Intel)                         ║");
+            error!("║      aarch64-apple-darwin    (Apple Silicon)                 ║");
+            error!("║    Linux:                                                    ║");
+            error!("║      x86_64-unknown-linux-gnu  (Intel/AMD 64-bit)            ║");
+            error!("║      aarch64-unknown-linux-gnu (ARM64)                       ║");
             error!("║                                                              ║");
-            error!("║  macOS and Linux support is in progress.                     ║");
             error!(
                 "║  https://github.com/{repo}/releases                  ║",
                 repo = OPENPNP_REPO
@@ -393,11 +400,26 @@ fn main() {
 fn target_triple_to_artifact(target: &str) -> Option<(String, &'static str)> {
     debug!(%target, "Resolving artifact for target triple");
     match target {
+        // Windows — x86_64 and ARM64
         "x86_64-pc-windows-msvc" => {
             Some(("openpnp-capture-windows-x86_64.zip".into(), "zip"))
         }
         "aarch64-pc-windows-msvc" => {
             Some(("openpnp-capture-windows-arm64.zip".into(), "zip"))
+        }
+        // macOS — Intel and Apple Silicon
+        "x86_64-apple-darwin" => {
+            Some(("openpnp-capture-macos-x86_64.tar.gz".into(), "tar.gz"))
+        }
+        "aarch64-apple-darwin" => {
+            Some(("openpnp-capture-macos-arm64.tar.gz".into(), "tar.gz"))
+        }
+        // Linux — x86_64 and ARM64 (GNU)
+        "x86_64-unknown-linux-gnu" => {
+            Some(("openpnp-capture-linux-x86_64.tar.gz".into(), "tar.gz"))
+        }
+        "aarch64-unknown-linux-gnu" => {
+            Some(("openpnp-capture-linux-arm64.tar.gz".into(), "tar.gz"))
         }
         _ => {
             warn!(%target, "No pre-built artifact available for this target triple");
