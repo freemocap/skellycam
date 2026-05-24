@@ -7,10 +7,10 @@ import DropdownButton from './ui-components/DropdownButton';
 import ToggleButtonComponent from './ui-components/ToggleButtonComponent';
 import ToggleComponent from './ui-components/ToggleComponent';
 import SubactionHeader from './ui-components/SubactionHeader';
-import SegmentedControl from './ui-components/SegmentedControl';
 import { STATES } from './ui-components/states';
 import IconButton from './ui-components/iconButton';
 import ButtonSm from './ui-components/ButtonSm';
+import NameDropdownSelector from '@/components/ui-components/NameDropdownSelector';
 
 
 export interface ExecutableCandidate {
@@ -344,7 +344,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                 iconClass: overallStatus.iconClass,
                 rightSideIcon: 'dropdown',
                 textColor: 'text-gray',
-                className: 'full-width',
+                
             }}
             dropdownItems={
                 <div className="connection-container flex flex-col p-1 gap-2 br-1 bg-darkgray border-1 border-mid-black">
@@ -427,12 +427,12 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                             {/* Executable selector */}
                             <div className="flex flex-col gap-1 p-1">
                                 <p className="text md text-nowrap">{t('executable')}</p>
-                                <SegmentedControl
-                                    options={executableOptions}
-                                    value={selectedExePath}
+                                <NameDropdownSelector
+                                    options={executableOptions.map(o => o.value)}
+                                    initialValue={selectedExePath}
                                     onChange={setSelectedExePath}
-                                    size="sm"
-                                    className="segmented-control-sm gap-2"
+                                    className="flex flex-row"
+                                    
                                 />
                             </div>
 

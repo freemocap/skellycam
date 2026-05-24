@@ -922,9 +922,9 @@ animation: fadeIn, scaleIn;
   border-bottom: 1px solid var(--gray-700);
   display: flex;
 }
-.mic-dropdown-container {
+/* .mic-dropdown-container {
   width: 218px;
-}
+} */
 
 
 /* =========================================
