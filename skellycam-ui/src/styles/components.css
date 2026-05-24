@@ -754,8 +754,14 @@ animation: fadeIn, scaleIn;
 
 .value-label,
 .input-field {
-
+  
   color: var(--gray-400);
+  
+}
+.input-field:active, .input-field:focus {
+  
+  border: none;
+  
 }
 
 .unit-label {

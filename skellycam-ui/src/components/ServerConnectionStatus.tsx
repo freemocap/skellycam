@@ -504,7 +504,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
 
                             {/* Error */}
                             {error && (
-                                <p className="text sm text-warning p-2 mt-1 border-1 border-solid border-warning br-1 text-wrap">{error}</p>
+                                <p className="text sm text-warning p-2 mt-1 border-1 border-solid border-warning br-1 text-wrap ">{error}</p>
                             )}
                         </div>
                     )}
