@@ -37,7 +37,7 @@ The output of applying the methodology to the SkellyCam camera backend. 9 docume
 
 **If you're porting a FreeMoCap component to Rust:**
 1. Read the [playbook README](./rearchitecture-playbook/README.md) (5 minutes)
-2. Skim the [skellycam example](./skellycam/) to see what good output looks like
+2. Skim the [skellycam-rearchitecture/ example](./skellycam-rearchitecture/) to see what good output looks like
 3. Follow the 5 steps, using the skellycam docs as reference for depth and structure
 4. Reference the [patterns catalog](./rearchitecture-playbook/05-patterns-catalog.md) for reusable Rust solutions
 
