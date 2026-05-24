@@ -114,7 +114,7 @@ const PlaybackPage: React.FC = () => {
     const recordingName = recordingPath ? recordingPath.split(/[\\/]/).pop() || recordingPath : '';
 
     return (
-        <div className="playback-page h-full flex flex-col" style={{ borderLeft: '1px solid var(--color-text-muted)' }}>
+        <div className="playback-page h-full flex flex-col">
             <div className='mode-header playback-mode w-full reveal fadeIn active-tools-header br-1-1 gap-1 p-1 flex justify-content-space-between'>
                 
             </div><div className="playback-page-content-main flex flex-col flex-1 overflow-hidden p-2 bg-middark rounded mt-1 br-2">

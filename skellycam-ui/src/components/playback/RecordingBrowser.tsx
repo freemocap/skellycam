@@ -361,7 +361,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     </div>
                 
                 <div className="flex flex-wrap flex-row items-center gap-1 justify-content-space-between min-w-full">
-                    <div className="input-with-string">
+                    <div className="input-with-string flex flex-1">
                         <input
                             className="input-field"
                             placeholder={t('filter')}
