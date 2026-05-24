@@ -14,7 +14,7 @@ export default function BottomPanelContent({ isCollapsed = false }: { isCollapse
 
                 <PanelResizeHandle className="info-panel-divider resizable-component" />
 
-                <Panel className="server-logs-container bg-middark bg-darkgray p-1 br-1" defaultSize={70} minSize={20}>
+                <Panel className="server-logs-container text-nowrap bg-middark bg-darkgray p-1 br-1" defaultSize={70} minSize={20}>
                     <LogTerminal isCollapsed={isCollapsed} />
                 </Panel>
             </PanelGroup>

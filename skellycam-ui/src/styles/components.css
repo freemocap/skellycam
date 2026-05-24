@@ -1179,5 +1179,7 @@ animation: fadeIn, scaleIn;
 }
 
 .playback-timeline-scrubber {
-min-width: 522px;
+  flex: 1 1 522px;
+  min-width: 0;
+  width: 100%;
 }

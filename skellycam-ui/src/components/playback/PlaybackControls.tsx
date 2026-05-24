@@ -166,7 +166,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   return (
     <div className="playback-controls bg-dark br-2 flex flex-row flex-wrap row-reverse justify-center gap-2 p-2">
       {/* Timeline Scrubber */}
-      <div className="playback-timeline-scrubber flex flex-row flex-1 items-center items-center">
+      <div className="playback-timeline-scrubber flex flex-row items-center items-center">
         <div className="playback-timeline-track flex-1 bg-middark relative">
           {/* Blue progress bar showing playhead position */}
           <div
@@ -216,7 +216,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
       </div>
 
       {/* Transport Controls Row */}
-      <div className="flex items-center justify-center controls-group-section gap-2">
+      <div className="flex items-center justify-center controls-group-section gap-2 flex-wrap">
 
         {/* Loop & Speed Group */}
         <div className="playback-controls-group-loop-speed flex bg-middark br-2 flex-row p-1 gap-1">
