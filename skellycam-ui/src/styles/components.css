@@ -81,35 +81,35 @@
 }
 
 /* Primary fullwidth button */
-.primary {
-  background-color: var(--red-500);
+.secondary {
+  background-color: var(--gray-600);
 }
-.primary > p {
+.secondary > p {
   color: var(--gray-100);
 }
 
+.secondary:hover {
+  background-color: var(--gray-800);
+}
 .tertiary > p {
   color: var(--gray-100);
 }
 
-.primary:hover {
-  background-color: var(--red-800);
-}
 
 .full-width {
   min-width: 100%;
 }
 
 /* Primary fullwidth button */
-.secondary {
+.primary {
   background-color: var(--gray-100);
   
 }
-.secondary > p {
+.primary > p {
   color: var(--gray-800);
 }
 
-.secondary:hover {
+.primary:hover {
   background-color: color-mix(in srgb, var(--gray-100) 70%, black);
 }
 

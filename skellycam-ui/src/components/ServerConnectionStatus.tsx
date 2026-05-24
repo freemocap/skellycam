@@ -386,7 +386,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                         </div>
 
                     {/* ── Advanced Settings Toggle ── */}
-                    <div className="flex flex-row flex-wrap justify-content-center pl-1 pr-1 ">
+                    <div className="open-advanced-settings-button-container flex flex-row flex-wrap justify-content-center pl-1 pr-1 ">
                         <ButtonSm
                             text={showAdvancedSettings ? 'Hide settings and preferences' : 'Show settings and preferences'}
                             onClick={() => setShowAdvancedSettings((prev) => !prev)}
@@ -426,8 +426,39 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                             </div>
 
                             {/* Executable selector */}
-                            <div className="flex flex-col gap-1 p-1">
-                                <p className="text md text-nowrap">{t('executable')}</p>
+                            <div className="executable-selector-container flex flex-col gap-1 p-1">
+                                
+                                <div className="flex flex-row items-center justify-content-space-between">
+                                <p className="text md text-nowrap">{t('executable')}
+                                    
+                                </p>
+
+                                {/* Browse + Refresh */}
+                            <div className="executable-actions flex gap-1">
+                                <IconButton
+                                    icon="subfolder-icon"
+                                    onClick={browseForExecutable}
+                                    disabled={serverRunning || serverLoading}
+                                    title={t('browseForExecutable')}
+                                    className="icon-size-28"
+
+                                    tooltip={true}
+                                    tooltipText={t('browseForExecutable')}
+                                    tooltipPosition="pos-bottom"
+                                />
+                                <IconButton
+                                    icon="rotate-icon"
+                                    onClick={refreshCandidates}
+                                    disabled={serverRunning || candidatesLoading}
+                                    title={t('refreshCandidates')}
+                                    className={candidatesLoading ? 'loader-icon' : ''}
+                                    className="icon-size-28"
+                                    tooltip={true}
+                                    tooltipText={t('refreshCandidates')}
+                                    tooltipPosition="pos-bottom"
+                                />
+                            </div>
+                                </div>
                                 <NameDropdownSelector
                                     options={executableOptions.map(o => o.value)}
                                     initialValue={selectedExePath}
@@ -437,25 +468,10 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                                 />
                             </div>
 
-                            {/* Browse + Refresh */}
-                            <div className="flex gap-1">
-                                <IconButton
-                                    icon="import-icon"
-                                    onClick={browseForExecutable}
-                                    disabled={serverRunning || serverLoading}
-                                    title={t('browseForExecutable')}
-                                />
-                                <IconButton
-                                    icon="rotate-icon"
-                                    onClick={refreshCandidates}
-                                    disabled={serverRunning || candidatesLoading}
-                                    title={t('refreshCandidates')}
-                                    className={candidatesLoading ? 'loader-icon' : ''}
-                                />
-                            </div>
+                            
 
                             {/* Launch / Stop / Reset */}
-                            <div className="launch-section flex flex-row flex-wrap gap-1">
+                            <div className="launch-section flex flex-row flex-wrap gap-2 flex-end">
                                 <ButtonSm
                                     text="Launch"
                                     onClick={() => startServer()}
@@ -488,7 +504,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
 
                             {/* Error */}
                             {error && (
-                                <p className="text sm text-warning">{error}</p>
+                                <p className="text sm text-warning p-2 mt-1 border-1 border-solid border-warning br-1 text-wrap">{error}</p>
                             )}
                         </div>
                     )}
