@@ -102,7 +102,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
             <>
                 <button
                     ref={buttonRef}
-                    className="button icon-button br-1 border-1 border-black bg-dark"
+                    className="grid-settings-button button icon-button br-1 icon-size-28"
                     onClick={handleToggle}
                     title={isOpen ? t("closeSettings") : t("gridSettings")}
                 >

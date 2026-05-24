@@ -171,6 +171,11 @@ a.link:hover {
 .left-4 {
   left: 4px;
 }
+.left-50 {
+
+  left: 50%;
+transform: translateX(-50%) translateY(6px);
+}
 
 .right-0 {
   right: 0;
@@ -181,12 +186,28 @@ a.link:hover {
 .right-4 {
   right: 4px;
 }
+.right-50 {
 
+  right: 50%;
+  transform: translateX(-50%) translateY(6px);
+}
 .bottom-0 {
   bottom: 0;
 }
 .bottom-2 {
   bottom: 2px;
+}
+.bottom-4 {
+  bottom: 4px;
+}
+.bottom-6 {
+  bottom: 6px;
+}
+.bottom-8 {
+  bottom: 8px;
+}
+.bottom-36 {
+  bottom: 36px;
 }
 
 .inset-0 {
@@ -204,6 +225,9 @@ a.link:hover {
 
 .flex-row {
   flex-direction: row;
+}
+.row-reverse {
+  flex-direction: row-reverse;
 }
 
 .flex-col {

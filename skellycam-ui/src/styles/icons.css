@@ -66,6 +66,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --frameforward-icon: url("../assets/icons/frameforward_icon.svg");
   --framebackward-icon: url("../assets/icons/framebackward_icon.svg");
   --loop-icon: url("../assets/icons/loop_icon.svg");
+  --loopactive-icon: url("../assets/icons/loopactive_icon.svg");
   --skipbackward-icon: url("../assets/icons/skipbackward_icon.svg");
   --skipforward-icon: url("../assets/icons/skipforward_icon.svg");
 
@@ -237,6 +238,9 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 .loop-icon {
   background-image: var(--loop-icon);
+}
+.loopactive-icon {
+  background-image: var(--loopactive-icon);
 }
 .frameforward-icon {
   background-image: var(--frameforward-icon);

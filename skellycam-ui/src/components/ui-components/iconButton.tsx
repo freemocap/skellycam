@@ -90,7 +90,7 @@ interface IconButtonProps {
   tooltipPosition?: TooltipPosition;
 }
 
-const IconButton: React.FC<IconButtonProps> = ({
+const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
   icon,
   onClick = () => {},
   disabled = false,
@@ -102,9 +102,10 @@ const IconButton: React.FC<IconButtonProps> = ({
   tooltip = false,
   tooltipText = "",
   tooltipPosition = "pos-bottom",
-}) => {
+}, ref) => {
   return (
     <button
+      ref={ref}
       onClick={onClick}
       disabled={disabled}
       title={title}
@@ -140,6 +141,6 @@ const IconButton: React.FC<IconButtonProps> = ({
       )}
     </button>
   );
-};
+});
 
 export default IconButton;

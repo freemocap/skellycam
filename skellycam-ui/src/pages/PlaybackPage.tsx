@@ -123,7 +123,7 @@ const PlaybackPage: React.FC = () => {
                         <div className="playback-page-content no-videos empty-state flex flex-col h-full">
                             {/* Recording header bar */}
                             <div
-                                className="playack-page-with-video flex items-center gap-2 px-2 py-1 flex-wrap m-1 ml-2"
+                                className="playback-page-with-video flex items-center gap-2 px-2 py-1 flex-wrap m-1 ml-2"
                                 
                                         >   
                                         <IconButton

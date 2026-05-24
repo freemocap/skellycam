@@ -653,7 +653,7 @@ animation: fadeIn, scaleIn;
 }
 
 .disabled>* {
-  opacity: 0.3;
+  opacity: 0.4;
 
   transition: opacity var(--speed-2) ease-in-out;
 }
@@ -661,6 +661,7 @@ animation: fadeIn, scaleIn;
 .disabled,
 .disabled>* {
   pointer-events: none;
+  opacity: 0.4;
   /* prevents clicking */
 }
 
@@ -961,7 +962,7 @@ animation: fadeIn, scaleIn;
   /* Enable iOS touch callout */
   -webkit-touch-callout: default;
 }
-.tooltip-container:not(.prompt-tooltip-container) {
+.tooltip-container:not(.prompt-tooltip-container, .dropdown) {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1049,8 +1050,6 @@ animation: fadeIn, scaleIn;
   transform:
     translateX(-50%)
     translateY(6px);
-
-  /* opacity: 0; */
 }
 
 .button-sm-group:hover .tooltip-container.pos-top,
@@ -1058,8 +1057,6 @@ animation: fadeIn, scaleIn;
   transform:
     translateX(-50%)
     translateY(0);
-
-  /* opacity: 1; */
 }
 
 /* TRIANGLE */
@@ -1093,7 +1090,6 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(6px);
 
-  /* opacity: 0; */
 }
 
 .button-sm-group:hover .tooltip-container.pos-left,
@@ -1102,7 +1098,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(0);
 
-  /* opacity: 1; */
+
 }
 
 /* TRIANGLE */
@@ -1136,7 +1132,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(-6px);
 
-  /* opacity: 0; */
+
 }
 
 .button-sm-group:hover .tooltip-container.pos-right,
@@ -1145,7 +1141,7 @@ animation: fadeIn, scaleIn;
     translateY(-50%)
     translateX(0);
 
-  /* opacity: 1; */ 
+
 }
 
 /* TRIANGLE */
@@ -1176,3 +1172,12 @@ animation: fadeIn, scaleIn;
   min-width:  400px;
 }
 
+.playback-settings-popup { 
+    
+    min-width: 182px;
+ 
+}
+
+.playback-timeline-scrubber {
+min-width: 522px;
+}
