@@ -1,5 +1,4 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import clsx from 'clsx';
 import { useAppDispatch, useAppSelector, selectCameras, selectConnectedCameras, selectIsLoading, detectCameras } from '@/store';
 import { camerasConnectOrUpdate, pauseUnpauseCameras, closeCameras } from '@/store/slices/cameras/cameras-thunks';
 import { savedSettingsCleared } from '@/store/slices/cameras/cameras-slice';
@@ -88,23 +87,28 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                               textColor = "text-black"
                               className={isLoading ? 'disabled primary' : 'primary'}
                               
-                                tooltip={true}
-                                tooltipText="Connect to Cameras"
-                                tooltipPosition="pos-bottom"
+                            tooltip={true}
+                            tooltipText="Connect to Cameras"
+                            tooltipPosition="pos-bottom"
 
                             />
                         ) : (
                             <>
-                                <button
-                                    className="button icon-button"
+                                <IconButton
+                                    icon={isPaused ? 'play-icon' : 'pause-icon'}
                                     onClick={() => dispatch(pauseUnpauseCameras())}
-                                    title={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
-                                >
-                                    <span className={clsx('icon icon-size-20', isPaused ? 'play-icon' : 'pause-icon')} />
-                                </button>
-                                <button className="button icon-button" onClick={handleStop} title="Stop streaming" disabled={isStoppingCameras}>
-                                    <span className={`icon icon-size-20 ${isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}`} />
-                                </button>
+                                    tooltip={true}
+                                    tooltipText={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
+                                    tooltipPosition="pos-bottom"
+                                />
+                                <IconButton
+                                    icon={isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}
+                                    onClick={handleStop}
+                                    tooltip={true}
+                                    tooltipText="Stop streaming"
+                                    tooltipPosition="pos-bottom"
+                                    disabled={isStoppingCameras}
+                                />
                             </>
                         )}
                     </div>

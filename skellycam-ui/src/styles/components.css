@@ -104,9 +104,14 @@
 .primary {
   background-color: var(--gray-100);
 }
+.primary:hover {
+  background-color: var(--gray-300);
+}
 .primary > p {
   color: var(--gray-800);
 }
+
+
 /* accent button */
 .accent {
   background-color: var(--red-500);
@@ -659,7 +664,7 @@ animation: fadeIn, scaleIn;
 }
 
 .disabled>* {
-  opacity: 0.4;
+  opacity: 0.6;
 
   transition: opacity var(--speed-2) ease-in-out;
 }

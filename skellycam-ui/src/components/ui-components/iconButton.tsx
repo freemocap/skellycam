@@ -95,7 +95,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
   onClick = () => {},
   disabled = false,
   title,
-  className = "",
+  className = "icon-size-28",
   iconSize = "icon-size-20",
 
   // TOOLTIP

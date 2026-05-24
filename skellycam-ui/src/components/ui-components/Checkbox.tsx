@@ -3,53 +3,59 @@ import React from "react";
 /**
  * Reusable Checkbox Component
  * ----------------------------
- * - Combines a native <input type="checkbox"> with a text label (<p> tag).
- * - Use the `label` prop to change the string next to the checkbox.
- * - `checked` + `onChange` make this component controllable from parent state.
- * - The entire container is clickable to toggle the checkbox.
- * - `inputClassName` allows adding extra classes to the <input> without breaking existing styles.
+ * - Entire row clickable
+ * - Accessible
+ * - Large hit area
+ * - Small visual checkbox
+ * - Smooth hover/focus states
  */
 
 interface CheckboxProps {
-  label: string; // text shown next to the checkbox
-  checked?: boolean; // optional controlled state
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; // handler for state changes
-  inputClassName?: string; // extra classes to add to the <input>
+  label: string;
+  checked?: boolean;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  inputClassName?: string;
+  disabled?: boolean;
 }
 
 const Checkbox: React.FC<CheckboxProps> = ({
   label,
-  checked,
+  checked = false,
   onChange,
-  inputClassName = "", // default to empty string
+  inputClassName = "",
+  disabled = false,
 }) => {
-  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (onChange) {
-      // Create a synthetic event with the toggled checked state
-      const syntheticEvent = {
-        ...e,
-        target: {
-          ...e.target,
-          checked: !checked,
-        },
-      } as React.ChangeEvent<HTMLInputElement>;
-      onChange(syntheticEvent);
-    }
-  };
-
   return (
-    <div
-      className="text-nowrap button checkbox gap-1 flex flex-row items-center p-2"
-      onClick={handleContainerClick}
-    >
+  <label
+  className={`
+    checkbox
+    text-nowrap
+    button
+    p-2
+    select-none
+    cursor-pointer
+    ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+  `}
+  style={{
+    paddingLeft: "11px",
+  }}
+>
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className={`button ${inputClassName}`.trim()} // merge default + extra classes
+        disabled={disabled}
+        className={`
+          button
+          flex-shrink-0
+          ${inputClassName}
+        `.trim()}
       />
-      <p className="text-gray text md text-align-left">{label}</p>
-    </div>
+
+      <p className="text-gray text md text-align-left">
+        {label}
+      </p>
+    </label>
   );
 };
 
