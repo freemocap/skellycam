@@ -72,8 +72,8 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                         <span className="icon icon-size-20 clear-icon" />
                     </button>
 
-                    <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
-                        <p className="text md" style={{ color: 'var(--gray-900)' }}>Update</p>
+                    <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--color-text-primary)', color: 'var(--color-bg-primary)' }}>
+                        <p className="text md" style={{ color: 'var(--color-bg-primary)' }}>Update</p>
                     </button>
 
                     <button className="button icon-button" onClick={onClose}>

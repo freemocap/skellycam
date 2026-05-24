@@ -79,7 +79,7 @@
 /* Source column header */
 .stats-th-source {
   width: 12%;
-  color: var(--gray-100);
+  color: var(--color-text-primary);
   text-align: left;
 }
 

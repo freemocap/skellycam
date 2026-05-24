@@ -228,7 +228,7 @@
 .playback-btn-play.playing {
   min-width: 60px;
 
-  background-color: var(--gray-600);
+  background-color: var(--color-surface-active);
 }
 
 /* =========================================
@@ -244,9 +244,9 @@
 
   background-color: var(--color-text-muted);
 
-  color: var(--gray-100);
+  color: var(--color-text-primary);
 
-  border: 1px solid var(--gray-600);
+  border: 1px solid var(--color-surface-active);
 
   border-radius: 3px;
 
@@ -260,9 +260,9 @@
 }
 
 .playback-speed-select:hover {
-  background-color: var(--gray-600);
+  background-color: var(--color-surface-active);
 
-  border-color: var(--gray-500);
+  border-color: var(--color-text-disabled);
 }
 
 .playback-speed-select:focus {
@@ -286,7 +286,7 @@
 
   background-color: var(--color-text-muted);
 
-  border: 1px solid var(--gray-600);
+  border: 1px solid var(--color-surface-active);
 
   border-radius: 4px;
 
@@ -294,7 +294,7 @@
 }
 
 .playback-sync-title {
-  color: var(--gray-300);
+  color: var(--log-trace);
 
   font-weight: 500;
 

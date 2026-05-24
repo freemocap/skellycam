@@ -341,7 +341,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 
 /* button icons variants */
 .primary {
-  background-color: var(--gray-900);
+  background-color: var(--color-bg-primary);
 }
 .icon-button.tertiary {
   background-color: transparent;
@@ -362,7 +362,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 .icon-button:hover:not(.secondary,.tertiary) {
  
-  background-color: var(--gray-600);
+  background-color: var(--color-surface-active);
   /* filter animation out */
   transition: filter var(--speed-1) ease-in-out;
 }

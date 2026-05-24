@@ -220,11 +220,11 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
           <div className="flex flex-row gap-1 pt-1">
             <button
               className="button sm br-1 flex-1"
-              style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}
+              style={{ background: 'var(--color-text-primary)', color: 'var(--color-bg-primary)' }}
               onClick={() => dispatch(camerasConnectOrUpdate())}
               title="Update camera settings"
             >
-              <p className="text md" style={{ color: 'var(--gray-900)' }}>Update Settings</p>
+              <p className="text md" style={{ color: 'var(--color-bg-primary)' }}>Update Settings</p>
             </button>
                  <button
               className="icon-button gap-1 br-1 button sm fit-content flex-inline text-left items-center"

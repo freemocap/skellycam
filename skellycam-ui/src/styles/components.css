@@ -791,7 +791,7 @@ animation: fadeIn, scaleIn;
 }
 
 .input-with-unit.tooltip:focus-within {
-  box-shadow: 0px 0px 0px 1px var(--gray-200-alpha-10);
+  box-shadow: 0px 0px 0px 1px var(--color-text-secondary-alpha-10);
   border-color: var(--color-text-primary);
   transition: border var(--speed-2);
 }
@@ -805,7 +805,7 @@ animation: fadeIn, scaleIn;
 
 .input-with-unit:focus-within,
 .input-with-string:focus-within {
-  box-shadow: 0px 0px 0px 1px var(--gray-200-alpha-10);
+  box-shadow: 0px 0px 0px 1px var(--color-text-secondary-alpha-10);
   border-color: var(--color-text-primary);
   transition: border var(--speed-2);
 }
@@ -921,7 +921,7 @@ animation: fadeIn, scaleIn;
 .update-progress-track {
   height: 4px;
   border-radius: 2px;
-  background-color: var(--gray-200-alpha-20);
+  background-color: var(--color-text-secondary-alpha-20);
   overflow: hidden;
   margin-top: 4px;
 }

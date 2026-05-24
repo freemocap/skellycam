@@ -12,7 +12,7 @@
 /* ---- Toolbar ---- */
 
 .log-toolbar {
-  border-bottom: 1px solid var(--gray-600);
+  border-bottom: 1px solid var(--color-surface-active);
   flex-shrink: 0;
 }
 
@@ -23,7 +23,7 @@
 /* ---- Search bar ---- */
 
 .log-search-bar {
-  border-bottom: 1px solid var(--gray-600);
+  border-bottom: 1px solid var(--color-surface-active);
   flex-shrink: 0;
 }
 
@@ -53,7 +53,7 @@
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: var(--gray-500);
+  color: var(--color-text-disabled);
 }
 
 /* ---- Log entry row ---- */
@@ -72,13 +72,13 @@
 }
 .log-level-filter {
   filter:grayscale(1);
-  color: var(--text-white);
+  color: var(--color-text-primary);
 }
 .log-level-filter.active {
   filter:grayscale(0);
 }
 .button.sm.br-1:not(.active,.button-sm-group) {
-  color: var(--text-white);
+  color: var(--color-text-primary);
   
 }
 /* Level border colours */

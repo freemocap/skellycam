@@ -1,13 +1,13 @@
 // src/components/framerate-viewer/d3ChartUtils.ts
 import * as d3 from "d3"
 
-export const DISABLED_TEXT_COLOR = "var(--gray-500)"
+export const DISABLED_TEXT_COLOR = "var(--color-text-disabled)"
 
 export function applyAxisStyles(
     svg: d3.Selection<SVGGElement, unknown, null, undefined>,
 ): void {
     svg.selectAll(".tick line")
-        .attr("stroke", "var(--gray-600)")
+        .attr("stroke", "var(--color-surface-active)")
         .attr("stroke-dasharray", "2,2")
 
     svg.selectAll(".tick text")

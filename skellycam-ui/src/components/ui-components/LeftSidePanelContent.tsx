@@ -93,7 +93,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                 <div
                     className="flex items-center gap-1 px-1 py-1"
                     // style={{
-                    //     borderBottom: '1px solid var(--gray-600)',
+                    //     borderBottom: '1px solid var(--color-surface-active)',
                     //     minHeight: 40,
                     // }}
                 >
