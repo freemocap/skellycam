@@ -331,8 +331,8 @@
 }
 
 @keyframes recording-button-pulse {
-  0%, 100% { background-color: var(--red-500); }
-  50%       { background-color: var(--red-600); }
+  0%, 100% { background-color: var(--red-700); }
+  50%       { background-color: var(--red-900); }
 }
 
 /* ============================================================

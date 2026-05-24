@@ -103,14 +103,20 @@
 /* Primary fullwidth button */
 .primary {
   background-color: var(--gray-100);
-  
 }
 .primary > p {
   color: var(--gray-800);
 }
+/* accent button */
+.accent {
+  background-color: var(--red-500);
+}
+.accent > p {
+  color: var(--gray-800);
+}
 
-.primary:hover {
-  background-color: color-mix(in srgb, var(--gray-100) 70%, black);
+.accent:hover {
+   background-color: var(--red-700);
 }
 
 /* card button */
