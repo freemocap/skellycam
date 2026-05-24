@@ -76,6 +76,21 @@
 /* =========================================
    CHROME / SAFARI THUMB
 ========================================= */
+.playback-timeline-input::-webkit-slider-thumb {
+  cursor: grab;
+}
+
+.playback-timeline-input:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.playback-timeline-input::-moz-range-thumb {
+  cursor: grab;
+}
+
+.playback-timeline-input:active::-moz-range-thumb {
+  cursor: grabbing;
+}
 
 .playback-timeline-input::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -91,7 +106,7 @@
 
   background: white;
 
-  cursor: pointer;
+  /* cursor: pointer; */
 
   transition:
     height 0.12s ease,
