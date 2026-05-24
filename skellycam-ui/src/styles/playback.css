@@ -20,7 +20,7 @@
   height: 36px;
   min-height: 36px;
 
-  background-color: var(--gray-700);
+  background-color: var(--color-text-muted);
 
   border-radius: 8px;
 
@@ -242,7 +242,7 @@
 
   padding: 4px 8px;
 
-  background-color: var(--gray-700);
+  background-color: var(--color-text-muted);
 
   color: var(--gray-100);
 
@@ -274,7 +274,7 @@
 }
 
 .playback-speed-select:active {
-  background-color: var(--gray-700);
+  background-color: var(--color-text-muted);
 }
 
 /* =========================================
@@ -284,7 +284,7 @@
 .playback-sync-info {
   padding: 8px;
 
-  background-color: var(--gray-700);
+  background-color: var(--color-text-muted);
 
   border: 1px solid var(--gray-600);
 

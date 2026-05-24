@@ -67,7 +67,7 @@ type ChartState = {
     height: number
 }
 
-const PAPER_COLOR = "var(--gray-700)"
+const PAPER_COLOR = "var(--color-text-muted)"
 
 export default function FramerateHistogramView({
     frontendColor,
@@ -96,7 +96,7 @@ export default function FramerateHistogramView({
                 .attr("text-anchor", "middle")
                 .style("font-family", "monospace")
                 .style("font-size", "10px")
-                .style("fill", "var(--gray-400)")
+                .style("fill", "var(--color-text-muted)")
                 .text("FPS")
 
             svg.append("text")
@@ -107,7 +107,7 @@ export default function FramerateHistogramView({
                 .attr("text-anchor", "middle")
                 .style("font-family", "monospace")
                 .style("font-size", "10px")
-                .style("fill", "var(--gray-400)")
+                .style("fill", "var(--color-text-muted)")
                 .text("Density")
 
             // Persistent empty-state text (hidden by default)

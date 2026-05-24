@@ -128,7 +128,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
           {/* Header */}
           <div
             className="subaction-header-container justify-content-space-between gap-1 br-1 flex justify-between items-center h-25 p-1"
-            // style={{ borderBottom: "1px solid var(--gray-700)" }}
+            // style={{ borderBottom: "1px solid var(--color-text-muted)" }}
           >
             <p className="text-nowrap text-left bg-md text-darkgray">Camera settings</p>
             <div className='flex flex-row gap-1'>

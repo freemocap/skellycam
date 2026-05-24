@@ -53,7 +53,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center gap-2 p-2" style={{ borderBottom: '1px solid var(--gray-700)' }}>
+                <div className="flex items-center gap-2 p-2" style={{ borderBottom: '1px solid var(--color-text-muted)' }}>
                     <p className="text md text-white text-nowrap">
                         {cameras.length} Cameras
                     </p>

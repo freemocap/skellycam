@@ -12,13 +12,13 @@
 
 .toggle-button:hover,
 .modal-trigger-button:hover {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
   transition: background-color var(--speed-2);
 }
 
 .toggle-button:active,
 .modal-trigger-button:active {
-  background-color: var(--gray-800);
+  background-color: var(--color-bg-secondary);
   transition: background-color var(--speed-1);
 }
 
@@ -27,11 +27,11 @@
 }
 
 .icon.toggle-container.off {
-  border: 2px solid var(--gray-500);
+  border: 2px solid var(--color-border-primary);
 }
 
 .icon.toggle-container.on {
-  background-color: var(--blue-900);
+  background-color: var(--color-info-idle);
   /* green when on */
 }
 
@@ -39,7 +39,7 @@
   /* idle state */
   width: 8px;
   height: 8px;
-  background-color: var(--gray-400);
+  background-color: var(--color-text-muted);
   border-radius: 50%;
   position: absolute;
   top: 2px;
@@ -52,13 +52,13 @@
   left: 12px;
   /* move to far right: 24 - 8 - 3 padding = 13px */
   top: 2px;
-  background-color: var(--blue-800);
+  background-color: var(--color-info-muted);
 }
 
 
 
 .tag {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
   padding: 2px 5px 2px 5px;
   text-align: center;
   border-radius: 4px;
@@ -66,33 +66,33 @@
 /* BUTTON STYLES AND SHAPES */
 /* Activate button */
 .activated>p {
-  color: var(--green-100);
+  color: var(--color-success);
 }
 
 .selected>p {
-  color: var(--gray-100);
+  color: var(--color-text-primary);
 }
 
 .button.activated {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
 }
 .button.activated:hover {
-  background-color: var(--gray-700);
+  background-color: var(--color-bg-tertiary);
 }
 
 /* Primary fullwidth button */
 .secondary {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
 }
 .secondary > p {
-  color: var(--gray-100);
+  color: var(--color-text-primary);
 }
 
 .secondary:hover {
-  background-color: var(--gray-800);
+  background-color: var(--color-bg-secondary);
 }
 .tertiary > p {
-  color: var(--gray-100);
+  color: var(--color-text-primary);
 }
 
 
@@ -102,26 +102,26 @@
 
 /* Primary fullwidth button */
 .primary {
-  background-color: var(--gray-100);
+  background-color: var(--color-text-primary);
 }
 .primary:hover {
-  background-color: var(--gray-300);
+  background-color: var(--log-trace);
 }
 .primary > p {
-  color: var(--gray-800);
+  color: var(--color-bg-secondary);
 }
 
 
 /* accent button */
 .accent {
-  background-color: var(--red-500);
+  background-color: var(--color-danger);
 }
 .accent > p {
-  color: var(--gray-800);
+  color: var(--color-bg-secondary);
 }
 
 .accent:hover {
-   background-color: var(--red-700);
+   background-color: var(--color-danger-strong);
 }
 
 /* card button */
@@ -173,7 +173,7 @@ button.rotate-button {
 }
 
 .button.sm:not(.primary, .secondary, .activated):hover {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
   transition: background-color var(--speed-1) ease-in-out;
 
 }
@@ -244,7 +244,7 @@ button.rotate-button {
 }
 
 .video-tile.empty {
-  border: 1.5px dashed var(--gray-500);
+  border: 1.5px dashed var(--color-border-primary);
 
   background: transparent;
 }
@@ -294,7 +294,7 @@ button.rotate-button {
 }
 
 .segmented-control-button:hover>p {
-  color: var(--gray-100);
+  color: var(--color-text-primary);
   transition: color var(--speed-1) ease-in-out;
 }
 
@@ -302,10 +302,10 @@ button.rotate-button {
 
 /* text colors */
 /* .color-gray-400 {
-  color: var(--gray-400);
+  color: var(--color-text-muted);
 }
 .color-gray-100 {
-  color: var(--gray-100);
+  color: var(--color-text-primary);
 } */
 /* icon setup on the left side */
 .icon {
@@ -333,8 +333,8 @@ button.rotate-button {
 }
 
 .top-header {
-  background-color: var(--gray-800);
-  /* border-bottom: 1.5px solid var(--gray-600); */
+  background-color: var(--color-bg-secondary);
+  /* border-bottom: 1.5px solid var(--color-bg-elevated); */
 }
 
 /* Resizable panel handles  --------------------- */
@@ -366,7 +366,7 @@ button.rotate-button {
   height: 20px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: var(--gray-500);
+  background: var(--color-border-primary);
   opacity: 0;
   transition:
     opacity 0.15s ease,
@@ -384,7 +384,7 @@ button.rotate-button {
   height: 4px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: var(--gray-500);
+  background: var(--color-border-primary);
   opacity: 0;
   transition:
     opacity 0.15s ease,
@@ -398,7 +398,7 @@ button.rotate-button {
 
 .resizable-component:hover::before {
   opacity: 1;
-  background: var(--gray-300);
+  background: var(--log-trace);
 }
 
 /* Slightly enlarge handle area on hover */
@@ -445,7 +445,7 @@ animation: fadeIn, scaleIn;
 }
 
 .welcome-modal-image-col {
-  background: linear-gradient(160deg, var(--gray-900) 0%, var(--blue-900) 100%);
+  background: linear-gradient(160deg, var(--color-bg-primary) 0%, var(--color-info-idle) 100%);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -469,9 +469,9 @@ animation: fadeIn, scaleIn;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color var(--speed-1), transform var(--speed-1);
-  background-color: var(--blue-900);
-  border: 2px solid var(--blue-800);
-  color: var(--gray-100);
+  background-color: var(--color-info-idle);
+  border: 2px solid var(--color-info-muted);
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -479,7 +479,7 @@ animation: fadeIn, scaleIn;
 }
 
 .welcome-connect-button:hover:not(:disabled) {
-  background-color: var(--blue-800);
+  background-color: var(--color-info-muted);
   transform: translateY(-1px);
 }
 .right-side-panel {
@@ -513,23 +513,23 @@ animation: fadeIn, scaleIn;
   z-index: 200;
   padding: 8px 16px;
   border-radius: 6px;
-  border: 1px solid var(--gray-600);
-  background-color: var(--gray-800);
+  border: 1px solid var(--color-bg-elevated);
+  background-color: var(--color-bg-secondary);
   animation: fadeIn var(--speed-2) ease;
   max-width: 320px;
   text-align: center;
 }
 
 .toast-notification.success {
-  border-color: var(--green-100);
+  border-color: var(--color-success);
 }
 
 .toast-notification.error {
-  border-color: var(--red-500);
+  border-color: var(--color-danger);
 }
 
 .toast-notification.info {
-  border-color: var(--blue-800);
+  border-color: var(--color-info-muted);
 }
 
 /* ---- Version badge ---- */
@@ -544,19 +544,19 @@ animation: fadeIn, scaleIn;
   
   font-family: monospace;
   font-size: 0.75rem;
-  color: var(--gray-400);
+  color: var(--color-text-muted);
   transition: border-color var(--speed-1), color var(--speed-1);
-  /* background-color: var(--gray-800); */
+  /* background-color: var(--color-bg-secondary); */
 }
 
 .version-badge:hover {
-  border-color: var(--gray-400);
-  color: var(--gray-100);
+  border-color: var(--color-text-muted);
+  color: var(--color-text-primary);
 }
 
 .version-badge.success {
-  border-color: var(--green-100);
-  color: var(--green-100);
+  border-color: var(--color-success);
+  color: var(--color-success);
 }
 
 .version-badge:disabled {
@@ -590,11 +590,11 @@ animation: fadeIn, scaleIn;
 }
 
 .language-option:hover {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
 }
 
 .language-option.selected {
-  background-color: var(--gray-700);
+  background-color: var(--color-bg-tertiary);
 }
 
 .translation-badge {
@@ -611,28 +611,28 @@ animation: fadeIn, scaleIn;
 }
 
 .translation-badge.ai {
-  border-color: var(--warning-500);
-  color: var(--warning-500);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 .translation-badge.human {
-  border-color: var(--blue-800);
-  color: var(--blue-800);
+  border-color: var(--color-info-muted);
+  color: var(--color-info-muted);
 }
 
 .translation-badge.native {
-  border-color: var(--green-100);
-  color: var(--green-100);
+  border-color: var(--color-success);
+  color: var(--color-success);
 }
 
 /* ---- Footer / Bottom Info Panel ---- */
 .bottom-info-container {
-  background-color: var(--gray-800);
+  background-color: var(--color-bg-secondary);
 }
 
 .info-panel-divider {
   width: 4px;
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
   cursor: col-resize;
   flex-shrink: 0;
 }
@@ -730,7 +730,7 @@ animation: fadeIn, scaleIn;
 
    /* Style the numeric input specifically */
 .numeric-input {
-  color: var(--gray-400);
+  color: var(--color-text-muted);
   font-weight: bold;
   text-align: right;
 }
@@ -755,7 +755,7 @@ animation: fadeIn, scaleIn;
 .value-label,
 .input-field {
   
-  color: var(--gray-400);
+  color: var(--color-text-muted);
   
 }
 .input-field:active, .input-field:focus {
@@ -766,7 +766,7 @@ animation: fadeIn, scaleIn;
 
 .unit-label {
 
-  color: var(--gray-500);
+  color: var(--color-border-primary);
 }
 
 .segmented-control-icon {
@@ -777,7 +777,7 @@ animation: fadeIn, scaleIn;
  {
     display: flex;
     align-items: center;
-    border: 1px solid var(--gray-600);
+    border: 1px solid var(--color-bg-elevated);
     border-radius: 4px;
     padding: 4px 8px;
     height: 28px;
@@ -786,27 +786,27 @@ animation: fadeIn, scaleIn;
 }
 
 .input-with-unit.tooltip:has(input.input-field:hover) {
-  border-color: var(--gray-400);
+  border-color: var(--color-text-muted);
   transition: border var(--speed-2);
 }
 
 .input-with-unit.tooltip:focus-within {
-  box-shadow: 0px 0px 0px 1px rgba(255, 255, 255, 0.5);
-  border-color: var(--gray-100);
+  box-shadow: 0px 0px 0px 1px var(--gray-200-alpha-10);
+  border-color: var(--color-text-primary);
   transition: border var(--speed-2);
 }
 
 /* Apply the same focus/hover behaviour to all input containers */
 .input-with-unit:has(input.input-field:hover),
 .input-with-string:has(input.input-field:hover) {
-  border-color: var(--gray-400);
+  border-color: var(--color-text-muted);
   transition: border var(--speed-2);
 }
 
 .input-with-unit:focus-within,
 .input-with-string:focus-within {
-  box-shadow: 0px 0px 0px 1px rgba(255, 255, 255, 0.5);
-  border-color: var(--gray-100);
+  box-shadow: 0px 0px 0px 1px var(--gray-200-alpha-10);
+  border-color: var(--color-text-primary);
   transition: border var(--speed-2);
 }
 
@@ -830,7 +830,7 @@ animation: fadeIn, scaleIn;
 
 .selected-camera-feed::before, .selected-camera-settings::before {
 
-  outline: 1.5px solid var(--gray-500);
+  outline: 1.5px solid var(--color-border-primary);
   content: "";
   width: 100%;
   height: 100%;
@@ -864,33 +864,33 @@ animation: fadeIn, scaleIn;
 
 /* Sidebar navigation tab buttons */
 .sidebar-nav-cameras {
-  background-color: var(--green-900);
-  color: var(--green-100);
+  background-color: var(--color-success-idle);
+  color: var(--color-success);
 }
 
 .sidebar-nav-cameras:hover {
-  background-color: var(--green-900);
+  background-color: var(--color-success-idle);
   opacity: 0.9;
 }
 
 .sidebar-nav-playback {
-  background-color: var(--blue-900);
-  color: var(--blue-100);
+  background-color: var(--color-info-idle);
+  color: var(--metric-stddev);
 }
 
 .sidebar-nav-playback:hover {
-  background-color: var(--blue-900);
+  background-color: var(--color-info-idle);
   opacity: 0.9;
 }
 
 .sidebar-nav-inactive {
-  background-color: var(--gray-700);
-  color: var(--gray-400);
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
 }
 
 .sidebar-nav-inactive:hover {
-  background-color: var(--gray-600);
-  color: var(--gray-100);
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-primary);
 }
 
 /* Update banner */
@@ -904,24 +904,24 @@ animation: fadeIn, scaleIn;
 }
 
 .update-banner-error {
-  background-color: var(--red-600);
-  color: var(--gray-100);
+  background-color: var(--metric-median);
+  color: var(--color-text-primary);
 }
 
 .update-banner-info {
-  background-color: var(--blue-900);
-  color: var(--blue-100);
+  background-color: var(--color-info-idle);
+  color: var(--metric-stddev);
 }
 
 .update-banner-success {
-  background-color: var(--green-900);
-  color: var(--green-100);
+  background-color: var(--color-success-idle);
+  color: var(--color-success);
 }
 
 .update-progress-track {
   height: 4px;
   border-radius: 2px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--gray-200-alpha-20);
   overflow: hidden;
   margin-top: 4px;
 }
@@ -940,15 +940,15 @@ animation: fadeIn, scaleIn;
 .update-progress-fill {
   height: 100%;
   border-radius: 2px;
-  background-color: var(--blue-100);
+  background-color: var(--metric-stddev);
   transition: width 0.3s ease;
 }
 
 /* Main content tab bar */
 .main-tab-bar {
   padding: 6px 8px 0;
-  background-color: var(--gray-800);
-  border-bottom: 1px solid var(--gray-700);
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-bg-tertiary);
   display: flex;
 }
 
@@ -1019,7 +1019,7 @@ animation: fadeIn, scaleIn;
 
 .tooltip-inner {
   position: relative;
-  background: black;
+  background: var(--color-bg-primary);
   will-change: transform, opacity;
 }
 
@@ -1063,7 +1063,7 @@ animation: fadeIn, scaleIn;
 
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 6px solid black;
+  border-bottom: 6px solid var(--color-bg-primary);
 }
 
 /* =========================================
@@ -1102,7 +1102,7 @@ animation: fadeIn, scaleIn;
 
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid black;
+  border-top: 6px solid var(--color-bg-primary);
 }
 
 /* =========================================
@@ -1144,7 +1144,7 @@ animation: fadeIn, scaleIn;
 
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
-  border-left: 6px solid black;
+  border-left: 6px solid var(--color-bg-primary);
 }
 
 /* =========================================
@@ -1187,7 +1187,7 @@ animation: fadeIn, scaleIn;
 
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
-  border-right: 6px solid black;
+  border-right: 6px solid var(--color-bg-primary);
 }
 
 .connection-status-dropdown {

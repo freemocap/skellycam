@@ -22,12 +22,12 @@
 
 /* FULL HIT AREA HOVER */
 .checkbox:hover {
-  background: var(--gray-600);
+  background: var(--color-surface-hover);
 }
 
 /* PRESSED */
 .checkbox:active {
-  background: var(--gray-500);
+  background: var(--color-surface-active);
 }
 
 /* =========================================
@@ -80,10 +80,10 @@
   width: var(--box-size);
   height: var(--box-size);
 
-  border: 1.5px solid var(--gray-400);
+  border: 1.5px solid var(--color-text-muted);
   border-radius: 2px;
 
-  background: black;
+  background: var(--color-bg-primary);
 
   box-sizing: border-box;
 
@@ -96,17 +96,17 @@
 
 /* Hover border */
 .checkbox:hover input[type="checkbox"]::after {
-  border-color: var(--gray-300);
+  border-color: var(--color-text-secondary);
 }
 
 /* Streaming variant */
 .checkbox input.streaming[type="checkbox"]::after {
-  border-color: var(--green-100);
+  border-color: var(--color-success);
 }
 
 /* Streaming hover */
 .checkbox:hover input.streaming[type="checkbox"]::after {
-  border-color: var(--green-200);
+  border-color: var(--color-success-strong);
 }
 
 /* =========================================
@@ -126,7 +126,7 @@
 
   border-radius: 1px;
 
-  background: var(--blue-500);
+  background: var(--color-info);
 
   transform: translate(-50%, -50%) scale(0);
 
@@ -146,7 +146,7 @@
 
 /* Streaming checked */
 .checkbox input.streaming[type="checkbox"]:checked::before {
-  background: var(--green-100);
+  background: var(--color-success);
 }
 
 /* =========================================
@@ -154,7 +154,7 @@
    ========================================= */
 
 .checkbox input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--blue-600);
+  outline: 2px solid var(--color-info-strong);
   outline-offset: 2px;
 }
 

@@ -13,7 +13,7 @@ export function applyAxisStyles(
     svg.selectAll(".tick text")
         .style("font-family", "monospace")
         .style("font-size", "10px")
-        .style("fill", "var(--gray-400)")
+        .style("fill", "var(--color-text-muted)")
 }
 
 export function renderEmptyChart(
