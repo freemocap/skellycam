@@ -140,6 +140,9 @@
 .border-red {
   border-color: var(--red-500);
 }
+.border-warning {
+  border-color: var(--warning-500);
+}
 
 .border-blue {
   border-color: var(--blue-800);

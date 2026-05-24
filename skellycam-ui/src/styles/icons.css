@@ -298,10 +298,20 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   min-height: 12px;
 }
 .icon-size-20 {
+  width: 20px;
+  height: 20px;
   min-width: 20px;
   min-height: 20px;
 }
 
+.icon-size-25 {
+  width: 25px;
+  height: 25px;
+}
+.icon-size-28 {
+  width: 28px;
+  height: 28px;
+}
 .icon-size-32 {
   width: 32px;
   height: 32px;
@@ -313,10 +323,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 
 .icon-button {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
+
   align-items: center;
   display: flex;
   justify-content: center;
