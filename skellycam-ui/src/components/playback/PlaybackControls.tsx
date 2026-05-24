@@ -231,7 +231,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             tooltipPosition="pos-top"
           />
 
-          <div className="pos-rel">
+          <div className="playback-speed-button-containter pos-rel">
             <button
               ref={speedButtonRef}
               className="playback-speed-button icon-size-28 button sm fit-content flex-inline items-center gap-1 br-1"

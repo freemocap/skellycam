@@ -13,14 +13,12 @@ interface DropdownButtonProps {
   };
   dropdownItems?: ReactNode;
   containerClassName?: string;
-  buttonClassName?: string;
-}
+} 
 
 export default function DropdownButton({
   buttonProps,
   dropdownItems,
   containerClassName,
-  buttonClassName,
 }: DropdownButtonProps) {
   const [open, setOpen] = useState(false);
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
@@ -53,7 +51,7 @@ export default function DropdownButton({
 
   return (
     <div ref={buttonRef} className={clsx("pos-rel", containerClassName)}>
-      <ButtonSm {...buttonProps} onClick={handleButtonClick} className={buttonClassName} />
+      <ButtonSm {...buttonProps} onClick={handleButtonClick} />
 
       {open && (
         <div
