@@ -1,6 +1,6 @@
 # Component #4: Ring Buffer → Broadcast Fan-Out + Frontend Payload + WebSocket
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/ipc/shared_memory/ring_buffer_shared_memory.py` — SharedMemoryRingBuffer
@@ -128,51 +128,57 @@ Four concurrent async tasks on each WebSocket connection:
 
 ---
 
-## What Changes in Rust
+## What Was Actually Built
 
-### The Ring Buffer Becomes a Channel Fan-Out
+### The Dispatcher Fan-Out Pattern
 
-The Python shared memory ring buffer serves two purposes:
-1. Frame data transfer across processes (solved by shared address space in Rust)
-2. Multi-consumer with different read semantics (solved by different channel types)
+The planned gatherer→broadcast fan-out was NOT implemented. Instead, a **dispatcher thread** sits between the gatherer and all downstream consumers:
 
-In Rust, the gatherer produces one `Arc<MultiFramePayload>` per step and fans out to consumers:
+```
+Gatherer ──unbounded mpsc──→ Dispatcher ──┐
+                                │          ├── Arc<Mutex<Option<FrontendPayload>>>  ← WS polls
+                                │          ├── Arc<Mutex<Option<Vec<RawFrame>>>>     ← on-demand decode
+                                │          └── Recording thread (via channel)         ← only when recording
+```
+
+The dispatcher `try_recv()`s from the gatherer channel (never blocking), encodes the frontend payload, stores it in a shared slot, and — if recording is active — forwards per-camera JPEGs to the recording thread.
+
+### Channel Types (Actual)
+
+| Connection | Channel Type | Behavior | Why |
+|-----------|-------------|----------|-----|
+| **Camera → Gatherer** | `sync_channel(1)` | Blocking send, capacity 1 | Backpressure: camera blocks if gatherer hasn't consumed previous frame. After send, camera enters barrier. |
+| **Gatherer → Dispatcher** | `mpsc::channel()` (unbounded) | Non-blocking send, every frame | Gatherer must never block — it holds the barrier. Dispatcher keeps up or the channel grows. |
+| **Dispatcher → Recorder** | `mpsc::channel()` (unbounded) | Non-blocking send, every frame | Recording thread has its own ffmpeg pacing. |
+| **Dispatcher → Frontend** | `Arc<Mutex<Option<FrontendPayload>>>` | Shared slot, write + clone on read | WebSocket polls `latest_frontend_payload()` every 10ms. No channel — just an atomic slot swap. |
+| **CameraGroup → Gatherer** | `mpsc::channel()` | `GathererUpdate::AddCamera`/`RemoveCamera` | Dynamic camera set changes. Drained via `try_recv()` at top of gatherer loop. |
+
+### WebSocket: Polling, Not Watch
+
+The WebSocket server does NOT use `tokio::sync::watch`. Instead, it polls `CameraGroup::latest_frontend_payload()` every 10ms:
 
 ```rust
-// Gatherer loop
 loop {
-    let f0 = decoder0_rx.recv();
-    let f1 = decoder1_rx.recv();
-    let f2 = decoder2_rx.recv();
-
-    let payload = Arc::new(MultiFramePayload {
-        frames: vec![f0, f1, f2],
-        step: n,
-        capture_timestamp: Instant::now(),
-    });
-
-    // RECORDER: every frame, in order, never blocks producer
-    recorder_tx.send(payload.clone()).unwrap(); // Arc clone = refcount bump
-
-    // WEBSOCKET: latest only, never blocks producer
-    ws_tx.send_replace(payload.clone());
-
-    // RT PIPELINE (future): latest only, never blocks producer
-    // rt_tx.send_replace(payload.clone());
-
-    n += 1;
+    let payload = manager.get_group(group_id)
+        .and_then(|g| g.latest_frontend_payload());
+    if let Some(payload) = payload {
+        if payload.frame_number > last_frame_number {
+            socket.send(Message::Binary(payload.jpeg_bytes.into())).await?;
+            last_frame_number = payload.frame_number;
+        }
+    }
+    tokio::time::sleep(Duration::from_millis(10)).await;
 }
 ```
 
-### Channel Type Selection
+No `frameNumber` backpressure from frontend — frames are sent as fast as the WebSocket can push them. If the frontend falls behind, TCP backpressure applies naturally.
 
-| Consumer | Channel Type | Behavior | Why |
-|----------|-------------|----------|-----|
-| **Recorder** | `mpsc::channel()` (unbounded) | Every frame, in order. Recorder thread blocks on `recv()` but producer never blocks on `send()`. | Must never drop frames. Memory growth if recorder falls behind is acceptable (transient, encoder catches up). |
-| **WebSocket** | `tokio::sync::watch` | Single latest value. `send_replace()` always succeeds. Consumer calls `borrow()` for current value. | Non-blocking for producer. Consumer gets whatever is latest when it polls. |
-| **RT Pipeline** (future) | `tokio::sync::watch` | Same as WebSocket. Consumer drains to latest before processing. | Same semantics — process the newest available data, skip intermediate. |
+### JPEG Processing: MJPEG Passthrough
 
-**Why not `tokio::sync::broadcast` for everything?** Broadcast has `Lagged` errors when consumers fall behind the buffer capacity. For the recorder, lagged = dropped frames = unacceptable. The recorder gets its own dedicated unbounded channel. WebSocket and RT pipeline use `watch` (simpler than broadcast for single-consumer latest-value semantics).
+The planned "decode BGR → resize to 50% → JPEG encode at quality 80" pipeline is NOT used for the primary MJPEG path. Instead:
+- **MJPEG frames** pass through the pipeline as raw bytes — no decode, no resize, no re-encode
+- Only lossless JPEG rotation is applied in the dispatcher via `rotate_jpeg_lossless()` (using turbojpeg `tjTransform`)
+- The RGB path (`resize_rgb` + `jpeg_encode_rgb` at quality 80) exists only as a fallback for non-MJPEG cameras
 
 ### WebSocket Binary Protocol Must Be Preserved Exactly
 
@@ -279,18 +285,21 @@ impl PayloadEncoder {
 
 ---
 
-## Functionality That Must Be Preserved
+## Functionality Preserved
 
-1. **Exact binary protocol** — frontend must receive bit-identical payload format
-2. **JPEG quality 80, resize to 50% (or custom display size)** — same image processing pipeline
-3. **Grab timestamp midpoint** — `mean(pre_grab_ns, post_grab_ns)` used as the multiframe timestamp
-4. **Backpressure via frameNumber acks** — frontend confirms frames; server skips if unacknowledged
-5. **Recorder sees every frame** — unbounded channel, never drops
-6. **WebSocket sees latest only** — watch channel, non-blocking for producer
-7. **Framerate tracking** — server (capture) and display (send) framerates computed independently
-8. **Multi-frame assembly** — all cameras at the same frame number before emitting
-9. **Overwrite semantics for streaming** — streaming consumers can't block the gatherer
-10. **Multiple camera groups** — each group has its own broadcast fan-out, WebSocket connections connect to a specific group
-11. **State updates** — serialized group state sent every 1s (only when changed)
-12. **Log relay** — log messages streamed over WebSocket
-13. **Ping/pong** — WebSocket keep-alive
+1. **Exact binary protocol** — bit-identical PayloadHeader (24 bytes) + FrameHeader (56 bytes) layout matching Python numpy dtypes
+2. **Recorder sees every frame** — unbounded channel from dispatcher to recording thread, never drops
+3. **WebSocket sees latest only** — shared slot updated each multiframe; WebSocket polls and skips already-seen frame numbers
+4. **Framerate tracking** — `FramerateTracker` computes server + display FPS independently, sent at ~4 Hz
+5. **Multi-frame assembly** — gatherer validates all cameras at same frame number (panics on desync)
+6. **Multiple camera groups** — each group has its own gatherer + dispatcher threads
+7. **Log relay** — `tracing` → `broadcast::channel` → `mpsc` bridge → WebSocket text messages
+
+## Functionality Changed (by design)
+
+- **No JPEG re-encode** — MJPEG passes through; only lossless rotation applied
+- **No resize to 50%** — native resolution sent to frontend
+- **No `frameNumber` backpressure** — TCP backpressure is the only flow control
+- **No state updates every 1s** — not implemented
+- **No ping/pong** — WebSocket keep-alive not yet needed
+- **Multiframe timestamp** — uses mean of `frame_available_ns` across cameras, not grab midpoint

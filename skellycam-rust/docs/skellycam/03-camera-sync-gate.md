@@ -1,6 +1,6 @@
 # Component #3: CameraOrchestrator + Sync Gate + Capture Loop
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/camera_group/camera_orchestrator.py` — CameraOrchestrator, sync gate, recording boundaries
@@ -159,97 +159,68 @@ The per-camera loop runs in its own process. Exact execution order per iteration
 
 ---
 
-## The Central Design Decision: Polling Gate vs. Structural Backpressure
+## What Was Actually Built: BreakableBarrier Sync
 
-The Python sync gate uses **polling**: each camera calls `should_grab_by_id()` in a `while` loop, spinning at 10μs. This is necessary because Python processes can't block each other — `multiprocessing.Value` has no "wait for value" primitive.
+The planned "Option B: structural backpressure" was NOT implemented. Instead, a `BreakableBarrier` synchronizes all camera threads with the gatherer thread at the end of each cycle.
 
-Rust offers two approaches:
-
-### Option A: Polling (faithful port)
-
-```rust
-// Camera thread loop
-loop {
-    if !orchestrator.should_grab_by_id(camera_id) {
-        spin_sleep::sleep(Duration::from_micros(10));
-        continue;
-    }
-    // grab + process + record...
-    frame_count.store(frame_number, Ordering::Release);
-}
-```
-
-- Same polling behavior, 10μs spin
-- `should_grab_by_id` reads `AtomicI64` values from all cameras
-- No structural change to the sync mechanism
-- Familiar, proven correctness
-
-### Option B: Structural backpressure (Rust-native)
-
-```rust
-// Each camera thread has sync_channel(1) to the gatherer
-// Gatherer runs:
-loop {
-    let f0 = cam0_rx.recv();  // blocks until camera 0 sends
-    let f1 = cam1_rx.recv();  // blocks until camera 1 sends
-    // -- all cameras have sent frame N --
-    let payload = MultiFramePayload { frames: [f0, f1], step: n };
-    broadcast_tx.send(payload);
-    n += 1;
-    // Cameras unblock, proceed to frame N+1
-}
-```
-
-- Cameras `send()` their frame to the gatherer, then block on the next `send()` (sync_channel capacity 1)
-- Gatherer's `recv()` from all cameras is an implicit barrier
-- No polling, no spin-wait, no atomics for the gate
-- **Consequence**: cameras CAN'T run independently — they're structurally gated by the gatherer
-- **Concern from SkellyCam docs**: "if one camera lags, the others must wait" — this is the DESIRED behavior (lockstep)
-
-### Decision: Option B + Same-Thread Grab/Retrieve (CONFIRMED)
-
-**Structural backpressure** eliminates the spin-wait entirely. It's also simpler — no `should_grab_by_id()` logic, no atomics for frame counts. The gatherer's `recv()` calls ARE the synchronization.
-
-**Why grab and retrieve stay on the same thread**: OpenCV's `VideoCapture` is not `Send` — it holds internal DirectShow filter graph state and must stay on the thread that created it. `retrieve()` decodes from internal OpenCV state, not from a buffer you can hand off to another thread. So the camera thread does both `grab()` (USB dequeue, ~1ms) and `retrieve()` (MJPG decode into BGR Mat, ~3-5ms), takes four timestamps (pre/post grab, pre/post retrieve), then sends the decoded `FramePacket` via `sync_channel(1)`.
-
-#### Pipeline topology (per camera)
+### How It Works
 
 ```
-CAMERA THREAD (one per camera)        GATHERER THREAD (one per group)
-capture.grab() ── grab timestamp
-capture.retrieve() ── retrieve ts
-frame.data_bytes() → zero-copy BGR
-FramePacket { data: Bgr(bytes),
-              timestamps, identity,   camera0_rx.recv() ← BLOCKED until camera 0 sends
-              frame_number }   ────→  camera1_rx.recv() ← BLOCKED until camera 1 sends
-frame_sender.send(packet)            // barrier: all cameras sent frame N
-  ↑ BLOCKED if sync_channel(1)       MultiFramePayload { frames, step: N }
-    has unconsumed frame N           step += 1
-                                     // cameras unblock, proceed to frame N+1
+Camera thread (one per camera):        Gatherer thread:
+  spin on Cap_hasNewFrame()
+  Cap_captureFrameRaw() → MJPEG
+  frame_sender.send(packet) ────────→  recv() from each camera ← BLOCKS
+  barrier.wait() ← BLOCKS ───────────  barrier.wait() ← rendezvous
+    ↓ (all release together)             ↓
+  loop_start_ns = now()                assemble MultiFramePayload
+  begin next capture cycle             send to dispatcher
 ```
 
-**Backpressure flow**: Gatherer blocks on `recv()` from each camera. Each camera blocks on `send()` after sending frame N (because capacity 1 is full until gatherer recvs frame N and loops back). The slowest camera determines the group framerate. Zero polling, zero atomics.
+**Key properties:**
 
-**What CameraStatus flags become**: With structural backpressure, many flags are unnecessary:
-- `grabbing_frame` — gone (backpressure is the gate)
-- `frame_count` — gone (gatherer tracks step numbers)
-- `is_recording_frame` — moves to recorder thread
-- `connected`, `is_paused`, `should_pause`, `should_close`, `closing`, `closed`, `updating`, `error` — still needed for lifecycle
-- `recording_in_progress` — still needed for recording coordination
+- Cameras send frames via `sync_channel(1)` then block at `barrier.wait()`
+- Gatherer collects one frame from each camera via `recv()`, then arrives at the same barrier
+- All threads release simultaneously — the barrier IS the synchronization point
+- `BreakableBarrier` supports `set_total()` for dynamic add/remove of cameras
+- When paused, cameras and gatherer spin on `paused.load()` instead of entering the barrier, allowing safe `set_total()` calls
+
+### Why Not Structural Backpressure?
+
+Structural backpressure (Option B) was prototyped but the barrier approach proved simpler to debug. With structural backpressure, timing information is lost during channel blocking. With a barrier, every thread independently records timestamps bracketing the wait — giving us precise per-camera wait duration data that the gatherer's statistics block surfaces.
+
+### CameraStatus Flags — Radically Simplified
+
+The Python's 11 `multiprocessing.Value` booleans are collapsed to:
+
+- `paused: Arc<AtomicBool>` — replaces `is_paused`, `should_pause`, `should_close`
+- Camera events via `mpsc::channel` — replaces `connected`, `error`, `closing`, `closed`
+- No `frame_count` per-camera — gatherer validates frame number alignment
+- No `grabbing_frame`, `is_recording_frame` — barrier-based sync + dispatcher recording state suffices
+
+### Capture API: openpnp-capture FFI
+
+Uses `openpnp-capture` C FFI instead of OpenCV:
+- `Cap_hasNewFrame()` — poll for available frame (no grab/retrieve split)
+- `Cap_getFrameSize()` + `Cap_captureFrameRaw()` — copy raw MJPEG bytes
+- **No BGR decode** — MJPEG flows through the pipeline as-is
+- COM context is thread-affine (same constraint as OpenCV)
 
 ---
 
-## Functionality That Must Be Preserved
+## Functionality Preserved
 
-1. **Frame-count-gated lockstep** — now structural via sync_channel(1) + gatherer recv, not polling
-2. **Grab and retrieve on same thread** — `VideoCapture` is not `Send`; both operations happen sequentially on the camera's dedicated OS thread with four separate timestamps (pre/post grab, pre/post retrieve)
-3. **Pre-allocated frame buffers** — `Mat::default()` reused each iteration; OpenCV manages the internal buffer. `data_bytes()` provides zero-copy access.
-4. **Recording boundaries via pause + frame offset** — same pattern, but recording happens in a recorder thread fed by broadcast
-5. **Pause gate** — paused camera threads skip the entire grab/retrieve cycle
-6. **Initialization barrier** — all cameras open, publish config, then gatherer starts first recv cycle
-7. **Recording boundary coordination** — `first/last_recording_frame_number` set while paused, with +3 frame offset
-8. **Per-frame timestamps** — four timestamps per frame (pre/post grab, pre/post retrieve) all captured on the camera thread
-9. **Camera error → group shutdown** — error in any thread triggers clean shutdown; channels break, Drop impls fire
-10. **Recording finalization on crash** — video files closed and timestamps flushed via Drop impls
-11. **Framerate tracking** — rolling median on camera thread (grab-to-grab duration)
-12. **Frame stamp on image** — drawn on camera thread after retrieve (directly on the BGR Mat using OpenCV's `imgproc::put_text`)
+1. **Frame-count-gated lockstep** — `BreakableBarrier` rendezvous ensures all cameras + gatherer are at the same cycle
+2. **Capture on dedicated thread** — `openpnp-capture` COM context is thread-affine; all capture on the camera thread
+3. **Pre-allocated frame buffer** — `raw_buffer: Vec<u8>` reused each iteration
+4. **Pause gate** — cameras and gatherer spin on `paused: Arc<AtomicBool>`, still processing commands
+5. **Initialization barrier** — all cameras stabilize and send `Ready` before gatherer starts
+6. **Per-frame timestamps** — 5 timestamps per frame (loop_start, frame_available, post_jpeg_extract, pre_send, gatherer_received)
+7. **Camera error → group awareness** — errors via `CameraEvent::Error` channel; disconnects trigger gatherer exit
+
+## Functionality Changed (by design)
+
+- **No grab/retrieve split** — `openpnp-capture` doesn't expose this
+- **No BGR decode in hot path** — MJPEG flows as raw bytes
+- **No `should_grab_by_id()` polling** — barrier provides synchronization
+- **No recording boundary coordination via pause + offset** — recording starts/stops via dispatcher commands
+- **No frame stamp on image** — MJPEG passthrough; pixels aren't modified

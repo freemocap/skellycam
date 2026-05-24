@@ -1,6 +1,6 @@
 # Component #1: System Startup & Process Model
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/__init__.py` — package init, beartype, freeze_support, logging
@@ -105,34 +105,51 @@ main() finally block → worker_registry.shutdown_all()
 
 ---
 
-## What Changes in Rust
+## What Was Actually Built
 
-| Python Concept | Rust Equivalent | Key Difference |
-|---------------|----------------|---------------|
-| `multiprocessing.Process` | `std::thread::spawn` | Threads share address space — no IPC needed for basic coordination |
-| `multiprocessing.Value("b")` | `Arc<AtomicBool>` | Same semantics (shared flag, atomic access) but no special setup |
-| `multiprocessing.Value("d")` heartbeat | Not needed | Threads live/die with the process — no orphan problem |
-| `WorkerRegistry` with escalating shutdown | `Vec<JoinHandle<T>>` + channel drop | Dropping a channel sender unblocks receivers; join handles collected in a Vec |
-| Child monitor thread | Not needed | If a thread panics and it's not handled, the process can decide to abort; `JoinHandle` naturally reports exit status |
-| Heartbeat thread | Not needed | Threads share fate with the process — no parent/child process split |
-| `freeze_support()` + staggered spawn | Not needed | Rust has no equivalent of `spawn` re-import — `thread::spawn` just runs the closure |
-| `atexit` safety net | `Drop` impls | Deterministic, no registration needed, compiler guarantees they run |
-| SIGTERM/SIGINT handlers in children | Not needed for threads; signal handling stays in main | Only the process needs signal handlers; threads don't receive signals |
-| `ensure_bytecode_compiled()` | Not needed | Rust is compiled ahead-of-time; no .pyc equivalent |
-| `beartype` runtime checking | Compile-time type system | Types are checked at build time, zero runtime cost |
-| `log_queue.cancel_join_thread()` | Not needed | Rust logging can use channels or lock-free approaches that don't block on drop |
-| FastAPI app lifespan | Axum `Router` with explicit startup/shutdown in `main()` | Axum doesn't have a lifespan context manager; startup/shutdown are just code before/after `axum::serve` |
-| `multiprocessing.Queue` for logs | `tracing` crate with subscriber | Structured, async-aware logging built into the ecosystem |
+| Python Concept | Rust Implementation | Notes |
+|---------------|-------------------|-------|
+| `multiprocessing.Process` | `std::thread::spawn` for camera/gatherer/dispatcher threads; `tokio` runtime for HTTP/WebSocket | Two concurrency models coexist: OS threads for the camera pipeline, async for the server |
+| `multiprocessing.Value("b")` | `Arc<AtomicBool>` for `paused`, `recording_active`, `gatherer_alive`, `shutdown_flag` | Same pattern — atomic flags shared across threads |
+| Heartbeat thread | Not implemented | Threads share the process address space — no orphan detection needed |
+| Child monitor thread | Not implemented | `JoinHandle` collected in `CameraGroup` and `CameraGroupManager`; thread panics are caught at `join()` time |
+| `WorkerRegistry` with escalating shutdown | `CameraGroupManager::close_all_groups()` — iterates groups, calls `shutdown()` on each | No 3-phase escalation; `Camera::shutdown()` sends command + joins thread |
+| `freeze_support()` + staggered spawn | Not needed | Rust threads don't re-import modules |
+| `atexit` safety net | `Drop` impl on `CameraGroupManager` — calls `close_all_groups()` if any groups remain | Compiler-guaranteed cleanup |
+| SIGTERM/SIGINT handlers | `tokio::signal::ctrl_c()` + `shutdown_flag` in `with_graceful_shutdown()` | Axum-native graceful shutdown; the `shutdown_flag` is also checked by `GET /shutdown` |
+| FastAPI app lifespan | Axum `Router` with `with_state()`, startup code in `main()` before `axum::serve`, shutdown in `Drop` + `close_all_groups()` | No lifespan context manager; init is explicit in `run_server()` |
+| `multiprocessing.Queue` for logs | `tracing` with two layers: `SkellyFormat` (stderr) + `LogRelayLayer` (broadcast to WebSocket) | Log relay bridges `tokio::sync::broadcast` → `tokio::sync::mpsc` in the WebSocket handler |
+
+### Startup Sequence (actual Rust implementation)
+
+```
+run_server() in main.rs:
+  1. Create Arc<AppState> with:
+     - camera_manager: Mutex<CameraGroupManager>
+     - shutdown_flag: Arc<AtomicBool>
+     - active_group_id: Mutex<Option<String>>
+  2. Build Axum Router via build_router(state)
+  3. Bind TCP listener on 0.0.0.0:53117
+  4. axum::serve with graceful_shutdown:
+     - Waits for either Ctrl+C OR shutdown_flag == true
+  5. On exit: camera_manager.blocking_lock().close_all_groups()
+```
+
+No heartbeat thread, no child monitor, no worker registry. The process model is dramatically simpler because threads share the process fate.
 
 ---
 
-## Functionality That Must Be Preserved
+## Functionality Preserved
 
-1. **Single global kill switch** — Setting one flag must cause all camera threads to stop gracefully
-2. **Escalating shutdown** — If a thread doesn't stop within a timeout, force-stop it
-3. **Child crash → parent aware** — If a camera thread panics, the server must know and react (either shutdown or restart that group)
-4. **Idempotent shutdown** — Calling shutdown multiple times must be safe
-5. **Clean exit** — All resources (camera handles, ffmpeg subprocesses, temp files) must be released on shutdown
-6. **Windows compatibility** — Must work on Windows (no `fork()`, no Unix signals for threads)
-7. **Graceful SIGTERM/SIGINT handling** — Ctrl+C must trigger clean shutdown
-8. **Startup port check** — Kill stale process on the server port before binding
+1. **Single global kill switch** — `shutdown_flag: Arc<AtomicBool>` in `AppState`, checked by WebSocket loop and exposed via `GET /shutdown`
+2. **Clean exit** — All camera handles, ffmpeg subprocesses, and threads released via `Drop` impls and explicit `shutdown()` calls
+3. **Windows compatibility** — Works on Windows; no `fork()`, no Unix signals for threads
+4. **Graceful Ctrl+C handling** — `tokio::signal::ctrl_c()` triggers clean shutdown
+5. **Camera group cleanup on server exit** — `CameraGroupManager::close_all_groups()` called in `run_server()` after server stops
+
+## Functionality Not Preserved (by design)
+
+- **Escalating shutdown** — Not needed; thread `JoinHandle` + channel drop is sufficient. A panicked thread is caught at `join()` and the process can abort.
+- **Child crash → parent aware** — Thread panics propagate via `JoinHandle::join()`. Camera errors are communicated via `CameraEvent::Error` channel.
+- **Idempotent shutdown** — `CameraGroup::shutdown()` checks state and returns error if already `Stopped`.
+- **Startup port check** — Not implemented; `TcpListener::bind` will error if port is in use, and the caller can retry.

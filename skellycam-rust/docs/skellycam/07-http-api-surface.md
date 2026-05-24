@@ -1,6 +1,6 @@
 # Component #7: HTTP API Surface
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/api/routers.py` — router list
@@ -19,207 +19,85 @@ Files analyzed:
 
 ---
 
-## Part 1: Server Configuration
+## Part 1: Implementation Reality — Server Configuration
 
 ```
 Protocol:       HTTP
-Host:            localhost
+Host:            0.0.0.0
 Port:            53117
 Base URL:        http://localhost:53117
 API Prefix:      /skellycam
-Swagger Docs:    /docs
-OpenAPI Title:   "SkellyCam API 💀📸✨"
+Swagger Docs:    /docs (custom Swagger UI via utoipa)
+Test Page:       /test (built-in HTML test harness)
+OpenAPI Title:   "Skellycam API"
 ```
 
-All camera and playback routes are prefixed with `/skellycam`. Health and shutdown routes are at the root level (no prefix). The root `/` redirects to `/docs`.
+### CORS Middleware (Rust)
 
-### CORS Middleware
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],       # All origins allowed
-    allow_methods=["*"],       # All HTTP methods
-    allow_headers=["*"],       # All headers
-    allow_credentials=True,
-)
+```rust
+let cors = CorsLayer::new()
+    .allow_origin(Any)
+    .allow_methods(Any)
+    .allow_headers(Any);
 ```
 
-Permissive CORS — the Electron frontend loads from `file://` or `localhost:<random_port>`, so the backend must accept cross-origin requests from any origin. Rust equivalent: `tower_http::cors::CorsLayer::permissive()` in Axum.
+### Route Registration (Actual)
 
----
+```rust
+Router::new()
+    .merge(camera_routes())      // /skellycam/camera/...
+    .merge(websocket_route())    // /skellycam/websocket/connect
+    .route("/api-docs/openapi.json", get(openapi_json))
+    .route("/docs", get(swagger_ui))
+    .route("/test", get(serve_test_page))
+    .layer(log_request_middleware)
+    .layer(cors)
+    .with_state(state)
+```
 
-## Part 2: Complete Endpoint Catalog
+### Endpoints Implemented
 
-All endpoints return `application/json` unless noted. Errors return `500 { "detail": "<exception message>" }`.
+| Method | Path | Status |
+|--------|------|--------|
+| `GET` | `/health` | **Implemented** — returns `"OK"` |
+| `GET` | `/shutdown` | **Implemented** — sets `shutdown_flag`, triggers graceful shutdown |
+| `POST` | `/skellycam/camera/detect` | **Implemented** — enumerates via `openpnp-capture` |
+| `POST` | `/skellycam/camera/group/apply` | **Implemented** — `create_or_update_group()` |
+| `DELETE` | `/skellycam/camera/group/close/all` | **Implemented** — `close_all_groups()` |
+| `GET` | `/skellycam/camera/group/all/pause_unpause` | **Implemented** — `toggle_pause()` on all groups |
+| `POST` | `/skellycam/camera/group/all/record/start` | **Implemented** — `start_recording()` |
+| `GET` | `/skellycam/camera/group/all/record/stop` | **Implemented** — `stop_recording()` |
+| `WS` | `/skellycam/websocket/connect` | **Implemented** — binary frames + framerate JSON + log relay |
+| `GET` | `/docs` | **Implemented** — static Swagger UI |
+| `GET` | `/api-docs/openapi.json` | **Implemented** — `utoipa`-generated schema |
+| `GET` | `/test` | **Implemented** — built-in HTML test page |
 
-### 2.1 Root & App
+### Endpoints NOT Implemented
 
-| Method | Path | Summary | Request | Response |
-|--------|------|---------|---------|----------|
-| `GET` | `/` | Redirect to /docs | — | 302 → `/docs` |
-| `GET` | `/favicon.ico` | Serve favicon | — | `image/x-icon` file |
-| `GET` | `/health` | Health check | — | `200 "Hello👋"` |
-| `GET` | `/shutdown` | Graceful shutdown | — | `200 { "status": "shutdown_initiated", "message": "Server shutting down. Goodbye! 👋" }` |
+| Method | Path | Reason |
+|--------|------|--------|
+| `GET` | `/` | Not redirected to /docs (uses /test instead) |
+| `GET` | `/favicon.ico` | Not needed |
+| `GET` | `/skellycam/camera/microphone/detect` | Audio recording deferred |
+| `GET` | `/skellycam/playback/*` | Playback endpoints deferred |
+| `GET` | `/skellycam/playback/{id}/videos/{vid}` | Video streaming deferred |
 
-**Shutdown behavior**: Sets `global_kill_flag.value = True`, waits 100ms, sends `SIGTERM` to own process. In Rust, this is `std::process::exit(0)` after a brief delay for the response to flush.
+### Camera Config (Reduced from Python's 20+ fields)
 
-### 2.2 Camera Group Lifecycle
-
-| Method | Path | Summary | Request Body | Response |
-|--------|------|---------|-------------|----------|
-| `POST` | `/skellycam/camera/group/apply` | Create or update camera group | `CameraGroupCreateRequest` | `CreateCameraGroupResponse` |
-| `DELETE` | `/skellycam/camera/group/close/all` | Close all camera groups | — | `200 true` |
-| `GET` | `/skellycam/camera/group/all/pause_unpause` | Toggle pause/unpause all groups | — | `200 true` |
-
-**`POST /camera/group/apply`** — The main endpoint for creating or reconfiguring camera groups.
-
-Request (`CameraGroupCreateRequest`):
-```json
-{
-  "camera_configs": {
-    "<camera_id>": {
-      "camera_id": "camera_0",
-      "camera_index": 0,
-      "backend": 0,
-      "resolution": { "width": 1280, "height": 720 },
-      "framerate": 30.0,
-      "exposure": -7,
-      "brightness": 128,
-      "contrast": 128,
-      "saturation": 128,
-      "hue": 0,
-      "gamma": 100,
-      "gain": 0,
-      "white_balance_temperature": 4000,
-      "sharpness": 128,
-      "backlight_compensation": 0,
-      "focus": 0,
-      "zoom": 0,
-      "pan": 0,
-      "tilt": 0,
-      "iris": 0,
-      "rotation": -1,
-      "video_file_extension": "mp4",
-      "writer_fourcc": "XVID"
-    }
-  }
+```rust
+pub struct CameraConfig {
+    pub camera_id: String,
+    pub camera_index: u32,
+    pub width: u32,
+    pub height: u32,
+    pub exposure: i32,
+    pub exposure_mode: String,  // "MANUAL", "AUTO", "RECOMMEND"
+    pub framerate: f64,
+    pub rotation: i32,
 }
 ```
 
-Response (`CreateCameraGroupResponse`):
-```json
-{
-  "group_id": "<uuid>",
-  "camera_configs": {
-    "<camera_id>": { ... }   // Extracted configs (actual camera capabilities, not requested)
-  }
-}
-```
-
-Logic: If no camera group exists with these camera IDs, creates and starts a new one. If a group already exists with these camera IDs, calls `update_camera_settings()` on that group (reconfigure cameras). The response contains the *extracted* configs — what the cameras actually support, returned after the two-phase startup (open cameras → discover capabilities → return actual config).
-
-### 2.3 Device Detection
-
-| Method | Path | Summary | Query Params | Response |
-|--------|------|---------|-------------|----------|
-| `POST` | `/skellycam/camera/detect` | Detect available cameras | `filter_virtual: bool` (default true), `backend_id: int` (optional) | `DetectedCamerasResponse` |
-| `GET` | `/skellycam/camera/microphone/detect` | Detect microphones | — | `DetectedMicrophonesResponse` |
-
-**`POST /camera/detect`** — Uses OpenCV `VideoCapture::new(i, CAP_DSHOW)` to enumerate DirectShow cameras (indices 0..15).
-
-Response (`DetectedCamerasResponse`):
-```json
-{
-  "cameras": [
-    {
-      "camera_id": "Integrated Camera",
-      "camera_index": 0,
-      "backend": 0,
-      "backend_name": "Auto",
-      "resolution": { "width": 1920, "height": 1080 },
-      "framerate": 30.0,
-      "supported_resolutions": [ ... ]
-    }
-  ]
-}
-```
-
-**`GET /camera/microphone/detect`** — Returns available audio input devices.
-
-Response (`DetectedMicrophonesResponse`):
-```json
-{
-  "microphones": {
-    "0": "Microphone (Realtek Audio)",
-    "1": "USB Microphone"
-  }
-}
-```
-
-### 2.4 Recording Control
-
-| Method | Path | Summary | Request Body | Response |
-|--------|------|---------|-------------|----------|
-| `POST` | `/skellycam/camera/group/all/record/start` | Start recording all groups | `StartRecordingRequest` | `200 true` |
-| `GET` | `/skellycam/camera/group/all/record/stop` | Stop recording all groups | — | `list[StopRecordingResponse]` |
-
-**`POST /camera/group/all/record/start`**
-
-Request (`StartRecordingRequest`):
-```json
-{
-  "recording_name": "recording_2026-05-10_14-30-00",
-  "recording_directory": "~/skellycam_data/recordings",
-  "mic_device_index": -1
-}
-```
-
-Logic: Resolves `~` to home directory, creates recording directory, calls `start_recording_all_groups()` which iterates all camera groups and calls `camera_group.start_recording()`. The pause-before-record protocol runs (see Component #5). If `mic_device_index >= 0`, starts audio recording.
-
-**`GET /camera/group/all/record/stop`**
-
-Response (`StopRecordingResponse` per camera group):
-```json
-[{
-  "recording_name": "recording_2026-05-10_14-30-00",
-  "recording_path": "/home/user/skellycam_data/recordings/recording_2026-05-10_14-30-00",
-  "number_of_cameras": 2,
-  "number_of_frames": 1500,
-  "total_duration_sec": 50.123,
-  "mean_framerate": 29.97,
-  "mean_inter_camera_sync_ms": 0.45,
-  "framerate_stats": {
-    "median": 29.97, "mean": 29.95, "std": 0.5, "min": 27.0, "max": 32.0
-  },
-  "frame_duration_stats": {
-    "median": 33.3, "mean": 33.4, "std": 0.8, "min": 31.0, "max": 37.0
-  },
-  "inter_camera_grab_range_ms_stats": {
-    "median": 0.45, "mean": 0.47, "std": 0.12, "min": 0.1, "max": 1.2
-  }
-}]
-```
-
-Logic: Calls `stop_recording_all_groups()` which iterates all camera groups and calls `camera_group.stop_recording()` (pause → set last_recording_frame_number → unpause → wait for RecordingFinishedMessages → RecordingFinalizer.finalize_recording()). Returns recording name, path, and timestamp statistics for each group.
-
-### 2.5 Playback
-
-| Method | Path | Summary | Query Params | Response |
-|--------|------|---------|-------------|----------|
-| `GET` | `/skellycam/playback/recordings` | List available recordings | `recording_parent_directory` (optional) | `list[RecordingListEntry]` |
-| `GET` | `/skellycam/playback/{recording_id}/videos` | List videos in a recording | `recording_parent_directory` (optional) | `list[VideoInfo]` |
-| `GET` | `/skellycam/playback/{recording_id}/videos/{video_id}` | Stream a video file | `recording_parent_directory` (optional) | `video/*` binary stream |
-| `GET` | `/skellycam/playback/{recording_id}/timestamps` | Get timestamps for all videos | `recording_parent_directory` (optional) | `{ "timestamps": {...}, "warnings": [...] }` |
-| `GET` | `/skellycam/playback/{recording_id}/videos/{video_id}/timestamps` | Get timestamps for one video | `recording_parent_directory` (optional) | `{ "video_id": ..., "headers": [...], "row_count": N }` |
-
-These are read-only endpoints for the frontend to browse and play back previously recorded sessions. They serve static files from disk — no camera interaction.
-
-**`GET /playback/recordings`** — Lists recording directories, sorted newest first. Each entry includes video count, total size, creation timestamp, and optionally frame count/duration/FPS if timestamp CSVs are found.
-
-**`GET /playback/{recording_id}/videos/{video_id}`** — Streams a video file with proper Content-Type header. Uses FastAPI's `FileResponse` which supports HTTP range requests for seeking. Axum equivalent: `axum::body::Body::from` with a `tokio::fs::File` and `.header("Content-Type", ...)`.
-
-**Path traversal protection**: Resolves the requested path and verifies it starts with the parent directory. Returns 400 for traversal attempts.
+8 fields vs Python's 20+. The Rust impl uses `openpnp-capture` which exposes DirectShow properties generically rather than through named UVC controls. Only exposure is directly managed; all other UVC properties (brightness, contrast, etc.) would need custom property ID mapping.
 
 ---
 

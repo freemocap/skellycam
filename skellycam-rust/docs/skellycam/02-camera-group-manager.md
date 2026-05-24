@@ -1,6 +1,6 @@
 # Component #2: CameraGroupManager + CameraGroup + CameraManager
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/camera_group/camera_group_manager.py` — CameraGroupManager, singleton factory
@@ -120,34 +120,103 @@ Additional routers: `/ws` (WebSocket), `/playback` (playback).
 
 ---
 
-## What Changes in Rust
+## What Was Actually Built
 
-| Python Concept | Rust Equivalent | Key Difference |
-|---------------|----------------|---------------|
-| Module-level global singleton | `OnceLock<CameraGroupManager>` or an `Arc<CameraGroupManager>` passed via Axum state | `OnceLock` is thread-safe lazy init. No global variable footgun. |
-| `get_or_create_camera_group_manager(app)` | `app.state` in Axum — constructor injection, no lazy init needed | Axum's `State` extractor provides typed, compile-time-checked dependency injection |
-| Async PubSub wait loop for extracted configs | Thread joins a `sync_channel` recv — each camera thread sends config on startup channel | No async needed for thread coordination; threads return values via channels |
-| Two-phase startup (spawn → wait → create SHM → notify) | Same logical flow, but simpler: spawn threads → recv configs from startup channel → allocate ring buffers on heap → send `Arc<RingBuffer>` handles to threads | Threads share address space — "shared memory" is just `Arc<T>`. No DTO/recreate pattern needed. |
-| `multiprocessing.Value("q")` for recording boundaries | `Arc<AtomicI64>` — set during pause, read atomically by camera threads | Same semantics, simpler API, no multiprocessing import |
-| PubSub for recording finished coordination | Each camera thread sends `RecordingFinished` on a oneshot channel; group collects all | `Vec<oneshot::Receiver<RecordingFinished>>` — simpler than PubSub for this one-shot pattern |
-| PubSub for config updates | `mpsc::Sender<ConfigUpdate>` per camera, or `tokio::sync::broadcast` for multi-consumer | Direct typed channels replace topic-based string routing |
-| `await_extracted_configs()` polling loop | Blocking `recv()` on a channel — the gatherer just waits for N configs | No polling needed; channels block until data arrives |
-| `finalize_recording()` polling loop | Collect N `RecordingFinished` messages from oneshot channels or a shared mpsc | Same pattern, but the channels carry typed data, not arbitrary PubSub messages |
-| Pydantic models for API types | `serde` derives on structs — same JSON shape, compile-time serialization | `#[derive(Serialize, Deserialize)]` replaces `BaseModel`. Same JSON output. |
-| `CameraStatus` as 11 `multiprocessing.Value` booleans | `Arc<AtomicBool>` per flag OR a single `Arc<Mutex<CameraState>>` OR an `Arc<AtomicU16>` bitfield | Rust can pack flags into a single atomic, or use a Mutex for coherent state transitions |
-| `CameraGroupState` Pydantic model | `#[derive(Serialize)] struct CameraGroupState` | Same JSON shape for API responses |
+### Layer 1: CameraGroupManager
+
+Located in `camera_group_manager/mod.rs`. Pure Rust, no Python dependency.
+
+```rust
+pub struct CameraGroupManager {
+    groups: HashMap<String, CameraGroup>,
+}
+```
+
+- `create_or_update_group(configs, group_id)` — creates a `CameraGroup`, calls `start()`, stores it
+- `close_group(id)` / `close_all_groups()` — shutdown and remove
+- `get_group(id)` / `get_group_mut(id)` — lookup by ID
+- `to_state_dict()` — serializable snapshot for API responses
+- `Drop` impl calls `close_all_groups()` if any groups remain
+
+Wrapped in `Mutex<CameraGroupManager>` inside `Arc<AppState>` — not a module-level global. The "singleton" property emerges from having one `AppState` passed to the Axum router.
+
+### Layer 2: CameraGroup
+
+Located in `camera_group/camera_group.rs`. The central orchestrator.
+
+**Creation** (`CameraGroup::new(configs)`):
+1. Generates a 6-char UUID group ID
+2. Stores configs in `HashMap<String, CameraGroupConfig>`
+3. State = `Created`
+
+**Startup** (`CameraGroup::start()`):
+1. Pause all cameras (set `paused = true`)
+2. Create `BreakableBarrier` with count = camera_count + 1
+3. Spawn each camera via `Camera::start(identity, config, barrier, paused, 0)`
+4. Failed spawns are logged and skipped — the group continues with remaining cameras
+5. Wait for each camera to send `Ready` via `wait_until_ready(timeout)`
+6. Failed stabilizations are logged and skipped
+7. Correct barrier count to actual camera count + 1
+8. Take each camera's frame receiver via `take_frame_receiver()`
+9. Spawn gatherer thread with frame receivers + barrier
+10. Spawn dispatcher thread with gatherer channel receiver
+11. Unpause → `Streaming` state
+
+**No two-phase startup with extracted configs.** Cameras self-configure during `Camera::start()` — `find_best_mjpg()` negotiates format, writes actual resolution/framerate to `Arc<Mutex<CameraConfig>>`. No DTO/recreate pattern because threads share address space.
+
+**Recording**: `start_recording(params)` sends `DispatcherCommand::StartRecording` to the dispatcher thread. `stop_recording()` sends `StopRecording` and receives `RecordingSummary` via a oneshot channel. No pause-before-record protocol.
+
+**Frontend**: `latest_frontend_payload()` reads from `Arc<Mutex<Option<FrontendPayload>>>` updated by the dispatcher. `latest_raw_frames()` provides per-camera JPEGs for on-demand decode.
+
+**Shutdown**: Sends shutdown commands to all cameras, sends `DispatcherCommand::Shutdown`, breaks the barrier, joins all threads.
+
+### Layer 3: Camera (replaces CameraManager)
+
+There is no separate `CameraManager` struct. Each `Camera` is a handle to a dedicated OS thread:
+
+```rust
+pub struct Camera {
+    command_sender: mpsc::Sender<CameraCommand>,
+    frame_receiver: Option<mpsc::Receiver<FramePacket>>,
+    event_receiver: mpsc::Receiver<CameraEvent>,
+    thread_handle: Option<JoinHandle<()>>,
+    identity: CameraIdentity,
+    config: Arc<Mutex<CameraConfig>>,
+}
+```
+
+- `start()` — creates COM context, opens stream, stabilizes, spawns capture thread
+- `configure(config)` — sends `Configure` command to running camera thread
+- `try_recv_frame()` — non-blocking frame poll
+- `shutdown()` — sends `Shutdown` command, joins thread
+
+### CameraStatus — radically simplified
+
+```rust
+pub struct CameraStatus {
+    pub camera_name: String,
+    pub camera_index: i32,
+    pub device_path: String,
+    pub config: CameraConfig,
+}
+```
+
+No 11 boolean flags. A single `paused: Arc<AtomicBool>` shared across all cameras in a group replaces `is_paused`, `should_pause`, `should_close`, etc. The `Ready`/`Error` event channel replaces `connected`, `error`, `closing`, `closed`.
 
 ---
 
-## Functionality That Must Be Preserved
+## Functionality Preserved
 
 1. **Camera group = top-level managed entity** — the API creates, reads, updates, destroys groups, not individual cameras
-2. **Same HTTP endpoints with same JSON shapes** — frontend compatibility
-3. **Two-phase startup** — spawn cameras, wait for all to report their actual config, then create shared structures
-4. **Recording boundary coordination** — pause → set frame boundaries → unpause → all cameras cross boundary at same frame
-5. **Config updates propagate to running cameras** — without stopping/restarting
-6. **Multiple camera groups can coexist** — each with independent cameras, recording state, and lifecycle
-7. **Recording finalization collects per-camera timestamps** — waits for all cameras to finish flushing
-8. **Clean shutdown of individual groups** — close a group without affecting others
-9. **Clean shutdown of all groups** — the global kill switch must still work
-10. **Audio recording** — optional, started/stopped with video recording
+2. **Same HTTP endpoints with same JSON shapes** — frontend compatibility maintained
+3. **Config updates propagate to running cameras** — via `Camera::configure()` which sends `Configure` command to the camera thread
+4. **Multiple camera groups can coexist** — `CameraGroupManager` holds a `HashMap<String, CameraGroup>`
+5. **Clean shutdown of individual groups** — `close_group(id)` shuts down one group without affecting others
+6. **Clean shutdown of all groups** — `close_all_groups()` + `Drop` impl
+
+## Functionality Changed (by design)
+
+- **Two-phase startup** — No extracted configs phase. Cameras self-configure via `find_best_mjpg()` during `Camera::start()`. Results written to `Arc<Mutex<CameraConfig>>` visible to all threads.
+- **Recording boundary coordination** — No pause-before-record with +3 frame offset. Recording starts/stops on-the-fly via dispatcher commands.
+- **Recording finalization** — Simplified to collecting per-camera metadata and file paths from the recording thread.
+- **Audio recording** — Not implemented (future scope).

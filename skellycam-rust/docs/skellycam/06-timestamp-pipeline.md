@@ -1,6 +1,6 @@
 # Component #6: Timestamp Pipeline Audit & Rust Design
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/camera/opencv/opencv_helpers/opencv_get_frame.py` — grab/retrieve timestamps
@@ -14,6 +14,65 @@ Files analyzed:
 - `skellycam/core/timestamps/full_timestamp.py` — FullTimestamp (UTC + local + perf_counter)
 - `skellycam/core/types/numpy_record_dtypes.py` — all dtype definitions
 - `skellycam/core/recorders/videos/video_recorder.py` — record timestamps
+
+---
+
+## Part 0: Implementation Reality — What Was Actually Built
+
+The extensible timestamp system described in Parts 3-6 was NOT built. The actual implementation uses a simpler, fixed-struct approach:
+
+### Actual Timestamp Fields (camera/types.rs)
+
+```rust
+pub struct FrameLifecycleTimestamps {
+    pub loop_start_ns: i64,        // top of capture loop iteration
+    pub frame_available_ns: i64,   // Cap_hasNewFrame() returned true
+    pub post_jpeg_extract_ns: i64, // Cap_captureFrameRaw() + Vec copy
+    pub pre_send_ns: i64,          // about to call frame_sender.send()
+    pub gatherer_received_ns: i64, // stamped by gatherer after recv()
+}
+```
+
+5 fields instead of the planned 6 (which was already reduced from Python's 9).
+
+### Actual Gatherer Timestamps (camera_group/camera_group.rs)
+
+```rust
+pub struct GathererTimestamps {
+    pub collecting_start_ns: i64,
+    pub all_frames_received_ns: i64,
+    pub post_barrier_ns: i64,
+    pub payload_assembled_ns: i64,
+    pub pre_send_downstream_ns: i64,
+}
+```
+
+### Key Differences from Plan
+
+| Planned | Actual | Reason |
+|---------|--------|--------|
+| `pre_frame_grab` / `post_frame_grab` | NOT PRESENT | `openpnp-capture` doesn't expose grab/retrieve split |
+| `pre_frame_decode` / `post_frame_decode` | `post_jpeg_extract_ns` | No decode in hot path — just raw byte copy from device buffer |
+| `pre_frame_record` / `post_frame_record` | NOT IN FRAME PACKET | Recording timestamps are on the recording thread, not packed into camera frames |
+| `TimebaseMapping` struct | `performance_counter_nanoseconds()` relative to T=0 | Simpler: all timestamps are monotonic ns since `init_logging()` call |
+| `TimestampStage` enum | NOT IMPLEMENTED | No extensible stage system; fixed struct is sufficient |
+| `FrameDurations` with `BTreeMap` | NOT IMPLEMENTED | Duration computation done ad-hoc in gatherer statistics |
+| `RecordingTimestampStatistics` map | `RecordingStats` struct with fixed fields | Simpler: just what's needed now |
+| Streaming CSV via `csv` crate | `CsvWriter` exists but not wired in | Deferred |
+| Polars for analysis | NOT INTEGRATED | Deferred |
+
+### Performance Clock
+
+```rust
+// timestamps/performance.rs
+static ANCHOR: OnceLock<ClockAnchor> = OnceLock::new();
+
+pub fn anchor_performance_clock() { /* first call wins */ }
+pub fn performance_counter_nanoseconds() -> i64 { /* elapsed ns since anchor */ }
+pub fn anchor_wall_clock_time() -> Option<SystemTime> { /* T=0 in UTC */ }
+```
+
+Single canonical T=0 anchor called from `init_logging()`. All timestamps are nanoseconds since that anchor. No `TimebaseMapping` needed — the anchor itself provides UTC mapping.
 
 ---
 

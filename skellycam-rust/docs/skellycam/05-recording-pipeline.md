@@ -1,6 +1,6 @@
 # Component #5: Recording Pipeline
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/recorders/videos/video_recorder.py` — VideoRecorder (per-camera, OpenCV VideoWriter)
@@ -243,20 +243,39 @@ This is the foundation for the per-camera recorder in the SkellyCam port. It nee
 
 ---
 
-## What Changes in Rust
+## What Was Actually Built
 
-### VideoRecorder: ffmpeg replaces OpenCV VideoWriter
+### VideoRecorder: ffmpeg Subprocess per Camera
 
-The Python code uses OpenCV's `cv2.VideoWriter` because it's already a dependency (camera capture). In Rust, we use ffmpeg subprocess (avoiding the opencv crate entirely):
+The Rust `VideoRecorder` wraps an ffmpeg child process, feeding raw RGB24 frames via `stdin`:
 
-- **Pro**: No OpenCV dependency. ffmpeg has better codec support, more predictable cross-platform behavior.
-- **Con**: Requires ffmpeg on PATH. Same constraint as the webcam test project.
-- **Open question**: Should we support a non-ffmpeg fallback (e.g., mp4 crate for pure-Rust encoding)?
+```rust
+pub struct VideoRecorder {
+    child: Child,
+    stdin: Option<ChildStdin>,
+    frame_count: u64,
+}
+```
 
-The recorder must additionally:
-- Collect per-frame timestamps (`pre_frame_record_ns`, `post_frame_record_ns`)
-- Track frame metadata (camera_info, frame_number, timebase_mapping)
-- Return accumulated metadata on finish
+- `start(width, height, fps, output_path)` — spawns ffmpeg with `-f rawvideo -pixel_format rgb24`
+- `feed_frame(rgb_data: &[u8])` — writes raw bytes to stdin (blocking if ffmpeg is slow)
+- `finish(mut self)` — drops stdin (EOF), waits for ffmpeg exit, returns frame count
+- `Drop` impl — kills ffmpeg if `finish()` was never called
+
+The recorder needs MJPEG→RGB decode before feeding ffmpeg. This decode happens on the recording thread, NOT on the dispatcher or gatherer threads.
+
+### Recording Architecture
+
+Recording is managed by a dedicated **recording thread** spawned by the dispatcher:
+
+1. `CameraGroup::start_recording(params)` → sends `DispatcherCommand::StartRecording` to dispatcher
+2. Dispatcher builds `RecorderSpawnConfig` per camera (paths, dimensions, fps from shared config)
+3. Dispatcher spawns the recording thread via `spawn_recording_thread()`
+4. Recording thread creates per-camera `VideoRecorder` objects (ffmpeg subprocesses)
+5. Each multiframe, dispatcher sends `RecordingFrameData` (JPEG bytes + timestamps) to recording thread
+6. Recording thread decodes JPEG → RGB, feeds ffmpeg, writes timestamp CSV row
+7. `CameraGroup::stop_recording()` → dispatcher sends `StopRecording` to recording thread
+8. Recording thread finalizes all recorders, runs finalizer, returns `RecordingSummary`
 
 ```rust
 pub struct VideoRecorder {
@@ -298,37 +317,20 @@ impl VideoRecorder {
 }
 ```
 
-### Recording Boundaries: Channels replace shared multiprocessing.Values
+### No Pause-Before-Record Protocol
 
-In Python, `first_recording_frame_number` and `last_recording_frame_number` are `multiprocessing.Value("q")` because the main process writes them and camera processes read them. In Rust, these are just fields on the orchestrator, since everything runs in one process:
+The planned pause-before-record with +3 frame offset was NOT implemented. Recording starts and stops on-the-fly via dispatcher commands. The first frame after `StartRecording` is recorded; the last frame before `StopRecording` is the final recorded frame. No `first_recording_frame_number` / `last_recording_frame_number` atomics exist.
 
-```rust
-// CameraOrchestrator in Rust
-pub struct CameraOrchestrator {
-    camera_statuses: HashMap<CameraId, CameraStatus>,
-    first_recording_frame_number: AtomicI64,  // -1 = not recording
-    last_recording_frame_number: AtomicI64,   // -1 = no end yet
-}
-```
+### RecordingFinalizer
 
-The pause-before-record protocol is identical. The `+3` offset is preserved.
+Simplified from the planned design. After all recorders finish, the finalizer:
+1. Collects per-camera video paths and frame counts
+2. Computes `RecordingStats` summary (fps, frame counts, durations)
+3. Returns `RecordingSummary` to the caller via a oneshot channel
 
-### PubSub replaced by direct channels
+No timestamp CSV processing (deferred). No Polars integration (deferred). No multi-frame CSV assembly (deferred).
 
-- `RecordingInfoMessage` → sent via a channel from CameraGroup to each camera thread's control loop
-- `RecordingFinishedMessage` → sent via a channel from each camera's recorder back to CameraGroup
-
-No PubSub infrastructure needed. Just `mpsc::channel` or `tokio::sync::mpsc`.
-
-### RecordingFinalizer: sync Rust, no async needed
-
-The Python finalizer uses `await` because timestamp processing happens on the asyncio event loop and must yield to avoid blocking. In Rust:
-
-- Run finalization on a dedicated thread via `tokio::task::spawn_blocking()`
-- Or make it fully synchronous (the API handler calling `stop_recording` can await the blocking task)
-- Duration computation uses iterators, rayon, or plain loops — all faster than numpy double-loops
-
-### Timestamp System: Extensibility Design
+### Timestamp System: Simplified
 
 **The problem**: Python's timestamp schema is fixed. `FRAME_LIFECYCLE_TIMESTAMPS_DTYPE` has exactly 8 named fields. Adding a new pipeline stage (e.g., "pre_rt_tracker" / "post_rt_tracker") requires:
 1. Adding fields to the dtype
@@ -458,40 +460,50 @@ This means adding a new stage automatically produces statistics for it — no ne
 - Removed (they bracket a zero-duration no-op)
 - Kept as always-equal timestamps for CSV compatibility
 
-Decision needed: preserve CSV compatibility (keep the column, always ~0ns) or drop the column.
+## Functionality Preserved
 
-### The "recording in progress" safety net
+1. **Per-camera video files** — one mp4 per camera, named `Camera_{index}_{id}_{label}.mp4`
+2. **ffmpeg subprocess per camera** — `VideoRecorder` with `Drop` safety net kills ffmpeg on panic
+3. **Frame metadata collection** — `RecordingStats::push_multiframe()` accumulates per-multiframe timing data
+4. **Recording folder schema** — `synchronized_videos/` and `timestamps/` subdirectories
+5. **Image rotation before encode** — lossless JPEG rotation applied in dispatcher before frames reach the recorder
 
-Python: `Drop` impl on Rust's VideoRecorder handles cleanup if `finish()` is never called (kill ffmpeg, close stdin). Python uses try/finally or context managers. Rust's deterministic Drop is strictly better here — no zombie ffmpeg processes even on panic.
+## Functionality Changed (by design)
 
----
-
-## Functionality That Must Be Preserved
-
-1. **Per-camera video files** — one mp4 per camera, named `{recording_name}.camera{camera_id}.mp4`
-2. **Pause-before-record protocol** — all cameras paused, boundaries set, then unpaused
-3. **+3 frame offset** — `first_recording_frame_number = max(current_frames) + 3`
-4. **Consecutive frame validation** — recorder checks each frame number is prev + 1
-5. **Image rotation before encode** — same rotation logic as camera loop
-6. **Per-frame timestamps** — pre/post recording timestamps for each frame
-7. **Frame metadata collection** — accumulated during recording, returned on finish
-8. **RecordingInfo JSON** — saved with camera configs, UUID, timestamps
-9. **Per-camera timestamp CSV** — all 8 timestamp fields + durations per frame
-10. **Multiframe timestamp CSV** — cross-camera sync stats per frame
-11. **Statistics** — median/mean/std/min/max for each stage, framerate, sync
-12. **Validation** — video files exist, same frame count, timestamps match videos
-13. **Recording stops on camera error** — if any camera fails, recording finalizes gracefully
-14. **Audio recording** — optional, controlled by `mic_device_index` (future scope)
-15. **Recording folder schema** — identical directory layout for frontend compatibility
+- **No pause-before-record protocol** — recording starts/stops on-the-fly via dispatcher commands
+- **No +3 frame offset** — not needed without the pause protocol
+- **No RecordingInfo JSON** — not yet implemented (deferred)
+- **No timestamp CSV output** — `CsvWriter` struct exists but CSV write is deferred
+- **No multiframe CSV** — deferred
+- **No Polars integration** — deferred
+- **No statistics summary file** — `RecordingStats` collects data in memory; JSON output deferred
+- **No audio recording** — future scope
+- **Recording finalization is synchronous** — runs on the recording thread (not `spawn_blocking`)
 
 ---
 
-## Confirmed Decisions
+## Actual Decisions (What Was Built)
 
-| # | Decision | Rationale |
-|---|----------|-----------|
-| 1 | **Prefer pure Rust, ffmpeg as fallback** | Try to avoid external process dependency if possible. If a pure Rust encoder (e.g., `openh264` crate, `mp4` crate) can match the quality and cross-platform support, use it. If not, ffmpeg is acceptable — potentially bundled with the build. |
-| 2 | **Audit timestamps for Rust pipeline** | Don't just port the Python timestamp stages. The "copy to shared memory" stage is meaningless in a threaded Rust app. Do a full audit to determine which stages make sense for the new pipeline. This is Component #6. |
-| 3 | **Timestamp storage: fixed struct for hot path → map for output** | Use a fixed struct in the hot loop (zero heap allocation, stack-only), convert to extensible map representation for CSV output and statistics. Best of both: fast in the loop, flexible at rest. |
-| 4 | **RecordingFinalizer: sync, on blocking thread** | Run on `tokio::task::spawn_blocking` so the HTTP API stays responsive but the finalizer code itself is straightforward synchronous Rust. |
-| 5 | **CSV streaming + Polars analysis** | Use the `csv` crate for streaming writes during recording (data lands on disk alongside video, resilient to crashes). Use `polars` for loading and analyzing the recorded data afterward. Both dependencies are acceptable. |
+| # | Decision | Outcome |
+|---|----------|---------|
+| 1 | **ffmpeg subprocess** | Used. `VideoRecorder` wraps ffmpeg with `-f rawvideo -pixel_format rgb24`. Works reliably on Windows. |
+| 2 | **Timestamp audit** | Done. Python's 9 timestamps → Rust's 5. "Copy to SHM" and "initialized_ns" removed. No extensible enum built — fixed `FrameLifecycleTimestamps` struct. |
+| 3 | **Timestamp storage** | Fixed struct only — `FrameLifecycleTimestamps` with 5 i64 fields. No map conversion layer built. |
+| 4 | **RecordingFinalizer** | Sync, runs on recording thread (not `spawn_blocking`). Returns `RecordingSummary` via oneshot channel. |
+| 5 | **CSV + Polars** | `CsvWriter` struct exists but not wired into recording path. Polars not integrated. Deferred. |
+
+### Stamp Collection Architecture
+
+The `RecordingStats` struct collects per-multiframe timing data:
+
+```rust
+pub struct RecordingStats {
+    frame_avail_ns_per_camera: Vec<Vec<i64>>,  // per camera, per frame
+    post_encode_ns_per_multiframe: Vec<i64>,     // dispatcher encode time
+    frame_counts_per_camera: Vec<usize>,
+    start_ns: i64,
+    end_ns: i64,
+}
+```
+
+`push_multiframe(payload, post_encode_ns)` is called by the dispatcher each multiframe while recording is active. `finalize()` returns the collected data for summary computation.

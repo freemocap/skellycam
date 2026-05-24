@@ -1,6 +1,6 @@
 # Component #8: WebSocket Binary Protocol
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/types/frontend_payload_bytearray.py` — `create_frontend_payload()`, dtype definitions, JPEG encoding
@@ -129,9 +129,23 @@ fn payload_header_to_bytes(header: &PayloadHeaderFooter) -> &[u8] {
 
 ---
 
-## Part 2: Image Processing Pipeline (per camera)
+## Part 2: Image Processing Pipeline — Implementation Reality
 
-Before JPEG encoding, each camera's frame goes through:
+The planned "decode BGR → rotate → resize to 50% → JPEG encode at quality 80" pipeline is NOT used for the primary MJPEG path. Instead:
+
+- **MJPEG frames pass through as raw bytes** — no decode, no resize, no re-encode
+- **Lossless JPEG rotation** applied in the dispatcher via `rotate_jpeg_lossless()` (turbojpeg `tjTransform`)
+- **The RGB fallback path** (`resize_rgb` → `jpeg_encode_rgb` at quality 80) exists only for non-MJPEG cameras
+- **Native resolution** is sent to the frontend (no 50% resize)
+- **No `displayImageSizes` from frontend** — the frontend's display size preferences are not forwarded to the encoder
+
+The `FrontendPayload` sent via WebSocket includes a `camera_fps` field computed from consecutive `frame_available_ns` timestamps, which is additional data beyond the binary byte payload.
+
+## Part 2 (Original Plan): Image Processing Pipeline (per camera)
+
+The planned pipeline below describes what WOULD happen if frames needed re-encoding. The actual MJPEG passthrough path skips all of this.
+
+Before JPEG encoding, each camera's frame would go through:
 
 ### Step 1: Compute Grab Timestamp Midpoint
 
@@ -346,19 +360,22 @@ async fn frontend_image_relay(
 
 ---
 
-## Functionality That Must Be Preserved
+## Functionality Preserved
 
-1. **Exact binary layout** — header/footer and frame header structs with correct sizes (24 and 56 bytes), field offsets, and endianness
-2. **Message type values** — 0 (header), 1 (frame), 2 (footer) — frontend uses these to parse the stream
-3. **frame_number in header matches footer** — frontend validates
-4. **camera_identifier 16-byte fixed width** — UTF-8, null-padded or truncated
-5. **JPEG quality 80** — same encoding quality
-6. **Default resize to 50%** — same scaling factor when no display sizes provided
-7. **Rotation before resize** — same order of operations
-8. **Grab midpoint as frame timestamp** — `(pre_grab + post_grab) / 2`
-9. **Multiframe timestamp as mean of grab midpoints** — used for framerate tracking
-10. **Per-camera JPEG encoding** — each camera's frame is independently encoded (not a stitched image)
-11. **Footer validation** — frontend uses footer to confirm complete message received
+1. **Exact binary layout** — `PayloadHeader` (24 bytes) + `FrameHeader` (56 bytes) with `#[repr(C)]`, matching Python numpy dtypes bit-for-bit
+2. **Message type values** — 0 (header), 1 (frame), 2 (footer)
+3. **frame_number in header matches footer** — enforced in `encode_payload()`
+4. **camera_identifier 16-byte fixed width** — UTF-8, null-padded via `make_camera_id()`
+5. **Per-camera JPEG encoding** — each camera's frame is independently packed (not a stitched image)
+6. **Footer validation** — footer provides end-of-payload marker for frontend
+
+## Functionality Changed (by design)
+
+- **No JPEG quality 80** — MJPEG passes through at camera's native quality (typically quality 80-95 from the sensor)
+- **No resize to 50%** — native resolution sent
+- **No rotation before resize** — lossless rotation only (turbojpeg `tjTransform`); no resize
+- **No grab midpoint** — `frame_available_ns` is used as the frame timestamp (no grab/retrieve split)
+- **Multiframe timestamp** — mean of `frame_available_ns` across cameras
 
 ---
 

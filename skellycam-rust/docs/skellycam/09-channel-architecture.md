@@ -1,6 +1,6 @@
 # Component #9: PubSub System → Rust Channels
 
-Status: **ANALYZED — stable reference artifact**
+Status: **AUDITED — updated for actual Rust implementation (2026-05-23)**
 
 Files analyzed:
 - `skellycam/core/ipc/pubsub/pubsub_abcs.py` — `PubSubTopicABC` base class (subscribe/publish/close)
@@ -261,7 +261,59 @@ That's ~20 lines of channel definitions replacing ~300 lines of PubSub infrastru
 
 ---
 
-## What's Completely Eliminated
+## Actual Channel Architecture
+
+The channel-based approach was implemented as planned, but with different concrete types:
+
+### Topic-by-Topic — Planned vs Actual
+
+| Topic | Planned Channel | Actual Channel | Notes |
+|-------|----------------|----------------|-------|
+| `UPDATE_CAMERA_SETTINGS` | `mpsc::Sender<ControlCommand>` | `mpsc::Sender<CameraCommand>` | Matches plan. `CameraCommand::Configure { config }` variant. |
+| `EXTRACTED_CONFIG` | `mpsc::Sender<CameraConfig>` | NOT NEEDED | Configs are written to `Arc<Mutex<CameraConfig>>` by camera threads directly. |
+| `SHM_UPDATES` | NOT NEEDED | NOT NEEDED | Threads share address space — no SHM DTOs. |
+| `RECORDING_INFO` | `mpsc::Sender<RecordingInfo>` | `mpsc::Sender<DispatcherCommand::StartRecording>` | Recording commands go through dispatcher, not directly to cameras. |
+| `RECORDING_FINISHED` | `mpsc::Sender<Vec<RecordedFrameMetadata>>` | `oneshot::Sender<RecordingSummary>` | Stop recording gets a oneshot response from the recording thread via dispatcher. |
+| `FRAMERATE` | `watch::Sender<CurrentFramerate>` | `FramerateTracker` in WebSocket handler | FPS computed in the WebSocket loop itself from camera_fps field in FrontendPayload. |
+| `LOGS` | `tracing` + `broadcast::channel` | `tracing` + `broadcast::channel` → `mpsc` bridge | Matches plan. `LogRelayLayer` → `broadcast` → tokio mpsc bridge in WS handler. |
+
+### Channel Types (Actual)
+
+All camera pipeline channels use `std::sync::mpsc` (OS threads), not `tokio::sync::mpsc`:
+
+| Channel | Type | Capacity | Use |
+|---------|------|----------|-----|
+| Camera command | `mpsc::channel()` | unbounded | `CameraCommand::Shutdown` / `Configure` |
+| Camera event | `mpsc::channel()` | unbounded | `CameraEvent::Ready` / `Error` |
+| Camera → Gatherer frames | `sync_channel()` | 1 | Backpressure: camera blocks until gatherer consumes |
+| Gatherer → Dispatcher | `mpsc::channel()` | unbounded | Gatherer must never block |
+| Gatherer updates | `mpsc::channel()` | unbounded | `GathererUpdate::AddCamera` / `RemoveCamera` |
+| Dispatcher control | `mpsc::channel()` | unbounded | `DispatcherCommand::StartRecording` / `StopRecording` / `Shutdown` / `UpdateConfigs` |
+| Recording frames | `mpsc::channel()` | unbounded | Dispatcher → recording thread |
+| Stop recording response | `mpsc::channel()` | 1 | Oneshot: dispatcher → caller |
+
+Only the WebSocket handler uses `tokio::sync::mpsc` (for the log relay bridge).
+
+### Why `std::sync::mpsc`, Not `tokio::sync::mpsc`
+
+The camera pipeline runs on OS threads (`std::thread::spawn`), not tokio tasks. `std::sync::mpsc` is the natural choice for OS threads — zero async overhead, no runtime dependency. The tokio runtime is only used for the HTTP/WebSocket server layer.
+
+### Sync Mechanism: BreakableBarrier
+
+Not mentioned in the original PubSub analysis because Python has no equivalent. The `BreakableBarrier` is the synchronization primitive that replaces `should_grab_by_id()` polling:
+
+```rust
+// sync_utils.rs
+pub struct BreakableBarrier { ... }
+impl BreakableBarrier {
+    pub fn new(total: usize) -> Self;
+    pub fn wait(&self) -> bool;         // true = normal release, false = barrier broken
+    pub fn break_barrier(&self);        // release all waiters, subsequent wait() returns false
+    pub fn set_total(&self, total: usize); // dynamic participant count change
+}
+```
+
+## What's Completely Eliminated (Accurate)
 
 | Python Artifact | Why Eliminated |
 |----------------|----------------|
