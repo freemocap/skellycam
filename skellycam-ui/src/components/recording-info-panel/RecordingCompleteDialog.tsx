@@ -94,7 +94,7 @@ export const RecordingCompleteDialog: React.FC = () => {
             onClick={handleClose}
         >
             <div
-                className="bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-2"
+                className="recording-complete-modal bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-4 gap-3"
                 style={{ minWidth: 360, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto' }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -137,8 +137,8 @@ export const RecordingCompleteDialog: React.FC = () => {
                 <div className="flex gap-1 justify-content-space-between">
                     <ButtonSm
                         text="Open in Playback"
-                        iconClass="stream-icon"
-                        buttonType="primary"
+                        iconClass="subfolder-icon"
+                        buttonType="secondary"
                         textColor="text-white"
                         onClick={handleOpenInPlayback}
                     />

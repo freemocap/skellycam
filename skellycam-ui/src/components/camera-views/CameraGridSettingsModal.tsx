@@ -161,7 +161,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
                 handleConfigChange({ rotation: Number(v) as RotationValue })
               }
               size="sm"
-              className="segmented-control-sm"
+              className="segmented-control-sm bg-darkgray"
             />
           </Row>
 

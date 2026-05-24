@@ -79,6 +79,7 @@ type TooltipPosition =
 interface IconButtonProps {
   icon: string;
   onClick?: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
   disabled?: boolean;
   title?: string;
   className?: string;
@@ -93,6 +94,7 @@ interface IconButtonProps {
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
   icon,
   onClick = () => {},
+  onMouseDown,
   disabled = false,
   title,
   className = "icon-size-28",
@@ -107,6 +109,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
     <button
       ref={ref}
       onClick={onClick}
+      onMouseDown={onMouseDown}
       disabled={disabled}
       title={title}
       className={clsx(
