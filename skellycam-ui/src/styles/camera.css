@@ -217,7 +217,7 @@
 }
 
 .range-input::-webkit-slider-thumb:hover {
-  background: var(--blue-100);
+  background: var(--metric-stddev);
 }
 
 .range-input::-moz-range-thumb {
@@ -243,7 +243,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
-  background-color: var(--blue-900);
+  background-color: var(--color-info-idle);
   flex-shrink: 0;
 }
 
@@ -363,11 +363,11 @@
 }
 
 .record-button-idle:not(:disabled):hover {
-  background-color: var(--red-600);
+  background-color: var(--metric-median);
 }
 
 .record-button-active {
-  background-color: var(--red-600);
+  background-color: var(--metric-median);
   animation: recording-button-pulse 2s infinite ease-in-out;
 }
 
@@ -378,11 +378,11 @@
 @keyframes recording-button-pulse {
   0%,
   100% {
-    background-color: var(--red-700);
+    background-color: var(--log-critical);
   }
 
   50% {
-    background-color: var(--red-900);
+    background-color: var(--color-danger-muted);
   }
 }
 
@@ -478,7 +478,7 @@
 .playback-slider {
   flex: 1;
   height: 4px;
-  accent-color: var(--blue-100);
+  accent-color: var(--metric-stddev);
   cursor: pointer;
 }
 

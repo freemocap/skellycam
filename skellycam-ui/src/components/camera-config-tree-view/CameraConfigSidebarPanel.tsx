@@ -59,7 +59,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                             {connectedCameras.length > 0 && (
                                 <span
                                     className="text md"
-                                    style={{ color: 'var(--green-400, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    style={{ color: 'var(--color-success, #4ade80)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 >
                                     {/* <span className="icon icon-size-20 streaming-icon" /> */}
                                     {connectedCameras.length} Streaming

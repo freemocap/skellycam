@@ -268,7 +268,7 @@
 .playback-speed-select:focus {
   outline: none;
 
-  border-color: var(--blue-700);
+  border-color: var(--color-info-medium);
 
   box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
 }

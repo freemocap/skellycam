@@ -505,7 +505,7 @@ body,
 
     Recommended:
     --color-link: var(--color-info);
-    --color-link-hover: var(--blue-400);
+    --color-link-hover: var(--metric-min-dark);
 
     --color-scrollbar-thumb: var(--color-border-secondary);
     --color-scrollbar-thumb-hover: var(--color-bg-primary);

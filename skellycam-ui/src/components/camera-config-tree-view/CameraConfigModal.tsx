@@ -58,7 +58,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                         {cameras.length} Cameras
                     </p>
                     {connectedCameras.length > 0 && (
-                        <p className="text md text-nowrap" style={{ color: 'var(--green-400, #4ade80)' }}>
+                        <p className="text md text-nowrap" style={{ color: 'var(--color-success, #4ade80)' }}>
                             {connectedCameras.length} Streaming
                         </p>
                     )}

@@ -132,6 +132,7 @@
   /* Brand / Info */
   --color-info: var(--blue-500);
   --color-info-strong: var(--blue-600);
+  --color-info-medium: var(--blue-700);
   --color-info-muted: var(--blue-800);
   --color-info-idle: var(--blue-900);
   --color-info-surface: var(--blue-500-alpha-10);
@@ -139,6 +140,7 @@
   /* Success */
   --color-success: var(--green-100);
   --color-success-strong: var(--green-200);
+  --color-success: var(--green-400);
   --color-success-muted: var(--green-500);
   --color-success-idle: var(--green-900);
   --color-success-surface: var(--green-100-alpha-20);
@@ -152,6 +154,7 @@
   /* Error / Danger */
   --color-danger: var(--red-500);
   --color-danger-strong: var(--red-700);
+  --color-danger-idle: var(--red-800);
   --color-danger-muted: var(--red-900);
   --color-danger-surface: var(--red-500-alpha-20);
 
@@ -185,6 +188,7 @@
   --metric-max-bg: var(--red-500-alpha-20);
 
   --metric-min: var(--blue-200);
+  --metric-min-dark: var(--blue-300);
   --metric-min-bg: var(--blue-200-alpha-20);
 
   /* ========================================
