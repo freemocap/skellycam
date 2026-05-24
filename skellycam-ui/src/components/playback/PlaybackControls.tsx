@@ -166,58 +166,59 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   return (
     <div className="playback-controls bg-dark br-2 flex flex-row flex-wrap row-reverse justify-center gap-2 p-2">
       {/* Timeline Scrubber */}
-      <div className="playback-timeline-scrubber flex flex-row items-center items-center">
-        <div className="playback-timeline-track flex-1 bg-middark relative">
-          {/* Blue progress bar showing playhead position */}
-          <div
-            className="playback-timeline-progress"
-            style={{
-              width: `${
-                totalFrames > 0 ? (currentFrame / (totalFrames - 1)) * 100 : 0
-              }%`,
-            }}
-          />
+      {/* Timeline Scrubber */}
+<div className="playback-timeline-scrubber flex flex-row items-center">
+  <div className="playback-timeline-track flex-1 bg-middark relative">
+    <input
+      type="range"
+      dir="ltr"
+      className="playback-timeline-input"
+      min={0}
+      max={Math.max(totalFrames - 1, 1)}
+      step={1}
+      value={currentFrame}
+      style={
+        {
+          "--progress-percent": `${
+            totalFrames > 1
+              ? (currentFrame / (totalFrames - 1)) * 100
+              : 0
+          }%`,
+        } as React.CSSProperties
+      }
+      onChange={(e) => onSeekDrag(Number(e.target.value))}
+      onMouseUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
+      onTouchEnd={(e) => onSeekCommit(Number(e.currentTarget.value))}
+    />
 
-          <input
-            type="range"
-            dir="ltr"
-            className="playback-timeline-input"
-            min={0}
-            max={Math.max(totalFrames - 1, 1)}
-            step={1}
-            value={currentFrame}
-            onChange={(e) => onSeekDrag(Number(e.target.value))}
-            onMouseUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
-            onTouchEnd={(e) => onSeekCommit(Number(e.currentTarget.value))}
-          />
+    <div className="playback-timeline-frame-counter pos-abs z-2 text-white gap-3 flex flex-row items-center">
+      Frame {currentFrame} / {totalFrames}
 
-          <div className="playback-timeline-frame-counter pos-abs z-2 text-white gap-3 flex flex-row items-center">
-            Frame {currentFrame} / {totalFrames}
-                    {/* Recording FPS Badge */}
-        {recordingFps != null && recordingFps > 0 && (
-          <span className="" title={t("recordingCaptureFps")}>
-            · Rec: {recordingFps} fps
-          </span>
-        )}
-          </div>
-          <span
-            className="playback-timeline-start-time pos-abs z-2 text-white"
-            title={t("estimatedTime")}
-          >
-            {formatTimestamp(currentTime, fps, settings.timestampFormat)}
-          </span>
-          <span
-            className="playback-timeline-end-time pos-abs z-2 text-white"
-            title={t("estimatedDuration")}
-          >
-            {formatTimestamp(duration, fps, settings.timestampFormat)}
-          </span>
-        </div>
-      </div>
+      {recordingFps != null && recordingFps > 0 && (
+        <span title={t("recordingCaptureFps")}>
+          · Rec: {recordingFps} fps
+        </span>
+      )}
+    </div>
+
+    <span
+      className="playback-timeline-start-time pos-abs z-2 text-white"
+      title={t("estimatedTime")}
+    >
+      {formatTimestamp(currentTime, fps, settings.timestampFormat)}
+    </span>
+
+    <span
+      className="playback-timeline-end-time pos-abs z-2 text-white"
+      title={t("estimatedDuration")}
+    >
+      {formatTimestamp(duration, fps, settings.timestampFormat)}
+    </span>
+  </div>
+</div>
 
       {/* Transport Controls Row */}
       <div className="flex items-center justify-center controls-group-section gap-2 flex-wrap">
-
         {/* Loop & Speed Group */}
         <div className="playback-controls-group-loop-speed flex bg-middark br-2 flex-row p-1 gap-1">
           <IconButton
@@ -325,8 +326,6 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             tooltipPosition="pos-top"
           />
         </div>
-
-        
 
         {/* Info & Settings Group */}
         <div className="playback-controls-group-info-settings flex items-center gap-1 flow-row p-1 bg-middark br-2">

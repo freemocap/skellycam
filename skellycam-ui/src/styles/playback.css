@@ -4,165 +4,217 @@
 
 /* Timeline Scrubber Container */
 .playback-timeline-scrubber {
-
-  min-height: 33px;
-
+  min-height: 36px;
+  width: 100%;
 }
 
-/* Timeline Start Time - positioned inside left */
-.playback-timeline-start-time {
-  font-family: 'Courier New', monospace;
-  left: 10px;
-  white-space: nowrap;
-  min-width: 48px;
-  text-align: left;
-  z-index: 2;
-  top: 50%;
+/* =========================================
+   TIMELINE TRACK
+========================================= */
 
-  mix-blend-mode: hard-light;
-  
-   font-weight: 600;
-  transform: translateY(-50%);
-}
-
-/* Timeline End Time - positioned inside right */
-.playback-timeline-end-time {
-  font-family: 'Courier New', monospace;
-  right: 10px;
-  white-space: nowrap;
-  min-width: 48px;
-
-   font-weight: 600;
-
-  text-align: right;
-   font-weight: 600;
-  mix-blend-mode: hard-light;
-
-    top: 50%;
-  transform: translateY(-50%);
-}
-/* Frame Counter - centered always */
-.playback-timeline-frame-counter {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
- 
-  white-space: nowrap;
-
-  mix-blend-mode: hard-light;
-
-  pointer-events: none;
-
-}
-
-/* Timeline Track (progress bar container) */
 .playback-timeline-track {
   position: relative;
+
   flex: 1;
-  height: 33px;
-  min-height: 33px;
+
+  height: 36px;
+  min-height: 36px;
+
   background-color: var(--gray-700);
-  border-radius: 4px;
+
+  border-radius: 8px;
+
   overflow: hidden;
+
   cursor: pointer;
+
+  contain: layout paint;
 }
 
-/* Timeline Progress Bar (blue line showing playhead progress) */
-.playback-timeline-progress {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  min-height: 33px;
-  background-color: var(--blue-700);
-  border-radius: 4px;
-  transition: width 0.05s linear;
-  pointer-events: none;
-  z-index: 1;
-}
+/* =========================================
+   RANGE INPUT
+========================================= */
 
-/* Timeline Input Range */
 .playback-timeline-input {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+
   width: 100%;
   height: 100%;
+
   margin: 0;
   padding: 0;
-  cursor: pointer;
-  -webkit-appearance: none;
+
   appearance: none;
-  background: transparent;
+  -webkit-appearance: none;
+
   border: none;
-  z-index: 3;
+  border-radius: inherit;
+
+  cursor: pointer;
+
+  background:
+    linear-gradient(
+      to right,
+      #3b82f6 0%,
+      #3b82f6 var(--progress-percent),
+      #3a3a3a var(--progress-percent),
+      #3a3a3a 100%
+    );
 }
+
+/* =========================================
+   CHROME / SAFARI TRACK
+========================================= */
+
+.playback-timeline-input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+  border-radius: inherit;
+}
+
+/* =========================================
+   CHROME / SAFARI THUMB
+========================================= */
 
 .playback-timeline-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
+
   width: 4px;
-  height: 33px;
-  background-color: white;
-  border: none;
+  height: 18px;
+
+  margin-top: 9px;
+
   border-radius: 2px;
+  border: none;
+
+  background: white;
+
   cursor: pointer;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+
+  transition:
+    height 0.12s ease,
+    margin-top 0.12s ease,
+    border-radius 0.12s ease;
 }
+
+/* Hover / active state */
+.playback-timeline-input:hover::-webkit-slider-thumb,
+.playback-timeline-input:active::-webkit-slider-thumb {
+  height: 40px;
+
+  margin-top: -2px;
+
+  border-radius: 999px;
+}
+
+/* =========================================
+   FIREFOX TRACK
+========================================= */
+
+.playback-timeline-input::-moz-range-track {
+  height: 100%;
+  background: transparent;
+  border-radius: inherit;
+}
+
+/* =========================================
+   FIREFOX THUMB
+========================================= */
 
 .playback-timeline-input::-moz-range-thumb {
   width: 4px;
-  height: 33px;
-  background-color: white;
-  border: none;
+  height: 18px;
+
   border-radius: 2px;
-  cursor: pointer;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-}
-
-.playback-timeline-input::-moz-range-track {
-  background: transparent;
   border: none;
+
+  background: white;
+
+  cursor: pointer;
+
+  transition:
+    height 0.12s ease,
+    border-radius 0.12s ease;
 }
 
-.playback-timeline-input::-moz-range-progress {
-  background: transparent;
-  height: 100%;
-}
-
-/* Hover state for playhead */
-.playback-timeline-track:hover .playback-timeline-input::-webkit-slider-thumb {
-  /* box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); */
-  width: 6px;
-  transition: all 0.2s ease;
-}
-
-.playback-timeline-track:hover .playback-timeline-input::-moz-range-thumb {
-  /* box-shadow: 0 0 8px rgba(255, 255, 255, 0.7); */
-  width: 6px;
-  transition: all 0.2s ease;
-}
-
-/* Active state for playhead */
-.playback-timeline-input:active::-webkit-slider-thumb {
-  /* box-shadow: 0 0 12px rgba(255, 255, 255, 1); */
-  width: 8px;
-}
-
+/* Hover / active state */
+.playback-timeline-input:hover::-moz-range-thumb,
 .playback-timeline-input:active::-moz-range-thumb {
-  /* box-shadow: 0 0 12px rgba(255, 255, 255, 1); */
-  width: 8px;
+  height: 40px;
+
+  border-radius: 999px;
+}
+
+/* =========================================
+   TIMELINE TEXT OVERLAYS
+========================================= */
+
+.playback-timeline-start-time,
+.playback-timeline-end-time,
+.playback-timeline-frame-counter {
+  position: absolute;
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  z-index: 2;
+
+  pointer-events: none;
+
+  user-select: none;
+
+  white-space: nowrap;
+
+  font-family: "Courier New", monospace;
+
+  font-weight: 600;
+
+  color: white;
+}
+
+/* Left timestamp */
+.playback-timeline-start-time {
+  left: 10px;
+
+  text-align: left;
+
+  min-width: 48px;
+}
+
+/* Right timestamp */
+.playback-timeline-end-time {
+  right: 10px;
+
+  text-align: right;
+
+  min-width: 48px;
+}
+
+/* Center frame counter */
+.playback-timeline-frame-counter {
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 /* =========================================
    PLAYBACK CONTROLS GROUPS
 ========================================= */
 
+/* Play button special styling */
+.playback-btn-play,
+.playback-btn-play.playing {
+  min-width: 60px;
 
+  background-color: var(--gray-600);
+}
 
 /* =========================================
    PLAYBACK SPEED SELECT
@@ -170,26 +222,39 @@
 
 .playback-speed-select {
   min-width: 50px;
+
   height: 28px;
+
   padding: 4px 8px;
+
   background-color: var(--gray-700);
+
   color: var(--gray-100);
+
   border: 1px solid var(--gray-600);
+
   border-radius: 3px;
+
   font-size: 0.85rem;
+
   font-weight: 500;
+
   cursor: pointer;
+
   transition: all 0.15s ease;
 }
 
 .playback-speed-select:hover {
   background-color: var(--gray-600);
+
   border-color: var(--gray-500);
 }
 
 .playback-speed-select:focus {
   outline: none;
+
   border-color: var(--blue-700);
+
   box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
 }
 
@@ -198,50 +263,39 @@
 }
 
 /* =========================================
-   PLAYBACK BUTTONS (using IconButton)
-========================================= */
-
-
-/* Play button special styling */
-.playback-btn-play,
-.playback-btn-play.playing {
-
-  min-width: 60px;
-  background-color: var(--gray-600);
-}
-
-
-/* =========================================
-   PLAYBACK FPS BADGE
-========================================= */
-
-
-/* =========================================
    PLAYBACK SYNC INFO PANEL
 ========================================= */
 
 .playback-sync-info {
   padding: 8px;
+
   background-color: var(--gray-700);
+
   border: 1px solid var(--gray-600);
+
   border-radius: 4px;
+
   animation: slideDown 0.2s ease;
 }
 
 .playback-sync-title {
   color: var(--gray-300);
+
   font-weight: 500;
+
   margin-bottom: 4px;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
+
     transform: translateY(-8px);
   }
 
   to {
     opacity: 1;
+
     transform: translateY(0);
   }
 }
@@ -251,7 +305,9 @@
 ========================================= */
 
 .playback-settings-popup {
-  animation: fadeIn 0.15s ease, scaleIn 0.2s ease;
+  animation:
+    fadeIn 0.15s ease,
+    scaleIn 0.2s ease;
 }
 
 @keyframes fadeIn {
@@ -273,4 +329,3 @@
     transform: scale(1);
   }
 }
-
