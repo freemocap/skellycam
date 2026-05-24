@@ -773,6 +773,18 @@ animation: fadeIn, scaleIn;
   filter: brightness(2);
 }
 
+.input-with-unit, .input-with-string
+ {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--gray-600);
+    border-radius: 4px;
+    padding: 4px 8px;
+    height: 28px;
+    width: 77px;
+    transition: border var(--speed-2);
+}
+
 .input-with-unit.tooltip:has(input.input-field:hover) {
   border-color: var(--gray-400);
   transition: border var(--speed-2);

@@ -54,7 +54,7 @@ const InputWithUnit: React.FC<InputWithUnitProps> = ({
         onFocus={(e) => e.target.select()}
         onKeyDown={handleKeyDown} // ✅ handle Enter
         placeholder={placeholder}
-        className={`input-field text md text-center p-2 br-1 ${inputClassName}`}
+        className={`input-field text md text-center ${inputClassName}`}
       />
       {unit && (
         <span className={`unit-label text md${unitClassName}`}>{unit}</span>
@@ -126,7 +126,7 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="value-selector br-1 border-1 border-mid-black pos-rel inline-block">
+    <div ref={containerRef} className="value-selector pos-rel inline-block">
       {/* Trigger Button */}
       <button
         ref={buttonRef}
