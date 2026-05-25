@@ -18,7 +18,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use crate::camera::{CameraIdentity, MultiFramePayload};
+use crate::camera::{CameraIdentity, FrameLifecycleTimestamps, MultiFramePayload};
 use crate::camera_group::frontend_encoder::encode_multiframe;
 use crate::camera_group::jpeg_transform::rotate_jpeg_lossless;
 use crate::camera_group::recording_stats::RecordingStats;
@@ -58,6 +58,12 @@ pub struct RawFrame {
     pub width: u32,
     pub height: u32,
     pub jpeg_bytes: Arc<[u8]>,
+    /// Monotonic frame number — all cameras in the same multiframe share this.
+    pub frame_number: i64,
+    /// Per-frame lifecycle timestamps (loop_start, frame_available,
+    /// post_jpeg_extract, pre_send, gatherer_received). All in nanoseconds
+    /// since T=0 (process start).
+    pub timestamps: FrameLifecycleTimestamps,
 }
 
 // ── Dispatcher spawn ────────────────────────────────────────────────────────
@@ -282,6 +288,8 @@ pub fn spawn_dispatcher(
                                     width: f.width,
                                     height: f.height,
                                     jpeg_bytes: Arc::clone(arc),
+                                    frame_number: f.frame_number,
+                                    timestamps: f.timestamps.clone(),
                                 })
                                 .collect(),
                         );
