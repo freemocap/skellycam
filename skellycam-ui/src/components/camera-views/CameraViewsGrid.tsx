@@ -11,6 +11,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectConnectedCameras } from "@/store/slices/cameras/cameras-selectors";
 import { camerasConnectOrUpdate } from "@/store/slices/cameras/cameras-thunks";
 import CameraEmptyState from "@/components/ui-components/camerasEmptyState";
+import { useRecordingGuard } from "@/components/RecordingGuardProvider";
 
 const GRID_COLS = 12;
 const MARGIN: [number, number] = [4, 4];
@@ -54,13 +55,16 @@ interface CameraViewsGridProps {
 export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns, resetKey }) => {
     const { connectedCameraIds } = useServer();
     const dispatch = useAppDispatch();
+    const { requestGuardedAction } = useRecordingGuard();
     const [isConnecting, setIsConnecting] = useState(false);
 
-    const handleConnect = async () => {
-        setIsConnecting(true);
-        try { await dispatch(camerasConnectOrUpdate()).unwrap(); }
-        catch { /* error handled by store */ }
-        finally { setIsConnecting(false); }
+    const handleConnect = () => {
+        requestGuardedAction('Update Camera Config', async () => {
+            setIsConnecting(true);
+            try { await dispatch(camerasConnectOrUpdate()).unwrap(); }
+            catch { /* error handled by store */ }
+            finally { setIsConnecting(false); }
+        });
     };
     const { t } = useTranslation();
     const isRecording = useAppSelector(state => state.recording.isRecording);

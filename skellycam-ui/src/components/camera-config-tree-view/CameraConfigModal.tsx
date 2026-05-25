@@ -5,6 +5,7 @@ import { savedSettingsCleared } from '@/store/slices/cameras/cameras-slice';
 import { CameraTreeItem } from './CameraTreeItem';
 import { NoCamerasPlaceholder } from './NoCamerasPlaceholder';
 import { useServer } from '@/services/server/ServerContextProvider';
+import { useRecordingGuard } from '@/components/RecordingGuardProvider';
 
 interface CameraConfigModalProps {
     open: boolean;
@@ -14,6 +15,7 @@ interface CameraConfigModalProps {
 export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onClose }) => {
     const dispatch = useAppDispatch();
     const { isConnected } = useServer();
+    const { requestGuardedAction } = useRecordingGuard();
     const cameras = useAppSelector(selectCameras);
     const connectedCameras = useAppSelector(selectConnectedCameras);
     const isLoading = useAppSelector(selectIsLoading);
@@ -32,8 +34,8 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
     }, [open, isConnected, cameras.length, dispatch]);
 
     const handleUpdate = useCallback(() => {
-        dispatch(camerasConnectOrUpdate());
-    }, [dispatch]);
+        requestGuardedAction('Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
+    }, [dispatch, requestGuardedAction]);
 
     const handleDetect = useCallback(() => {
         dispatch(detectCameras({ filterVirtual: true }));
@@ -68,7 +70,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
 
                     <div className="flex-1" />
 
-                    <button className="button icon-button" onClick={() => dispatch(savedSettingsCleared())} title="Reset all cameras to default settings">
+                    <button className="button icon-button" onClick={() => requestGuardedAction('Clear Camera Settings', () => dispatch(savedSettingsCleared()))} title="Reset all cameras to default settings">
                         <span className="icon icon-size-20 clear-icon" />
                     </button>
 

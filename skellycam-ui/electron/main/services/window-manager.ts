@@ -1,5 +1,5 @@
 // electron/main/services/window-manager.ts
-import { BrowserWindow, shell } from 'electron';
+import { BrowserWindow, ipcMain, shell } from 'electron';
 import { LifecycleLogger } from './logger';
 import { APP_ENVIRONMENT } from '../index';
 import {APP_PATHS} from "../app-paths";
@@ -45,6 +45,20 @@ export class WindowManager {
 
     private static configureWindowHandlers(window: BrowserWindow): void {
         console.log('Configuring window handlers');
+
+        // Guard recording sessions against accidental close/quit
+        let closeConfirmed = false;
+        window.on('close', (event) => {
+            if (closeConfirmed) return;
+            event.preventDefault();
+            window.webContents.send('request-close-confirmation');
+            ipcMain.once('close-confirmation-result', (_e, confirmed: boolean) => {
+                if (confirmed) {
+                    closeConfirmed = true;
+                    window.close();
+                }
+            });
+        });
 
         window.on('closed', () => {
             console.log('Window closed');

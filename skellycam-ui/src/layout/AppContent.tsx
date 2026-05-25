@@ -7,6 +7,7 @@ import {AutoUpdateProvider} from "@/hooks/AutoUpdateContext";
 import {useTranslation} from "react-i18next";
 import {getLocaleDirection} from "@/i18n";
 import {WelcomeModal} from "@/components/ui-components/WelcomeModal";
+import {RecordingGuardProvider} from "@/components/RecordingGuardProvider";
 
 export const AppContent = function () {
     const {i18n} = useTranslation();
@@ -21,11 +22,13 @@ export const AppContent = function () {
     return (
         <HashRouter>
             <AutoUpdateProvider>
-                <BasePanelLayout welcomeOpen={welcomeOpen}>
-                    <MainTabPanel/>
-                </BasePanelLayout>
-                <UpdateBanner/>
-                <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
+                <RecordingGuardProvider>
+                    <BasePanelLayout welcomeOpen={welcomeOpen}>
+                        <MainTabPanel/>
+                    </BasePanelLayout>
+                    <UpdateBanner/>
+                    <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
+                </RecordingGuardProvider>
             </AutoUpdateProvider>
         </HashRouter>
     );

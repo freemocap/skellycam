@@ -9,6 +9,7 @@ import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import IconButton from "@/components/ui-components/IconButton";
+import { useRecordingGuard } from '@/components/RecordingGuardProvider';
 
 
 export const CameraConfigSidebarPanel: React.FC = () => {
@@ -16,6 +17,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     const dispatch = useAppDispatch();
     const { isConnected } = useServer();
     const { t } = useTranslation();
+    const { requestGuardedAction } = useRecordingGuard();
     const cameras = useAppSelector(selectCameras);
     const connectedCameras = useAppSelector(selectConnectedCameras);
     const isLoading = useAppSelector(selectIsLoading);
@@ -34,17 +36,19 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     }, [isStoppingCameras, connectedCameras.length]);
 
     const handleUpdate = useCallback(() => {
-        dispatch(camerasConnectOrUpdate());
-    }, [dispatch]);
+        requestGuardedAction('Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
+    }, [dispatch, requestGuardedAction]);
 
     const handleDetect = useCallback(() => {
         dispatch(detectCameras({ filterVirtual: true }));
     }, [dispatch]);
 
     const handleStop = useCallback(() => {
-        setIsStoppingCameras(true);
-        dispatch(closeCameras());
-    }, [dispatch]);
+        requestGuardedAction('Stop Recording & Close Cameras', () => {
+            setIsStoppingCameras(true);
+            dispatch(closeCameras());
+        });
+    }, [dispatch, requestGuardedAction]);
 
     return (
         <div className="camera-config-sidebar-panel flex flex-col flex-1 bg-middark br-2 p-1 min-h-0">
@@ -96,7 +100,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                             <>
                                 <IconButton
                                     icon={isPaused ? 'play-icon' : 'pause-icon'}
-                                    onClick={() => dispatch(pauseUnpauseCameras())}
+                                    onClick={() => requestGuardedAction('Pause/Unpause Cameras', () => dispatch(pauseUnpauseCameras()))}
                                     tooltip={true}
                                     tooltipText={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
                                     tooltipPosition="pos-bottom"

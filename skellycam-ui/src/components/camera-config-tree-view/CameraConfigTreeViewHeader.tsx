@@ -11,6 +11,7 @@ import {
 } from "@/store/slices/cameras/cameras-thunks";
 import { savedSettingsCleared } from "@/store/slices/cameras/cameras-slice";
 import { useTranslation } from 'react-i18next';
+import { useRecordingGuard } from '@/components/RecordingGuardProvider';
 
 interface CameraConfigTreeViewHeaderProps {
     cameraCount: number;
@@ -24,6 +25,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
 }) => {
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
+    const { requestGuardedAction } = useRecordingGuard();
     const [isActionInProgress, setIsActionInProgress] = React.useState(false);
 
     const wrap = (fn: () => Promise<any>) => () => {
@@ -44,21 +46,21 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                     iconClass="stream-icon"
                     textColor="text-white"
                     title={t("connectCameras")}
-                    onClick={wrap(() => dispatch(camerasConnectOrUpdate()).unwrap())}
+                    onClick={() => requestGuardedAction('Update Camera Config', wrap(() => dispatch(camerasConnectOrUpdate()).unwrap()))}
                 />
                 <ButtonSm
                     text=""
                     iconClass={isPaused ? "stream-icon" : "record-icon"}
                     textColor="text-white"
                     title={isPaused ? t("resumeStreaming") : t("pauseStreaming")}
-                    onClick={wrap(() => dispatch(pauseUnpauseCameras()).unwrap())}
+                    onClick={() => requestGuardedAction('Pause/Unpause Cameras', wrap(() => dispatch(pauseUnpauseCameras()).unwrap()))}
                 />
                 <ButtonSm
                     text=""
                     iconClass="close-icon"
                     textColor="text-white"
                     title={t("closeAllCameras")}
-                    onClick={wrap(() => dispatch(closeCameras()).unwrap())}
+                    onClick={() => requestGuardedAction('Stop Recording & Close Cameras', wrap(() => dispatch(closeCameras()).unwrap()))}
                 />
                 <ButtonSm
                     text=""
@@ -72,7 +74,7 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                     iconClass="minus-icon"
                     textColor="text-white"
                     title={t("clearCameraSettings")}
-                    onClick={() => dispatch(savedSettingsCleared())}
+                    onClick={() => requestGuardedAction('Clear Camera Settings', () => dispatch(savedSettingsCleared()))}
                 />
             </div>
         </div>

@@ -195,8 +195,6 @@ function buildViewMenu(t: MenuLabels): MenuItemConstructorOptions {
                 click: () => sendMenuAction('toggle-fullscreen'),
             },
             { type: 'separator' },
-            { role: 'reload' },
-            { role: 'forceReload' },
             { role: 'toggleDevTools' },
             { type: 'separator' },
             { role: 'resetZoom' },

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from "react-i18next";
 import { useElectronIPC } from '@/services';
+import { useRecordingGuard } from '@/components/RecordingGuardProvider';
 import { DEFAULT_HOST, DEFAULT_PORT } from '@/services/server/server-helpers/server-urls';
 import DropdownButton from './ui-components/DropdownButton';
 import ToggleButtonComponent from './ui-components/ToggleButtonComponent';
@@ -54,6 +55,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
     const { isConnected, connect, disconnect, connectedCameraIds, updateServerConnection } = useServer();
     const { t } = useTranslation();
     const { isElectron, api } = useElectronIPC();
+    const { requestGuardedAction } = useRecordingGuard();
 
     // Persisted UI state
     const [selectedExePath, setSelectedExePath] = useState(() => loadFromStorage(STORAGE_KEYS.SELECTED_EXE_PATH, ''));
@@ -259,8 +261,8 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
 
     const handleToggleAutoConnectWs = useCallback((newState: boolean) => {
         setAutoConnectWs(newState);
-        if (!newState) disconnect();
-    }, [disconnect]);
+        if (!newState) requestGuardedAction('Stop Recording & Disconnect', () => disconnect());
+    }, [disconnect, requestGuardedAction]);
 
     const handleToggleWsConnected = useCallback(() => {
         if (isConnected) {
@@ -380,7 +382,7 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
                                             {...toggleConfig}
                                             textColor="text-white"
                                             onConnect={() => { setAutoConnectWs(true); connect(); }}
-                                            onDisconnect={() => { setAutoConnectWs(false); disconnect(); }}
+                                            onDisconnect={() => requestGuardedAction('Stop Recording & Disconnect', () => { setAutoConnectWs(false); disconnect(); })}
                                         />
                                     </div>
                         </div>

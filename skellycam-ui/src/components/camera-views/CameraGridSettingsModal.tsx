@@ -10,6 +10,7 @@ import NameDropdownSelector from '@/components/ui-components/NameDropdownSelecto
 import SegmentedControl from '@/components/ui-components/SegmentedControl';
 import ValueSelector from '@/components/ui-components/ValueSelector';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
+import { useRecordingGuard } from '@/components/RecordingGuardProvider';
 
 interface CameraGridSettingsModalProps {
     camera: Camera;
@@ -58,6 +59,7 @@ const Row:React.FC<{ label: string; indent?: boolean; children: React.ReactNode 
 export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = ({ camera, initialPos, onClose }) => {
     const dispatch = useAppDispatch();
     const allCameras = useAppSelector(selectCameras);
+    const { requestGuardedAction } = useRecordingGuard();
     const otherCamerasCount = allCameras.length - 1;
     const [pos, setPos] = useState(initialPos);
     const dragRef = useRef<{ startX: number; startY: number; startTop: number; startLeft: number } | null>(null);
@@ -221,14 +223,14 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
             <button
               className="button sm br-1 flex-1"
               style={{ background: 'var(--color-text-primary)', color: 'var(--color-bg-primary)' }}
-              onClick={() => dispatch(camerasConnectOrUpdate())}
+              onClick={() => requestGuardedAction('Update Camera Config', () => dispatch(camerasConnectOrUpdate()))}
               title="Update camera settings"
             >
               <p className="text md" style={{ color: 'var(--color-bg-primary)' }}>Update Settings</p>
             </button>
                  <button
               className="icon-button gap-1 br-1 button sm fit-content flex-inline text-left items-center"
-              onClick={() => dispatch(savedSettingsCleared())}
+              onClick={() => requestGuardedAction('Clear Camera Settings', () => dispatch(savedSettingsCleared()))}
               title="Reset all cameras to default settings"
             >
               <span className="icon icon-size-20 clear-icon"></span>
