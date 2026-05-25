@@ -201,7 +201,7 @@ export const RecordingInfoPanel: React.FC = () => {
                     onClick={handleRecordButtonClick}
                 />
             </div>
-
+                    
             {/* Microphone */}
             <MicrophoneSelector
                 selectedMicIndex={micDeviceIndex}

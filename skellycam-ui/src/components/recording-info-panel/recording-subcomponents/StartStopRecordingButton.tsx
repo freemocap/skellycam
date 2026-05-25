@@ -44,8 +44,8 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
     return (
         <button
             className={clsx(
-                "record-button text-nowrap flex flex-row flex-1 gap-1 br-1 button sm min-w-fit-content flex-inline text-left items-center full-width primary justify-center",
-                isRecording ? "record-button-active" : isPending ? "record-button-pending" : "record-button-idle",
+                "accent text-nowrap flex flex-row flex-1 gap-1 br-1 button sm min-w-fit-content flex-inline text-left items-center full-width primary justify-center",
+                isRecording ? "record-button-active" : isPending ? "record-button-pending" : "accent",
             )}
             onClick={onClick}
             disabled={isDisabled}

@@ -591,7 +591,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     }
 
     return (
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col h-full w-full gap-1">
             {/* Video grid */}
             <div
                 ref={gridContainerRef}
@@ -693,7 +693,7 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
             </div>
 
             {!allReady && videos.length > 0 && (
-                <div className="text-center p-1" style={{ backgroundColor: 'var(--warning-500)', color: '#fff' }}>
+                <div className="text-center p-1" style={{ backgroundColor: 'var(--color-warning)', color: '#fff' }}>
                     <p className="text sm">{t('loadingVideos', { ready: videosReady, total: videos.length })}</p>
                 </div>
             )}

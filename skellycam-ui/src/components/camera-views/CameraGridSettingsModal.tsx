@@ -128,7 +128,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
           {/* Header */}
           <div
             className="subaction-header-container justify-content-space-between gap-1 br-1 flex justify-between items-center h-25 p-1"
-            // style={{ borderBottom: "1px solid var(--gray-700)" }}
+            // style={{ borderBottom: "1px solid var(--color-text-muted)" }}
           >
             <p className="text-nowrap text-left bg-md text-darkgray">Camera settings</p>
             <div className='flex flex-row gap-1'>
@@ -161,7 +161,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
                 handleConfigChange({ rotation: Number(v) as RotationValue })
               }
               size="sm"
-              className="segmented-control-sm"
+              className="segmented-control-sm bg-darkgray"
             />
           </Row>
 
@@ -220,11 +220,11 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
           <div className="flex flex-row gap-1 pt-1">
             <button
               className="button sm br-1 flex-1"
-              style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}
+              style={{ background: 'var(--color-text-primary)', color: 'var(--color-bg-primary)' }}
               onClick={() => dispatch(camerasConnectOrUpdate())}
               title="Update camera settings"
             >
-              <p className="text md" style={{ color: 'var(--gray-900)' }}>Update Settings</p>
+              <p className="text md" style={{ color: 'var(--color-bg-primary)' }}>Update Settings</p>
             </button>
                  <button
               className="icon-button gap-1 br-1 button sm fit-content flex-inline text-left items-center"

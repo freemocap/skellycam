@@ -70,7 +70,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
         <div className="camera-item-row br-1 flex flex-col gap-1 m-1"
         >
             {/* Row 1 — selection, name, settings */}
-            <div className="camera-row-group flex flex-row gap-1 items-center">
+            <div className="camera-row-group flex flex-row gap-0 items-center">
                 {/* Left group — checkbox */}
                 <div className="flex flex-row checkbox-group">
                     <DesignerCheckbox
@@ -99,7 +99,7 @@ export const CameraTreeItem: React.FC<CameraTreeItemProps> = ({ camera }) => {
 
                         <button
                             ref={settingsBtnRef}
-                            className={clsx("pos-abs top-0 right-0 button icon-button", settingsOpen && "activated")}
+                            className={clsx("pos-abs top-50 right-0 button icon-button", settingsOpen && "activated")}
                             onClick={e => {
                                 e.stopPropagation();
                                 handleOpenSettings(e);

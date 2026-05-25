@@ -116,7 +116,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
                 style={{
                   width: "4px",
                   cursor: "col-resize",
-                  backgroundColor: "var(--gray-600)",
+                  backgroundColor: "var(--color-surface-active)",
                 }}
               />
               <Panel className="right-side-panel" defaultSize={60} minSize={10}>
@@ -130,7 +130,7 @@ export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
             style={{
               height: "4px",
               cursor: "row-resize",
-              backgroundColor: "var(--gray-600)",
+              backgroundColor: "var(--color-surface-active)",
             }}
           />
 

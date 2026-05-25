@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import ToggleComponent from './ui-components/ToggleComponent';
 import NameDropdownSelector from './ui-components/NameDropdownSelector';
 import SubactionHeader from './ui-components/SubactionHeader';
-import useDraggableTooltips from '@/hooks/useDraggableTooltips';
 import type { ExecutableCandidate } from './ServerConnectionStatus';
 import IconButton from './ui-components/iconButton';
+import ButtonSm from './ui-components/ButtonSm';
 
 interface ConnectionSettingsModalProps {
     open: boolean;
@@ -56,8 +56,6 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
 
     const { t } = useTranslation();
 
-    useDraggableTooltips();
-
     // Close on Escape key
     useEffect(() => {
         if (!open) return;
@@ -94,7 +92,7 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
             onClick={onClose}
         >
             <div
-                className="draggable bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-2"
+                className="bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-2 gap-2"
                 style={{ minWidth: 320, maxWidth: 420, maxHeight: '80vh', overflowY: 'auto' }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -142,47 +140,44 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
 
                         {/* Browse + Refresh */}
                         <div className="flex gap-1">
-                            <button
-                                className="button icon-button br-1 border-1 border-black"
+                            <IconButton
+                                icon="import-icon"
                                 onClick={browseForExecutable}
                                 disabled={serverRunning || serverLoading}
                                 title={t('browseForExecutable')}
-                            >
-                                <span className="icon import-icon icon-size-20" />
-                            </button>
-                            <button
-                                className="button icon-button br-1 border-1 border-black"
+                            />
+                            <IconButton
+                                icon="rotate-icon"
                                 onClick={refreshCandidates}
                                 disabled={serverRunning || candidatesLoading}
                                 title={t('refreshCandidates')}
-                            >
-                                <span className={`icon rotate-icon icon-size-20 ${candidatesLoading ? 'loader-icon' : ''}`} />
-                            </button>
+                                className={candidatesLoading ? 'loader-icon' : ''}
+                            />
                         </div>
 
                         {/* Launch / Stop / Reset */}
                         <div className="flex gap-1">
-                            <button
-                                className="button sm br-1 flex-1 justify-center primary"
+                            <ButtonSm
+                                text="Launch"
                                 onClick={() => startServer()}
                                 disabled={serverRunning || serverLoading}
-                            >
-                                <p className="text md text-white">Launch</p>
-                            </button>
-                            <button
-                                className="button sm br-1 flex-1 justify-center secondary"
+                                className="flex-1 justify-center primary"
+                                title={t('Launch')}
+                            />
+                            <ButtonSm
+                                text="Stop"
                                 onClick={() => stopServer()}
                                 disabled={!serverRunning || serverLoading}
-                            >
-                                <p className="text md">Stop</p>
-                            </button>
-                            <button
-                                className="button sm br-1 flex-1 justify-center"
+                                className="flex-1 justify-center secondary"
+                                title={t('Stop')}
+                            />
+                            <ButtonSm
+                                text="Reset"
                                 onClick={() => resetServer()}
                                 disabled={!serverRunning || serverLoading}
-                            >
-                                <p className="text md">Reset</p>
-                            </button>
+                                className="flex-1 justify-center"
+                                title={t('Reset')}
+                            />
                         </div>
 
                         {/* Running path */}
@@ -251,14 +246,12 @@ export const ConnectionSettingsModal: React.FC<ConnectionSettingsModalProps> = (
                                     : autoConnectWs ? t('connecting') : t('disconnected')}
                             </p>
                         </div>
-                        <button
-                            className={`button sm br-1 ${isConnected ? 'secondary' : 'primary'}`}
+                        <ButtonSm
+                            text={isConnected ? t('disconnect') : t('connect')}
                             onClick={handleToggleWsConnected}
-                        >
-                            <p className="text md text-white">
-                                {isConnected ? t('disconnect') : t('connect')}
-                            </p>
-                        </button>
+                            className={isConnected ? 'secondary' : 'primary'}
+                            title={isConnected ? t('disconnect') : t('connect')}
+                        />
                     </div>
                 </div>
 

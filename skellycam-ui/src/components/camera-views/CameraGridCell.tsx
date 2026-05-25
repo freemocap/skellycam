@@ -7,6 +7,7 @@ import { selectCameraById } from '@/store/slices/cameras/cameras-selectors';
 import { CameraView } from './CameraView';
 import { CameraGridSettingsModal } from './CameraGridSettingsModal';
 import Checkbox from '@/components/ui-components/Checkbox';
+import IconButton from '@/components/ui-components/IconButton';
 
 interface CameraGridCellProps {
     cameraId: string;
@@ -21,8 +22,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
 
     if (!camera) return <CameraView cameraId={cameraId} />;
 
-    const handleOpenSettings = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleOpenSettings = () => {
         if (!settingsOpen && settingsBtnRef.current) {
             const rect = settingsBtnRef.current.getBoundingClientRect();
             setModalPos({
@@ -38,7 +38,7 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
             <CameraView cameraId={cameraId} />
 
             {/* Overlay header — fades in on hover */}
-            <div className="camera-cell-overlay">
+            <div className="camera-cell-overlay p-1">
                 <Checkbox
                     label=""
                     checked={camera.selected}
@@ -50,15 +50,18 @@ export const CameraGridCell: React.FC<CameraGridCellProps> = ({ cameraId }) => {
 
                 <div className="flex-1" />
 
-                <button
+                <IconButton
                     ref={settingsBtnRef}
-                    className={clsx('button icon-button camera-cell-toggle', settingsOpen && 'activated')}
+                    icon={settingsOpen ? 'close-icon' : 'settings-icon'}
                     onClick={handleOpenSettings}
-                    onMouseDown={e => e.stopPropagation()}
-                    title="Camera settings"
-                >
-                    <span className={clsx('icon icon-size-20', settingsOpen ? 'close-icon' : 'settings-icon')} />
-                </button>
+                    className={clsx('icon-size-28', settingsOpen && 'activated')}
+
+                    tooltip={true}
+                    tooltipText="Camera settings"
+                    tooltipPosition="pos-left"
+
+                    onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+                />
             </div>
 
             {/* Portal — renders outside the transformed grid cell */}

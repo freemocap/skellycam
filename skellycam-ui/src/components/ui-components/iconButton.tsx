@@ -79,6 +79,7 @@ type TooltipPosition =
 interface IconButtonProps {
   icon: string;
   onClick?: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
   disabled?: boolean;
   title?: string;
   className?: string;
@@ -90,22 +91,25 @@ interface IconButtonProps {
   tooltipPosition?: TooltipPosition;
 }
 
-const IconButton: React.FC<IconButtonProps> = ({
+const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
   icon,
   onClick = () => {},
+  onMouseDown,
   disabled = false,
   title,
-  className = "",
+  className = "icon-size-28",
   iconSize = "icon-size-20",
 
   // TOOLTIP
   tooltip = false,
   tooltipText = "",
   tooltipPosition = "pos-bottom",
-}) => {
+}, ref) => {
   return (
     <button
+      ref={ref}
       onClick={onClick}
+      onMouseDown={onMouseDown}
       disabled={disabled}
       title={title}
       className={clsx(
@@ -140,6 +144,6 @@ const IconButton: React.FC<IconButtonProps> = ({
       )}
     </button>
   );
-};
+});
 
 export default IconButton;

@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import ButtonSm from '../ui-components/ButtonSm';
 import SubactionHeader from '../ui-components/SubactionHeader';
 
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -301,19 +302,16 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         }
     }, [initialLoadPath, didAutoLoad, loadRecording]);
 
-    const handleLoadManualPath = useCallback(() => {
-        const trimmed = manualPath.trim().replace(/[\\/]+$/, '');
-        if (!trimmed) return;
-        const lastSep = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
-        const recName = lastSep >= 0 ? trimmed.slice(lastSep + 1) : trimmed;
-        loadRecording({ name: recName, path: trimmed, video_count: 0 });
-    }, [manualPath, loadRecording]);
-
     const handleBrowseDirectory = useCallback(async () => {
         if (!isElectron || !api) return;
         const result: string | null = await api.fileSystem.selectDirectory.mutate();
-        if (result) setManualPath(result);
-    }, [api, isElectron]);
+        if (!result) return;
+        const trimmed = result.trim().replace(/[\\/]+$/, '');
+        setManualPath(trimmed);
+        const lastSep = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+        const recName = lastSep >= 0 ? trimmed.slice(lastSep + 1) : trimmed;
+        loadRecording({ name: recName, path: trimmed, video_count: 0 });
+    }, [api, isElectron, loadRecording]);
 
     // -----------------------------------------------------------------------
     // Sort controls
@@ -333,33 +331,18 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         <div className="flex playback-page-content has-videos flex flex-col gap-2 p-2 h-full overflow-hidden">
             {/* Manual path row */}
             <div className="load-group flex flex-row flex-wrap gap-1 items-center">
-                <ButtonSm
-                    iconClass="subfolder-icon"
-                    text=""
-                    textColor="text-gray"
-                    onClick={handleBrowseDirectory}
-                    buttonType={!isElectron ? "disabled" : ""}
-                    title={t("browseForDirectory")}
-                />
-                <div className="input-with-string flex-1">
-                    <input
-                        className="input-field"
-                        placeholder="~/skellycam_data/recordings/2024-01-01..."
-                        value={manualPath}
-                        onChange={(e) => setManualPath(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleLoadManualPath();
-                        }}
-                        disabled={isLoadingRecording}
+                <div calassName="flex flex-row gap-1 items-center">
+                    <SubactionHeader text="Folder Directory" />
+                    <ButtonSm
+                        iconClass="subfolder-icon"
+                        text={manualPath || 'Select recording folder'}
+                        onClick={handleBrowseDirectory}
+                        title="Click to select recording folder"
+                        disabled={!isElectron}
+                        className="select-path bg-middark border-1 border-black flex-1"
+                        textClass="text-wrap flex-1"
                     />
                 </div>
-                <ButtonSm
-                    className='secondary'
-                    text={t('load')}
-                    onClick={handleLoadManualPath}
-                    disabled={!manualPath.trim() || isLoadingRecording}
-                    iconClass={isLoadingRecording && !loadingPath ? 'loader-icon' : ''}
-                />
             </div>
 
             {/* Error */}
@@ -378,7 +361,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     </div>
                 
                 <div className="flex flex-wrap flex-row items-center gap-1 justify-content-space-between min-w-full">
-                    <div className="input-with-string">
+                    <div className="input-with-string flex flex-1">
                         <input
                             className="input-field"
                             placeholder={t('filter')}
@@ -400,13 +383,21 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
                     <ButtonSm
                         text={sortDir === 'desc' ? '↓' : '↑'}
                         onClick={toggleSortDir}
-                        title="Toggle sort direction"
+                        
+
+                        tooltip={true}
+                        tooltipText={sortDir === 'desc' ? t('sortDescending') : t('sortAscending')}
+                        tooltipPosition="pos-bottom"
                     />
                     <ButtonSm
                         text={t('refresh')}
                         onClick={fetchRecordings}
                         disabled={isLoadingList}
                         iconClass="rotate-icon"
+
+                        tooltip={true}
+                        tooltipText={t('refreshList')}
+                        tooltipPosition="pos-bottom"
                     />
                 </div>
             </div>

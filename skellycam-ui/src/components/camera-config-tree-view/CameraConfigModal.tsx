@@ -53,12 +53,12 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center gap-2 p-2" style={{ borderBottom: '1px solid var(--gray-700)' }}>
+                <div className="flex items-center gap-2 p-2" style={{ borderBottom: '1px solid var(--color-text-muted)' }}>
                     <p className="text md text-white text-nowrap">
                         {cameras.length} Cameras
                     </p>
                     {connectedCameras.length > 0 && (
-                        <p className="text md text-nowrap" style={{ color: 'var(--green-400, #4ade80)' }}>
+                        <p className="text md text-nowrap" style={{ color: 'var(--color-success, #4ade80)' }}>
                             {connectedCameras.length} Streaming
                         </p>
                     )}
@@ -72,8 +72,8 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
                         <span className="icon icon-size-20 clear-icon" />
                     </button>
 
-                    <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--gray-100)', color: 'var(--gray-900)' }}>
-                        <p className="text md" style={{ color: 'var(--gray-900)' }}>Update</p>
+                    <button className="button sm br-1" onClick={handleUpdate} style={{ background: 'var(--color-text-primary)', color: 'var(--color-bg-primary)' }}>
+                        <p className="text md" style={{ color: 'var(--color-bg-primary)' }}>Update</p>
                     </button>
 
                     <button className="button icon-button" onClick={onClose}>

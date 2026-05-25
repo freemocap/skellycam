@@ -7,7 +7,6 @@
   flex-direction: column;
   height: 100%;
   width: inherit;
-  /* background-color: var(--gray-800); */
   overflow: hidden;
   position: relative;
   padding: 4px;
@@ -42,31 +41,48 @@
   gap: 4px;
   text-align: center;
   padding: 16px;
-  color: var(--gray-400);
+  color: var(--color-text-muted);
 }
 
-/* Camera cell wrapper (react-grid-layout child) */
+/* ============================================================
+   Camera Cell
+   ============================================================ */
+
 .camera-cell {
   overflow: hidden;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--color-border-muted);
   transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 
 .camera-cell.recording {
-  border: 2px solid #ff2020;
+  border: 2px solid var(--color-danger);
   animation: recording-pulse 3s infinite ease-in-out;
 }
 
 @keyframes recording-pulse {
-  0%   { border-color: #ff2020; box-shadow: 0 0 4px rgba(255, 32, 32, 0.4); }
-  50%  { border-color: #aa1010; box-shadow: 0 0 8px rgba(255, 32, 32, 0.15); }
-  100% { border-color: #ff2020; box-shadow: 0 0 4px rgba(255, 32, 32, 0.4); }
+  0% {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 4px var(--red-500-alpha-40);
+  }
+
+  50% {
+    border-color: var(--color-danger-strong);
+    box-shadow: 0 0 8px var(--red-500-alpha-15);
+  }
+
+  100% {
+    border-color: var(--color-danger);
+    box-shadow: 0 0 4px var(--red-500-alpha-40);
+  }
 }
 
-/* react-grid-layout overrides */
+/* ============================================================
+   React Grid Layout Overrides
+   ============================================================ */
+
 .camera-grid-container .react-grid-placeholder {
-  background-color: var(--blue-800);
+  background-color: var(--color-info-muted);
   opacity: 0.15;
   border-radius: 4px;
 }
@@ -86,8 +102,8 @@
   height: 10px;
   right: 4px;
   bottom: 4px;
-  border-right: 2px solid rgba(255, 255, 255, 0.5);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+  border-right: 2px solid var(--color-white-alpha-50);
+  border-bottom: 2px solid var(--color-white-alpha-50);
 }
 
 /* ============================================================
@@ -96,14 +112,19 @@
 
 .resizable-camera-view {
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--color-border-muted);
   border-radius: 4px;
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.resizable-camera-view:hover { border-color: rgba(255, 255, 255, 0.4); }
-.resizable-camera-view.active { border-color: var(--blue-800); }
+.resizable-camera-view:hover {
+  border-color: var(--color-white-alpha-40);
+}
+
+.resizable-camera-view.active {
+  border-color: var(--color-info-muted);
+}
 
 .resizable-move-area {
   width: 100%;
@@ -111,7 +132,9 @@
   cursor: grab;
 }
 
-.resizable-move-area.dragging { cursor: grabbing; }
+.resizable-move-area.dragging {
+  cursor: grabbing;
+}
 
 .resize-handle {
   position: absolute;
@@ -130,13 +153,13 @@
   right: 2px;
   width: 8px;
   height: 8px;
-  border-right: 2px solid rgba(255, 255, 255, 0.45);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.45);
+  border-right: 2px solid var(--color-white-alpha-45);
+  border-bottom: 2px solid var(--color-white-alpha-45);
 }
 
 .resize-handle:hover::after,
 .resize-handle.active::after {
-  border-color: var(--blue-800);
+  border-color: var(--color-info-muted);
 }
 
 /* ============================================================
@@ -159,7 +182,7 @@
 }
 
 /* ============================================================
-   Range Input (native slider)
+   Range Input
    ============================================================ */
 
 .range-input {
@@ -167,7 +190,7 @@
   appearance: none;
   width: 100%;
   height: 4px;
-  background: var(--gray-600);
+  background: var(--color-border-secondary);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
@@ -184,24 +207,24 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--blue-800);
+  background: var(--color-info-muted);
   cursor: pointer;
   transition: background var(--speed-1);
 }
 
 .range-input:disabled::-webkit-slider-thumb {
-  background: var(--gray-500);
+  background: var(--color-text-disabled);
 }
 
 .range-input::-webkit-slider-thumb:hover {
-  background: var(--blue-100);
+  background: var(--metric-stddev);
 }
 
 .range-input::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--blue-800);
+  background: var(--color-info-muted);
   cursor: pointer;
   border: none;
 }
@@ -220,67 +243,89 @@
   justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
-  background-color: var(--blue-900);
+  background-color: var(--color-info-idle);
   flex-shrink: 0;
 }
 
 .camera-section-header {
-  background-color: var(--gray-700);
+  background-color: var(--color-bg-tertiary);
 }
 
 .camera-section-header:hover {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
 }
 
 .camera-item-row {
-  background-color: var(--gray-800);
+  background-color: var(--color-bg-secondary);
   transition: background-color var(--speed-1);
 }
 
-/* .camera-item-row:hover {
-  background-color: var(--gray-700);
-} */
-
 .camera-item-row.expanded {
-  background-color: var(--gray-700);
+  background-color: var(--color-bg-tertiary);
 }
 
-/* Status colors */
-.camera-status-connected  { color: var(--green-100); }
-.camera-status-available  { color: var(--blue-800); }
-.camera-status-error      { color: var(--red-500); }
+/* ============================================================
+   Camera Status
+   ============================================================ */
 
+.camera-status-connected {
+  color: var(--color-success);
+}
 
-.camera-status-connected  { background-color: var(--green-100); color: #000; }
-.camera-status-available  { background-color: var(--blue-800);  color: #fff; }
-.camera-status-error      { background-color: var(--red-500);   color: #fff; }
+.camera-status-available {
+  color: var(--color-info-muted);
+}
 
-/* Config summary chips */
+.camera-status-error {
+  color: var(--color-danger);
+}
+
+.camera-status-connected {
+  background-color: var(--color-success);
+  color: var(--color-bg-primary);
+}
+
+.camera-status-available {
+  background-color: var(--color-info-muted);
+  color: var(--color-text-primary);
+}
+
+.camera-status-error {
+  background-color: var(--color-danger);
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   Config Chips
+   ============================================================ */
+
 .camera-config-chip {
   padding: 0 4px;
-  border: 1px solid var(--gray-600);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 2px;
- 
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* Expanded config panel */
+/* ============================================================
+   Expanded Config Panel
+   ============================================================ */
+
 .config-panel {
   margin-left: 20px;
   margin-right: 4px;
   margin-bottom: 4px;
   padding: 8px;
   border-radius: 4px;
-  border: 1px solid var(--gray-600);
-  background-color: var(--gray-700);
+  border: 1px solid var(--color-border-secondary);
+  background-color: var(--color-bg-tertiary);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .config-panel-divider {
-  border-bottom: 1px solid var(--gray-600);
+  border-bottom: 1px solid var(--color-border-secondary);
   padding-top: 4px;
 }
 
@@ -309,30 +354,36 @@
 .record-button-duration {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-white-alpha-60);
   letter-spacing: 0.5px;
 }
 
 .record-button-idle {
-  background-color: var(--red-500);
+  background-color: var(--color-danger);
 }
 
 .record-button-idle:not(:disabled):hover {
-  background-color: var(--red-600);
+  background-color: var(--metric-median);
 }
 
 .record-button-active {
-  background-color: var(--red-600);
+  background-color: var(--metric-median);
   animation: recording-button-pulse 2s infinite ease-in-out;
 }
 
 .record-button-pending {
-  background-color: var(--gray-600);
+  background-color: var(--color-border-secondary);
 }
 
 @keyframes recording-button-pulse {
-  0%, 100% { background-color: var(--red-500); }
-  50%       { background-color: var(--red-600); }
+  0%,
+  100% {
+    background-color: var(--log-critical);
+  }
+
+  50% {
+    background-color: var(--color-danger-muted);
+  }
 }
 
 /* ============================================================
@@ -342,7 +393,7 @@
 .recording-path-preview {
   font-family: monospace;
   font-size: 0.8rem;
-  color: var(--gray-400);
+  color: var(--color-text-muted);
   overflow: hidden;
 }
 
@@ -367,33 +418,30 @@
   overflow: hidden;
 }
 
-/* Popup overlay for long values like directory paths */
-/* .directory-input-popup {
-  min-width: 320px;
-} */
-
 .directory-input-popup input.input-field {
   width: 100%;
-  /* min-width: 280px; */
 }
 
 .recording-countdown {
   text-align: center;
-  color: var(--warning-500);
+  color: var(--color-warning);
   font-size: 1.5rem;
   font-weight: bold;
   padding: 8px;
 }
 
-/* Recording browser */
+/* ============================================================
+   Recording Browser
+   ============================================================ */
+
 .recording-list {
   overflow-y: auto;
-  border: 1px solid var(--gray-600);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 4px;
 }
 
 .recording-row {
-  border-bottom: 1px solid var(--gray-700);
+  border-bottom: 1px solid var(--color-bg-tertiary);
   cursor: pointer;
 }
 
@@ -408,26 +456,29 @@
 
 .sort-select {
   min-width: 90px;
-  background-color: var(--gray-700);
-  border: 1px solid var(--gray-600);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-secondary);
   border-radius: 4px;
-  color: var(--gray-400);
+  color: var(--color-text-muted);
   font-size: 13px;
   padding: 2px 4px;
   cursor: pointer;
 }
 
-/* ── Playback controls ── */
+/* ============================================================
+   Playback Controls
+   ============================================================ */
+
 .playback-controls {
-  border-top: 1px solid var(--gray-700);
-  background-color: var(--gray-800);
+  border-top: 1px solid var(--color-bg-tertiary);
+  background-color: var(--color-bg-secondary);
   flex-shrink: 0;
 }
 
 .playback-slider {
   flex: 1;
   height: 4px;
-  accent-color: var(--blue-100);
+  accent-color: var(--metric-stddev);
   cursor: pointer;
 }
 
@@ -440,14 +491,14 @@
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 13px;
   font-weight: 600;
-  color: var(--green-100);
+  color: var(--color-success);
   min-width: 70px;
   text-align: right;
   white-space: nowrap;
 }
 
 .playback-timecode.text-gray {
-  color: var(--gray-400);
+  color: var(--color-text-muted);
   text-align: left;
 }
 
@@ -455,9 +506,9 @@
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 13px;
   font-weight: 700;
-  color: var(--green-100);
-  background-color: rgba(0, 255, 136, 0.08);
-  border: 1px solid rgba(0, 255, 136, 0.2);
+  color: var(--color-success);
+  background-color: var(--color-success-alpha-08);
+  border: 1px solid var(--color-success-alpha-20);
   border-radius: 4px;
   padding: 2px 8px;
   white-space: nowrap;
@@ -466,9 +517,9 @@
 .playback-fps-badge {
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 11px;
-  color: #ffcc80;
-  background-color: rgba(255, 204, 128, 0.08);
-  border: 1px solid rgba(255, 204, 128, 0.2);
+  color: var(--color-warning-soft);
+  background-color: var(--color-warning-alpha-08);
+  border: 1px solid var(--color-warning-alpha-20);
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;
@@ -482,8 +533,8 @@
   font-size: 20px;
   width: 40px;
   height: 40px;
-  border: 2px solid var(--green-100);
-  color: var(--green-100);
+  border: 2px solid var(--color-success);
+  color: var(--color-success);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -492,7 +543,7 @@
 
 .playback-play-btn:hover,
 .playback-play-btn.playing {
-  background-color: rgba(0, 255, 136, 0.1);
+  background-color: var(--color-success-alpha-10);
 }
 
 .playback-info-left {
@@ -512,16 +563,19 @@
 .playback-sync-info {
   padding: 6px 8px;
   border-radius: 4px;
-  background-color: rgba(255, 204, 128, 0.06);
-  border: 1px solid rgba(255, 204, 128, 0.15);
+  background-color: var(--color-warning-alpha-06);
+  border: 1px solid var(--color-warning-alpha-15);
 }
 
 .playback-sync-title {
-  color: #ffcc80;
+  color: var(--color-warning-soft);
   font-weight: 600;
 }
 
-/* Camera grid cell overlay */
+/* ============================================================
+   Camera Grid Cell Overlay
+   ============================================================ */
+
 .camera-cell-overlay {
   position: absolute;
   top: 0;
@@ -530,8 +584,13 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
+
+  background: linear-gradient(
+    to bottom,
+    var(--overlay-65) 0%,
+    transparent 100%
+  );
+
   opacity: 0;
   transition: opacity 0.15s ease;
   z-index: 10;
@@ -542,15 +601,18 @@
 }
 
 .camera-cell-toggle {
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255,255,255,0.15);
+  background-color: var(--overlay-50);
+  border: 1px solid var(--color-border-muted);
 }
 
 .camera-cell-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: var(--overlay-75);
 }
 
-/* Constrain segmented controls to their config panel container */
+/* ============================================================
+   Config Panel Layout Helpers
+   ============================================================ */
+
 .config-panel .segmented-control-container {
   max-width: 100%;
   width: 100%;
@@ -561,7 +623,10 @@
   flex: 1;
 }
 
-/* Compact config panel (used in camera grid modal) */
+/* ============================================================
+   Compact Config Panel
+   ============================================================ */
+
 .config-panel-compact {
   overflow: hidden;
 }
@@ -585,3 +650,35 @@
   min-width: 0;
   width: 100%;
 }
+
+/* ============================================================
+   REQUIRED MISSING TOKENS
+   ADD THESE TO color.css
+   ============================================================ */
+
+/*
+
+--color-white-alpha-40: rgba(255,255,255,0.4);
+--color-white-alpha-45: rgba(255,255,255,0.45);
+--color-white-alpha-50: rgba(255,255,255,0.5);
+--color-white-alpha-60: rgba(255,255,255,0.6);
+
+--overlay-50: rgba(0,0,0,0.5);
+--overlay-65: rgba(0,0,0,0.65);
+--overlay-75: rgba(0,0,0,0.75);
+
+--red-500-alpha-15: rgba(215,24,75,0.15);
+--red-500-alpha-40: rgba(215,24,75,0.4);
+
+--color-success-alpha-08: rgba(22,221,18,0.08);
+--color-success-alpha-10: rgba(22,221,18,0.1);
+--color-success-alpha-20: rgba(22,221,18,0.2);
+
+--color-warning-alpha-06: rgba(230,73,0,0.06);
+--color-warning-alpha-08: rgba(230,73,0,0.08);
+--color-warning-alpha-15: rgba(230,73,0,0.15);
+--color-warning-alpha-20: rgba(230,73,0,0.2);
+
+--color-warning-soft: #ffcc80;
+
+*/

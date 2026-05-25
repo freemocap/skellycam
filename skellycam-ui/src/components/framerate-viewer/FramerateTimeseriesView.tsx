@@ -64,7 +64,7 @@ type ChartState = {
     backendFpsBuf: FpsSample[]
 }
 
-const AXIS_LABEL_COLOR = "var(--gray-400)"
+const AXIS_LABEL_COLOR = "var(--color-text-muted)"
 
 export default function FramerateTimeseriesView({
     frontendColor,

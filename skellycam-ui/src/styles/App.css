@@ -8,12 +8,15 @@
 @import './camera.css';
 @import './checkbox.css';
 @import './components.css';
+@import './playback.css';
+
 /* base / reset */
 
 
 /* =========================
    UTILITIES (Tailwind-like)
    ========================= */
+
 .overflow-hidden {
   overflow: hidden;
 }
@@ -31,48 +34,36 @@
    Applies to all scrollbars
    ========================== */
 
-/* Track: the background of the scrollbar */
+/* Track */
 ::-webkit-scrollbar-track {
   border-radius: 10px;
-  /* Rounded corners for the track */
   background-color: transparent;
-  /* Change to any color you want */
 }
 
-/* Scrollbar: the actual scrollbar container */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: calc(12px - 4px);
-  /* Width of the vertical scrollbar */
   height: 12px;
-  /* Height of the horizontal scrollbar */
   background-color: transparent;
-  /* Background color behind the thumb */
 }
 
-/* Thumb: the draggable part of the scrollbar */
+/* Thumb */
 ::-webkit-scrollbar-thumb {
   border-radius: 99px;
-  /* Fully rounded thumb */
-  background-color: var(--gray-600);
-  /* Default thumb color */
+  background-color: var(--color-border-secondary);
   cursor: grab;
-  /* Cursor when hovering over thumb */
-  border: 2px solid var(--gray-700);
-  /* Padding/border around thumb, match scrollbar background */
+  border: 2px solid var(--color-surface-hover);
 }
 
-/* Thumb hover state: when mouse is over the thumb */
+/* Thumb hover */
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--gray-900);
-  /* Change thumb color on hover */
+  background-color: var(--color-bg-primary);
 }
 
-/* Thumb active state: when mouse is clicking/dragging the thumb */
+/* Thumb active */
 ::-webkit-scrollbar-thumb:active {
-  background-color: var(--gray-900);
-  /* Change thumb color when active */
+  background-color: var(--color-bg-primary);
   cursor: grabbing;
-  /* Cursor changes when dragging */
 }
 
 a,
@@ -96,48 +87,25 @@ a.link:hover {
   margin-left: 2px;
 } */
 
-/* z-index */
-.z-1 {
-  z-index: 1;
-}
+/* =========================
+   Z-INDEX
+   ========================= */
 
-.z-2 {
-  z-index: 2;
-}
+.z-1 { z-index: 1; }
+.z-2 { z-index: 2; }
+.z-3 { z-index: 3; }
+.z-4 { z-index: 4; }
+.z-5 { z-index: 5; }
+.z-6 { z-index: 6; }
+.z-7 { z-index: 7; }
+.z-8 { z-index: 8; }
+.z-9 { z-index: 9; }
+.z-10 { z-index: 10; }
 
-.z-3 {
-  z-index: 3;
-}
+/* =========================
+   POSITIONS
+   ========================= */
 
-.z-4 {
-  z-index: 4;
-}
-
-.z-5 {
-  z-index: 5;
-}
-
-.z-6 {
-  z-index: 6;
-}
-
-.z-7 {
-  z-index: 7;
-}
-
-.z-8 {
-  z-index: 8;
-}
-
-.z-9 {
-  z-index: 9;
-}
-
-.z-10 {
-  z-index: 10;
-}
-
-/* positions */
 .pos-abs {
   position: absolute;
 }
@@ -150,40 +118,50 @@ a.link:hover {
   position: sticky;
 }
 
-/* positions */
-.top-0 {
-  top: 0;
-}
-.top-2 {
-  top: 2px;
+/* Position helpers */
+
+.top-0 { top: 0; }
+.top-2 { top: 2px; }
+.top-4 { top: 4px; }
+
+.top-50 {
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.left-0 {
-  left: 0;
-}
-.left-2 {
-  left: 2px;
+.left-0 { left: 0; }
+.left-2 { left: 2px; }
+.left-4 { left: 4px; }
+
+.left-50 {
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
 }
 
-.right-0 {
-  right: 0;
-}
-.right-2 {
-  right: 2px;
+.right-0 { right: 0; }
+.right-2 { right: 2px; }
+.right-4 { right: 4px; }
+
+.right-50 {
+  right: 50%;
+  transform: translateX(-50%) translateY(6px);
 }
 
-.bottom-0 {
-  bottom: 0;
-}
-.bottom-2 {
-  bottom: 2px;
-}
+.bottom-0 { bottom: 0; }
+.bottom-2 { bottom: 2px; }
+.bottom-4 { bottom: 4px; }
+.bottom-6 { bottom: 6px; }
+.bottom-8 { bottom: 8px; }
+.bottom-36 { bottom: 36px; }
 
 .inset-0 {
   inset: 0;
 }
 
-/* display / flex */
+/* =========================
+   DISPLAY / FLEX
+   ========================= */
+
 .flex {
   display: flex;
 }
@@ -194,6 +172,10 @@ a.link:hover {
 
 .flex-row {
   flex-direction: row;
+}
+
+.row-reverse {
+  flex-direction: row-reverse;
 }
 
 .flex-col {
@@ -223,6 +205,7 @@ a.link:hover {
 .align-end {
   align-items: flex-end;
 }
+
 .flex-end {
   justify-content: flex-end;
 }
@@ -234,162 +217,97 @@ a.link:hover {
 .align-items-end {
   align-items: flex-end;
 }
-/* display / block */
+
+/* =========================
+   DISPLAY / BLOCK
+   ========================= */
+
 .block {
   display: block;
 }
-/* flex (proportions) */
-.flex-1 {
-  flex: 1;
-}
 
-.flex-2 {
-  flex: 2;
-}
+/* =========================
+   FLEX PROPORTIONS
+   ========================= */
 
-.flex-3 {
-  flex: 3;
-}
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+.flex-3 { flex: 3; }
+.flex-4 { flex: 4; }
+.flex-5 { flex: 5; }
+.flex-6 { flex: 6; }
 
-.flex-4 {
-  flex: 4;
-}
-
-.flex-5 {
-  flex: 5;
-}
-
-.flex-6 {
-  flex: 6;
-}
-
-/* fractional helper used in layout */
 .flex-15 {
   flex: 1.5;
 }
 
-/* left / middle proportions in example */
 .flex-grow {
   flex-grow: 1;
 }
 
-/* gaps */
-.gap-1 {
-  gap: 4px;
-}
+/* =========================
+   GAPS
+   ========================= */
 
-.gap-2 {
-  gap: 8px;
-}
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
 
-.gap-3 {
-  gap: 12px;
-}
+/* =========================
+   PADDING
+   ========================= */
 
-.gap-4 {
-  gap: 16px;
-}
+.p-0 { padding: 0; }
+.p-01 { padding: 2px; }
+.p-1 { padding: 4px; }
+.p-2 { padding: 8px; }
+.p-3 { padding: 12px; }
+.p-4 { padding: 16px; }
 
-/* padding */
-.p-0 {
-  padding: 0;
-}
-.p-01 {
-  padding: 2px;
-}
+.pb-1 { padding-bottom: 4px; }
+.pb-2 { padding-bottom: 8px; }
 
-.p-1 {
-  padding: 4px;
-}
+.pl-1 { padding-left: 4px; }
+.pl-2 { padding-left: 8px; }
 
-.p-2 {
-  padding: 8px;
-}
+.pr-1 { padding-right: 4px; }
+.pr-2 { padding-right: 8px; }
 
-.p-3 {
-  padding: 12px;
-}
+.pt-1 { padding-top: 4px; }
+.pt-2 { padding-top: 8px; }
 
-.p-4 {
-  padding: 16px;
-}
+/* =========================
+   MARGIN
+   ========================= */
 
+.m-0 { margin: 0; }
+.m-1 { margin: 4px; }
+.m-2 { margin: 8px; }
+.m-3 { margin: 12px; }
+.m-4 { margin: 16px; }
 
-.pb-1 {
-  padding-bottom: 4px;
-}
-.pb-2 {
-  padding-bottom: 8px;
-}
+/* Margin Bottom */
 
-.pl-1 {
-  padding-left: 4px;
-}
-.pl-2 {
-  padding-left: 8px;
-}
-
-.pr-1 {
-  padding-right: 4px;
-}
-.pr-2 {
-  padding-right: 8px;
-
-}
-.pt-1 {
-  padding-top: 4px;
-}
-.pt-2 {
-  padding-top: 8px;
-}
-
-
-
-/* margin */
-.m-0 {
-  margin: 0;
-}
-
-.m-1 {
-  margin: 4px;
-}
-
-.m-2 {
-  margin: 8px;
-}
-
-.m-3 {
-  margin: 12px;
-}
-
-.m-4 {
-  margin: 16px;
-}
-
-/* margin-bottom */
 .mb-4 {
   margin-bottom: 16px;
 }
 
-/* margin top */
-.mt-1 {
-  margin-top: 4px;
-}
-.mt-2 {
-  margin-top: 8px;
-}
-.mt-3 {
-  margin-top: 12px;
-}
-.mt-4 {
-  margin-top: 16px;
-}
+/* Margin Top */
 
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
 
-/* widths/heights */
+/* =========================
+   WIDTHS / HEIGHTS
+   ========================= */
+
 .w-full {
   width: 100%;
 }
+
 .min-w-full {
   min-width: 100%;
 }
@@ -402,22 +320,14 @@ a.link:hover {
   height: 25px;
 }
 
-.h-full {
-  height: 100%;
-}
- .min-h-0  {
+.min-h-0 {
   min-height: 0;
- }
- .min-w-0  {
-  min-width: 0;
- }
+}
 
-/* .h-30 {
-  height: 30px;
-} */
-/* .h-40 {
-  height: 40px;
-} */
+.min-w-0 {
+  min-width: 0;
+}
+
 .h-70 {
   height: 70px;
 }
@@ -437,33 +347,18 @@ a.link:hover {
 /* =========================
    BORDER RADIUS
    ========================= */
-.br-1 {
-  border-radius: 4px;
-}
 
-.br-1-1 {
-  border-radius: 6px;
-}
-
-.br-2 {
-  border-radius: 8px;
-}
-
-.br-3 {
-  border-radius: 12px;
-}
-
-.br-4 {
-  border-radius: 16px;
-}
-
-.br-5 {
-  border-radius: 18px;
-}
+.br-1 { border-radius: 4px; }
+.br-1-1 { border-radius: 6px; }
+.br-2 { border-radius: 8px; }
+.br-3 { border-radius: 12px; }
+.br-4 { border-radius: 16px; }
+.br-5 { border-radius: 18px; }
 
 /* =========================
    BORDER SIZES
    ========================= */
+
 .border-1 {
   border-width: 1.5px;
   border-style: solid;
@@ -489,42 +384,14 @@ a.link:hover {
   border-style: solid;
 }
 
-
-
-
-
-
-/* individual borders */
-/* .border-t-1 { border-top-width: 1px; border-style: solid; }
-.border-t-2 { border-top-width: 2px; border-style: solid; }
-.border-t-3 { border-top-width: 3px; border-style: solid; }
-.border-t-black { border-top-color: var(--gray-900); }
-.border-t-red   { border-top-color: var(--red-500); }
-
-.border-b-1 { border-bottom-width: 1px; border-style: solid; }
-.border-b-2 { border-bottom-width: 2px; border-style: solid; }
-.border-b-3 { border-bottom-width: 3px; border-style: solid; }
-.border-b-black { border-bottom-color: var(--gray-900); }
-.border-b-red   { border-bottom-color: var(--red-500); }
-
-.border-l-1 { border-left-width: 1px; border-style: solid; }
-.border-l-2 { border-left-width: 2px; border-style: solid; }
-.border-l-3 { border-left-width: 3px; border-style: solid; }
-.border-l-black { border-left-color: var(--gray-900); }
-.border-l-red   { border-left-color: var(--red-500); }
-
-.border-r-1 { border-right-width: 1px; border-style: solid; }
-.border-r-2 { border-right-width: 2px; border-style: solid; }
-.border-r-3 { border-right-width: 3px; border-style: solid; }
-.border-r-black { border-right-color: var(--gray-900); }
-.border-r-red   { border-right-color: var(--red-500); } */
-
 /* =========================
    OVERFLOW
    ========================= */
+
 .overflow-hidden {
   overflow: hidden;
 }
+
 .overflow-visible {
   overflow: visible;
 }
@@ -532,44 +399,46 @@ a.link:hover {
 /* =========================
    BACKGROUND COLORS
    ========================= */
+
 .bg-red {
-  background-color: var(--red-500);
+  background-color: var(--color-danger);
 }
 
 .bg-blue {
-  background-color: var(--red-500);
+  background-color: var(--color-info);
 }
 
 html,
 body,
 #root,
 .bg-middark {
-  background-color: var(--gray-800);
+  background-color: var(--color-bg-secondary);
 }
 
 .bg-dark {
-  background-color: var(--gray-900);
+  background-color: var(--color-bg-primary);
 }
 
 .bg-darkgray {
-  background-color: var(--gray-700);
+  background-color: var(--color-bg-tertiary);
 }
 
 .bg-gray {
-  background-color: var(--gray-600);
+  background-color: var(--color-bg-elevated);
 }
 
 .bg-pink {
-  background-color: var(--green-100);
+  background-color: var(--color-success);
 }
 
 .bg-white {
-  background-color: var(--gray-100);
+  background-color: var(--color-text-primary);
 }
 
 /* =========================
    TEXT
    ========================= */
+
 .text-center {
   text-align: center;
 }
@@ -584,47 +453,77 @@ body,
 
 .text-white,
 .color-white {
-  color: var(--gray-100);
+  color: var(--color-text-primary);
 }
 
 .text-gray,
 .color-gray {
-  color: var(--gray-400);
+  color: var(--color-text-muted);
 }
 
 .text-warning {
-  color: var(--warning-500);
+  color: var(--color-warning);
 }
 
 .text-darkgray,
 .color-darkgray {
-  color: var(--gray-500);
+  color: var(--color-text-disabled);
 }
 
 .text-error {
-  color: var(--red-500);
+  color: var(--color-danger);
 }
 
 /* =========================
    HELPERS
    ========================= */
+
 .hidden {
   display: none;
 }
 
+/* =========================
+   ROOT VARIABLES
+   ========================= */
 
-
-/* Root variables */
 :root {
-  /* --form-control-color: currentColor; */
-  --form-control-disabled: #959495;
+  --form-control-disabled: var(--color-text-disabled);
+
+  /*
+    MISSING SEMANTIC TOKENS YOU SHOULD ADD
+    ======================================
+
+    These are currently still semantic gaps in the system:
+
+    --color-link
+    --color-link-hover
+
+    --color-scrollbar-thumb
+    --color-scrollbar-thumb-hover
+
+    --color-shadow-elevated
+
+    Recommended:
+    --color-link: var(--color-info);
+    --color-link-hover: var(--metric-min-dark);
+
+    --color-scrollbar-thumb: var(--color-border-secondary);
+    --color-scrollbar-thumb-hover: var(--color-bg-primary);
+
+    --shadow-elevated-sharp: 0px 7px 15px rgba(0,0,0,0.5);
+
+    Also:
+    Shadow rgba values should become tokenized if you want 100% semantic compliance.
+  */
 }
 
-/* Label container */
+/* =========================
+   FORM CONTROL
+   ========================= */
+
 .form-control {
   font-family: system-ui, sans-serif;
   font-size: 2rem;
-  /* scales checkbox size */
   font-weight: bold;
   line-height: 1.1;
 
@@ -633,24 +532,33 @@ body,
   gap: 0.5em;
 }
 
-.form-control+.form-control {
+.form-control + .form-control {
   margin-top: 1em;
 }
 
-/* Disabled label style (must add .form-control--disabled) */
 .form-control--disabled {
   color: var(--form-control-disabled);
   cursor: not-allowed;
 }
+
+/* =========================
+   ELEVATION
+   ========================= */
+
 .elevated-sharp {
   box-shadow: 0px 7px 15px rgba(0, 0, 0, 0.5);
 }
+
+/* =========================
+   TEXT HELPERS
+   ========================= */
 
 .text-nowrap {
   text-wrap: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
+
 .text-wrap {
   overflow-wrap: break-word;
   text-wrap: wrap;

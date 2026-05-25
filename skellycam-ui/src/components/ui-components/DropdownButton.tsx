@@ -13,7 +13,7 @@ interface DropdownButtonProps {
   };
   dropdownItems?: ReactNode;
   containerClassName?: string;
-}
+} 
 
 export default function DropdownButton({
   buttonProps,
@@ -43,12 +43,7 @@ export default function DropdownButton({
   const handleButtonClick = () => {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setPopupStyle({
-        position: "fixed",
-        top: rect.bottom + 4,
-        left: 8, /* window.innerWidth - rect.right, */
-        zIndex: 10,
-      });
+
     }
     setOpen((prev) => !prev);
     buttonProps.onClick?.();
@@ -61,8 +56,8 @@ export default function DropdownButton({
       {open && (
         <div
           ref={popupRef}
-          className="reveal slide-down elevated-sharp dropdown-container border-1 border-black bg-middark br-2 flex flex-col gap-1 p-1"
-          style={popupStyle}
+          className="connection-status-dropdown flex flex-row reveal slide-down elevated-sharp dropdown-container border-1 border-black bg-middark br-2 flex flex-col gap-1 p-1"
+          
         >
           {dropdownItems}
         </div>

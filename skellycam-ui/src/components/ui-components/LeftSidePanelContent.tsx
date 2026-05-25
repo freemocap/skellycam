@@ -8,6 +8,8 @@ import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInf
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
 import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 import {CameraConfigSidebarPanel} from "@/components/camera-config-tree-view/CameraConfigSidebarPanel";
+import ButtonSm from "@/components/ui-components/ButtonSm";
+import IconButton from "@/components/ui-components/IconButton";
 
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
@@ -24,24 +26,26 @@ const CollapsedToolbar: React.FC<{
 
     return (
         <div className="collapsed-sidebar items-center flex flex-col items-center w-full h-full pt-1 gap-1"       >
-            <button
-                className="button icon-button"
+            <IconButton
+                icon="expand-icon"
                 onClick={onToggleCollapse}
-                title={t('expandSidebar')}
-            >
-                <span className="icon icon-size-20 expand-icon text sm"></span>
-            </button>
+                tooltip={true}
+                tooltipText={t('expandSidebar')}
+                tooltipPosition="pos-right"
+            />
 
             <ServerConnectionStatus compact />
-
-            <button
-                className={`collapsed-start-recording-btn br-1 button icon-button record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
+            
+            <ButtonSm
+                className={`collapsed-start-recording-btn record-button-sm ${isRecording ? 'record-button-active' : 'record-button-idle'}`}
                 onClick={onRecordClick}
                 disabled={noCameras && !isRecording}
-                title={isRecording ? t('stopRecording') : t('startRecording')}
-            >
-                <span className={`icon icon-size-20 ${isRecording ? 'close-icon' : 'record-icon'}`} />
-            </button>
+                tooltip={true}
+                tooltipText={isRecording ? t('stopRecording') : t('startRecording')}
+                tooltipPosition="pos-right"
+                iconClass={isRecording ? 'close-icon' : 'record-icon'}
+                text=""
+            />
         </div>
     );
 };
@@ -89,7 +93,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                 <div
                     className="flex items-center gap-1 px-1 py-1"
                     // style={{
-                    //     borderBottom: '1px solid var(--gray-600)',
+                    //     borderBottom: '1px solid var(--color-surface-active)',
                     //     minHeight: 40,
                     // }}
                 >
@@ -99,13 +103,14 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     className="flex-1 overflow-hidden" style={{minWidth: 0}}>
                         <ServerConnectionStatus />
                     </div>
-                    <button
-                        className="button icon-button"
+                    <IconButton
+                        icon="collapse-icon"
                         onClick={onToggleCollapse}
-                        title={t('collapseSidebar')}
-                    >
-                        <span className="icon icon-size-20 collapse-icon"></span>
-                    </button>
+                        tooltip={true}
+                        tooltipText={t('collapseSidebar')}
+                        tooltipPosition="pos-left"
+                        className="icon-size-28"
+                    />
                 </div>
 
                 {/* Main content */}

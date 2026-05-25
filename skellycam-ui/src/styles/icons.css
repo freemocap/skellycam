@@ -9,7 +9,7 @@
 
 4. Add the icon to `icons.css` as a variable so it can be reused easily throughout the design system.
 
-5. Update `app.css` and use the same icon variable you just created as a class.
+5. Update the same file in the bottom of `icon.css` and use the same icon variable you just created as a class.
 
 Note:
 The FreeMoCap design system uses icons as CSS background images.
@@ -56,12 +56,19 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --expand-icon: url("../assets/icons/expand_icon.svg");
   --collapse-icon: url("../assets/icons/collapse_icon.svg");
   --copy-icon: url("../assets/icons/copy_icon.svg");
-
+  --mic-icon: url("../assets/icons/mic_icon.svg");
+  --mic-active-icon: url("../assets/icons/mic_active_icon.svg");
   --processmocap-icon: url("../assets/icons/processmocap_icon.svg");
   --video-icon: url("../assets/icons/video_icon.svg");
   --record-icon: url("../assets/icons/record_icon.svg");
   --calibrate-icon: url("../assets/icons/calibrate_icon.svg");
   --back-icon: url("../assets/icons/back_icon.svg");
+  --frameforward-icon: url("../assets/icons/frameforward_icon.svg");
+  --framebackward-icon: url("../assets/icons/framebackward_icon.svg");
+  --loop-icon: url("../assets/icons/loop_icon.svg");
+  --loopactive-icon: url("../assets/icons/loopactive_icon.svg");
+  --skipbackward-icon: url("../assets/icons/skipbackward_icon.svg");
+  --skipforward-icon: url("../assets/icons/skipforward_icon.svg");
 
   --learn-icon: url("../assets/icons/learn_icon.svg");
   --discord-icon: url("../assets/icons/discord_icon.svg");
@@ -88,6 +95,15 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 
 
   /* icon type */
+.close-icon {
+  background-image: var(--close-icon);
+}
+.mic-icon {
+  background-image: var(--mic-icon);
+}
+.mic-active-icon {
+  background-image: var(--mic-active-icon);
+}
 .close-icon {
   background-image: var(--close-icon);
 }
@@ -220,6 +236,24 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 .copy-icon {
   background-image: var(--copy-icon);
 }
+.loop-icon {
+  background-image: var(--loop-icon);
+}
+.loopactive-icon {
+  background-image: var(--loopactive-icon);
+}
+.frameforward-icon {
+  background-image: var(--frameforward-icon);
+}
+.framebackward-icon {
+  background-image: var(--framebackward-icon);
+}
+.skipforward-icon {
+  background-image: var(--skipforward-icon);
+}
+.skipbackward-icon {
+  background-image: var(--skipbackward-icon);
+}
 
 .loader-icon {
   background-image: var(--loader-icon);
@@ -268,10 +302,20 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   min-height: 12px;
 }
 .icon-size-20 {
+  width: 20px;
+  height: 20px;
   min-width: 20px;
   min-height: 20px;
 }
 
+.icon-size-25 {
+  width: 25px;
+  height: 25px;
+}
+.icon-size-28 {
+  width: 28px;
+  height: 28px;
+}
 .icon-size-32 {
   width: 32px;
   height: 32px;
@@ -283,13 +327,31 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 
 .icon-button {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
+
   align-items: center;
   display: flex;
   justify-content: center;
+}
+.icon-button.deactivated {
+
+   opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* button icons variants */
+.primary {
+  background-color: var(--color-bg-primary);
+}
+.icon-button.tertiary {
+  background-color: transparent;
+}
+.icon-button.tertiary:hover {
+  filter: brightness(1.2);
+}
+
+.primary:hover {
+  background-color: var(--color-danger-idle);
 }
 
 .icon-button:hover>.icon {
@@ -298,9 +360,9 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 
   transition: filter var(--speed-1) ease-in-out;
 }
-.icon-button:hover:not(.secondary)  {
+.icon-button:hover:not(.secondary,.tertiary) {
  
-  background-color: var(--gray-600);
+  background-color: var(--color-surface-active);
   /* filter animation out */
   transition: filter var(--speed-1) ease-in-out;
 }

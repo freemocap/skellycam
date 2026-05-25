@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import IconButton from "@/components/ui-components/iconButton";
 
 // Reusable InputWithUnit
 interface InputWithUnitProps {
@@ -141,14 +142,13 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
         <div className="value-selector-container border-1 border-black elevated-sharp pos-abs flex flex-row right-0 p-1 bg-dark br-2 z-1 reveal slide-down">
           <div className="flex right-0 p-2 gap-2 bg-middark br-1 z-1">
             {/* Minus button */}
-            <button
+            <IconButton
+              icon="minus-icon"
               onClick={decrement}
-              className={`button icon-button close-button ${
-                currentValue <= min ? "deactivated" : ""
-              }`}
-            >
-              <span className="icon minus-icon icon-size-20"></span>
-            </button>
+              disabled={currentValue <= min}
+              className={`icon-size-28 ${currentValue <= min ? "deactivated" : ""}`}
+              iconSize="icon-size-20"
+            />
 
             {/* Input */}
             <InputWithUnit
@@ -161,14 +161,13 @@ const ValueSelector: React.FC<ValueSelectorProps> = ({
             />
 
             {/* Plus button */}
-            <button
-              onClick={increment}
-              className={`button icon-button close-button ${
-                currentValue >= max ? "deactivated" : ""
-              }`}
-            >
-              <span className="icon plus-icon icon-size-20"></span>
-            </button>
+           <IconButton
+  icon="plus-icon"
+  onClick={increment}
+  disabled={currentValue >= max}
+  className={`icon-size-28 ${currentValue >= max ? "deactivated" : ""}`}
+  iconSize="icon-size-20"
+/>
           </div>
         </div>
       )}

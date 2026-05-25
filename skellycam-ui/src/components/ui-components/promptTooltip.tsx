@@ -87,7 +87,7 @@ useEffect(() => {
 
   const variantClasses = {
     default: "border-gray800",
-    warning: "border-red",
+    warning: "border-warning",
     boarding: "border-blue",
   };
 
@@ -129,10 +129,11 @@ const handleClose = () => {
         )}
       >
         {/* CLOSE BUTTON */}
-        <div className="icon-button-holder flex flex-row pos-abs top-0 right-0 z-2">
+        <div className="icon-button-holder flex flex-row pos-abs top-4 right-4 z-2">
           <IconButton
             icon="close-icon"
             onClick={handleClose}
+            className="tertiary icon-size-20"
           />
         </div>
 
