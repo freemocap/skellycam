@@ -21,7 +21,7 @@ export const AppContent = function () {
     return (
         <HashRouter>
             <AutoUpdateProvider>
-                <BasePanelLayout>
+                <BasePanelLayout welcomeOpen={welcomeOpen}>
                     <MainTabPanel/>
                 </BasePanelLayout>
                 <UpdateBanner/>

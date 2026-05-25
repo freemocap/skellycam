@@ -11,12 +11,12 @@ import PromptTooltip from "@/components/ui-components/promptTooltip";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {ConnectionState} from "@/services/server/server-helpers/websocket-connection";
 
-export const BasePanelLayout = ({children}: { children: React.ReactNode }) => {
+export const BasePanelLayout = ({children, welcomeOpen = false}: { children: React.ReactNode; welcomeOpen?: boolean }) => {
     const { connectionState, connectedCameraIds } = useServer();
     const showServiceUI = connectionState !== ConnectionState.CONNECTED;
     const isFailed = connectionState === ConnectionState.FAILED
         || connectionState === ConnectionState.RECONNECTING;
-    const showConnectCameras = connectionState === ConnectionState.CONNECTED && connectedCameraIds.length === 0;
+    const showConnectCameras = !welcomeOpen && connectionState === ConnectionState.CONNECTED && connectedCameraIds.length === 0;
 
     const navigate = useNavigate();
     const prevCameraCountRef = useRef(0);
