@@ -8,7 +8,7 @@ import { useElectronIPC } from '@/services';
 import { serverUrls } from '@/services/server/server-helpers/server-urls';
 import { backendFetch } from '@/services/electron-ipc/backend-fetch';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import IconButton from '@/components/ui-components/iconButton';
 
 // Module-level cache so playback state survives tab switches
@@ -32,6 +32,7 @@ const PlaybackPage: React.FC = () => {
     const { t } = useTranslation();
     const { api } = useElectronIPC();
     const location = useLocation();
+    const navigate = useNavigate();
     const locationState = location.state as { loadRecordingPath?: string } | null;
     const initialLoadPath = locationState?.loadRecordingPath ?? null;
 
@@ -84,7 +85,9 @@ const PlaybackPage: React.FC = () => {
         setRecordingFps(undefined);
         setFrameTimestamps(null);
         cachedPlaybackState = { loadedVideos: [], recordingId: null, recordingPath: null, recordingFps: undefined, frameTimestamps: null, currentFrame: 0 };
-    }, []);
+        // Clear location state so RecordingBrowser doesn't auto-load the same recording again
+        navigate(location.pathname, { replace: true, state: {} });
+    }, [navigate, location.pathname]);
 
     const handleOpenFolder = useCallback(async () => {
         if (!recordingPath) return;
