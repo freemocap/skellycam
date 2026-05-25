@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {useState} from "react";
 import {useTranslation} from "react-i18next";
+import {useLocation} from "react-router-dom";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {startRecording, stopRecording} from "@/store";
 import {useServer} from "@/services/server/ServerContextProvider";
@@ -8,6 +9,7 @@ import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInf
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
 import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 import {CameraConfigSidebarPanel} from "@/components/camera-config-tree-view/CameraConfigSidebarPanel";
+import {PlaybackSidebarPanel} from "@/components/playback-sidebar/PlaybackSidebarPanel";
 import ButtonSm from "@/components/ui-components/ButtonSm";
 import IconButton from "@/components/ui-components/IconButton";
 
@@ -53,6 +55,8 @@ const CollapsedToolbar: React.FC<{
 export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCollapsed, onToggleCollapse}) => {
     const dispatch = useAppDispatch();
     const {t} = useTranslation();
+    const location = useLocation();
+    const isPlayback = location.pathname.startsWith('/playback');
 
     const recordingInfo = useAppSelector((state) => state.recording);
     const isRecording = recordingInfo.isRecording;
@@ -115,8 +119,14 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
 
                 {/* Main content */}
                 <div className="side-action-main-container h-full flex flex-col gap-1 flex-1 overflow-hidden">
-                    <RecordingInfoPanel/>
-                    <CameraConfigSidebarPanel/>
+                    {isPlayback ? (
+                        <PlaybackSidebarPanel/>
+                    ) : (
+                        <>
+                            <RecordingInfoPanel/>
+                            <CameraConfigSidebarPanel/>
+                        </>
+                    )}
                 </div>
             </div>
         </>
