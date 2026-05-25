@@ -11,15 +11,12 @@ export const MainTabPanel: React.FC = () => {
 
     const activeTab = location.pathname.startsWith('/playback')
         ? 'playback'
-        : location.pathname.startsWith('/cameras')
-            ? 'cameras'
-            : 'home';
+        : 'cameras';
 
     return (
         <div className="main-container gap-1 overflow-hidden flex flex-row flex-1 pos-rel">
             <SegmentedControl
                 options={[
-                    { label: t('home'), value: 'home' },
                     { label: t('cameras'), value: 'cameras' },
                     { label: t('videoPlayback'), value: 'playback' },
                 ]}

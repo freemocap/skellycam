@@ -6,10 +6,12 @@ import {UpdateBanner} from "@/components/ui-components/UpdateBanner";
 import {AutoUpdateProvider} from "@/hooks/AutoUpdateContext";
 import {useTranslation} from "react-i18next";
 import {getLocaleDirection} from "@/i18n";
+import {WelcomeModal} from "@/components/ui-components/WelcomeModal";
 
 export const AppContent = function () {
     const {i18n} = useTranslation();
     const direction = getLocaleDirection(i18n.language);
+    const [welcomeOpen, setWelcomeOpen] = React.useState(true);
 
     React.useEffect(() => {
         document.documentElement.dir = direction;
@@ -23,6 +25,7 @@ export const AppContent = function () {
                     <MainTabPanel/>
                 </BasePanelLayout>
                 <UpdateBanner/>
+                <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
             </AutoUpdateProvider>
         </HashRouter>
     );
