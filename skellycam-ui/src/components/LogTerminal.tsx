@@ -366,21 +366,61 @@ const LogTerminalFull = () => {
 
                 {/* Action buttons */}
                 <div className="log-actions flex gap-1">
-                    <ButtonSm text={copyFeedback ? "✓" : "Copy"} textColor="text-gray" onClick={handleCopyToClipboard} />
-                    <ButtonSm text="Save" textColor="text-gray" onClick={handleSaveToDisk} />
-                    <ButtonSm text="↓" textColor="text-gray" onClick={scrollToBottom} />
                     <ButtonSm
-                        text="Search"
+                        text={copyFeedback ? "✓" : ""}
+                        iconClass={copyFeedback ? "" : "copy-icon"}
+                        textColor="text-gray"
+                        onClick={handleCopyToClipboard}
+                        tooltip={true}
+                        tooltipText="Copy"
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass="download-icon"
+                        textColor="text-gray"
+                        onClick={handleSaveToDisk}
+                        tooltip={true}
+                        tooltipText="Save"
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass="collapse-icon"
+                        textColor="text-gray"
+                        onClick={scrollToBottom}
+                        tooltip={true}
+                        tooltipText="Scroll to bottom"
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass="scan-icon"
                         textColor={showSearch ? "text-white" : "text-gray"}
                         buttonType={showSearch ? "activated" : ""}
                         onClick={() => setShowSearch(!showSearch)}
+                        tooltip={true}
+                        tooltipText="Search"
+                        tooltipPosition="pos-bottom"
                     />
                     <ButtonSm
-                        text={isPaused ? "▶" : "⏸"}
+                        text=""
+                        iconClass={isPaused ? "play-icon" : "pause-icon"}
                         textColor={isPaused ? "text-warning" : "text-gray"}
                         onClick={() => setIsPaused(prev => !prev)}
+                        tooltip={true}
+                        tooltipText={isPaused ? "Resume" : "Pause"}
+                        tooltipPosition="pos-bottom"
                     />
-                    <ButtonSm text="Clear" textColor="text-gray" onClick={handleClear} />
+                    <ButtonSm
+                        text=""
+                        iconClass="clear-icon"
+                        textColor="text-gray"
+                        onClick={handleClear}
+                        tooltip={true}
+                        tooltipText="Clear"
+                        tooltipPosition="pos-bottom"
+                    />
                 </div>
             </div>
 
