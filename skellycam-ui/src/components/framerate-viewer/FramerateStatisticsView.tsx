@@ -104,6 +104,14 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
         min: {short: t("statsMinShort"), long: t("statsMinLong")},
     };
 
+    const renderTooltip = (text: string) => (
+        <div className="tooltip-container pos-bottom" style={{maxWidth: 360, minWidth: 0, whiteSpace: "normal"}}>
+            <div className="tooltip-inner p-1">
+                <span className="text-xs">{text}</span>
+            </div>
+        </div>
+    );
+
     const renderMetricCell = (rowKey: RowKey, metric: MetricKey) => (
         <td key={metric} className={`stats-td stats-col-${metricClass(metric)}`}>
             <div className={`stats-cell-primary stats-cell-${metricClass(metric)}-text`}>
@@ -117,11 +125,12 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
 
     const renderRow = (rowKey: RowKey, sourceLabel: string, tooltip: string) => (
         <tr key={rowKey}>
-            <td className={`stats-td stats-source-cell stats-source-${rowKey}`} title={tooltip}>
+            <td className={`stats-td stats-source-cell stats-source-${rowKey}`}>
                 {sourceLabel}
                 <div className="stats-source-samples">
                     <span ref={setSpanRef(`${rowKey}-samples`)}>--</span>
                 </div>
+                {renderTooltip(tooltip)}
             </td>
             {METRIC_KEYS.map((metric) => renderMetricCell(rowKey, metric))}
         </tr>
@@ -132,15 +141,15 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
             <table className="stats-table">
                 <thead>
                     <tr>
-                        <th className="stats-th stats-th-source"
-                            title={`${tooltips.source.short} ${tooltips.source.long}`}>
+                        <th className="stats-th stats-th-source">
                             {t("source")}
+                            {renderTooltip(`${tooltips.source.short} ${tooltips.source.long}`)}
                         </th>
                         {METRIC_KEYS.map((metric) => (
                             <th key={metric}
-                                className={`stats-th stats-col-${metricClass(metric)}`}
-                                title={`${tooltips[metric].short} ${tooltips[metric].long}`}>
+                                className={`stats-th stats-col-${metricClass(metric)}`}>
                                 {t(metric === "stdDev" ? "stdDevCv" : metric === "recent" ? "Recent" : metric)}
+                                {renderTooltip(`${tooltips[metric].short} ${tooltips[metric].long}`)}
                             </th>
                         ))}
                     </tr>
