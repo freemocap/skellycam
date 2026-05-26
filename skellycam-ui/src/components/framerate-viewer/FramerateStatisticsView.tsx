@@ -105,7 +105,7 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
     };
 
     const renderTooltip = (text: string) => (
-        <div className="tooltip-container pos-bottom" style={{maxWidth: 360, minWidth: 0, whiteSpace: "normal"}}>
+        <div className="tooltip-container pos-bottom stats-tooltip">
             <div className="tooltip-inner p-1">
                 <span className="text-xs">{text}</span>
             </div>
