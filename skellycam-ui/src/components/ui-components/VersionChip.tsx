@@ -53,11 +53,11 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
     if (!version) return null;
 
     return (
-        <div className={`version-button-container pos-abs flex flex-row items-center gap-4${className ? ` ${className}` : ''}`} style={style}>
+        <div className={`version-button-container flex-start pos-abs flex flex-col items-center gap-0 ${className ? ` ${className}` : ''}`} style={style}>
             <ButtonSm
                 text={`v${version}`}
                 onClick={checkForUpdate}
-                textColor='text-white'
+                textColor='text-gray'
                 disabled={isChecking}
                 tooltip={true}
                 tooltipText={t('checkForUpdates')}
@@ -75,7 +75,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
             <ButtonSm
                 text="Releases"
                 onClick={() => window.open(EXTERNAL_URLS.GITHUB_RELEASES, '_blank')}
-                textColor = "text-white"
+                textColor = "text-gray"
                 className="externallink"
                 tooltip={true}
                 tooltipText="view all releases on GitHub"

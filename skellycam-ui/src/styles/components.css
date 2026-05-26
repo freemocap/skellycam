@@ -583,7 +583,7 @@ animation: fadeIn, scaleIn;
 
 .language-dropdown-panel {
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 0;
   z-index: 100;
   min-width: 220px;
@@ -697,16 +697,16 @@ animation: fadeIn, scaleIn;
   background-size: contain;
 }
 
-.splashmodal-mini-menu-container {
-  /* position: absolute; */
-  top: 5px;
+/* .splashmodal-mini-menu-container {
+  position: absolute; */
+  /* top: 5px;
   left: 5px;
-}
+} */
 
 .version-button-container {
   /* position: absolute; */
-  top: 284px;
-  left: 0px;
+  top: 235px;
+  left: 6px;
   /* display: block; */
   text-wrap: nowrap;
 }

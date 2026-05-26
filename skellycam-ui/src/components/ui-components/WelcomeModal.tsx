@@ -11,6 +11,7 @@ import { EXTERNAL_URLS } from '@/constants/external-urls';
 import DesignerCheckbox from '@/components/ui-components/Checkbox';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import ButtonCard from '@/components/ui-components/ButtonCard';
+import iconButton from '@/components/ui-components/IconButton';
 
 interface WelcomeModalProps {
     open: boolean;
@@ -129,9 +130,9 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                     </div>
 
                     {/* Right column — content */}
-                    <div className="flex-1 flex flex-col gap-2 p-1 justify-content-space-between">
+                    <div className="splash-action-group flex-1 flex flex-col gap-1 p-1 justify-content-space-between">
                         {/* Top actions */}
-                        <div className="flex flex-col p-2 gap-3">
+                        <div className="flex flex-col pl-2 pr-2 pt-2 pb-0 mb-0">
                             <h1 className="title">
                                 <span className="text-white">{t('welcomeTitle')}</span>
                                 <br />
@@ -139,7 +140,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                             </h1>
 
                             {/* Primary navigation cards */}
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 mt-3">
                                 <ButtonCard
                                     text={t('connectToCameras')}
                                     iconClass="live-icon icon-size-42"
@@ -158,17 +159,18 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                                     label={t('sendAnonymousPings')}
                                     checked={telemetryEnabled}
                                     onChange={(e) => handleTelemetryToggle(e.target.checked)}
+                                    className="pl-0"
                                 />
                             )}
 
-                            <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2">
+                            <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2 top-12 left-12">
                                 <LanguageSwitcher />
                                 <VersionChip variant="compact" />
                             </div>
                         </div>
 
                         {/* Bottom links */}
-                        <div className="flex flex-col gap-1">
+                        <div className="splash-bottom-links flex flex-col gap-1 pl-1">
                             <ButtonSm
                                 iconClass="learn-icon"
                                 text={t('documentation')}
