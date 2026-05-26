@@ -8,6 +8,7 @@ import {useTranslation} from "react-i18next";
 import {getLocaleDirection} from "@/i18n";
 import {WelcomeModal} from "@/components/ui-components/WelcomeModal";
 import {RecordingGuardProvider} from "@/components/RecordingGuardProvider";
+import {PlaybackContextProvider} from "@/contexts/PlaybackContext";
 
 export const AppContent = function () {
     const {i18n} = useTranslation();
@@ -23,9 +24,11 @@ export const AppContent = function () {
         <HashRouter>
             <AutoUpdateProvider>
                 <RecordingGuardProvider>
+                    <PlaybackContextProvider>
                     <BasePanelLayout welcomeOpen={welcomeOpen}>
                         <MainTabPanel/>
                     </BasePanelLayout>
+                    </PlaybackContextProvider>
                     <UpdateBanner/>
                     <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
                 </RecordingGuardProvider>

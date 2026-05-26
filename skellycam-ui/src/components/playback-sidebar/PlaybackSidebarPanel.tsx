@@ -1,15 +1,16 @@
 import * as React from 'react';
-import {useTranslation} from "react-i18next";
+import { RecordingBrowser } from '@/components/playback/RecordingBrowser';
+import { usePlaybackContext } from '@/contexts/PlaybackContext';
 
 export const PlaybackSidebarPanel: React.FC = () => {
-    const {t} = useTranslation();
+    const { handleRecordingLoaded, initialLoadPath } = usePlaybackContext();
 
     return (
-        <div className="flex flex-col gap-1 h-full p-1">
-            <div className="flex flex-col gap-1 p-2 bg-surface br-2 border-mid-black border-1">
-                <span className="text-sm text-muted">{t('playbackSidebar', 'Playback sidebar')}</span>
-                <span className="text-xs text-muted">{t('playbackSidebarComingSoon', 'Coming soon')}</span>
-            </div>
+        <div className="flex flex-col flex-1 bg-middark br-2 p-1 min-h-0 overflow-hidden">
+            <RecordingBrowser
+                onRecordingLoaded={handleRecordingLoaded}
+                initialLoadPath={initialLoadPath}
+            />
         </div>
     );
 };
