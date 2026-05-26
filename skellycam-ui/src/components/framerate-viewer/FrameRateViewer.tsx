@@ -75,7 +75,7 @@ export const FramerateViewerPanel = ({ isCollapsed = false }: { isCollapsed?: bo
                         onClick={() => setShowHistogram(v => !v)}
                         title={t("distributionView")}
                     >
-                        <p className="text sm">Dist.</p>
+                        <p className="text sm">Distribution</p>
                     </button>
                 </div>
             </div>

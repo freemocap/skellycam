@@ -174,7 +174,7 @@ function applyFilters(entries: LogRecord[], selectedLevels: string[], searchText
 // Collapsed summary view
 // ---------------------------------------------------------------------------
 
-const LogCollapsedView = ({ getLogStore }: { getLogStore: ReturnType<typeof useServer>["getLogStore"] }) => {
+const LogCollapsedView = ({ getLogStore, selectedLevels }: { getLogStore: ReturnType<typeof useServer>["getLogStore"]; selectedLevels: string[] }) => {
     const { t } = useTranslation();
     const [lastEntry, setLastEntry] = useState<LogRecord | null>(null);
 
@@ -182,12 +182,15 @@ const LogCollapsedView = ({ getLogStore }: { getLogStore: ReturnType<typeof useS
         const poll = () => {
             const snap = getLogStore().getSnapshot();
             const entries = snap.entries;
-            setLastEntry(entries.length > 0 ? entries[entries.length - 1] : null);
+            const visible = selectedLevels.length > 0
+                ? entries.filter(e => selectedLevels.includes(e.levelname.toLowerCase()))
+                : entries;
+            setLastEntry(visible.length > 0 ? visible[visible.length - 1] : null);
         };
         poll();
         const id = setInterval(poll, LOG_POLL_INTERVAL_MS);
         return () => clearInterval(id);
-    }, [getLogStore]);
+    }, [getLogStore, selectedLevels]);
 
     if (!lastEntry) return (
         <div className="log-collapsed-summary flex items-center h-full gap-1">
@@ -215,7 +218,27 @@ const LogCollapsedView = ({ getLogStore }: { getLogStore: ReturnType<typeof useS
 // LogTerminal (full view)
 // ---------------------------------------------------------------------------
 
-const LogTerminalFull = () => {
+interface LogTerminalFullProps {
+    selectedLevels: string[];
+    setSelectedLevels: React.Dispatch<React.SetStateAction<string[]>>;
+    searchText: string;
+    setSearchText: React.Dispatch<React.SetStateAction<string>>;
+    showSearch: boolean;
+    setShowSearch: React.Dispatch<React.SetStateAction<boolean>>;
+    isPaused: boolean;
+    setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const LogTerminalFull = ({
+    selectedLevels,
+    setSelectedLevels,
+    searchText,
+    setSearchText,
+    showSearch,
+    setShowSearch,
+    isPaused,
+    setIsPaused,
+}: LogTerminalFullProps) => {
     const { t } = useTranslation();
     const { getLogStore } = useServer();
 
@@ -226,10 +249,6 @@ const LogTerminalFull = () => {
         version: 0,
     });
 
-    const [isPaused, setIsPaused] = useState(false);
-    const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
-    const [searchText, setSearchText] = useState<string>("");
-    const [showSearch, setShowSearch] = useState(false);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -469,6 +488,20 @@ const LogTerminalFull = () => {
 
 export const LogTerminal = ({ isCollapsed = false }: { isCollapsed?: boolean }) => {
     const { getLogStore } = useServer();
-    if (isCollapsed) return <LogCollapsedView getLogStore={getLogStore} />;
-    return <LogTerminalFull />;
+    const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+    const [searchText, setSearchText] = useState("");
+    const [showSearch, setShowSearch] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+
+    if (isCollapsed) return (
+        <LogCollapsedView getLogStore={getLogStore} selectedLevels={selectedLevels} />
+    );
+    return (
+        <LogTerminalFull
+            selectedLevels={selectedLevels} setSelectedLevels={setSelectedLevels}
+            searchText={searchText} setSearchText={setSearchText}
+            showSearch={showSearch} setShowSearch={setShowSearch}
+            isPaused={isPaused} setIsPaused={setIsPaused}
+        />
+    );
 };
