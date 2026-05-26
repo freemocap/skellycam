@@ -9,6 +9,7 @@ interface DropdownButtonProps {
     rightSideIcon?: string;
     textColor?: string;
     buttonType?: string;
+    className?: string;
     onClick?: () => void;
   };
   dropdownItems?: ReactNode;

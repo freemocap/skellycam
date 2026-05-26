@@ -9,7 +9,7 @@ import ToggleButtonComponent from './ui-components/ToggleButtonComponent';
 import ToggleComponent from './ui-components/ToggleComponent';
 import SubactionHeader from './ui-components/SubactionHeader';
 import { STATES } from './ui-components/states';
-import IconButton from './ui-components/iconButton';
+import IconButton from './ui-components/IconButton';
 import ButtonSm from './ui-components/ButtonSm';
 import NameDropdownSelector from '@/components/ui-components/NameDropdownSelector';
 

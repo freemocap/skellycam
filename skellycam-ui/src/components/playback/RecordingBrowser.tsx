@@ -331,7 +331,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({ onRecordingL
         <div className="flex playback-page-content has-videos flex flex-col gap-2 p-2 h-full overflow-hidden">
             {/* Manual path row */}
             <div className="load-group flex flex-row flex-wrap gap-1 items-center">
-                <div calassName="flex flex-row gap-1 items-center">
+                <div className="flex flex-row gap-1 items-center">
                     <SubactionHeader text="Folder Directory" />
                     <ButtonSm
                         iconClass="subfolder-icon"

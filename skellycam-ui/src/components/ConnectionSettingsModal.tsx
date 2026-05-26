@@ -4,7 +4,7 @@ import ToggleComponent from './ui-components/ToggleComponent';
 import NameDropdownSelector from './ui-components/NameDropdownSelector';
 import SubactionHeader from './ui-components/SubactionHeader';
 import type { ExecutableCandidate } from './ServerConnectionStatus';
-import IconButton from './ui-components/iconButton';
+import IconButton from './ui-components/IconButton';
 import ButtonSm from './ui-components/ButtonSm';
 
 interface ConnectionSettingsModalProps {

@@ -9,17 +9,16 @@ export const Footer = function () {
            
         <p className="pos-abs footer-content text sm text-gray text-center">
             <a
-                className="text-gray"
+                className="text-gray flex flex-row gap-1"
                 href={EXTERNAL_URLS.GITHUB_ORG}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ textDecoration: 'none' }}
-                class="flex flex-row gap-1 "
             >
             {t('footerWith') + ' '}
-            <span class="flex-inline icon icon-size-20 donate-icon"></span>
+            <span className="flex-inline icon icon-size-20 donate-icon"></span>
             {/* <a
-                className="text-gray"
+                className="text-gray flex flex-row gap-1"
                 href={EXTERNAL_URLS.GITHUB_ORG}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -32,7 +31,7 @@ export const Footer = function () {
                 {t('footerOrgName')}
             
             {' '}{new Date().getFullYear()}
-            <span class="flex-inline icon icon-size-20 externallink-icon"></span>
+            <span className="flex-inline icon icon-size-20 externallink-icon"></span>
             </a>
         </p>
         

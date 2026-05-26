@@ -98,7 +98,7 @@
 
 const childShouldRender =
   isValidElement(children)
-    ? children.props.show !== false
+    ? (children.props as { show?: boolean }).show !== false
     : true;
 
     

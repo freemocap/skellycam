@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import IconButton from "@/components/ui-components/iconButton";
+import IconButton from "@/components/ui-components/IconButton";
 
 // Reusable InputWithUnit
 interface InputWithUnitProps {

@@ -5,7 +5,7 @@ import { SyncedVideoPlayer } from '@/components/playback/SyncedVideoPlayer';
 import { CamerasViewSettingsOverlay } from '@/components/camera-view-settings-overlay/CamerasViewSettingsOverlay';
 import { useElectronIPC } from '@/services';
 import { useTranslation } from 'react-i18next';
-import IconButton from '@/components/ui-components/iconButton';
+import IconButton from '@/components/ui-components/IconButton';
 import { usePlaybackContext } from '@/contexts/PlaybackContext';
 
 const PlaybackPage: React.FC = () => {

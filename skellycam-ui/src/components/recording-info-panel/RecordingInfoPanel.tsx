@@ -136,7 +136,7 @@ export const RecordingInfoPanel: React.FC = () => {
     return (
     <div className="main-side-actions flex flex-col gap-1 z-3">
         <div className="file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
-            <p class="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
+            <p className="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
                 {/* Path & Settings button */}
                 <ButtonSm
                     iconClass="subfolder-icon"

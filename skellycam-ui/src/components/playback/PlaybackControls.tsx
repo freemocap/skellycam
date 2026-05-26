@@ -5,7 +5,7 @@ import DesignerCheckbox from "@/components/ui-components/Checkbox";
 import type { PlaybackSettings } from "./SyncedVideoPlayer";
 import { useTranslation } from "react-i18next";
 import IconButton from "@/components/ui-components/IconButton";
-import PromptTooltip from "@/components/ui-components/promptTooltip.tsx";
+import PromptTooltip from "@/components/ui-components/promptTooltip";
 import SubactionHeader from "@/components/ui-components/SubactionHeader";
 import ToggleComponent from "@/components/ui-components/ToggleComponent";
 
