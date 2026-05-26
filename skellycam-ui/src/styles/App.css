@@ -123,6 +123,10 @@ a.link:hover {
 .top-0 { top: 0; }
 .top-2 { top: 2px; }
 .top-4 { top: 4px; }
+.top-6 { top: 6px; }
+.top-8 { top: 8px; }
+.top-10 { top: 10px; }
+.top-12 { top: 12px; }
 
 .top-50 {
   top: 50%;
@@ -132,6 +136,10 @@ a.link:hover {
 .left-0 { left: 0; }
 .left-2 { left: 2px; }
 .left-4 { left: 4px; }
+.left-6 { left: 6px; }
+.left-8 { left: 8px; }
+.left-10 { left: 10px; }
+.left-12 { left: 12px; }
 
 .left-50 {
   left: 50%;
@@ -141,6 +149,10 @@ a.link:hover {
 .right-0 { right: 0; }
 .right-2 { right: 2px; }
 .right-4 { right: 4px; }
+.right-6 { right: 6px; }
+.right-8 { right: 8px; }
+.right-10 { right: 10px; }
+.right-12 { right: 12px; }
 
 .right-50 {
   right: 50%;
@@ -258,19 +270,22 @@ a.link:hover {
    PADDING
    ========================= */
 
-.p-0 { padding: 0; }
+.p-0 { padding: 0px; }
 .p-01 { padding: 2px; }
 .p-1 { padding: 4px; }
 .p-2 { padding: 8px; }
 .p-3 { padding: 12px; }
 .p-4 { padding: 16px; }
 
+.pb-0 { padding-bottom: 0px; }
 .pb-1 { padding-bottom: 4px; }
 .pb-2 { padding-bottom: 8px; }
 
+.pl-0 { padding-left: 0px; }
 .pl-1 { padding-left: 4px; }
 .pl-2 { padding-left: 8px; }
 
+.pr-0 { padding-right: 0px; }
 .pr-1 { padding-right: 4px; }
 .pr-2 { padding-right: 8px; }
 
