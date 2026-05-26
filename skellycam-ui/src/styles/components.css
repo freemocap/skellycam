@@ -652,7 +652,7 @@ animation: fadeIn, scaleIn;
 .splash-overlay {
   position: fixed;
   /* inset: 0; */
-  background-color: var(--overlay);
+  background-color: var(--color-surface-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
