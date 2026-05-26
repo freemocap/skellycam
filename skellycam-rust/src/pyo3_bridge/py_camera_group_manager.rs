@@ -483,6 +483,21 @@ fn recording_summary_to_pydict(
     Ok(d.into())
 }
 
+// Non-PyO3 methods — called from Rust (e.g., freemocap's PyO3 bridge)
+// to access FrameSlots without going through Python.
+impl PyO3CameraGroupManager {
+    /// Extract `FrameSlots` for a given group. Called by the freemocap
+    /// PyO3 bridge to wire a pipeline to a camera group without copying
+    /// data through Python.
+    pub fn get_frame_slots(&self, group_id: &str) -> Option<FrameSlots> {
+        self.groups
+            .get(group_id)
+            .and_then(|m| m.lock().ok())
+            .map(|group| group.frame_slots())
+    }
+}
+
+use crate::camera_group::FrameSlots;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 
 // ── Tests ───────────────────────────────────────────────────────────────────

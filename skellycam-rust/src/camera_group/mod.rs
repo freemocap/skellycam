@@ -15,7 +15,8 @@ use crate::camera::MultiFramePayload;
 
 pub use types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingParams, SharedConfigMap};
 pub use camera_group::{
-    CameraGroup, CameraGroupState, CameraStatus, GathererInvalidTransition,
+    CameraGroup, CameraGroupState, CameraStatus, FrameSlots,
+    GathererInvalidTransition,
     GathererState, GathererStateMachine, GathererTimestamps,
 };
 pub use dispatcher::FrontendPayload;

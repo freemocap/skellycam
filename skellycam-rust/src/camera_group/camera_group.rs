@@ -82,6 +82,18 @@ pub struct CameraStatus {
 ///
 /// Within Streaming, `pause()` / `unpause()` toggles whether frames flow
 /// downstream. `apply()` can reconfigure, add, or remove cameras.
+/// Handle to a CameraGroup's shared frame slots.
+///
+/// The dispatcher thread writes to these `Arc<Mutex<Option<T>>>` every multiframe.
+/// Cloning `FrameSlots` is cheap (`Arc` ref bump) — external consumers like the
+/// freemocap pipeline can poll the same slots directly without involving the
+/// `CameraGroup` handle.
+#[derive(Clone)]
+pub struct FrameSlots {
+    pub raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
+    pub frontend_payload: Arc<Mutex<Option<FrontendPayload>>>,
+}
+
 pub struct CameraGroup {
     group_id: String,
     state: CameraGroupState,
@@ -513,6 +525,19 @@ impl CameraGroup {
             .lock()
             .ok()
             .and_then(|guard| guard.clone())
+    }
+
+    /// Return clones of the shared frame slots for external consumers.
+    ///
+    /// The dispatcher thread writes into these slots every multiframe. External
+    /// consumers (like the freemocap pipeline) can poll the same `Arc` slots
+    /// directly without going through the `CameraGroup` handle or copying data
+    /// across process boundaries. Each clone is a cheap `Arc` ref bump.
+    pub fn frame_slots(&self) -> FrameSlots {
+        FrameSlots {
+            raw_frames: self.latest_raw_frames.clone(),
+            frontend_payload: self.latest_frontend_payload.clone(),
+        }
     }
 
     // ── Capture control ───────────────────────────────────────────────────

@@ -5,7 +5,7 @@
 //! The Python module name is `_skellycam_rust` (underscore prefix = private
 //! implementation detail consumed by `skellycam.core.camera_group.camera_group_manager`).
 
-mod py_camera_group_manager;
+pub mod py_camera_group_manager;
 mod types;
 
 use pyo3::prelude::*;
