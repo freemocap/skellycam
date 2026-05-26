@@ -59,7 +59,7 @@ export const CameraViewsGrid: React.FC<CameraViewsGridProps> = ({ manualColumns,
     const [isConnecting, setIsConnecting] = useState(false);
 
     const handleConnect = () => {
-        requestGuardedAction('Update Camera Config', async () => {
+        requestGuardedAction('Stop Recording & Update Camera Config', async () => {
             setIsConnecting(true);
             try { await dispatch(camerasConnectOrUpdate()).unwrap(); }
             catch { /* error handled by store */ }

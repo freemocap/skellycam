@@ -132,13 +132,13 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
                     dispatch(detectCameras());
                     break;
                 case 'connect-cameras':
-                    requestGuardedAction('Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
+                    requestGuardedAction('Stop Recording & Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
                     break;
                 case 'close-cameras':
                     requestGuardedAction('Stop Recording & Close Cameras', () => dispatch(closeCameras()));
                     break;
                 case 'pause-unpause-cameras':
-                    requestGuardedAction('Pause/Unpause Cameras', () => dispatch(pauseUnpauseCameras()));
+                    requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()));
                     break;
 
                 // Locale toggle

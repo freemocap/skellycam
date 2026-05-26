@@ -34,7 +34,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
     }, [open, isConnected, cameras.length, dispatch]);
 
     const handleUpdate = useCallback(() => {
-        requestGuardedAction('Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
+        requestGuardedAction('Stop Recording & Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
     }, [dispatch, requestGuardedAction]);
 
     const handleDetect = useCallback(() => {
@@ -70,7 +70,7 @@ export const CameraConfigModal: React.FC<CameraConfigModalProps> = ({ open, onCl
 
                     <div className="flex-1" />
 
-                    <button className="button icon-button" onClick={() => requestGuardedAction('Clear Camera Settings', () => dispatch(savedSettingsCleared()))} title="Reset all cameras to default settings">
+                    <button className="button icon-button" onClick={() => requestGuardedAction('Stop Recording & Clear Camera Settings', () => dispatch(savedSettingsCleared()))} title="Reset all cameras to default settings">
                         <span className="icon icon-size-20 clear-icon" />
                     </button>
 

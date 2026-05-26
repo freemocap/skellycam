@@ -41,7 +41,7 @@ export function useKeyboardShortcuts(): void {
       // Shift+Space — pause / unpause camera streaming
       if (e.shiftKey && e.key === " ") {
         e.preventDefault();
-        requestGuardedAction('Pause/Unpause Cameras', () => dispatch(pauseUnpauseCameras()));
+        requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()));
         return;
       }
     };

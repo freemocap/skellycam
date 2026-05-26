@@ -36,12 +36,12 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     }, [isStoppingCameras, connectedCameras.length]);
 
     const handleUpdate = useCallback(() => {
-        requestGuardedAction('Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
+        requestGuardedAction('Stop Recording & Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
     }, [dispatch, requestGuardedAction]);
 
     const handleDetect = useCallback(() => {
-        dispatch(detectCameras({ filterVirtual: true }));
-    }, [dispatch]);
+        requestGuardedAction('Stop Recording & Detect Cameras', () => dispatch(detectCameras({ filterVirtual: true })));
+    }, [dispatch, requestGuardedAction]);
 
     const handleStop = useCallback(() => {
         requestGuardedAction('Stop Recording & Close Cameras', () => {
@@ -100,7 +100,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                             <>
                                 <IconButton
                                     icon={isPaused ? 'play-icon' : 'pause-icon'}
-                                    onClick={() => requestGuardedAction('Pause/Unpause Cameras', () => dispatch(pauseUnpauseCameras()))}
+                                    onClick={() => requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()))}
                                     tooltip={true}
                                     tooltipText={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
                                     tooltipPosition="pos-bottom"

@@ -46,14 +46,14 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                     iconClass="stream-icon"
                     textColor="text-white"
                     title={t("connectCameras")}
-                    onClick={() => requestGuardedAction('Update Camera Config', wrap(() => dispatch(camerasConnectOrUpdate()).unwrap()))}
+                    onClick={() => requestGuardedAction('Stop Recording & Update Camera Config', wrap(() => dispatch(camerasConnectOrUpdate()).unwrap()))}
                 />
                 <ButtonSm
                     text=""
                     iconClass={isPaused ? "stream-icon" : "record-icon"}
                     textColor="text-white"
                     title={isPaused ? t("resumeStreaming") : t("pauseStreaming")}
-                    onClick={() => requestGuardedAction('Pause/Unpause Cameras', wrap(() => dispatch(pauseUnpauseCameras()).unwrap()))}
+                    onClick={() => requestGuardedAction('Stop Recording & Pause Cameras', wrap(() => dispatch(pauseUnpauseCameras()).unwrap()))}
                 />
                 <ButtonSm
                     text=""
@@ -67,14 +67,14 @@ export const CameraConfigTreeViewHeader: React.FC<CameraConfigTreeViewHeaderProp
                     iconClass={isLoading || isActionInProgress ? "loader-icon" : "rotate-icon"}
                     textColor="text-white"
                     title={t("detectCameras")}
-                    onClick={wrap(() => dispatch(detectCameras({ filterVirtual: true })).unwrap())}
+                    onClick={() => requestGuardedAction('Stop Recording & Detect Cameras', wrap(() => dispatch(detectCameras({ filterVirtual: true })).unwrap()))}
                 />
                 <ButtonSm
                     text=""
                     iconClass="minus-icon"
                     textColor="text-white"
                     title={t("clearCameraSettings")}
-                    onClick={() => requestGuardedAction('Clear Camera Settings', () => dispatch(savedSettingsCleared()))}
+                    onClick={() => requestGuardedAction('Stop Recording & Clear Camera Settings', () => dispatch(savedSettingsCleared()))}
                 />
             </div>
         </div>
