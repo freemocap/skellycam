@@ -132,7 +132,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                     {/* Right column — content */}
                     <div className="splash-action-group flex-1 flex flex-col gap-1 p-1 justify-content-space-between">
                         {/* Top actions */}
-                        <div className="flex flex-col pl-2 pr-2 pt-2 pb-0 mb-0 gap-3">
+                        <div className="flex flex-col pl-2 pr-2 pt-2 pb-0 mb-0">
                             <h1 className="title">
                                 <span className="text-white">{t('welcomeTitle')}</span>
                                 <br />
@@ -140,7 +140,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                             </h1>
 
                             {/* Primary navigation cards */}
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 mt-3">
                                 <ButtonCard
                                     text={t('connectToCameras')}
                                     iconClass="live-icon icon-size-42"
