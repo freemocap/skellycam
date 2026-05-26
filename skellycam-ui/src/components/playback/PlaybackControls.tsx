@@ -288,7 +288,7 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             title={t("previousFrame")}
             className="icon-size-28"
             tooltip={true}
-            tooltipText={t("framebackward")}
+            tooltipText={t("previousFrame")}
             tooltipPosition="pos-top"
           />
 
