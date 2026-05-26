@@ -1019,7 +1019,9 @@ animation: fadeIn, scaleIn;
 ========================================= */
 
 .button-sm-group:hover .tooltip-container,
-.icon-button:hover .tooltip-container {
+.icon-button:hover .tooltip-container,
+.stats-th:hover .tooltip-container,
+.stats-source-cell:hover .tooltip-container {
   opacity: 1;
   visibility: visible;
 }
@@ -1050,7 +1052,9 @@ animation: fadeIn, scaleIn;
 }
 
 .button-sm-group:hover .tooltip-container.pos-bottom,
-.icon-button:hover .tooltip-container.pos-bottom {
+.icon-button:hover .tooltip-container.pos-bottom,
+.stats-th:hover .tooltip-container.pos-bottom,
+.stats-source-cell:hover .tooltip-container.pos-bottom {
   transform:
     translateX(-50%)
     translateY(-4px);

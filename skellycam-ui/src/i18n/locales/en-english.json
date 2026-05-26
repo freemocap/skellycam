@@ -69,6 +69,7 @@
   "playbackSpeed": "Playback speed (does not affect recording fps)",
   "framerateTimeline": "Framerate Timeline",
   "framerateDistribution": "Framerate Distribution",
+  "statisticsView": "Statistics View",
   "timelineView": "Timeline View",
   "distributionView": "Distribution View",
   "combinedView": "Combined View",

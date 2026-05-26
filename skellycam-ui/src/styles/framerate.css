@@ -45,7 +45,7 @@
    ============================================================ */
 
 .stats-table-wrapper {
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .stats-table {
@@ -64,7 +64,9 @@
   font-weight: bold;
   cursor: help;
   font-family: monospace;
+  position: relative;
 }
+
 
 .stats-td {
   /* font-size: 0.65rem; */
@@ -120,6 +122,7 @@
   cursor: help;
   text-align: left;
   white-space: nowrap;
+  position: relative;
 }
 
 .stats-source-backend {
