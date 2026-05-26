@@ -11,7 +11,7 @@ import PromptTooltip from "@/components/ui-components/promptTooltip";
 import {useServer} from "@/services/server/ServerContextProvider";
 import {ConnectionState} from "@/services/server/server-helpers/websocket-connection";
 
-export const BasePanelLayout = ({children, welcomeOpen = false}: { children: React.ReactNode; welcomeOpen?: boolean }) => {
+export const BasePanelLayout = ({children, welcomeOpen = false, onOpenWelcome}: { children: React.ReactNode; welcomeOpen?: boolean; onOpenWelcome?: () => void }) => {
     const { connectionState, connectedCameraIds } = useServer();
     const showServiceUI = connectionState !== ConnectionState.CONNECTED;
     const isFailed = connectionState === ConnectionState.FAILED
@@ -109,6 +109,7 @@ export const BasePanelLayout = ({children, welcomeOpen = false}: { children: Rea
                 <LeftSidePanelContent
                   isCollapsed={isCollapsed}
                   onToggleCollapse={handleToggleCollapse}
+                  onOpenWelcome={onOpenWelcome}
                 />
               </Panel>
               <PanelResizeHandle

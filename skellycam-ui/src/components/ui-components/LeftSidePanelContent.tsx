@@ -16,6 +16,7 @@ import IconButton from "@/components/ui-components/IconButton";
 interface LeftSidePanelContentProps {
     isCollapsed: boolean;
     onToggleCollapse: () => void;
+    onOpenWelcome?: () => void;
 }
 
 const CollapsedToolbar: React.FC<{
@@ -23,7 +24,8 @@ const CollapsedToolbar: React.FC<{
     isRecording: boolean;
     noCameras: boolean;
     onRecordClick: () => void;
-}> = ({onToggleCollapse, isRecording, noCameras, onRecordClick}) => {
+    onOpenWelcome?: () => void;
+}> = ({onToggleCollapse, isRecording, noCameras, onRecordClick, onOpenWelcome}) => {
     const {t} = useTranslation();
 
     return (
@@ -35,6 +37,16 @@ const CollapsedToolbar: React.FC<{
                 tooltipText={t('expandSidebar')}
                 tooltipPosition="pos-right"
             />
+
+            {onOpenWelcome && (
+                <IconButton
+                    icon="home-icon"
+                    onClick={onOpenWelcome}
+                    tooltip={true}
+                    tooltipText={t('home')}
+                    tooltipPosition="pos-right"
+                />
+            )}
 
             <ServerConnectionStatus compact />
             
@@ -52,7 +64,7 @@ const CollapsedToolbar: React.FC<{
     );
 };
 
-export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCollapsed, onToggleCollapse}) => {
+export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCollapsed, onToggleCollapse, onOpenWelcome}) => {
     const dispatch = useAppDispatch();
     const {t} = useTranslation();
     const location = useLocation();
@@ -85,6 +97,7 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     isRecording={isRecording}
                     noCameras={noCameras}
                     onRecordClick={handleCollapsedRecordClick}
+                    onOpenWelcome={onOpenWelcome}
                 />
             )}
 
@@ -102,7 +115,16 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     // }}
                 >
 
-                    <div 
+                    {onOpenWelcome && (
+                        <IconButton
+                            icon="home-icon"
+                            onClick={onOpenWelcome}
+                            tooltip={true}
+                            tooltipText={t('home')}
+                            tooltipPosition="pos-right"
+                        />
+                    )}
+                    <div
                     data-warning="service-unavailable"
                     className="flex-1 overflow-hidden" style={{minWidth: 0}}>
                         <ServerConnectionStatus />

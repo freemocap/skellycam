@@ -25,7 +25,7 @@ export const AppContent = function () {
             <AutoUpdateProvider>
                 <RecordingGuardProvider>
                     <PlaybackContextProvider>
-                    <BasePanelLayout welcomeOpen={welcomeOpen}>
+                    <BasePanelLayout welcomeOpen={welcomeOpen} onOpenWelcome={() => setWelcomeOpen(true)}>
                         <MainTabPanel/>
                     </BasePanelLayout>
                     </PlaybackContextProvider>
