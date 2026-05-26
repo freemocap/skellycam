@@ -248,3 +248,4 @@ tsconfig.json
 package.json
 index.ts
 bun.lock
+package-lock.json

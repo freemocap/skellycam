@@ -70,7 +70,7 @@ export const LanguageSwitcher: React.FC = () => {
 
                 {/* Dropdown */}
                 {open && (
-                    <div className="language-dropdown-panel dropdown-container border-1 border-black elevated-sharp bg-dark br-2 reveal slide-up">
+                    <div className="language-dropdown-panel dropdown-container border-1 border-black elevated-sharp bg-dark br-2 reveal slide-down">
                         <div className="flex flex-col p-1 gap-1 bg-middark br-1">
                             {Object.entries(SUPPORTED_LOCALES).map(([code, { label, englishName, flag }]) => (
                                 <button

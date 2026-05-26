@@ -15,6 +15,7 @@ interface CheckboxProps {
   checked?: boolean;
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   inputClassName?: string;
+  className?: string;
   disabled?: boolean;
 }
 
@@ -23,6 +24,7 @@ const Checkbox: React.FC<CheckboxProps> = ({
   checked = false,
   onChange,
   inputClassName = "",
+  className = "",
   disabled = false,
 }) => {
   return (
@@ -34,11 +36,9 @@ const Checkbox: React.FC<CheckboxProps> = ({
     p-2
     select-none
     cursor-pointer
+    ${className}
     ${disabled ? "opacity-50 cursor-not-allowed" : ""}
   `}
-  style={{
-    paddingLeft: "11px",
-  }}
 >
       <input
         type="checkbox"
