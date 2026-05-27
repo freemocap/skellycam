@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::camera::{FramePacket, MultiFramePayload};
+use crate::camera::{FramePacket, GathererTimestamps, MultiFramePayload};
 use crate::camera_group::sync_utils::BreakableBarrier;
 use crate::timestamps::performance::{anchor_wall_clock_time, performance_counter_nanoseconds};
 
@@ -369,17 +369,18 @@ pub fn spawn_gatherer(
             let mut payload = MultiFramePayload {
                 frames,
                 frame_number: step,
-                all_frames_received_ns: gatherer_sm.timestamps.all_frames_received_ns,
-                payload_assembled_ns: 0,
-                pre_send_downstream_ns: 0,
+                gatherer_timestamps: GathererTimestamps {
+                    all_frames_received_ns: gatherer_sm.timestamps.all_frames_received_ns,
+                    ..gatherer_sm.timestamps
+                },
             };
 
             // ── AssemblingPayload → SendingDownstream ──
             if let Err(e) = gatherer_sm.transition_to(GathererState::SendingDownstream) {
                 tracing::error!("[gatherer] invalid state transition: {e}");
             }
-            payload.payload_assembled_ns = gatherer_sm.timestamps.payload_assembled_ns;
-            payload.pre_send_downstream_ns = gatherer_sm.timestamps.pre_send_downstream_ns;
+            payload.gatherer_timestamps.payload_assembled_ns = gatherer_sm.timestamps.payload_assembled_ns;
+            payload.gatherer_timestamps.pre_send_downstream_ns = gatherer_sm.timestamps.pre_send_downstream_ns;
 
             // ── Push statistics for this multiframe (warmup-gated) ──
             let push_stats = step >= STATS_WARMUP_MULTIFRAMES;

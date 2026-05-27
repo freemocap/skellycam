@@ -177,24 +177,24 @@ impl RecordingStats {
             .map(|f| f.timestamps.frame_available_ns);
 
         // Gatherer-level metrics
-        if payload.all_frames_received_ns > 0
-            && payload.all_frames_received_ns >= payload.frames.first().map(|f| f.timestamps.frame_available_ns).unwrap_or(0)
+        if payload.gatherer_timestamps.all_frames_received_ns > 0
+            && payload.gatherer_timestamps.all_frames_received_ns >= payload.frames.first().map(|f| f.timestamps.frame_available_ns).unwrap_or(0)
         {
             let first_avail = payload.frames.first().map(|f| f.timestamps.frame_available_ns).unwrap_or(0);
             self.gatherer_frames_collection
-                .push((payload.all_frames_received_ns - first_avail) as f64);
+                .push((payload.gatherer_timestamps.all_frames_received_ns - first_avail) as f64);
         }
-        if payload.payload_assembled_ns > 0
-            && payload.payload_assembled_ns >= payload.all_frames_received_ns
+        if payload.gatherer_timestamps.payload_assembled_ns > 0
+            && payload.gatherer_timestamps.payload_assembled_ns >= payload.gatherer_timestamps.all_frames_received_ns
         {
             self.gatherer_payload_assembly
-                .push((payload.payload_assembled_ns - payload.all_frames_received_ns) as f64);
+                .push((payload.gatherer_timestamps.payload_assembled_ns - payload.gatherer_timestamps.all_frames_received_ns) as f64);
         }
-        if payload.pre_send_downstream_ns > 0
-            && post_send_downstream_ns >= payload.pre_send_downstream_ns
+        if payload.gatherer_timestamps.pre_send_downstream_ns > 0
+            && post_send_downstream_ns >= payload.gatherer_timestamps.pre_send_downstream_ns
         {
             self.gatherer_downstream_send
-                .push((post_send_downstream_ns - payload.pre_send_downstream_ns) as f64);
+                .push((post_send_downstream_ns - payload.gatherer_timestamps.pre_send_downstream_ns) as f64);
         }
     }
 

@@ -8,7 +8,7 @@ pub mod detect;
 pub use types::{
     CameraConfig, CameraCommand, CameraDetection, CameraEvent, CameraFormatInfo,
     CameraHandle, CameraIdentity, FrameData, FrameLifecycleTimestamps, FramePacket,
-    MultiFramePayload,
+    GathererTimestamps, MultiFramePayload,
 };
 pub use camera::Camera;
 pub use camera_thread::spawn;

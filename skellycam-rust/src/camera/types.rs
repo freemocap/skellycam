@@ -143,17 +143,46 @@ pub struct CameraDetection {
     pub available: bool,
 }
 
+/// Gatherer-level timestamps for one multiframe cycle.
+///
+/// Populated by the gatherer state machine. One set per multiframe.
+#[derive(Debug, Clone, Copy)]
+pub struct GathererTimestamps {
+    /// Start of this gatherer iteration.
+    pub collecting_start_ns: i64,
+    /// When the last camera's `FramePacket` is received.
+    pub all_frames_received_ns: i64,
+    /// When the gatherer exits `barrier.wait()`.
+    pub post_barrier_ns: i64,
+    /// After the `MultiFramePayload` struct is assembled.
+    pub payload_assembled_ns: i64,
+    /// Just before `multi_frame_sender.send(payload)`.
+    pub pre_send_downstream_ns: i64,
+}
+
+impl GathererTimestamps {
+    pub fn new() -> Self {
+        Self {
+            collecting_start_ns: 0,
+            all_frames_received_ns: 0,
+            post_barrier_ns: 0,
+            payload_assembled_ns: 0,
+            pre_send_downstream_ns: 0,
+        }
+    }
+}
+
+impl Default for GathererTimestamps {
+    fn default() -> Self { Self::new() }
+}
+
 /// Multi-camera synchronized payload with gatherer-level timestamps.
 #[derive(Debug)]
 pub struct MultiFramePayload {
     pub frames: Vec<FramePacket>,
     pub frame_number: i64,
-    /// Stamped when the last camera's `recv()` completes.
-    pub all_frames_received_ns: i64,
-    /// Stamped after the `MultiFramePayload` struct is assembled.
-    pub payload_assembled_ns: i64,
-    /// Stamped just before `multi_frame_sender.send()`.
-    pub pre_send_downstream_ns: i64,
+    /// Per-cycle gatherer timestamps (replaces bare i64 fields).
+    pub gatherer_timestamps: GathererTimestamps,
 }
 
 impl MultiFramePayload {

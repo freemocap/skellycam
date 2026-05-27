@@ -17,7 +17,7 @@ pub use types::{CameraGroupConfig, DispatcherCommand, GathererUpdate, RecordingP
 pub use camera_group::{
     CameraGroup, CameraGroupState, CameraStatus, FrameSlots,
     GathererInvalidTransition,
-    GathererState, GathererStateMachine, GathererTimestamps,
+    GathererState, GathererStateMachine,
 };
 pub use dispatcher::FrontendPayload;
 pub use frontend_encoder::{encode_multiframe, encode_payload, FrameHeader, PayloadHeader};

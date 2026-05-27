@@ -850,43 +850,6 @@ pub enum GathererState {
 /// These represent the gatherer's own loop lifecycle (one set per multiframe
 /// cycle, distinct from the per-camera per-frame timestamps in
 /// `FrameLifecycleTimestamps`).
-#[derive(Debug, Clone, Copy)]
-pub struct GathererTimestamps {
-    /// Stamped at the start of each gatherer iteration (top of the
-    /// CollectingFrames state). For iteration 0 this is when the gatherer
-    /// thread began; for every subsequent iteration it equals the previous
-    /// iteration's `post_send_downstream_ns`. The interval
-    /// `all_frames_received_ns - collecting_start_ns` is the time the
-    /// gatherer spent blocked waiting on `receiver.recv()` for every camera.
-    pub collecting_start_ns: i64,
-    /// Stamped when the last camera's `FramePacket` is received in this cycle.
-    pub all_frames_received_ns: i64,
-    /// Stamped when the gatherer itself exits `barrier.wait()`.
-    pub post_barrier_ns: i64,
-    /// Stamped after the `MultiFramePayload` struct is assembled.
-    pub payload_assembled_ns: i64,
-    /// Stamped just before `multi_frame_sender.send(payload)` is called.
-    pub pre_send_downstream_ns: i64,
-}
-
-impl GathererTimestamps {
-    pub fn new() -> Self {
-        Self {
-            collecting_start_ns: 0,
-            all_frames_received_ns: 0,
-            post_barrier_ns: 0,
-            payload_assembled_ns: 0,
-            pre_send_downstream_ns: 0,
-        }
-    }
-}
-
-impl Default for GathererTimestamps {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Manages the gatherer's runtime state cycle with automatic timestamp recording.
 ///
 /// Every call to `transition_to()`:
@@ -895,13 +858,13 @@ impl Default for GathererTimestamps {
 /// 3. Updates the current state.
 pub struct GathererStateMachine {
     state: GathererState,
-    pub timestamps: GathererTimestamps,
+    pub timestamps: crate::camera::GathererTimestamps,
 }
 
 impl GathererStateMachine {
     pub fn new() -> Self {
         let now = performance_counter_nanoseconds();
-        let mut timestamps = GathererTimestamps::new();
+        let mut timestamps = crate::camera::GathererTimestamps::new();
         timestamps.collecting_start_ns = now;
         Self {
             state: GathererState::CollectingFrames,
