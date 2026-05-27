@@ -104,7 +104,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
     return (
         <div
             className="splash-overlay inset-0 reveal fadeIn"
-            style={{ position: 'fixed', zIndex: 50 }}
+            style={{ position: 'fixed', zIndex: 100 }}
             onClick={onClose}
         >
             <div
