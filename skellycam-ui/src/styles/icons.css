@@ -55,7 +55,13 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --explainer-icon: url("../assets/icons/explainer_icon.svg");
   --expand-icon: url("../assets/icons/expand_icon.svg");
   --collapse-icon: url("../assets/icons/collapse_icon.svg");
+  --copyover-icon: url("../assets/icons/copyover_icon.svg");
+  --save-icon: url("../assets/icons/save_icon.svg");
+
   --copy-icon: url("../assets/icons/copy_icon.svg");
+  --scrolldown-icon: url("../assets/icons/scrolldown_icon.svg");
+  --scrollup-icon: url("../assets/icons/scrollup_icon.svg");
+
   --mic-icon: url("../assets/icons/mic_icon.svg");
   --mic-active-icon: url("../assets/icons/mic_active_icon.svg");
   --processmocap-icon: url("../assets/icons/processmocap_icon.svg");
@@ -63,6 +69,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --record-icon: url("../assets/icons/record_icon.svg");
   --calibrate-icon: url("../assets/icons/calibrate_icon.svg");
   --back-icon: url("../assets/icons/back_icon.svg");
+  --copied-icon: url("../assets/icons/copied_icon.svg");
   --frameforward-icon: url("../assets/icons/frameforward_icon.svg");
   --framebackward-icon: url("../assets/icons/framebackward_icon.svg");
   --loop-icon: url("../assets/icons/loop_icon.svg");
@@ -78,6 +85,7 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
   --donate-icon: url("../assets/icons/donate_icon.svg");
   --subcat-icon: url("../assets/icons/subcat_icon.svg");
   --download-icon: url("../assets/icons/download_icon.svg");
+  --search-icon: url("../assets/icons/search_icon.svg");
 
   --settings-icon: url("../assets/icons/settings_icon.svg");
   --subfolder_icon: url("../assets/icons/subfolder_icon.svg");
@@ -126,6 +134,9 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 }
 .back-icon {
   background-image: var(--back-icon);
+}
+.search-icon {
+  background-image: var(--search-icon);
 }
 .clear-icon {
   background-image: var(--clear-icon);
@@ -233,11 +244,26 @@ Study the codebase HTML structure carefully. You will notice that whenever icons
 .connected-icon {
   background-image: var(--connected-icon);
 }
-.copy-icon {
-  background-image: var(--copy-icon);
+.copyover-icon {
+  background-image: var(--copyover-icon);
 }
 .loop-icon {
   background-image: var(--loop-icon);
+}
+.copy-icon {
+  background-image: var(--copy-icon);
+}
+.copied-icon {
+  background-image: var(--copied-icon);
+}
+.scrolldown-icon {
+  background-image: var(--scrolldown-icon);
+}
+.save-icon {
+  background-image: var(--save-icon);
+}
+.scrollup-icon {
+  background-image: var(--scrollup-icon);
 }
 .loopactive-icon {
   background-image: var(--loopactive-icon);

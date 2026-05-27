@@ -29,7 +29,7 @@ import clsx from "clsx";
  * -----------------------------------------
  *
  * <IconButton
- *   icon="copy-icon"
+ *   icon="copyover-icon"
  * />
  *
  * <IconButton
@@ -41,7 +41,7 @@ import clsx from "clsx";
  * -----------------------------------------
  *
  * <IconButton
- *   icon="copy-icon"
+ *   icon="copyover-icon"
  *   tooltip={true}
  *   tooltipText="Copy to clipboard"
  * />

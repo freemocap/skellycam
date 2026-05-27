@@ -11,7 +11,7 @@ import { EXTERNAL_URLS } from '@/constants/external-urls';
 import DesignerCheckbox from '@/components/ui-components/Checkbox';
 import ButtonSm from '@/components/ui-components/ButtonSm';
 import ButtonCard from '@/components/ui-components/ButtonCard';
-import iconButton from '@/components/ui-components/IconButton';
+import IconButton from '@/components/ui-components/IconButton';
 
 interface WelcomeModalProps {
     open: boolean;
@@ -102,100 +102,105 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
     if (!open) return null;
 
     return (
+      <div
+        className="splash-overlay inset-0 reveal fadeIn"
+        style={{ position: "fixed", zIndex: 100 }}
+        onClick={onClose}
+      >
         <div
-            className="splash-overlay inset-0 reveal fadeIn"
-            style={{ position: 'fixed', zIndex: 50 }}
-            onClick={onClose}
+          className="pos-rel splash-modal fade reveal main-container br-2 flex flex-col p-1 bg-dark border-1 border-black"
+          onClick={(e) => e.stopPropagation()}
         >
-            <div
-                className="pos-rel splash-modal fade reveal main-container br-2 flex flex-col p-1 bg-dark border-1 border-black"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="overflow-hidden flex-1 bg-middark br-1 flex flex-row gap-3 p-2">
-                    {/* Close button */}
-                    <button
+          <div className="overflow-hidden flex-1 bg-middark br-1 flex flex-row gap-3 p-2">
+            <div className="icon-button-holder flex flex-row pos-abs top-4 right-4 z-2">
+              {/* Close button */}
+              <IconButton
+                icon="icon close-icon icon-size-20"
+                onClick={onClose}
+                className="pos-abs top-0 right-0 tertiary"
+              />
+            </div>
+            {/* <button
                         onClick={onClose}
                         className="button icon-button close-button pos-abs top-0 right-0 m-1"
                     >
                         <span className="icon close-icon icon-size-20" />
-                    </button>
+                    </button> */}
 
-                    {/* Left column — logo */}
-                    <div className="splash-image-container flex flex-1">
-                        
-                        {/* <div className="splash-image-logo-container m-2" /> */}
-                        
-                         
-                        
-                    </div>
+            {/* Left column — logo */}
+            <div className="splash-image-container flex flex-1">
+              {/* <div className="splash-image-logo-container m-2" /> */}
+            </div>
 
-                    {/* Right column — content */}
-                    <div className="splash-action-group flex-1 flex flex-col gap-1 p-1 justify-content-space-between">
-                        {/* Top actions */}
-                        <div className="flex flex-col pl-2 pr-2 pt-2 pb-0 mb-0">
-                            <h1 className="title">
-                                <span className="text-white">{t('welcomeTitle')}</span>
-                                <br />
-                                <span className="text-gray">{t('welcomeSubtitle')}</span>
-                            </h1>
+            {/* Right column — content */}
+            <div className="splash-action-group flex-1 flex flex-col gap-1 p-1 justify-content-space-between">
+              {/* Top actions */}
+              <div className="flex flex-col pl-2 pr-2 pt-2 pb-0 mb-0">
+                <h1 className="title">
+                  <span className="text-white">{t("welcomeTitle")}</span>
+                  <br />
+                  <span className="text-gray">{t("welcomeSubtitle")}</span>
+                </h1>
 
-                            {/* Primary navigation cards */}
-                            <div className="flex gap-2 mt-3">
-                                <ButtonCard
-                                    text={t('connectToCameras')}
-                                    iconClass="live-icon icon-size-42"
-                                    onClick={handleGoToCameras}
-                                />
-                                <ButtonCard
-                                    text={t('videoPlayback')}
-                                    iconClass="importVideos-icon icon-size-42"
-                                    onClick={handleGoToPlayback}
-                                />
-                            </div>
+                {/* Primary navigation cards */}
+                <div className="flex gap-2 mt-3">
+                  <ButtonCard
+                    text={t("connectToCameras")}
+                    iconClass="live-icon icon-size-42"
+                    onClick={handleGoToCameras}
+                  />
+                  <ButtonCard
+                    text={t("videoPlayback")}
+                    iconClass="importVideos-icon icon-size-42"
+                    onClick={handleGoToPlayback}
+                  />
+                </div>
 
-                            {/* Telemetry checkbox */}
-                            {telemetryLoaded && (
-                                <DesignerCheckbox
-                                    label={t('sendAnonymousPings')}
-                                    checked={telemetryEnabled}
-                                    onChange={(e) => handleTelemetryToggle(e.target.checked)}
-                                    className="pl-0"
-                                />
-                            )}
+                {/* Telemetry checkbox */}
+                {telemetryLoaded && (
+                  <DesignerCheckbox
+                    label={t("sendAnonymousPings")}
+                    checked={telemetryEnabled}
+                    onChange={(e) => handleTelemetryToggle(e.target.checked)}
+                    className="pl-0"
+                  />
+                )}
 
-                            <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2 top-12 left-12">
-                                <LanguageSwitcher />
-                                <VersionChip variant="compact" />
-                            </div>
-                        </div>
+                <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2 top-12 left-12">
+                  <LanguageSwitcher />
+                  <VersionChip variant="compact" />
+                </div>
+              </div>
 
-                        {/* Bottom links */}
-                        <div className="splash-bottom-links flex flex-col gap-1 pl-1">
-                            <ButtonSm
-                                iconClass="learn-icon"
-                                text={t('documentation')}
-                                rightSideIcon="externallink"
-                                textColor="text-gray"
-                                onClick={() => window.open(EXTERNAL_URLS.DOCS_INTRO, '_blank')}
-                            />
-                            <ButtonSm
-                                iconClass="discord-icon"
-                                text="Join community"
-                                rightSideIcon="externallink"
-                                textColor="text-gray"
-                                onClick={() => window.open(EXTERNAL_URLS.DISCORD, '_blank')}
-                            />
-                            {/* <ButtonSm
+              {/* Bottom links */}
+              <div className="splash-bottom-links flex flex-col gap-1 pl-1">
+                <ButtonSm
+                  iconClass="learn-icon"
+                  text={t("documentation")}
+                  rightSideIcon="externallink"
+                  textColor="text-gray"
+                  onClick={() =>
+                    window.open(EXTERNAL_URLS.DOCS_INTRO, "_blank")
+                  }
+                />
+                <ButtonSm
+                  iconClass="discord-icon"
+                  text="Join community"
+                  rightSideIcon="externallink"
+                  textColor="text-gray"
+                  onClick={() => window.open(EXTERNAL_URLS.DISCORD, "_blank")}
+                />
+                {/* <ButtonSm
                                 iconClass=""
                                 text={t('roadmap')}
                                 rightSideIcon="externallink"
                                 textColor="text-gray"
                                 onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
                             /> */}
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     );
 };
