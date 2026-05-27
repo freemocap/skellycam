@@ -386,17 +386,17 @@ const LogTerminalFull = ({
                 {/* Action buttons */}
                 <div className="log-actions flex gap-1">
                     <ButtonSm
-                        text={copyFeedback ? "✓" : ""}
-                        iconClass={copyFeedback ? "" : "copy-icon"}
+                        text={copyFeedback ? "" : ""}
+                        iconClass={copyFeedback ? "copied-icon" : "copy-icon"}
                         textColor="text-gray"
                         onClick={handleCopyToClipboard}
                         tooltip={true}
-                        tooltipText="Copy"
+                        tooltipText={copyFeedback ? "Copied!" : "Copy to clipboard"}
                         tooltipPosition="pos-bottom"
                     />
                     <ButtonSm
                         text=""
-                        iconClass="download-icon"
+                        iconClass="save-icon"
                         textColor="text-gray"
                         onClick={handleSaveToDisk}
                         tooltip={true}
@@ -405,7 +405,7 @@ const LogTerminalFull = ({
                     />
                     <ButtonSm
                         text=""
-                        iconClass="collapse-icon"
+                        iconClass="scrolldown-icon"
                         textColor="text-gray"
                         onClick={scrollToBottom}
                         tooltip={true}
@@ -414,7 +414,7 @@ const LogTerminalFull = ({
                     />
                     <ButtonSm
                         text=""
-                        iconClass="scan-icon"
+                        iconClass="search-icon"
                         textColor={showSearch ? "text-white" : "text-gray"}
                         buttonType={showSearch ? "activated" : ""}
                         onClick={() => setShowSearch(!showSearch)}

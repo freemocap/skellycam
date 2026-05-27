@@ -373,7 +373,7 @@ button.rotate-button {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 4px;
+  width: 3px;
   height: 20px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
@@ -392,7 +392,7 @@ button.rotate-button {
   top: 50%;
   left: 50%;
   width: 20px;
-  height: 4px;
+  height: 3px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
   background: var(--color-border-primary);
@@ -407,18 +407,18 @@ button.rotate-button {
    HOVER
  */
 
-.resizable-component:hover::before {
+.resizable-component[data-resize-handle-state="hover"]::before {
   opacity: 1;
   background: var(--log-trace);
 }
 
 /* Slightly enlarge handle area on hover */
 .resizable-component[data-panel-group-direction="horizontal"]:hover {
-  width: 8px !important;
+  width: 4px !important;
 }
 
 .resizable-component[data-panel-group-direction="vertical"]:hover {
-  height: 8px !important;
+  height: 4px !important;
 }
 
 /* =========================================
@@ -432,11 +432,11 @@ button.rotate-button {
 
 /* Wider while dragging */
 .resizable-component[data-panel-group-direction="horizontal"][data-resize-handle-state="drag"] {
-  width: 10px !important;
+  width: 8px !important;
 }
 
 .resizable-component[data-panel-group-direction="vertical"][data-resize-handle-state="drag"] {
-  height: 10px !important;
+  height: 8px !important;
 }
 
 /* Make center indicator brighter/larger while dragging */

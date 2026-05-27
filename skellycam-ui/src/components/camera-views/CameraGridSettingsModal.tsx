@@ -140,7 +140,7 @@ export const CameraGridSettingsModal: React.FC<CameraGridSettingsModalProps> = (
                   ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? "s" : ""}`
                   : "No other cameras"
               }
-              iconClass="copy-icon"
+              iconClass="copyover-icon"
               buttonType={otherCamerasCount === 0 ? "disabled" : ""}
               onClick={() => {
                 if (otherCamerasCount > 0)
