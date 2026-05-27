@@ -10,14 +10,14 @@ export default function BottomPanelContent({ isCollapsed = false }: { isCollapse
     const isPlayback = location.pathname.startsWith('/playback');
 
     return (
-        <div className="bottom-info-container br-2 flex h-full overflow-hidden">
+        <div className="bottom-info-container br-2 flex h-full">
             {isPlayback ? (
                 <div className="server-logs-container text-nowrap bg-middark bg-darkgray p-1 br-1 w-full h-full">
                     <LogTerminal isCollapsed={isCollapsed} />
                 </div>
             ) : (
                 <PanelGroup className="console-area p-0" direction="horizontal" style={{direction: "ltr"}}>
-                    <Panel className="camera-performance-metric-container bg-middark bg-darkgray p-1 br-1" defaultSize={30} minSize={15}>
+                    <Panel className="camera-performance-metric-container overflow-visiblei bg-middark bg-darkgray p-1 br-1" defaultSize={30} minSize={15}>
                         <FramerateViewerPanel isCollapsed={isCollapsed} />
                     </Panel>
 

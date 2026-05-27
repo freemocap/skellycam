@@ -95,7 +95,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                               
                             tooltip={true}
                             tooltipText="Connect to Cameras"
-                            tooltipPosition="pos-bottom"
+                            tooltipPosition="pos-bottom-right"
 
                             />
                         ) : (
@@ -105,15 +105,15 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                                     onClick={() => requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()))}
                                     tooltip={true}
                                     tooltipText={isRecording ? t('stopRecordingFirst') : isPaused ? t('resumeStreaming') : t('pauseStreaming')}
-                                    tooltipPosition="pos-bottom"
+                                    tooltipPosition="pos-bottom-right"
                                     disabled={isRecording}
                                 />
                                 <IconButton
                                     icon={isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}
                                     onClick={handleStop}
                                     tooltip={true}
-                                    tooltipText={isRecording ? t('stopRecordingFirst') : t('pauseStreaming')}
-                                    tooltipPosition="pos-bottom"
+                                    tooltipText={isRecording ? t('stopRecordingFirst') : t('stopStreaming')}
+                                    tooltipPosition="pos-bottom-right"
                                     disabled={isRecording || isStoppingCameras}
                                 />
                             </>

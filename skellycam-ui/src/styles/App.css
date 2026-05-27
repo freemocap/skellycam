@@ -9,6 +9,7 @@
 @import './checkbox.css';
 @import './components.css';
 @import './playback.css';
+@import './tooltips.css';
 
 /* base / reset */
 
@@ -406,9 +407,15 @@ a.link:hover {
 .overflow-hidden {
   overflow: hidden;
 }
+.overflow-hiddeni {
+  overflow: hidden!important;
+}
 
 .overflow-visible {
   overflow: visible;
+}
+.overflow-visiblei {
+  overflow: visible!important;
 }
 
 /* =========================
