@@ -13,6 +13,7 @@ import {getTimestampString} from "@/components/recording-info-panel/getTimestamp
 import {RecordingCompleteDialog} from "@/components/recording-info-panel/RecordingCompleteDialog";
 import {RecordingPathModal} from "@/components/recording-info-panel/RecordingPathModal";
 import ButtonSm from "@/components/ui-components/ButtonSm";
+import { useTranslation } from "react-i18next";
 
 interface RecordingOperation {
     type: 'start' | 'stop';
@@ -22,6 +23,7 @@ interface RecordingOperation {
 export const RecordingInfoPanel: React.FC = () => {
     const dispatch = useAppDispatch();
     const recordingInfo = useAppSelector((state) => state.recording);
+    const { t } = useTranslation();
 
     const [createSubfolder, setCreateSubfolder] = useState<boolean>(false);
     const [useDelayStart, setUseDelayStart] = useState<boolean>(false);
@@ -198,6 +200,7 @@ export const RecordingInfoPanel: React.FC = () => {
                     countdown={countdown}
                     recordingStartTime={recordingStartTime}
                     disabled={noCamerasConnected && !recordingInfo.isRecording}
+                    tooltipText={noCamerasConnected && !recordingInfo.isRecording ? t('connectCamerasToRecord') : undefined}
                     onClick={handleRecordButtonClick}
                 />
             </div>

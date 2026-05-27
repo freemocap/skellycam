@@ -22,6 +22,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
     const connectedCameras = useAppSelector(selectConnectedCameras);
     const isLoading = useAppSelector(selectIsLoading);
     const isPaused = useAppSelector(selectIsPaused);
+    const isRecording = useAppSelector((state) => state.recording.isRecording);
 
     useEffect(() => {
         if (isConnected && cameras.length === 0) {
@@ -80,8 +81,9 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                         icon="scan-icon"
                         onClick={handleDetect}
                         tooltip={true}
-                        tooltipText="Detect new cameras"
+                        tooltipText={isRecording ? t('stopRecordingFirst') : "Detect new cameras"}
                         tooltipPosition="pos-bottom"
+                        disabled={isRecording}
                     />
                         {connectedCameras.length === 0 ? (
                             <ButtonSm
@@ -102,16 +104,17 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                                     icon={isPaused ? 'play-icon' : 'pause-icon'}
                                     onClick={() => requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()))}
                                     tooltip={true}
-                                    tooltipText={isPaused ? t('resumeStreaming') : t('pauseStreaming')}
+                                    tooltipText={isRecording ? t('stopRecordingFirst') : isPaused ? t('resumeStreaming') : t('pauseStreaming')}
                                     tooltipPosition="pos-bottom"
+                                    disabled={isRecording}
                                 />
                                 <IconButton
                                     icon={isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}
                                     onClick={handleStop}
                                     tooltip={true}
-                                    tooltipText="Stop streaming"
+                                    tooltipText={isRecording ? t('stopRecordingFirst') : t('pauseStreaming')}
                                     tooltipPosition="pos-bottom"
-                                    disabled={isStoppingCameras}
+                                    disabled={isRecording || isStoppingCameras}
                                 />
                             </>
                         )}

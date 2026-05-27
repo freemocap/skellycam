@@ -1020,6 +1020,7 @@ animation: fadeIn, scaleIn;
 
 .button-sm-group:hover .tooltip-container,
 .icon-button:hover .tooltip-container,
+.tooltip-wrapper:hover .tooltip-container,
 .stats-th:hover .tooltip-container,
 .stats-source-cell:hover .tooltip-container {
   opacity: 1;

@@ -189,6 +189,65 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
   tooltipText = "",
   tooltipPosition = "pos-bottom",
 }) => {
+  const innerContent = (
+    <>
+      {/* LEFT ICON */}
+      {iconClass && (
+        <span className={clsx("icon icon-size-20", iconClass)} />
+      )}
+
+      {/* TEXT */}
+      <p className={clsx(
+        textColor,
+        "text-nowrap text md text-align-left",
+        textClass
+      )}>
+        {text}
+      </p>
+    </>
+  );
+
+  const tooltipEl = tooltip && tooltipText && (
+    <div
+      className={clsx(
+        "tooltip-container elevated-sharp",
+        tooltipPosition,
+        "p-01 br-2 bg-dark"
+      )}
+    >
+      <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
+        <p className="text-white text md">{tooltipText}</p>
+      </div>
+    </div>
+  );
+
+  // When disabled with a tooltip, use a div wrapper so hover still fires.
+  // button:disabled may suppress pointer events in some environments,
+  // but the parent div reliably receives hover and shows the tooltip.
+  if (disabled && tooltip && tooltipText) {
+    return (
+      <div
+        className={clsx("button-sm-group pos-rel fit-content flex-inline")}
+        style={{ opacity: 0.5, cursor: "not-allowed" }}
+      >
+        <button
+          disabled
+          title={title}
+          className={clsx(
+            "gap-1 br-1 button items-center sm fit-content flex-inline text-left items-center text-black",
+            buttonType,
+            rightSideIcon,
+            className
+          )}
+          style={{ pointerEvents: "none" }}
+        >
+          {innerContent}
+        </button>
+        {tooltipEl}
+      </div>
+    );
+  }
+
   return (
     <button
       onClick={onClick}
@@ -202,34 +261,8 @@ const ButtonSm: React.FC<ButtonSmProps> = ({
         className
       )}
     >
-      {/* LEFT ICON */}
-      {iconClass && (
-        <span className={clsx("icon icon-size-20", iconClass)} />
-      )}
-
-      {/* TEXT */}
-      <p   className={clsx(
-    textColor,
-    "text-nowrap text md text-align-left",
-    textClass
-  )}>
-        {text}
-      </p>
-
-      {/* TOOLTIP */}
-      {tooltip && tooltipText && (
-        <div
-          className={clsx(
-            "tooltip-container elevated-sharp",
-            tooltipPosition,
-            "p-01 br-2 bg-dark"
-          )}
-        >
-          <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
-            <p className="text-white text md">{tooltipText}</p>
-          </div>
-        </div>
-      )}
+      {innerContent}
+      {tooltipEl}
     </button>
   );
 };

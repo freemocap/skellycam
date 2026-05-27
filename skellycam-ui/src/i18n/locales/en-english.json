@@ -259,5 +259,7 @@
   "checkForUpdates": "Check for Updates",
   "upToDate": "You are up to date",
   "updateError": "Update check failed",
-  "serverNotConnected": "Connect to server to enable controls"
+  "serverNotConnected": "Connect to server to enable controls",
+  "connectCamerasToRecord": "Connect cameras to start recording",
+  "stopRecordingFirst": "Stop recording first"
 }

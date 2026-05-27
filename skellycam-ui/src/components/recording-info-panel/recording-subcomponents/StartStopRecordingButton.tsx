@@ -9,6 +9,7 @@ interface StartStopButtonProps {
     recordingStartTime: number | null;
     disabled: boolean;
     onClick: () => void;
+    tooltipText?: string;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -23,7 +24,7 @@ const formatDuration = (seconds: number): string => {
 };
 
 export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
-    isRecording, isPending, countdown, recordingStartTime, disabled, onClick,
+    isRecording, isPending, countdown, recordingStartTime, disabled, onClick, tooltipText,
 }) => {
     const [recordingDuration, setRecordingDuration] = useState<number>(0);
     const { t } = useTranslation();
@@ -41,7 +42,7 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
 
     const isDisabled = disabled || isPending || countdown !== null;
 
-    return (
+    const buttonEl = (
         <button
             className={clsx(
                 "accent text-nowrap flex flex-row flex-1 gap-1 br-1 button sm min-w-fit-content flex-inline text-left items-center full-width primary justify-center",
@@ -49,6 +50,7 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
             )}
             onClick={onClick}
             disabled={isDisabled}
+            style={isDisabled && tooltipText ? { pointerEvents: "none" } : undefined}
         >
             {countdown !== null && countdown > 0 ? (
                 <div className="flex items-center gap-1">
@@ -76,4 +78,19 @@ export const StartStopRecordingButton: React.FC<StartStopButtonProps> = ({
             )}
         </button>
     );
+
+    if (isDisabled && tooltipText) {
+        return (
+            <div className="tooltip-wrapper pos-rel flex flex-1 w-full" style={{ opacity: 0.5, cursor: "not-allowed" }}>
+                {buttonEl}
+                <div className={clsx("tooltip-container elevated-sharp pos-top p-01 br-2 bg-dark")}>
+                    <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
+                        <p className="text-white text md">{tooltipText}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return buttonEl;
 };

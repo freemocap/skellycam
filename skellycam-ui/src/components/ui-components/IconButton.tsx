@@ -105,6 +105,48 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
   tooltipText = "",
   tooltipPosition = "pos-bottom",
 }, ref) => {
+  const iconEl = (
+    <span className={clsx("icon", icon, iconSize)} />
+  );
+
+  const tooltipEl = tooltip && tooltipText && (
+    <div
+      className={clsx(
+        "tooltip-container elevated-sharp",
+        tooltipPosition,
+        "p-01 br-2 bg-dark"
+      )}
+    >
+      <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
+        <p className="text-white text md">{tooltipText}</p>
+      </div>
+    </div>
+  );
+
+  // When disabled with a tooltip, use a div wrapper so hover still fires.
+  // button:disabled may suppress pointer events in some environments,
+  // but the parent div reliably receives hover and shows the tooltip.
+  if (disabled && tooltip && tooltipText) {
+    return (
+      <div
+        className="tooltip-wrapper pos-rel"
+        title={title}
+        style={{ opacity: 0.5, cursor: "not-allowed", display: "inline-flex" }}
+      >
+        <button
+          ref={ref}
+          disabled
+          onMouseDown={onMouseDown}
+          className={clsx("button icon-button pos-rel br-1", className)}
+          style={{ pointerEvents: "none" }}
+        >
+          {iconEl}
+        </button>
+        {tooltipEl}
+      </div>
+    );
+  }
+
   return (
     <button
       ref={ref}
@@ -117,31 +159,8 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({
         className
       )}
     >
-      {/* ICON */}
-      <span
-        className={clsx(
-          "icon",
-          icon,
-          iconSize
-        )}
-      />
-
-      {/* TOOLTIP */}
-      {tooltip && tooltipText && (
-        <div
-          className={clsx(
-            "tooltip-container elevated-sharp",
-            tooltipPosition,
-            "p-01 br-2 bg-dark"
-          )}
-        >
-          <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
-            <p className="text-white text md">
-              {tooltipText}
-            </p>
-          </div>
-        </div>
-      )}
+      {iconEl}
+      {tooltipEl}
     </button>
   );
 });
