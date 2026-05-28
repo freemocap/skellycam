@@ -350,7 +350,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
   // Render
   // -----------------------------------------------------------------------
   return (
-    <div className="flex playback-page-content pos-rel has-videos flex flex-col gap-2 h-full overflow-hidden">
+    <div className="flex playback-page-content pos-rel has-videos flex flex-col gap-1 h-full overflow-hidden">
       {/* Manual path row */}
       <div className="load-group bg-middark br-1 p-1 flex flex-start flex-wrap gap-1 items-center pb-2">
         <div className="flex flex-col flex-start gap-1 items-center">
