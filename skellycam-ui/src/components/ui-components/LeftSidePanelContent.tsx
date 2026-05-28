@@ -5,7 +5,7 @@ import {useLocation} from "react-router-dom";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {startRecording, stopRecording} from "@/store";
 import {useServer} from "@/services/server/ServerContextProvider";
-import {RecordingInfoPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
+import {RecordingPanelProvider, RecordingOptionsPanel, RecordingButtonPanel} from "@/components/recording-info-panel/RecordingInfoPanel";
 import {getTimestampString} from "@/components/recording-info-panel/getTimestampString";
 import {ServerConnectionStatus} from "@/components/ServerConnectionStatus";
 import {CameraConfigSidebarPanel} from "@/components/camera-config-tree-view/CameraConfigSidebarPanel";
@@ -144,10 +144,11 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                     {isPlayback ? (
                         <PlaybackSidebarPanel/>
                     ) : (
-                        <>
-                            <RecordingInfoPanel/>
+                        <RecordingPanelProvider>
+                            <RecordingOptionsPanel/>
                             <CameraConfigSidebarPanel/>
-                        </>
+                            <RecordingButtonPanel/>
+                        </RecordingPanelProvider>
                     )}
                 </div>
             </div>

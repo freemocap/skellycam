@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {createContext, useContext, useEffect, useState} from "react";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {
     StartStopRecordingButton
@@ -20,10 +20,54 @@ interface RecordingOperation {
     timestamp: number;
 }
 
-export const RecordingInfoPanel: React.FC = () => {
+interface RecordingPanelContextType {
+    createSubfolder: boolean;
+    setCreateSubfolder: (v: boolean) => void;
+    useDelayStart: boolean;
+    setUseDelayStart: (v: boolean) => void;
+    delaySeconds: number;
+    setDelaySeconds: (v: number) => void;
+    countdown: number | null;
+    pendingOperation: RecordingOperation | null;
+    recordingStartTime: number | null;
+    useTimestamp: boolean;
+    setUseTimestamp: (v: boolean) => void;
+    useIncrement: boolean;
+    setUseIncrement: (v: boolean) => void;
+    currentIncrement: number;
+    setCurrentIncrement: (v: number) => void;
+    baseName: string;
+    setBaseName: (v: string) => void;
+    customSubfolderName: string;
+    setCustomSubfolderName: (v: string) => void;
+    recordingTag: string;
+    setRecordingTag: (v: string) => void;
+    micDeviceIndex: number;
+    setMicDeviceIndex: (v: number) => void;
+    pathModalOpen: boolean;
+    setPathModalOpen: (v: boolean) => void;
+    microphoneError: string | null;
+    setMicrophoneError: (v: string | null) => void;
+    recordingName: string;
+    subfolderName: string | undefined;
+    displayPath: string;
+    noCamerasConnected: boolean;
+    isRecording: boolean;
+    recordingDirectory: string;
+    handleRecordButtonClick: () => Promise<void>;
+}
+
+const RecordingPanelContext = createContext<RecordingPanelContextType | null>(null);
+
+const useRecordingPanel = (): RecordingPanelContextType => {
+    const ctx = useContext(RecordingPanelContext);
+    if (!ctx) throw new Error("useRecordingPanel must be used within RecordingPanelProvider");
+    return ctx;
+};
+
+export const RecordingPanelProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
     const dispatch = useAppDispatch();
     const recordingInfo = useAppSelector((state) => state.recording);
-    const { t } = useTranslation();
 
     const [createSubfolder, setCreateSubfolder] = useState<boolean>(false);
     const [useDelayStart, setUseDelayStart] = useState<boolean>(false);
@@ -137,31 +181,63 @@ export const RecordingInfoPanel: React.FC = () => {
         : `${recordingInfo.recordingDirectory}/${recordingName}`;
 
     return (
-    <div className="main-side-actions flex flex-col gap-1 z-3">
-        <div className="pos-rel file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
-            <p className="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
-                {/* Path & Settings button */}
+        <RecordingPanelContext.Provider value={{
+            createSubfolder, setCreateSubfolder,
+            useDelayStart, setUseDelayStart,
+            delaySeconds, setDelaySeconds,
+            countdown,
+            pendingOperation,
+            recordingStartTime,
+            useTimestamp, setUseTimestamp,
+            useIncrement, setUseIncrement,
+            currentIncrement, setCurrentIncrement,
+            baseName, setBaseName,
+            customSubfolderName, setCustomSubfolderName,
+            recordingTag, setRecordingTag,
+            micDeviceIndex, setMicDeviceIndex,
+            pathModalOpen, setPathModalOpen,
+            microphoneError, setMicrophoneError,
+            recordingName,
+            subfolderName,
+            displayPath,
+            noCamerasConnected,
+            isRecording: recordingInfo.isRecording,
+            recordingDirectory: recordingInfo.recordingDirectory,
+            handleRecordButtonClick,
+        }}>
+            {children}
+        </RecordingPanelContext.Provider>
+    );
+};
+
+export const RecordingOptionsPanel: React.FC = () => {
+    const {
+        displayPath, pathModalOpen, setPathModalOpen, microphoneError,
+        recordingDirectory, recordingName, subfolderName, countdown,
+        recordingTag, useDelayStart, delaySeconds, useTimestamp, baseName,
+        useIncrement, currentIncrement, createSubfolder, customSubfolderName,
+        isRecording, setUseDelayStart, setDelaySeconds, setRecordingTag,
+        setUseTimestamp, setBaseName, setUseIncrement, setCurrentIncrement,
+        setCreateSubfolder, setCustomSubfolderName,
+    } = useRecordingPanel();
+
+    return (
+        <div className="main-side-actions flex flex-col gap-1 z-3" style={{flexShrink: 0}}>
+            <div className="pos-rel file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
+                <p className="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
                 <ButtonSm
                     iconClass="subfolder-icon"
                     text={displayPath ? displayPath : "Set recording path"}
-                    // rightSideIcon="externallink"
                     textColor="text-gray"
                     textClass="flex flex-end"
-                    // className="text-nowrap"
                     buttonType="full-width"
                     onClick={() => setPathModalOpen(true)}
-                    
                 />
-                {/* <p className="recording-path-preview text-wrap p-1">
-                    {displayPath}
-                </p> */}
-
                 <RecordingCompleteDialog />
-
                 <RecordingPathModal
                     open={pathModalOpen}
                     onClose={() => setPathModalOpen(false)}
-                    recordingDirectory={recordingInfo.recordingDirectory}
+                    recordingDirectory={recordingDirectory}
                     recordingName={recordingName}
                     subfolder={subfolderName}
                     countdown={countdown}
@@ -174,7 +250,7 @@ export const RecordingInfoPanel: React.FC = () => {
                     currentIncrement={currentIncrement}
                     createSubfolder={createSubfolder}
                     customSubfolderName={customSubfolderName}
-                    isRecording={recordingInfo.isRecording}
+                    isRecording={isRecording}
                     onDelayToggle={setUseDelayStart}
                     onDelayChange={setDelaySeconds}
                     onTagChange={setRecordingTag}
@@ -194,34 +270,46 @@ export const RecordingInfoPanel: React.FC = () => {
                     </div>
                 )}
             </div>
-            {/* Title */}
-            {/* <div className="flex items-center gap-1 h-25">
-                <span className="icon stream-icon icon-size-20" />
-                <p className="text bg text-white">Record</p>
-            </div> */}
-        <div className="record-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-2 pb-2">
-            {/* Record button — full width, its own row */}
-            <div className="flex flex-row flex-1 items-center gap-1 fit-content w-full min-w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-                <StartStopRecordingButton
-                    isRecording={recordingInfo.isRecording}
-                    isPending={pendingOperation !== null}
-                    countdown={countdown}
-                    recordingStartTime={recordingStartTime}
-                    disabled={noCamerasConnected && !recordingInfo.isRecording}
-                    tooltipText={noCamerasConnected && !recordingInfo.isRecording ? t('connectCamerasToRecord') : undefined}
-                    onClick={handleRecordButtonClick}
-                />
-            </div>
-                    
-            {/* Microphone */}
-            <MicrophoneSelector
-                selectedMicIndex={micDeviceIndex}
-                onMicSelected={setMicDeviceIndex}
-                disabled={recordingInfo.isRecording}
-                onError={setMicrophoneError}
-            />
         </div>
-        
-     </div>
     );
 };
+
+export const RecordingButtonPanel: React.FC = () => {
+    const { t } = useTranslation();
+    const {
+        isRecording, pendingOperation, countdown, recordingStartTime,
+        noCamerasConnected, micDeviceIndex, setMicDeviceIndex, setMicrophoneError,
+        handleRecordButtonClick,
+    } = useRecordingPanel();
+
+    return (
+        <div className="main-side-actions flex flex-col gap-1 z-3" style={{flexShrink: 0}}>
+            <div className="record-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-2 pb-2">
+                <div className="flex flex-row flex-1 items-center gap-1 fit-content w-full min-w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                    <StartStopRecordingButton
+                        isRecording={isRecording}
+                        isPending={pendingOperation !== null}
+                        countdown={countdown}
+                        recordingStartTime={recordingStartTime}
+                        disabled={noCamerasConnected && !isRecording}
+                        tooltipText={noCamerasConnected && !isRecording ? t('connectCamerasToRecord') : undefined}
+                        onClick={handleRecordButtonClick}
+                    />
+                </div>
+                <MicrophoneSelector
+                    selectedMicIndex={micDeviceIndex}
+                    onMicSelected={setMicDeviceIndex}
+                    disabled={isRecording}
+                    onError={setMicrophoneError}
+                />
+            </div>
+        </div>
+    );
+};
+
+export const RecordingInfoPanel: React.FC = () => (
+    <RecordingPanelProvider>
+        <RecordingOptionsPanel />
+        <RecordingButtonPanel />
+    </RecordingPanelProvider>
+);
