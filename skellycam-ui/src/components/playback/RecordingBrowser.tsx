@@ -416,7 +416,9 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
             onClick={toggleSortDir}
             tooltip={true}
             tooltipText={
-              sortDir === "desc" ? t("sortDescending") : t("sortAscending")
+              sortDir === "desc"
+                ? t("sortBy", { direction: t("descending") })
+                : t("sortBy", { direction: t("ascending") })
             }
             tooltipPosition="pos-bottom"
           />
@@ -426,7 +428,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
             disabled={isLoadingList}
             iconClass="rotate-icon"
             tooltip={true}
-            tooltipText={t("refreshList")}
+            tooltipText={t("refresh")}
             tooltipPosition="pos-bottom"
           />
         </div>

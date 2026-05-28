@@ -4,6 +4,7 @@ import ToggleComponent from '@/components/ui-components/ToggleComponent';
 import SubactionHeader from '@/components/ui-components/SubactionHeader';
 import ValueSelector from '@/components/ui-components/ValueSelector';
 import ButtonSm from '@/components/ui-components/ButtonSm';
+import IconButton from '@/components/ui-components/IconButton';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector, selectCameras } from '@/store';
@@ -100,14 +101,15 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
     if (inline) {
         return (
             <>
-                <button
+                <IconButton
                     ref={buttonRef}
-                    className="grid-settings-button button icon-button br-1 icon-size-28"
+                    className="grid-settings-button icon-size-28"
+                    icon={isOpen ? "close-icon" : "settings-icon"}
                     onClick={handleToggle}
-                    title={isOpen ? t("closeSettings") : t("gridSettings")}
-                >
-                    <span className={clsx("icon icon-size-20", isOpen ? "close-icon" : "settings-icon")} />
-                </button>
+                    tooltip={true}
+                    tooltipText={isOpen ? t("closeSettings") : t("gridSettings")}
+                    tooltipPosition="pos-bottom-right"
+                />
                 {isOpen && panel}
             </>
         );
@@ -135,18 +137,13 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
             </div>
           </div> */}
           <div className="settings-overlay-trigger"></div>
-          <button
-            className="button icon-button br-1"
+          <IconButton
+            icon={isOpen ? "close-icon" : "grid2-icon"}
             onClick={handleToggle}
-            title={isOpen ? t("closeSettings") : t("gridSettings")}
-          >
-            <span
-              className={clsx(
-                "icon icon-size-20",
-                isOpen ? "close-icon" : "grid2-icon",
-              )}
-            />
-          </button>
+            tooltip={true}
+            tooltipText={isOpen ? t("closeSettings") : t("gridSettings")}
+            tooltipPosition="pos-bottom-right"
+          />
         </div>
         {isOpen && panel}
       </>

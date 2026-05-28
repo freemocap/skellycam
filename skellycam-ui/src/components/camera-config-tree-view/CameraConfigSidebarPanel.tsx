@@ -112,7 +112,7 @@ export const CameraConfigSidebarPanel: React.FC = () => {
                                     icon={isStoppingCameras ? 'loader-icon' : 'stopstreaming-icon'}
                                     onClick={handleStop}
                                     tooltip={true}
-                                    tooltipText={isRecording ? t('stopRecordingFirst') : t('stopStreaming')}
+                                    tooltipText={isRecording ? t('stopRecordingFirst') : t('closeAllCameras')}
                                     tooltipPosition="pos-bottom-right"
                                     disabled={isRecording || isStoppingCameras}
                                 />
