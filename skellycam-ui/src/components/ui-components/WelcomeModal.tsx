@@ -136,9 +136,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
             <div className="splash-action-group flex-1 flex flex-col gap-1 p-1 justify-content-space-between">
               {/* Top actions */}
               <div className="flex flex-col pl-2 pr-2 pt-2 pb-0 mb-0">
-                <h1 className="title">
+                <h1 className="title flex flex-col gap-1">
                   <span className="text-white">{t("welcomeTitle")}</span>
-                  <br />
                   <span className="text-gray">{t("welcomeSubtitle")}</span>
                 </h1>
 

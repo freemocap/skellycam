@@ -10,7 +10,7 @@ export default function BottomPanelContent({ isCollapsed = false }: { isCollapse
     const isPlayback = location.pathname.startsWith('/playback');
 
     return (
-        <div className="bottom-info-container br-2 flex h-full overflow-hidden">
+        <div className="bottom-info-container br-2 flex h-full">
             {isPlayback ? (
                 <div className="server-logs-container text-nowrap bg-middark bg-darkgray p-1 br-1 w-full h-full">
                     <LogTerminal isCollapsed={isCollapsed} />

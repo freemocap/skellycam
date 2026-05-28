@@ -104,9 +104,9 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
         min: {short: t("statsMinShort"), long: t("statsMinLong")},
     };
 
-    const renderTooltip = (text: string) => (
-        <div className="tooltip-container pos-bottom stats-tooltip">
-            <div className="tooltip-inner p-1">
+    const renderTooltip = (text: string, position: string = "pos-bottom") => (
+        <div className={`tooltip-container elevated-sharp ${position} p-01 br-2 bg-dark stats-tooltip`}>
+            <div className="tooltip-inner br-1 pl-2 pr-2 pt-1 pb-1 border-1 border-mid-black border-solid">
                 <span className="text-xs">{text}</span>
             </div>
         </div>
@@ -130,7 +130,7 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
                 <div className="stats-source-samples">
                     <span ref={setSpanRef(`${rowKey}-samples`)}>--</span>
                 </div>
-                {renderTooltip(tooltip)}
+                {renderTooltip(tooltip, "pos-bottom-left")}
             </td>
             {METRIC_KEYS.map((metric) => renderMetricCell(rowKey, metric))}
         </tr>
@@ -143,13 +143,13 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
                     <tr>
                         <th className="stats-th stats-th-source">
                             {t("source")}
-                            {renderTooltip(`${tooltips.source.short} ${tooltips.source.long}`)}
+                            {renderTooltip(`${tooltips.source.short} ${tooltips.source.long}`, "pos-bottom-left")}
                         </th>
                         {METRIC_KEYS.map((metric) => (
                             <th key={metric}
                                 className={`stats-th stats-col-${metricClass(metric)}`}>
                                 {t(metric === "stdDev" ? "stdDevCv" : metric === "recent" ? "Recent" : metric)}
-                                {renderTooltip(`${tooltips[metric].short} ${tooltips[metric].long}`)}
+                                {renderTooltip(`${tooltips[metric].short} ${tooltips[metric].long}`, (metric === "recent" || metric === "mean") ? "pos-bottom-left" : (metric === "stdDev" || metric === "max" || metric === "min") ? "pos-bottom-right" : "pos-bottom")}
                             </th>
                         ))}
                     </tr>

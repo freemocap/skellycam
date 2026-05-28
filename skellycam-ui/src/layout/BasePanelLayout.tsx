@@ -54,7 +54,7 @@ export const BasePanelLayout = ({children, welcomeOpen = false, onOpenWelcome}: 
       >
         <FloatingOnboarding
           target='[data-warning="service-unavailable"]'
-          
+          className="z-110i"
         
         >
                     <PromptTooltip
@@ -68,6 +68,7 @@ export const BasePanelLayout = ({children, welcomeOpen = false, onOpenWelcome}: 
                         onButtonClick={() => window.open("https://github.com/freemocap/freemocap", "_blank")}
                         position="pos-bottom"
                         variant={isFailed ? "warning" : "default"}
+                        className={isFailed ? "" : "loading"}
                         onClose={() => {}}
                     />
         </FloatingOnboarding>

@@ -10,6 +10,7 @@ type MicrophoneSelectorProps = {
     selectedMicIndex: number;
     onMicSelected: (micIndex: number) => void;
     disabled: boolean;
+    onError?: (error: string | null) => void;
 };
 
 type MicrophoneMap = Record<number, string>;
@@ -17,7 +18,7 @@ type MicrophoneMap = Record<number, string>;
 const NO_MIC_LABEL = "No microphone";
 
 export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
-    selectedMicIndex, onMicSelected, disabled,
+    selectedMicIndex, onMicSelected, disabled, onError,
 }) => {
     const [microphones, setMicrophones] = useState<MicrophoneMap>({});
     const [loading, setLoading] = useState<boolean>(false);
@@ -42,6 +43,10 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
     };
 
     useEffect(() => { detectMicrophones(); }, []);
+
+    useEffect(() => {
+        if (onError) onError(error);
+    }, [error, onError]);
 
     const micEntries = Object.entries(microphones).map(([id, name]) => ({
         id: Number(id), name: name as string,
@@ -82,11 +87,6 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                     tooltipText={t("refreshMicrophoneList")}
                 />
             </div>
-            {error && (
-                <p className="error-message text sm text-error text-nowrap overflow-hidden" style={{ textOverflow: 'ellipsis' }} title={error}>
-                    {error}
-                </p>
-            )}
         </div>
     );
 };
