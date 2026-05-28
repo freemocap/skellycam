@@ -6,7 +6,10 @@ from pydantic import BaseModel, Field
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
-from skellycam.core.camera_group.camera_group_manager import get_or_create_camera_group_manager
+from skellycam.core.camera_group.camera_group_manager import (
+    get_or_create_camera_group_manager,
+    USE_RUST_BACKEND,
+)
 from skellycam.core.device_detection.detect_cameras_devices import CameraDeviceInfo, CameraFormatInfo, detect_available_cameras
 from skellycam.core.device_detection.detect_microphone_devices import get_available_microphones
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
@@ -93,35 +96,38 @@ def cameras_detect_endpoint(
         backend_id: CameraBackendInt | None = None
 ) -> DetectedCamerasResponse:
     try:
-        cameras = detect_available_cameras(backend_id=backend_id, filter_virtual=filter_virtual)
+        if USE_RUST_BACKEND:
+            cameras = _detect_cameras_rust(filter_virtual=filter_virtual)
+        else:
+            cameras = detect_available_cameras(backend_id=backend_id, filter_virtual=filter_virtual)
 
-        # Merge format data from the Rust openpnp-capture enumeration.
-        # Match by device_path — both OpenCV and openpnp-capture use the
-        # same USB device path format on Windows DirectShow.
-        try:
-            import _skellycam_rust
-            rust_cameras = _skellycam_rust.detect_cameras()
-            path_to_formats = {
-                rc["device_path"]: rc["formats"]
-                for rc in rust_cameras
-                if rc.get("device_path")
-            }
-            for cam in cameras:
-                if cam.path and cam.path in path_to_formats:
-                    cam.formats = [
-                        CameraFormatInfo(
-                            width=f["width"],
-                            height=f["height"],
-                            fps=f["fps"],
-                            fourcc=f["fourcc"],
-                            fourcc_str=f["fourcc_str"],
-                        )
-                        for f in path_to_formats[cam.path]
-                    ]
-        except ImportError:
-            logger.debug("_skellycam_rust not available, skipping format enumeration")
-        except Exception as e:
-            logger.warning(f"Failed to merge Rust format data: {e}")
+            # Merge format data from the Rust openpnp-capture enumeration.
+            # Match by device_path — both OpenCV and openpnp-capture use the
+            # same USB device path format on Windows DirectShow.
+            try:
+                import _skellycam_rust
+                rust_cameras = _skellycam_rust.detect_cameras()
+                path_to_formats = {
+                    rc["device_path"]: rc["formats"]
+                    for rc in rust_cameras
+                    if rc.get("device_path")
+                }
+                for cam in cameras:
+                    if cam.path and cam.path in path_to_formats:
+                        cam.formats = [
+                            CameraFormatInfo(
+                                width=f["width"],
+                                height=f["height"],
+                                fps=f["fps"],
+                                fourcc=f["fourcc"],
+                                fourcc_str=f["fourcc_str"],
+                            )
+                            for f in path_to_formats[cam.path]
+                        ]
+            except ImportError:
+                logger.debug("_skellycam_rust not available, skipping format enumeration")
+            except Exception as e:
+                logger.warning(f"Failed to merge Rust format data: {e}")
 
         return DetectedCamerasResponse(cameras=cameras)
     except Exception as e:
@@ -235,3 +241,44 @@ async def pause_camera_groups(request: Request) -> bool:
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Detection helpers ──────────────────────────────────────────────────────────
+
+
+def _detect_cameras_rust(*, filter_virtual: bool = True) -> list[CameraDeviceInfo]:
+    """Detect cameras using the Rust backend (_skellycam_rust.detect_cameras).
+
+    Converts the Rust detection output (list of dicts) to CameraDeviceInfo
+    objects. Virtual cameras are filtered out by default.
+    """
+    import _skellycam_rust
+
+    rust_cameras = _skellycam_rust.detect_cameras()
+    results: list[CameraDeviceInfo] = []
+
+    for rc in rust_cameras:
+        if filter_virtual and not rc.get("device_path"):
+            continue
+
+        formats = [
+            CameraFormatInfo(
+                width=f["width"],
+                height=f["height"],
+                fps=f["fps"],
+                fourcc=f["fourcc"],
+                fourcc_str=f["fourcc_str"],
+            )
+            for f in rc.get("formats", [])
+        ]
+
+        results.append(
+            CameraDeviceInfo(
+                index=rc["camera_index"],
+                name=rc.get("display_name", f"Camera {rc['camera_index']}"),
+                path=rc.get("device_path"),
+                formats=formats,
+            )
+        )
+
+    return results

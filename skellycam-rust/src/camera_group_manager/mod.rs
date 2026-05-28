@@ -45,7 +45,7 @@ impl CameraGroupManager {
             let uuid = uuid::Uuid::new_v4();
             uuid.as_simple().to_string()[..6].to_string()
         });
-
+        //TODO - This whole module is bonkers nonsense
         // If a group with this ID already exists, shut it down first
         if let Some(existing) = self.groups.remove(&group_id) {
             tracing::info!(

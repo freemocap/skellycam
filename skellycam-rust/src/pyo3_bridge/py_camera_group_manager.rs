@@ -36,7 +36,7 @@ impl PyO3CameraGroupManager {
     /// Detects all cameras, matches each config entry to a physical device by
     /// `camera_index`, and starts a new `CameraGroup`. The group runs until
     /// `close_all_groups()` is called or the manager is dropped.
-    fn create_or_update_group(
+    pub fn create_or_update_group(
         &mut self,
         configs: &Bound<'_, PyDict>,
     ) -> PyResult<String> {
@@ -156,7 +156,7 @@ impl PyO3CameraGroupManager {
     }
 
     /// Pause all camera groups (suppress downstream frame sends).
-    fn pause(&self) {
+    pub fn pause(&self) {
         for group_mutex in self.groups.values() {
             if let Ok(mut group) = group_mutex.lock() {
                 group.pause();
@@ -165,11 +165,24 @@ impl PyO3CameraGroupManager {
     }
 
     /// Unpause all camera groups (resume downstream frame sends).
-    fn unpause(&self) {
+    pub fn unpause(&self) {
         for group_mutex in self.groups.values() {
             if let Ok(mut group) = group_mutex.lock() {
                 group.unpause();
             }
+        }
+    }
+
+    /// Toggle pause state across all camera groups.
+    /// If any group is paused, unpause all; otherwise pause all.
+    pub fn pause_unpause_all(&self) {
+        let any_paused = self.groups.values().any(|m| {
+            m.lock().map(|g| g.is_paused()).unwrap_or(false)
+        });
+        if any_paused {
+            self.unpause();
+        } else {
+            self.pause();
         }
     }
 
@@ -235,7 +248,7 @@ impl PyO3CameraGroupManager {
 
     /// Start recording across all camera groups.
     #[pyo3(signature = (output_dir, label = None))]
-    fn start_recording(&self, output_dir: &str, label: Option<&str>) -> PyResult<()> {
+    pub fn start_recording(&self, output_dir: &str, label: Option<&str>) -> PyResult<()> {
         use crate::camera_group::RecordingParams;
         let params = RecordingParams {
             output_dir: output_dir.to_string(),
@@ -252,7 +265,7 @@ impl PyO3CameraGroupManager {
     }
 
     /// Stop recording across all camera groups and return summaries.
-    fn stop_recording(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+    pub fn stop_recording(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
         let result = PyDict::new(py);
         for (group_id, group_mutex) in &self.groups {
             let mut group = group_mutex.lock().unwrap();
@@ -272,17 +285,17 @@ impl PyO3CameraGroupManager {
     }
 
     /// Shut down and remove all camera groups.
-    fn close_all_groups(&mut self) {
+    pub fn close_all_groups(&mut self) {
         self.close_all_groups_inner();
     }
 
     /// Return the group IDs of all active groups.
-    fn list_groups(&self) -> Vec<String> {
+    pub fn list_groups(&self) -> Vec<String> {
         self.groups.keys().cloned().collect()
     }
 
     /// Return the number of active groups.
-    fn group_count(&self) -> usize {
+    pub fn group_count(&self) -> usize {
         self.groups.len()
     }
 
