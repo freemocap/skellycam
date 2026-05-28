@@ -662,8 +662,8 @@ animation: fadeIn, scaleIn;
 }
 
 .splash-modal {
-  width: 481px;
-  height: 320px;
+    width: 550px;
+    height: 366px;
   /* animation: scaleIn 0.3s ease forwards; */
   animation: fadeIn, scaleIn;
 }
@@ -705,7 +705,7 @@ animation: fadeIn, scaleIn;
 
 .version-button-container {
   /* position: absolute; */
-  top: 235px;
+  top: 278px;
   left: 6px;
   /* display: block; */
   text-wrap: nowrap;
