@@ -995,3 +995,33 @@ animation: fadeIn, scaleIn;
   min-width: 0;
   width: 100%;
 }
+
+/* =========================================
+   ERROR MESSAGE CONTAINER
+========================================= */
+
+.error-message-container {
+  max-height: 16px;
+  top: -6px;
+}
+.error-message-container::before,
+.error-message-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 20px;
+  height: 16px;
+  background-image: url(/images/inv-edge.svg);
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.error-message-container::before {
+  left: -20px;
+  transform: scaleX(-1);
+}
+
+.error-message-container::after {
+  right: -20px;
+}
+

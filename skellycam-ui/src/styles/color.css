@@ -112,6 +112,7 @@
   --color-bg-secondary: var(--gray-800);
   --color-bg-tertiary: var(--gray-700);
   --color-bg-elevated: var(--gray-600);
+  --color-bg-warning: var(--warning-500);
 
   /* Surface States */
   --color-surface-hover: var(--gray-700);
@@ -269,7 +270,9 @@
 .border-white {
   border-color: var(--color-text-primary);
 }
-
+.bg-warning {
+  background-color: var(--color-bg-warning);
+}
 /* ========================================
    COMPONENT STATES
    ======================================== */
