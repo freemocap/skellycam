@@ -149,7 +149,7 @@ export default function FramerateStatisticsView({compact = false}: FramerateStat
                             <th key={metric}
                                 className={`stats-th stats-col-${metricClass(metric)}`}>
                                 {t(metric === "stdDev" ? "stdDevCv" : metric === "recent" ? "Recent" : metric)}
-                                {renderTooltip(`${tooltips[metric].short} ${tooltips[metric].long}`, (metric === "recent" || metric === "mean") ? "pos-bottom-left" : "pos-bottom")}
+                                {renderTooltip(`${tooltips[metric].short} ${tooltips[metric].long}`, (metric === "recent" || metric === "mean") ? "pos-bottom-left" : (metric === "stdDev" || metric === "max" || metric === "min") ? "pos-bottom-right" : "pos-bottom")}
                             </th>
                         ))}
                     </tr>

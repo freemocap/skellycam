@@ -17,7 +17,7 @@ export default function BottomPanelContent({ isCollapsed = false }: { isCollapse
                 </div>
             ) : (
                 <PanelGroup className="console-area p-0" direction="horizontal" style={{direction: "ltr"}}>
-                    <Panel className="camera-performance-metric-container overflow-visiblei bg-middark bg-darkgray p-1 br-1" defaultSize={30} minSize={15}>
+                    <Panel className="camera-performance-metric-container bg-middark bg-darkgray p-1 br-1" defaultSize={30} minSize={15}>
                         <FramerateViewerPanel isCollapsed={isCollapsed} />
                     </Panel>
 
