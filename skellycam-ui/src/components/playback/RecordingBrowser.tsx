@@ -368,13 +368,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
       </div>
 
       {/* Error */}
-      {error && (
-        <div className="error-message-container elevated-sharp pos-abs left-50 fit-content bg-warning p-1 flex flex-row text-center items-center">
-          <p className="error-message text sm text-white text-nowrap overflow-hidden">
-            {error}
-          </p>
-        </div>
-      )}
+      {error && <p className="pl-2 flex flex-row text sm text-error">{error}</p>}
 
       {/* Header bar + List wrapper */}
       <div className="flex flex-col flex-1 overflow-hidden bg-middark br-1 p-1  ">
@@ -415,11 +409,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
             text={sortDir === "desc" ? "↓" : "↑"}
             onClick={toggleSortDir}
             tooltip={true}
-            tooltipText={
-              sortDir === "desc"
-                ? t("sortBy", { direction: t("descending") })
-                : t("sortBy", { direction: t("ascending") })
-            }
+             tooltipText={sortDir === 'desc' ? t('sortDescending') : t('sortAscending')}
             tooltipPosition="pos-bottom"
           />
           <ButtonSm

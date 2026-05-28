@@ -495,7 +495,7 @@ body,
 }
 
 .text-error {
-  color: var(--color-warning);
+  color: var(--color-danger);
 }
 
 /* =========================

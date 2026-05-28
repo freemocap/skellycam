@@ -39,7 +39,6 @@ export const RecordingInfoPanel: React.FC = () => {
     const [recordingTag, setRecordingTag] = useState<string>("");
     const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
     const [pathModalOpen, setPathModalOpen] = useState<boolean>(false);
-    const [microphoneError, setMicrophoneError] = useState<string | null>(null);
 
     const {isElectron, api} = useElectronIPC();
     const {connectedCameraIds} = useServer();
@@ -138,7 +137,7 @@ export const RecordingInfoPanel: React.FC = () => {
 
     return (
     <div className="main-side-actions flex flex-col gap-1 z-3">
-        <div className="pos-rel file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
+        <div className="file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
             <p className="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
                 {/* Path & Settings button */}
                 <ButtonSm
@@ -186,13 +185,6 @@ export const RecordingInfoPanel: React.FC = () => {
                     onCreateSubfolderChange={setCreateSubfolder}
                     onCustomSubfolderNameChange={setCustomSubfolderName}
                 />
-                {microphoneError && (
-                    <div className="error-message-container elevated-sharp pos-abs left-50 fit-content bg-warning p-1 flex flex-row text-center items-center">
-                        <p className="error-message text sm text-white text-nowrap overflow-hidden" title={microphoneError}>
-                           {microphoneError}
-                        </p>
-                    </div>
-                )}
             </div>
             {/* Title */}
             {/* <div className="flex items-center gap-1 h-25">
@@ -218,7 +210,6 @@ export const RecordingInfoPanel: React.FC = () => {
                 selectedMicIndex={micDeviceIndex}
                 onMicSelected={setMicDeviceIndex}
                 disabled={recordingInfo.isRecording}
-                onError={setMicrophoneError}
             />
         </div>
         
