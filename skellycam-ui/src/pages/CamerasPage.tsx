@@ -18,11 +18,14 @@ export const CamerasPage = () => {
 
     return (
         <div className="cameras-page p-0">
-            <CamerasViewSettingsOverlay
-                onSettingsChange={handleSettingsChange}
-                onResetLayout={handleResetLayout}
-            />
             <div className="cameras-page-content">
+                <div className="settings-overlay-trigger">
+                    <CamerasViewSettingsOverlay
+                        inline
+                        onSettingsChange={handleSettingsChange}
+                        onResetLayout={handleResetLayout}
+                    />
+                </div>
                 <ErrorBoundary>
                     <CameraViewsGrid
                         manualColumns={manualColumns}

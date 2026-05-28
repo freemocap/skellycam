@@ -34,7 +34,7 @@ export const CamerasViewSettingsOverlay: React.FC<CamerasViewSettingsOverlayProp
         }
     }, [isConnected, cameras.length, dispatch]);
     const [isOpen, setIsOpen] = useState<boolean>(false);
-    const [isAuto, setIsAuto] = useState<boolean>(true);
+    const [isAuto, setIsAuto] = useState<boolean>(false);
     const [manualColumns, setManualColumns] = useState<number>(2);
     const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
     const buttonRef = useRef<HTMLButtonElement>(null);
