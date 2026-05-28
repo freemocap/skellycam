@@ -187,7 +187,7 @@ export const RecordingInfoPanel: React.FC = () => {
                     onCustomSubfolderNameChange={setCustomSubfolderName}
                 />
                 {microphoneError && (
-                    <div className="error-message-container pos-abs left-50 fit-content bg-warning p-1 flex flex-row text-center items-center">
+                    <div className="error-message-container elevated-sharp pos-abs left-50 fit-content bg-warning p-1 flex flex-row text-center items-center">
                         <p className="error-message text sm text-white text-nowrap overflow-hidden" title={microphoneError}>
                            {microphoneError}
                         </p>
