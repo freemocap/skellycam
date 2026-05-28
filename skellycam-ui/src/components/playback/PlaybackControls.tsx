@@ -8,6 +8,7 @@ import IconButton from "@/components/ui-components/IconButton";
 import PromptTooltip from "@/components/ui-components/promptTooltip";
 import SubactionHeader from "@/components/ui-components/SubactionHeader";
 import ToggleComponent from "@/components/ui-components/ToggleComponent";
+import { useDismissibleTooltip } from "@/hooks/useDismissibleTooltip";
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
@@ -92,8 +93,10 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
   const speedButtonRef = useRef<HTMLButtonElement>(null);
   const speedPopupRef = useRef<HTMLDivElement>(null);
 
-  // Sync info panel
-  const [syncInfoOpen, setSyncInfoOpen] = useState(true);
+  // Sync info panel — persists dismissal across reloads
+  const [syncInfoOpen, openSyncInfo, dismissSyncInfo] = useDismissibleTooltip(
+    "skellycam:tooltip:syncInfo",
+  );
 
   const updateSetting = <K extends keyof PlaybackSettings>(
     key: K,
@@ -336,12 +339,12 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
               text={t("syncInfoTitle")}
               position="pos-top"
               variant="warning"
-              onClose={() => setSyncInfoOpen(false)}
+              onClose={dismissSyncInfo}
             />
 
             <IconButton
               icon="warning-icon"
-              onClick={() => setSyncInfoOpen((prev) => !prev)}
+              onClick={() => (syncInfoOpen ? dismissSyncInfo() : openSyncInfo())}
               title={t("syncInfo")}
               className={clsx("icon-size-28", syncInfoOpen && "activated")}
               tooltip={true}
