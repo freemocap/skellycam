@@ -111,6 +111,7 @@
   --color-bg-primary: var(--gray-900);
   --color-bg-secondary: var(--gray-800);
   --color-bg-tertiary: var(--gray-700);
+  --color-bg-quaternary: var(--gray-100);
   --color-bg-elevated: var(--gray-600);
   --color-bg-warning: var(--warning-500);
 
