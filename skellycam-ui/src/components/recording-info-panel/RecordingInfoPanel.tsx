@@ -225,11 +225,16 @@ export const RecordingOptionsPanel: React.FC = () => {
         <div className="main-side-actions flex flex-col gap-1 z-3" style={{flexShrink: 0}}>
             <div className="pos-rel file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
                 <p className="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
+                <div className="button-sm-group gap-1 br-1 button items-center sm fit-content flex-inline text-left items-center text-black full-width" style={{pointerEvents: "none"}}>
+                    <span className="icon icon-size-20 subfolder-icon" />
+                    <p className="text-gray text-nowrap text md text-align-left flex flex-end">
+                        {displayPath || "Set recording path"}
+                    </p>
+                </div>
                 <ButtonSm
-                    iconClass="subfolder-icon"
-                    text={displayPath ? displayPath : "Set recording path"}
+                    iconClass="settings-icon"
+                    text="Recording Options"
                     textColor="text-gray"
-                    textClass="flex flex-end"
                     buttonType="full-width"
                     onClick={() => setPathModalOpen(true)}
                 />
