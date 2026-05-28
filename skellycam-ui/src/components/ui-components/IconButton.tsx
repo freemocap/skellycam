@@ -1,5 +1,6 @@
 import React from "react";
 import clsx from "clsx";
+import { TooltipPosition } from "./types";
 
 /**
  * =========================================
@@ -70,11 +71,6 @@ import clsx from "clsx";
  * =========================================
  */
 
-type TooltipPosition =
-  | "pos-top"
-  | "pos-bottom"
-  | "pos-left"
-  | "pos-right";
 
 interface IconButtonProps {
   icon: string;
