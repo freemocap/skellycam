@@ -24,6 +24,28 @@
   /* Enable iOS touch callout */
   -webkit-touch-callout: default;
 }
+
+/* =========================================
+   LOADING STATE WITH SHIMMER ANIMATION
+========================================= */
+
+@keyframes shimmer-border {
+  0% {
+    border-color: var(--color-info);
+  }
+  50% {
+    border-color: var(--log-detail-border);
+  }
+  100% {
+    border-color: var(--color-info);
+  }
+}
+
+.prompt-tooltip-container.loading > div {
+  /* border: 2px solid var(--color-info); */
+  animation: shimmer-border 1.5s ease-in-out infinite;
+}
+
 .tooltip-container:not(.prompt-tooltip-container, .dropdown) {
   opacity: 0;
   visibility: hidden;

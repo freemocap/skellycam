@@ -52,6 +52,9 @@
 
     // Show / hide onboarding
     show?: boolean;
+
+    // Additional CSS classes
+    className?: string;
   }
 
   type Position = {
@@ -63,8 +66,7 @@
     target,
     children,
     show = true,
-
-    
+className,
     offsetTop = 0,
     offsetLeft = 0,
   }: FloatingOnboardingProps) {
@@ -477,7 +479,7 @@ const childShouldRender =
 
     return createPortal(
       <div
-        className="prompt-tooltip-reference-container"
+        className={`prompt-tooltip-reference-container${className ? ` ${className}` : ''}`}
         ref={tooltipRef}
         style={{
           position: "fixed",
