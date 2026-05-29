@@ -129,7 +129,9 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
 
             {/* Left column — logo */}
             <div className="splash-image-container flex flex-1">
-              {/* <div className="splash-image-logo-container m-2" /> */}
+              <div className="pos-abs m-2 left-10 top-10">
+                <img src="/skellycam-logo.png" alt="Skellycam Logo" width={54} height={54} />
+              </div>
             </div>
 
             {/* Right column — content */}
@@ -165,7 +167,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                   />
                 )}
 
-                <div className="splashmodal-mini-menu-container pos-abs flex items-center gap-2 top-12 left-12">
+                <div className="splashmodal-mini-menu-container flex flex-col flex-start pol-rel items-center gap-1 bottom-2 pos-abs bottom-10 left-12 fit-content">
                   <LanguageSwitcher />
                   <VersionChip variant="compact" />
                 </div>
@@ -189,13 +191,13 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                   textColor="text-gray"
                   onClick={() => window.open(EXTERNAL_URLS.DISCORD, "_blank")}
                 />
-                {/* <ButtonSm
+                <ButtonSm
                                 iconClass=""
                                 text={t('roadmap')}
                                 rightSideIcon="externallink"
                                 textColor="text-gray"
                                 onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
-                            /> */}
+                            />
               </div>
             </div>
           </div>
