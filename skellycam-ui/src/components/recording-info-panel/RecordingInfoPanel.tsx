@@ -83,7 +83,6 @@ export const RecordingPanelProvider: React.FC<{children: React.ReactNode}> = ({c
     const [recordingTag, setRecordingTag] = useState<string>("");
     const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
     const [pathModalOpen, setPathModalOpen] = useState<boolean>(false);
-    const [microphoneError, setMicrophoneError] = useState<string | null>(null);
 
     const {isElectron, api} = useElectronIPC();
     const {connectedCameraIds} = useServer();
@@ -267,13 +266,6 @@ export const RecordingOptionsPanel: React.FC = () => {
                     onCreateSubfolderChange={setCreateSubfolder}
                     onCustomSubfolderNameChange={setCustomSubfolderName}
                 />
-                {microphoneError && (
-                    <div className="error-message-container elevated-sharp pos-abs left-50 fit-content bg-warning p-1 flex flex-row text-center items-center">
-                        <p className="error-message text sm text-white text-nowrap overflow-hidden" title={microphoneError}>
-                           {microphoneError}
-                        </p>
-                    </div>
-                )}
             </div>
         </div>
     );
@@ -308,6 +300,13 @@ export const RecordingButtonPanel: React.FC = () => {
                     onError={setMicrophoneError}
                 />
             </div>
+                    
+            {/* Microphone */}
+            <MicrophoneSelector
+                selectedMicIndex={micDeviceIndex}
+                onMicSelected={setMicDeviceIndex}
+                disabled={recordingInfo.isRecording}
+            />
         </div>
     );
 };
