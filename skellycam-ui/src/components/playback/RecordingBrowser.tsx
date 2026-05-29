@@ -371,7 +371,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
       {error && <p className="pl-2 flex flex-row text sm text-error">{error}</p>}
 
       {/* Header bar + List wrapper */}
-      <div className="flex flex-col flex-1 overflow-hidden bg-middark br-1 p-1  ">
+      <div className="flex flex-col flex-1 overflow-hidden bg-middark br-1 p-1 gap-2  ">
         {/* Header bar */}
         <div className="recording-group flex flex-row flex-wrap flex-start items-center gap-1 justify-content-space-between">
         <div className="flex header-holder-for-recording items-center gap-1">
@@ -439,7 +439,7 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
           </p>
         </div>
       ) : (
-        <div className="recording-list flex-1 overflow-y border-1 border-black br-2 p-2">
+        <div className="recording-list flex-1 overflow-y br-2 p-1">
           {filteredSorted.map((rec) => (
             <RecordingRow
               key={rec.path}

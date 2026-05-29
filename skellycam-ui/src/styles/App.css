@@ -54,7 +54,7 @@
   border-radius: 99px;
   background-color: var(--color-border-secondary);
   cursor: grab;
-  border: 2px solid var(--color-surface-hover);
+  border: 2px solid var(--color-bg-secondary);
 }
 
 /* Thumb hover */

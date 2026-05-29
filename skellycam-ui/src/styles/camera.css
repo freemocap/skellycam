@@ -436,8 +436,8 @@
 
 .recording-list {
   overflow-y: auto;
-  border: 1px solid var(--color-border-secondary);
-  border-radius: 4px;
+  /* border: 1px solid var(--color-border-secondary);
+  border-radius: 4px; */
 }
 
 .recording-row {
