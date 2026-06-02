@@ -324,8 +324,6 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
         return (
             <IconButton
                 icon={overallStatus.iconClass}
-                tooltip={true}
-                tooltipText={overallStatus.text + cameraCountSuffix}
             />
         );
     }
