@@ -256,6 +256,25 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         leaderIdRef.current = videos.length > 0 ? videos[0].videoId : null;
     }, [videos]);
 
+    // Reset all frame state when the set of videos changes (new recording loaded)
+    const videoKey = videos.map((v) => v.videoId).join(',');
+    useEffect(() => {
+        if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+        isPlayingRef.current = false;
+        currentFrameRef.current = 0;
+        totalFramesRef.current = 0;
+        didSeekInitialRef.current = false;
+        setIsPlaying(false);
+        setCurrentFrame(0);
+        setTotalFrames(0);
+        setDuration(0);
+        setVideosReady(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [videoKey]);
+
     // -----------------------------------------------------------------------
     // Direct DOM overlay updates — fast, no React involved
     // -----------------------------------------------------------------------
