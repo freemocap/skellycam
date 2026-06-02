@@ -54,7 +54,7 @@
   border-radius: 99px;
   background-color: var(--color-border-secondary);
   cursor: grab;
-  border: 2px solid var(--color-surface-hover);
+  border: 2px solid var(--color-bg-secondary);
 }
 
 /* Thumb hover */
@@ -167,6 +167,8 @@ a.link:hover {
 .bottom-4 { bottom: 4px; }
 .bottom-6 { bottom: 6px; }
 .bottom-8 { bottom: 8px; }
+.bottom-10 { bottom: 10px; }
+.bottom-12 { bottom: 12px; }
 .bottom-36 { bottom: 36px; }
 
 .inset-0 {

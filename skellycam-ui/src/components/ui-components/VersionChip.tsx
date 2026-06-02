@@ -53,7 +53,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
     if (!version) return null;
 
     return (
-        <div className={`version-button-container flex-start pos-abs flex flex-col items-center gap-0 ${className ? ` ${className}` : ''}`} style={style}>
+        <div className={`version-button-container flex-start flex flex-col items-center gap-0 ${className ? ` ${className}` : ''}`} style={style}>
             <ButtonSm
                 text={`v${version}`}
                 onClick={checkForUpdate}
@@ -61,7 +61,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
                 disabled={isChecking}
                 tooltip={true}
                 tooltipText={t('checkForUpdates')}
-                tooltipPosition="pos-top"
+                tooltipPosition="pos-right"
                 className={clsx("version-badge", showSuccess && "success")}
                 iconClass={clsx(
                     "icon icon-size-20",
@@ -79,7 +79,7 @@ export const VersionChip: React.FC<VersionChipProps> = ({ variant = 'full', clas
                 className="externallink"
                 tooltip={true}
                 tooltipText="view all releases on GitHub"
-                tooltipPosition="pos-top"
+                tooltipPosition="pos-right"
             />
 
 

@@ -528,7 +528,7 @@ animation: fadeIn, scaleIn;
   left: 0;
   z-index: 100;
   min-width: 220px;
-  max-height: 280px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -646,8 +646,8 @@ animation: fadeIn, scaleIn;
 
 .version-button-container {
   /* position: absolute; */
-  top: 278px;
-  left: 6px;
+  /* top: 278px;
+  left: 6px; */
   /* display: block; */
   text-wrap: nowrap;
 }
@@ -923,6 +923,7 @@ animation: fadeIn, scaleIn;
   z-index: 100;
   max-width:  400px;
   min-width:  400px;
+  z-index: 114;
 }
 
 .playback-settings-popup { 
