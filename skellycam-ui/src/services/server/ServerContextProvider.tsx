@@ -10,6 +10,7 @@ import {LogStore, LogRecord} from "@/services/server/server-helpers/log-store";
 
 interface ServerContextValue {
     isConnected: boolean;
+    connectionState: ConnectionState;
     connect: () => void;
     disconnect: () => void;
     send: (data: string | object) => void;
@@ -20,6 +21,7 @@ interface ServerContextValue {
     getLogStore: () => LogStore;
     connectedCameraIds: string[];
     updateServerConnection: (host: string, port: number) => void;
+    setStreamPaused: (paused: boolean) => void;
 }
 
 const ServerContext = createContext<ServerContextValue | null>(null);
@@ -69,6 +71,7 @@ function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
 export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Reactive state - only updates when camera list actually changes
     const [isConnected, setIsConnected] = useState<boolean>(false);
+    const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
     const [connectedCameraIds, setConnectedCameraIds] = useState<string[]>([]);
 
     // Service instances
@@ -91,6 +94,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
     const pendingPayloadRef = useRef<ArrayBuffer | null>(null);
     const processingFrameRef = useRef<boolean>(false);
     const frameLoopRef = useRef<number | null>(null);
+    const isStreamPausedRef = useRef<boolean>(false);
 
     // Cached sorted camera IDs from the last frame — compared by value to avoid
     // per-frame Array.from().sort() allocations when the camera list hasn't changed.
@@ -128,6 +132,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         const handleStateChange = (newState: ConnectionState): void => {
             const connected = newState === ConnectionState.CONNECTED;
             setIsConnected(connected);
+            setConnectionState(newState);
 
             if (newState === ConnectionState.DISCONNECTED || newState === ConnectionState.FAILED) {
                 canvasManagerRef.current?.terminateAllWorkers();
@@ -195,7 +200,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         // so createImageBitmap promises can resolve without being starved
         // by the WebSocket onmessage dispatch loop.
         const processFrameLoop = async (): Promise<void> => {
-            if (!processingFrameRef.current && pendingPayloadRef.current !== null) {
+            if (!isStreamPausedRef.current && !processingFrameRef.current && pendingPayloadRef.current !== null) {
                 const payload = pendingPayloadRef.current;
                 pendingPayloadRef.current = null;
                 processingFrameRef.current = true;
@@ -296,6 +301,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         return logStoreRef.current;
     }, []);
 
+    const setStreamPaused = useCallback((paused: boolean): void => {
+        isStreamPausedRef.current = paused;
+    }, []);
+
     const updateServerConnection = useCallback((host: string, port: number): void => {
         // Update the singleton so HTTP endpoints also update
         serverUrls.setHost(host);
@@ -312,6 +321,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
 
     const contextValue = useMemo(() => ({
         isConnected,
+        connectionState,
         connect,
         disconnect,
         send,
@@ -322,7 +332,8 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
         getLogStore,
         connectedCameraIds,
         updateServerConnection,
-    }), [isConnected, connectedCameraIds, connect, disconnect, send, setCanvasForCamera, getFps, getServerFps, getFramerateStore, getLogStore, updateServerConnection]);
+        setStreamPaused,
+    }), [isConnected, connectionState, connectedCameraIds, connect, disconnect, send, setCanvasForCamera, getFps, getServerFps, getFramerateStore, getLogStore, updateServerConnection, setStreamPaused]);
 
     return (
         <ServerContext.Provider value={contextValue}>

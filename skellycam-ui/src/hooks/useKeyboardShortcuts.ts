@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useAppDispatch } from "@/store";
 import { localeToggled } from "@/store/slices/settings";
 import { pauseUnpauseCameras } from "@/store/slices/cameras";
+import { useRecordingGuard } from "@/components/RecordingGuardProvider";
 
 /**
  * Registers global keyboard shortcuts that should be active app-wide.
@@ -12,6 +13,7 @@ import { pauseUnpauseCameras } from "@/store/slices/cameras";
  */
 export function useKeyboardShortcuts(): void {
   const dispatch = useAppDispatch();
+  const { requestGuardedAction } = useRecordingGuard();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -20,6 +22,12 @@ export function useKeyboardShortcuts(): void {
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       ) {
+        return;
+      }
+
+      // Ctrl/Cmd+R and F5 — disabled; reload kills the Python server
+      if (((e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R")) || e.key === "F5") {
+        e.preventDefault();
         return;
       }
 
@@ -33,12 +41,12 @@ export function useKeyboardShortcuts(): void {
       // Shift+Space — pause / unpause camera streaming
       if (e.shiftKey && e.key === " ") {
         e.preventDefault();
-        dispatch(pauseUnpauseCameras());
+        requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()));
         return;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dispatch]);
+  }, [dispatch, requestGuardedAction]);
 }

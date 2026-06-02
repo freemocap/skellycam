@@ -1,8 +1,6 @@
 import React from 'react';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { Box, Tooltip, useTheme } from '@mui/material';
-import {ROTATION_DEGREE_LABELS, ROTATION_OPTIONS, RotationValue} from '@/store/slices/cameras/cameras-types';
+import SegmentedControl from '@/components/ui-components/SegmentedControl';
+import { ROTATION_DEGREE_LABELS, ROTATION_OPTIONS, RotationValue } from '@/store/slices/cameras/cameras-types';
 import { useTranslation } from 'react-i18next';
 
 interface CameraConfigRotationProps {
@@ -10,52 +8,24 @@ interface CameraConfigRotationProps {
     onChange: (rotation: RotationValue) => void;
 }
 
-
-
 export const CameraConfigRotation: React.FC<CameraConfigRotationProps> = ({
-                                                                              rotation = -1,
-                                                                              onChange
-                                                                          }) => {
-    const theme = useTheme();
+    rotation = -1,
+    onChange,
+}) => {
     const { t } = useTranslation();
 
-    const handleChange = (
-        event: React.MouseEvent<HTMLElement>,
-        newRotation: RotationValue | null,
-    ): void => {
-        if (newRotation !== null) {
-            onChange(newRotation);
-        }
-    };
-
     return (
-        <Box>
-            <Tooltip title={t("selectCameraRotation")}>
-                <ToggleButtonGroup
-                    color={theme.palette.primary.main as any}
-                    value={rotation}
-                    size="small"
-                    exclusive
-                    onChange={handleChange}
-                    aria-label={t("cameraRotation")}
-                    sx={{
-                        '& .MuiToggleButton-root.Mui-selected': {
-                            backgroundColor: theme.palette.primary.dark,
-                            color: theme.palette.primary.contrastText,
-                            border: `1px solid ${theme.palette.text.secondary}`,
-                            '&:hover': {
-                                backgroundColor: theme.palette.primary.light,
-                            },
-                        }
-                    }}
-                >
-                    {ROTATION_OPTIONS.map((option: RotationValue) => (
-                        <ToggleButton key={option} value={option}>
-                            {ROTATION_DEGREE_LABELS[option]}
-                        </ToggleButton>
-                    ))}
-                </ToggleButtonGroup>
-            </Tooltip>
-        </Box>
+        <div title={t("selectCameraRotation")}>
+            <SegmentedControl
+                options={ROTATION_OPTIONS.map((o: RotationValue) => ({
+                    label: ROTATION_DEGREE_LABELS[o],
+                    value: String(o),
+                }))}
+                value={String(rotation)}
+                onChange={(v) => onChange(Number(v) as RotationValue)}
+                size="sm"
+                className="segmented-control-sm"
+            />
+        </div>
     );
 };

@@ -10,6 +10,7 @@ import { selectVideoLoadFolder } from '@/store/slices/videos';
 import { localeChanged, selectLocale, localeToggled } from '@/store/slices/settings';
 import { isElectron } from '@/services/electron-ipc/electron-ipc';
 import { SUPPORTED_LOCALES } from '@/i18n';
+import { useRecordingGuard } from '@/components/RecordingGuardProvider';
 
 import type { SupportedLocale } from '@/i18n';
 import type { MenuAction } from '../../electron/main/services/menu-builder';
@@ -59,6 +60,7 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
+    const { requestGuardedAction } = useRecordingGuard();
 
     const isRecording = useAppSelector((state) => state.recording.isRecording);
     const currentLocale = useAppSelector(selectLocale);
@@ -130,13 +132,13 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
                     dispatch(detectCameras());
                     break;
                 case 'connect-cameras':
-                    dispatch(camerasConnectOrUpdate());
+                    requestGuardedAction('Stop Recording & Update Camera Config', () => dispatch(camerasConnectOrUpdate()));
                     break;
                 case 'close-cameras':
-                    dispatch(closeCameras());
+                    requestGuardedAction('Stop Recording & Close Cameras', () => dispatch(closeCameras()));
                     break;
                 case 'pause-unpause-cameras':
-                    dispatch(pauseUnpauseCameras());
+                    requestGuardedAction('Stop Recording & Pause Cameras', () => dispatch(pauseUnpauseCameras()));
                     break;
 
                 // Locale toggle
@@ -170,5 +172,5 @@ export function useMenuActions({ onToggleSidebar }: UseMenuActionsParams): void 
         });
 
         return cleanup;
-    }, [dispatch, navigate, isRecording, onToggleSidebar]);
+    }, [dispatch, navigate, isRecording, onToggleSidebar, requestGuardedAction]);
 }
