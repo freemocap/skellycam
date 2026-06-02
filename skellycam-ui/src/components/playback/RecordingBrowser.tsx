@@ -235,9 +235,65 @@ export const RecordingBrowser: React.FC<RecordingBrowserProps> = ({
       result = result.filter((r) => r.name.toLowerCase().includes(q));
     }
 
-    // Sort
-    return [...result].sort((a, b) =>
-      compareRecordings(a, b, sortField, sortDir),
+        // Sort
+        return [...result].sort((a, b) => compareRecordings(a, b, sortField, sortDir));
+    }, [recordings, filterText, sortField, sortDir]);
+
+    // -----------------------------------------------------------------------
+    // Load a specific recording
+    // -----------------------------------------------------------------------
+    const loadRecording = useCallback(
+        async (recording: RecordingEntry) => {
+            setIsLoadingRecording(true);
+            setLoadingPath(recording.path);
+            setError(null);
+
+            try {
+                let parentParam = '';
+                if (recording.path) {
+                    const normalized = recording.path.replace(/\\/g, '/').replace(/\/+$/, '');
+                    const lastSlash = normalized.lastIndexOf('/');
+                    if (lastSlash >= 0) {
+                        parentParam = `?recording_parent_directory=${encodeURIComponent(normalized.slice(0, lastSlash))}`;
+                    }
+                }
+
+                const response = await backendFetch(
+                    serverUrls.endpoints.playbackVideos(recording.name) + parentParam,
+                );
+
+                if (!response.ok) {
+                    const detail = await response
+                        .json()
+                        .catch(() => ({ detail: response.statusText }));
+                    throw new Error(detail.detail || response.statusText);
+                }
+
+                const data: Array<{
+                    video_id: string;
+                    filename: string;
+                    stream_url: string;
+                    size_bytes: number;
+                }> = await response.json();
+
+                const videos: LoadedVideo[] = data.map((v) => ({
+                    videoId: v.video_id,
+                    filename: v.filename,
+                    streamUrl: serverUrls.endpoints.playbackVideoStream(recording.name, v.video_id) + parentParam,
+                    sizeBytes: v.size_bytes,
+                }));
+
+                const recFps = recording.fps ?? undefined;
+
+                onRecordingLoaded(videos, recording.name, recording.path, recFps);
+            } catch (e) {
+                setError(e instanceof Error ? e.message : 'Failed to load recording');
+            } finally {
+                setIsLoadingRecording(false);
+                setLoadingPath(null);
+            }
+        },
+        [onRecordingLoaded],
     );
   }, [recordings, filterText, sortField, sortDir]);
 

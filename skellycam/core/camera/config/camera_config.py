@@ -39,6 +39,8 @@ class OrientationTypes(enum.Enum):
 def get_video_file_type(fourcc_code: int) -> str:
     """Return the file extension for an OpenCV FOURCC integer code."""
     for fourcc_str, ext in FOURCC_TO_EXTENSION.items():
+        if len(fourcc_str) != 4:
+            continue  # skip non-OpenCV sentinels (e.g. PYAV_H264_FOURCC)
         if cv2.VideoWriter.fourcc(*fourcc_str) == fourcc_code:
             return ext
     raise ValueError(f"Unrecognized FOURCC code: {fourcc_code}")
@@ -179,7 +181,10 @@ class CameraConfig(BaseModel):
 
     @property
     def video_file_extension(self) -> str:
-        return get_video_file_type(cv2.VideoWriter.fourcc(*self.writer_fourcc))
+        ext = FOURCC_TO_EXTENSION.get(self.writer_fourcc)
+        if ext is None:
+            raise ValueError(f"Unrecognized writer_fourcc '{self.writer_fourcc}' — not found in FOURCC_TO_EXTENSION")
+        return ext
 
     def to_settable_parameters(self) -> SettableCameraParameters:
         """

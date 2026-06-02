@@ -12,9 +12,10 @@ import cv2
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig
-from skellycam.core.recorders.videos.fourcc_codec_helpers import FOURCC_TO_EXTENSION, resolve_writer_fourcc
+from skellycam.core.recorders.videos.fourcc_codec_helpers import FOURCC_TO_EXTENSION, PYAV_H264_FOURCC, resolve_writer_fourcc
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.type_overloads import CameraIdString
+from skellycam.core.recorders.videos.pyav_video_writer import PyavVideoWriter
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class VideoRecorder:
     recording_info: RecordingInfo
     video_frame_metadata: list[np.recarray] = field(default_factory=list)
     previous_frame_number: int | None = None
-    video_writer: cv2.VideoWriter | None = None
+    video_writer: cv2.VideoWriter | PyavVideoWriter | None = None
 
     @property
     def any_data_saved(self) -> bool:
@@ -113,12 +114,20 @@ class VideoRecorder:
         return self.video_frame_metadata
 
     def _initialize_video_writer(self) -> None:
-        self.video_writer = cv2.VideoWriter(
-            self.video_file_path,
-            cv2.VideoWriter.fourcc(*self.writer_fourcc),
-            self.framerate,
-            self.video_image_shape,
-        )
+        if self.writer_fourcc == PYAV_H264_FOURCC:
+            self.video_writer = PyavVideoWriter(
+                path=self.video_file_path,
+                fps=self.framerate,
+                width=self.video_image_shape[0],
+                height=self.video_image_shape[1],
+            )
+        else:
+            self.video_writer = cv2.VideoWriter(
+                self.video_file_path,
+                cv2.VideoWriter.fourcc(*self.writer_fourcc),
+                self.framerate,
+                self.video_image_shape,
+            )
         if not self.video_writer.isOpened():
             raise RuntimeError(
                 f"Failed to open video writer for camera {self.camera_index} "
