@@ -22,7 +22,6 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
     const { t } = useTranslation();
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
-    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     const [telemetryEnabled, setTelemetryEnabled] = useState<boolean>(true);
     const [telemetryLoaded, setTelemetryLoaded] = useState<boolean>(false);
     const { isElectron, api } = useElectronIPC();
@@ -37,20 +36,6 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
         if (prevCount === 0 && currentCount > 0) onClose();
         prevCountRef.current = currentCount;
     }, [connectedCameraIds, open, onClose]);
-
-    useEffect(() => {
-        const fetchLogo = async (): Promise<void> => {
-            try {
-                if (isElectron && api) {
-                    const dataUrl = await api.assets.getLogoBase64.query();
-                    if (dataUrl) setLogoDataUrl(dataUrl);
-                }
-            } catch (error) {
-                console.error('Failed to load logo:', error);
-            }
-        };
-        fetchLogo();
-    }, [isElectron, api]);
 
     useEffect(() => {
         const loadTelemetryPref = async (): Promise<void> => {
@@ -127,11 +112,8 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                         <span className="icon close-icon icon-size-20" />
                     </button> */}
 
-            {/* Left column — logo */}
+            {/* Left column — skeleton art */}
             <div className="splash-image-container flex flex-1">
-              <div className="pos-abs m-2 left-10 top-10">
-                <img src="/skellycam-logo.png" alt="Skellycam Logo" width={54} height={54} />
-              </div>
             </div>
 
             {/* Right column — content */}
@@ -167,8 +149,10 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ open, onClose }) => 
                   />
                 )}
 
-                <div className="splashmodal-mini-menu-container flex flex-col flex-start pol-rel items-center gap-1 bottom-2 pos-abs bottom-10 left-12 fit-content">
+                <div className="pos-abs top-10 left-10 fit-content">
                   <LanguageSwitcher />
+                </div>
+                <div className="splashmodal-mini-menu-container flex flex-col flex-start pol-rel items-center gap-1 bottom-2 pos-abs bottom-10 left-12 fit-content">
                   <VersionChip variant="compact" />
                 </div>
               </div>
