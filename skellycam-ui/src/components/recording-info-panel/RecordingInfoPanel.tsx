@@ -13,6 +13,7 @@ import {getTimestampString} from "@/components/recording-info-panel/getTimestamp
 import {RecordingCompleteDialog} from "@/components/recording-info-panel/RecordingCompleteDialog";
 import {RecordingPathModal} from "@/components/recording-info-panel/RecordingPathModal";
 import ButtonSm from "@/components/ui-components/ButtonSm";
+import TextSelector from "@/components/ui-components/TextSelector";
 import { useTranslation } from "react-i18next";
 
 interface RecordingOperation {
@@ -139,21 +140,25 @@ export const RecordingInfoPanel: React.FC = () => {
     <div className="main-side-actions flex flex-col gap-1 z-3">
         <div className="file-directory-group bg-middark br-2 p-1 flex flex-col gap-1 br-1 p-1 pb-2">
             <p className="text-nowrap text-left bg-md text-darkgray p-1">File directory</p>
-                {/* Path & Settings button */}
-                <ButtonSm
-                    iconClass="subfolder-icon"
-                    text={displayPath ? displayPath : "Set recording path"}
-                    // rightSideIcon="externallink"
-                    textColor="text-gray"
-                    textClass="flex flex-end"
-                    // className="text-nowrap"
-                    buttonType="full-width"
-                    onClick={() => setPathModalOpen(true)}
-                    
-                />
-                {/* <p className="recording-path-preview text-wrap p-1">
-                    {displayPath}
-                </p> */}
+                <div className="button-sm-group gap-1 br-1 button items-center sm fit-content flex-inline text-left items-center text-black full-width" style={{pointerEvents: "none"}}>
+                    <span className="icon icon-size-20 subfolder-icon" />
+                    <p className="text-gray text-nowrap text md text-align-left flex flex-end">
+                        {displayPath || "Set recording path"}
+                    </p>
+                </div>
+                <div className="flex flex-row gap-1 items-center">
+                    <TextSelector
+                        value={recordingTag}
+                        onChange={setRecordingTag}
+                        placeholder={t("recordingTagPlaceholder")}
+                    />
+                    <ButtonSm
+                        iconClass="settings-icon"
+                        text="Recording Options"
+                        textColor="text-gray"
+                        onClick={() => setPathModalOpen(true)}
+                    />
+                </div>
 
                 <RecordingCompleteDialog />
 

@@ -145,8 +145,10 @@ export const LeftSidePanelContent: React.FC<LeftSidePanelContentProps> = ({isCol
                         <PlaybackSidebarPanel/>
                     ) : (
                         <>
+                            <div className="flex-1 min-h-0 overflow-hidden">
+                                <CameraConfigSidebarPanel/>
+                            </div>
                             <RecordingInfoPanel/>
-                            <CameraConfigSidebarPanel/>
                         </>
                     )}
                 </div>
