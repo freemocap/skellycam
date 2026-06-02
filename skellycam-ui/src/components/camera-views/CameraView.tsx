@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useMemo, memo } from 'react';
 import { useServer } from '@/services/server/ServerContextProvider';
 import { frontendColor, backendColor } from '@/components/framerate-viewer/FrameRateViewer';
 import { useAppSelector } from '@/store/hooks';
-import { selectCameraById } from '@/store/slices/cameras/cameras-selectors';
+import { selectCameraById, selectIsPaused } from '@/store/slices/cameras/cameras-selectors';
 
 interface CameraViewProps {
     cameraId: string;
@@ -25,6 +25,7 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId, scale, ma
     const serverFpsRef = useRef<HTMLSpanElement>(null);
     const { setCanvasForCamera, getFps, getServerFps } = useServer();
     const cameraIndex = useAppSelector(state => selectCameraById(state, cameraId))?.index;
+    const isPaused = useAppSelector(selectIsPaused);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -83,6 +84,37 @@ export const CameraView: React.FC<CameraViewProps> = memo(({ cameraId, scale, ma
                 ref={canvasRef}
                 style={canvasStyle}
             />
+            {isPaused && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+                        gap: 8,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <span
+                        className="icon pause-icon"
+                        style={{ width: 40, height: 40, opacity: 0.9 }}
+                    />
+                    <span
+                        style={{
+                            color: '#fff',
+                            fontSize: '13px',
+                            fontFamily: 'monospace',
+                            letterSpacing: '0.08em',
+                            opacity: 0.9,
+                        }}
+                    >
+                        PAUSED
+                    </span>
+                </div>
+            )}
             <div
                 style={{
                     position: 'absolute',

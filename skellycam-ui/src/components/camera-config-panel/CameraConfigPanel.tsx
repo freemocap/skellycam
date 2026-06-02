@@ -1,12 +1,6 @@
 import React from "react";
-import {
-    Box,
-    Collapse,
-    IconButton,
-    Tooltip,
-    useTheme,
-} from "@mui/material";
-import MediationIcon from "@mui/icons-material/Mediation";
+import clsx from "clsx";
+import ButtonSm from "@/components/ui-components/ButtonSm";
 import { CameraConfigResolution } from "./CameraConfigResolution";
 import { CameraConfigExposure } from "./CameraConfigExposure";
 import { CameraConfigRotation } from "./CameraConfigRotation";
@@ -19,125 +13,50 @@ interface CameraConfigPanelProps {
     config: CameraConfig;
     onConfigChange: (newConfig: CameraConfig) => void;
     isExpanded: boolean;
+    compact?: boolean;
 }
 
 export const CameraConfigPanel: React.FC<CameraConfigPanelProps> = ({
-    config,
-    onConfigChange,
-    isExpanded,
+    config, onConfigChange, isExpanded, compact = false,
 }) => {
-    const theme = useTheme();
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
     const allCameras = useAppSelector(selectCameras);
     const otherCamerasCount = allCameras.length - 1;
 
-    const handleChange = <K extends keyof CameraConfig>(
-        key: K,
-        value: CameraConfig[K]
-    ): void => {
-        onConfigChange({
-            ...config,
-            [key]: value,
-        });
-    };
-
-    const handleCopyToAllCameras = (): void => {
-        dispatch(configCopiedToAll(config.camera_id));
-    };
-
-    const handleResolutionChange = (width: number, height: number): void => {
-        handleChange("resolution", { width, height });
-    };
-
-    const handleRotationChange = (value: RotationValue): void => {
-        handleChange("rotation", value);
-    };
-
-    const handleExposureModeChange = (mode: ExposureMode): void => {
-        handleChange("exposure_mode", mode);
-    };
-
-    const handleExposureValueChange = (value: number): void => {
-        handleChange("exposure", value);
+    const handleChange = <K extends keyof CameraConfig>(key: K, value: CameraConfig[K]) => {
+        onConfigChange({ ...config, [key]: value });
     };
 
     return (
-        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <Box
-                sx={{
-                    px: 1.5,
-                    py: 1,
-                    ml: 5,
-                    mr: 1,
-                    mb: 0.5,
-                    borderRadius: 1,
-                    border: `1px solid ${theme.palette.divider}`,
-                    backgroundColor: theme.palette.background.paper,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1,
-                }}
-            >
-                {/* Top row: Resolution, Rotation, then Copy to All pushed right */}
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap'}}>
-                    <CameraConfigResolution
-                        resolution={config.resolution}
-                        onChange={handleResolutionChange}
-                    />
+        <div className={clsx("config-panel", !isExpanded && "hidden", compact && "config-panel-compact")}>
+            <div className={clsx("flex gap-1", compact ? "flex-col" : "items-center flex-wrap")}>
+                <CameraConfigResolution
+                    resolution={config.resolution}
+                    onChange={(w, h) => handleChange("resolution", { width: w, height: h })}
+                />
+                <CameraConfigRotation
+                    rotation={config.rotation}
+                    onChange={(v: RotationValue) => handleChange("rotation", v)}
+                />
+                <ButtonSm
+                    text={otherCamerasCount > 0
+                        ? `Copy to ${otherCamerasCount} other${otherCamerasCount > 1 ? 's' : ''}`
+                        : t("copySettingsToAll")}
+                    iconClass="stream-icon"
+                    buttonType={clsx(otherCamerasCount === 0 && "disabled", compact && "full-width justify-center")}
+                    onClick={() => { if (otherCamerasCount > 0) dispatch(configCopiedToAll(config.camera_id)); }}
+                />
+            </div>
 
-                    <CameraConfigRotation
-                        rotation={config.rotation}
-                        onChange={handleRotationChange}
-                    />
-
-                    {/* Spacer pushes Copy to All to the right */}
-                    <Box sx={{flex: 1}}/>
-
-                    <Tooltip
-                        title={
-                            otherCamerasCount > 0
-                                ? `Copy settings to ${otherCamerasCount} other camera${
-                                    otherCamerasCount > 1 ? "s" : ""
-                                }`
-                                : "No other cameras to copy to"
-                        }
-                    >
-                        <span>
-                            <IconButton
-                                size="small"
-                                onClick={handleCopyToAllCameras}
-                                disabled={otherCamerasCount === 0}
-                                aria-label={t("copySettingsToAll")}
-                                sx={{
-                                    color: theme.palette.primary.contrastText,
-                                    border: `1px solid ${theme.palette.divider}`,
-                                    '&:hover': {
-                                        backgroundColor: theme.palette.primary.dark,
-                                        color: theme.palette.primary.contrastText,
-                                        borderColor: theme.palette.primary.dark,
-                                    },
-                                    '&:disabled': {
-                                        color: theme.palette.action.disabled,
-                                    },
-                                }}
-                            >
-                                <MediationIcon fontSize="small"/>
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-                </Box>
-
-                {/* Exposure controls */}
-                <Box sx={{pt: 0.5, borderTop: `1px solid ${theme.palette.divider}`}}>
-                    <CameraConfigExposure
-                        exposureMode={config.exposure_mode}
-                        exposure={config.exposure}
-                        onExposureModeChange={handleExposureModeChange}
-                        onExposureValueChange={handleExposureValueChange}
-                    />
-                </Box>
-            </Box>
-        </Collapse>
+            <div className="config-panel-divider">
+                <CameraConfigExposure
+                    exposureMode={config.exposure_mode}
+                    exposure={config.exposure}
+                    onExposureModeChange={(mode: ExposureMode) => handleChange("exposure_mode", mode)}
+                    onExposureValueChange={(v) => handleChange("exposure", v)}
+                />
+            </div>
+        </div>
     );
 };

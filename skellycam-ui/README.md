@@ -2,7 +2,7 @@
 
 React/Electron desktop interface for SkellyCam — live multi-camera streaming, recording, and synchronized playback.
 
-Built with **React 19**, **TypeScript**, **Material UI**, **Redux Toolkit**, and packaged as an **Electron** desktop app via [electron-vite](https://github.com/electron-vite/electron-vite-react).
+Built with **React 19**, **TypeScript**, **Redux Toolkit**, and packaged as an **Electron** desktop app via [electron-vite](https://github.com/electron-vite/electron-vite-react). UI styling uses a custom CSS design system.
 
 ---
 
@@ -113,7 +113,6 @@ src/
 | Package | Purpose |
 |---------|---------|
 | `react` / `react-dom` | UI framework |
-| `@mui/material` | Component library |
 | `@reduxjs/toolkit` / `react-redux` | State management |
 | `react-router-dom` | Client-side routing |
 | `react-resizable-panels` | Draggable panel layout |

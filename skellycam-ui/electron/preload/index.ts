@@ -45,4 +45,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('update-error', handler);
         return () => { ipcRenderer.removeListener('update-error', handler); };
     },
+
+    onRequestCloseConfirmation: (callback: () => void) => {
+        const handler = () => callback();
+        ipcRenderer.on('request-close-confirmation', handler);
+        return () => { ipcRenderer.removeListener('request-close-confirmation', handler); };
+    },
+
+    sendCloseConfirmationResult: (confirmed: boolean) => {
+        ipcRenderer.send('close-confirmation-result', confirmed);
+    },
 });

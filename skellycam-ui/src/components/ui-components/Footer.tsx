@@ -1,30 +1,46 @@
-import Typography from "@mui/material/Typography";
-import Link from "@mui/material/Link";
 import * as React from "react";
-import {useTheme} from "@mui/material";
-import {useTranslation} from "react-i18next";
-import {EXTERNAL_URLS} from "@/constants/external-urls";
+import { useTranslation } from "react-i18next";
+import { EXTERNAL_URLS } from "@/constants/external-urls";
 
 export const Footer = function () {
-    const theme = useTheme();
-    const {t} = useTranslation();
+    const { t } = useTranslation();
 
     return (
-        <Typography
-            variant="body2"
-            color={theme.palette.mode === 'dark' ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)"}
-            align="center"
-        >
+           
+        <p className="pos-abs footer-content text sm text-gray text-center">
+            <a
+                className="text-gray flex flex-row gap-1"
+                href={EXTERNAL_URLS.GITHUB_ORG}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+            >
             {t('footerWith') + ' '}
-            <Link color="inherit" href={EXTERNAL_URLS.GITHUB_ORG} target="_blank" rel="noopener noreferrer"
-                  sx={{display: 'inline-flex', alignItems: 'center', textDecoration: 'none'}}>
-                ❤️
-            </Link>{' ' + t('footerFrom') + ' '}
-            <Link color="inherit" href={EXTERNAL_URLS.GITHUB_ORG} target="_blank" rel="noopener noreferrer"
-                  sx={{display: 'inline-flex', alignItems: 'center', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }}}>
+            <span className="flex-inline icon icon-size-20 donate-icon"></span>
+            {/* <a
+                className="text-gray flex flex-row gap-1"
+                href={EXTERNAL_URLS.GITHUB_ORG}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+            > */}
+                
+            {/* </a> */}
+            {' ' + t('footerFrom') + ' '}
+         
                 {t('footerOrgName')}
-            </Link>{' '}
-            {new Date().getFullYear()}
-        </Typography>
+            
+            {' '}{new Date().getFullYear()}
+            <span className="flex-inline icon icon-size-20 externallink-icon"></span>
+            </a>
+        </p>
+        
+            //  <ButtonSm
+            //                     iconClass=""
+            //                     text={t('roadmap')}
+            //                     rightSideIcon="externallink"
+            //                     textColor="text-gray"
+            //                     onClick={() => window.open(EXTERNAL_URLS.ROADMAP, '_blank')}
+            //                 />
     );
-}
+};

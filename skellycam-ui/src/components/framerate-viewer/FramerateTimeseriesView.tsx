@@ -1,9 +1,8 @@
 // src/components/framerate-viewer/FramerateTimeseriesView.tsx
 import {useCallback, useRef} from "react"
 import * as d3 from "d3"
-import {useTheme} from "@mui/material/styles"
 import {TimestampedSample} from "@/services/server/server-helpers/framerate-store"
-import {applyAxisStyles} from "@/components/framerate-viewer/d3ChartUtils"
+import {applyAxisStyles, DISABLED_TEXT_COLOR} from "@/components/framerate-viewer/d3ChartUtils"
 import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
 import {useServer} from "@/services/server/ServerContextProvider"
@@ -65,12 +64,13 @@ type ChartState = {
     backendFpsBuf: FpsSample[]
 }
 
+const AXIS_LABEL_COLOR = "var(--color-text-muted)"
+
 export default function FramerateTimeseriesView({
     frontendColor,
     backendColor,
     title = "Framerate Over Time",
 }: FramerateTimeseriesProps) {
-    const theme = useTheme()
     const {t} = useTranslation()
     const stateRef = useRef<ChartState | null>(null)
     const {getFramerateStore} = useServer()
@@ -101,7 +101,7 @@ export default function FramerateTimeseriesView({
                 .tickSize(-width)
             yAxisG.call(yAxisGen)
 
-            applyAxisStyles(chartArea, theme)
+            applyAxisStyles(chartArea)
 
             // Axis labels (appended to svg root group, outside clip-path)
             svg.append("text")
@@ -111,7 +111,7 @@ export default function FramerateTimeseriesView({
                 .attr("text-anchor", "middle")
                 .style("font-family", "monospace")
                 .style("font-size", "10px")
-                .style("fill", theme.palette.text.secondary)
+                .style("fill", AXIS_LABEL_COLOR)
                 .text("Time")
 
             svg.append("text")
@@ -122,7 +122,7 @@ export default function FramerateTimeseriesView({
                 .attr("text-anchor", "middle")
                 .style("font-family", "monospace")
                 .style("font-size", "10px")
-                .style("fill", theme.palette.text.secondary)
+                .style("fill", AXIS_LABEL_COLOR)
                 .text("FPS")
 
             // Persistent path elements — one per series, never removed
@@ -145,7 +145,7 @@ export default function FramerateTimeseriesView({
                 .attr("dominant-baseline", "central")
                 .style("font-family", "monospace")
                 .style("font-size", "12px")
-                .style("fill", theme.palette.text.disabled)
+                .style("fill", DISABLED_TEXT_COLOR)
                 .style("display", "none")
 
             stateRef.current = {
@@ -166,7 +166,7 @@ export default function FramerateTimeseriesView({
                 },
             }
         },
-        [theme, frontendColor, backendColor]
+        [frontendColor, backendColor]
     )
 
     // updateChart — only mutates path `d` attrs and y-axis ticks. Zero DOM adds/removes for x-axis.
@@ -247,7 +247,7 @@ export default function FramerateTimeseriesView({
                 .ticks(Math.max(2, Math.min(5, Math.floor(height / 30))))
                 .tickSize(-width)
             yAxisG.call(yAxisGen)
-            applyAxisStyles(svg, theme)
+            applyAxisStyles(svg)
 
             // Line generator maps absolute timestamps → relative seconds for the fixed x-axis
             const line = d3
@@ -259,7 +259,7 @@ export default function FramerateTimeseriesView({
             state.frontendPath.attr("d", state.frontendData.length > 0 ? line(state.frontendData) : null)
             state.backendPath.attr("d", state.backendData.length > 0 ? line(state.backendData) : null)
         },
-        [getFramerateStore, frontendColor, backendColor, theme, t]
+        [getFramerateStore, frontendColor, backendColor, t]
     )
 
     return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}

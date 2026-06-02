@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { IconButton, InputAdornment, TextField } from '@mui/material';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import TextSelector from '@/components/ui-components/TextSelector';
+import ButtonSm from '@/components/ui-components/ButtonSm';
 import { useAppDispatch } from '@/store';
 import { recordingDirectoryChanged } from '@/store/slices/recording/recording-slice';
 import { useElectronIPC } from '@/services';
@@ -16,36 +16,22 @@ export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({ val
     const { t } = useTranslation();
 
     const handleSelectDirectory = async (): Promise<void> => {
-        // Only try to use electron API if we're in electron environment
-        if (!isElectron || !api) {
-            console.warn('Electron API not available');
-            return;
-        }
-
+        if (!isElectron || !api) return;
         try {
             const result: string | null = await api.fileSystem.selectDirectory.mutate();
-            if (result) {
-                // Use the specific action for recording directory changes
-                dispatch(recordingDirectoryChanged(result));
-            }
+            if (result) dispatch(recordingDirectoryChanged(result));
         } catch (error) {
             console.error('Failed to select directory:', error);
         }
     };
 
-    const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-        const newPath: string = e.target.value;
-
-        // Handle tilde expansion for home directory
+    const handleTextChange = async (newPath: string): Promise<void> => {
         if (newPath.includes('~') && isElectron && api) {
             try {
-                const home: string = await api.fileSystem.getHomeDirectory.query();
-                // Replace ~ at the beginning of the path with home directory
-                const expanded: string = newPath.replace(/^~(\/|\\)?/, home ? `${home}$1` : '');
+                const home = await api.fileSystem.getHomeDirectory.query();
+                const expanded = newPath.replace(/^~(\/|\\)?/, home ? `${home}$1` : '');
                 dispatch(recordingDirectoryChanged(expanded));
-            } catch (error) {
-                console.error('Failed to expand home directory:', error);
-                // Fall back to using the path as-is
+            } catch {
                 dispatch(recordingDirectoryChanged(newPath));
             }
         } else {
@@ -54,25 +40,23 @@ export const BaseRecordingDirectoryInput: React.FC<DirectoryInputProps> = ({ val
     };
 
     return (
-        <TextField
-            label={t("recordingDirectory")}
-            value={value}
-            onChange={handleInputChange}
-            fullWidth
-            size="small"
-            InputProps={{
-                endAdornment: (
-                    <InputAdornment position="end">
-                        <IconButton
-                            onClick={handleSelectDirectory}
-                            edge="end"
-                            disabled={!isElectron}
-                        >
-                            <FolderOpenIcon />
-                        </IconButton>
-                    </InputAdornment>
-                ),
-            }}
-        />
+        <div className="flex gap-1 items-center">
+            <div className="text-selector-constrained">
+                <TextSelector
+                    value={value}
+                    onChange={handleTextChange}
+                    placeholder={t("recordingDirectory")}
+                    popupClassName="directory-input-popup"
+                />
+            </div>
+            <ButtonSm
+                iconClass="import-icon"
+                text=""
+                textColor="text-gray"
+                onClick={handleSelectDirectory}
+                buttonType={!isElectron ? "disabled" : ""}
+                title={t("browseForDirectory")}
+            />
+        </div>
     );
 };

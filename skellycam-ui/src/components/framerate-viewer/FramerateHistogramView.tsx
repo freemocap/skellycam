@@ -1,8 +1,7 @@
 // src/components/framerate-viewer/FramerateHistogramView.tsx
 import {useCallback, useRef} from "react"
 import * as d3 from "d3"
-import {useTheme} from "@mui/material/styles"
-import {applyAxisStyles} from "./d3ChartUtils"
+import {applyAxisStyles, DISABLED_TEXT_COLOR} from "./d3ChartUtils"
 import BaseD3ChartView, {ChartScaffolding, ChartLifecycle} from "@/components/framerate-viewer/BaseD3ChartView"
 import {useTranslation} from "react-i18next"
 import {useServer} from "@/services/server/ServerContextProvider"
@@ -68,12 +67,13 @@ type ChartState = {
     height: number
 }
 
+const PAPER_COLOR = "var(--color-text-muted)"
+
 export default function FramerateHistogramView({
     frontendColor,
     backendColor,
     title = "Framerate Distribution",
 }: FramerateHistogramProps) {
-    const theme = useTheme()
     const {t} = useTranslation()
     const stateRef = useRef<ChartState | null>(null)
     const {getFramerateStore} = useServer()
@@ -96,7 +96,7 @@ export default function FramerateHistogramView({
                 .attr("text-anchor", "middle")
                 .style("font-family", "monospace")
                 .style("font-size", "10px")
-                .style("fill", theme.palette.text.secondary)
+                .style("fill", "var(--color-text-muted)")
                 .text("FPS")
 
             svg.append("text")
@@ -107,7 +107,7 @@ export default function FramerateHistogramView({
                 .attr("text-anchor", "middle")
                 .style("font-family", "monospace")
                 .style("font-size", "10px")
-                .style("fill", theme.palette.text.secondary)
+                .style("fill", "var(--color-text-muted)")
                 .text("Density")
 
             // Persistent empty-state text (hidden by default)
@@ -119,7 +119,7 @@ export default function FramerateHistogramView({
                 .attr("dominant-baseline", "central")
                 .style("font-family", "monospace")
                 .style("font-size", "12px")
-                .style("fill", theme.palette.text.disabled)
+                .style("fill", DISABLED_TEXT_COLOR)
                 .style("display", "none")
 
             stateRef.current = {
@@ -136,7 +136,7 @@ export default function FramerateHistogramView({
                 },
             }
         },
-        [theme, frontendColor, backendColor]
+        [frontendColor, backendColor]
     )
 
     // updateChart — uses D3 data join for minimal DOM mutations
@@ -211,7 +211,7 @@ export default function FramerateHistogramView({
             xAxisG.call(xAxisGen)
             yAxisG.selectAll("*").remove()
             yAxisG.call(yAxisGen)
-            applyAxisStyles(svg, theme)
+            applyAxisStyles(svg)
 
             // D3 data join for bars — enter/update/exit pattern
             const numSources = [frontendHist, backendHist].filter(Boolean).length
@@ -233,7 +233,7 @@ export default function FramerateHistogramView({
                 const entered = bars.enter()
                     .append("rect")
                     .attr("fill", color)
-                    .attr("stroke", theme.palette.background.paper)
+                    .attr("stroke", PAPER_COLOR)
                     .attr("stroke-width", 0.5)
                     .attr("opacity", 0.7)
 
@@ -258,7 +258,7 @@ export default function FramerateHistogramView({
             updateBars(state.frontendBarGroup, frontendHist?.bins ?? [], frontendColor, 0)
             updateBars(state.backendBarGroup, backendHist?.bins ?? [], backendColor, numSources > 1 ? 1 : 0)
         },
-        [getFramerateStore, frontendColor, backendColor, theme, t]
+        [getFramerateStore, frontendColor, backendColor, t]
     )
 
     return <BaseD3ChartView title={title} initChart={initChart} updateChart={updateChart}

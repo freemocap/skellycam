@@ -1,16 +1,4 @@
-import React, { useEffect, useState } from "react";
-import {
-    Box,
-    Paper,
-    Typography,
-    useTheme,
-} from "@mui/material";
-import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
-import { TreeItem } from "@mui/x-tree-view/TreeItem";
-import ExpandMore from "@mui/icons-material/ExpandMore";
-import ChevronRight from "@mui/icons-material/ChevronRight";
-import VideoCameraFrontIcon from '@mui/icons-material/VideoCameraFront';
-
+import React, { useEffect } from "react";
 import { CameraConfigTreeViewHeader } from "./CameraConfigTreeViewHeader";
 import { CameraGroupTreeItem } from "./CameraGroupTreeItem";
 import { NoCamerasPlaceholder } from "./NoCamerasPlaceholder";
@@ -23,111 +11,60 @@ import {
     selectSelectedCameras,
     selectIsPaused,
     detectCameras,
-    Camera
+    Camera,
 } from "@/store";
-import {useServer} from "@/services/server/ServerContextProvider";
+import { useServer } from "@/services/server/ServerContextProvider";
 import { useTranslation } from 'react-i18next';
 
-
 export const CameraConfigTreeView: React.FC = () => {
-    const theme = useTheme();
     const dispatch = useAppDispatch();
     const { t } = useTranslation();
-    const {isConnected} = useServer()
-    // Redux state
+    const { isConnected } = useServer();
     const cameras = useAppSelector(selectCameras);
     const isLoading = useAppSelector(selectIsLoading);
     const connectedCameras = useAppSelector(selectConnectedCameras);
     const selectedCameras = useAppSelector(selectSelectedCameras);
-
-    // Local state
-    const [expandedItems, setExpandedItems] = useState<string[]>([
-        "cameras-root",
-        "cameras-connected",
-        "cameras-available"
-    ]);
-
-    // Pause state from Redux (shared with keyboard shortcut)
     const isPaused = useAppSelector(selectIsPaused);
 
-    // Group cameras by status
     const availableCameras = cameras
         .filter((cam: Camera) => cam.connectionStatus !== "connected")
         .sort((a, b) => a.index - b.index);
-    const isConnectedToCameras = connectedCameras.length > 0;
-    const hasSelectedCameras = selectedCameras.length > 0;
 
-    // Initial camera detection
     useEffect(() => {
-        if (isConnected  && cameras.length === 0) {
+        if (isConnected && cameras.length === 0) {
             dispatch(detectCameras({ filterVirtual: true }));
         }
     }, [isConnected, cameras.length, dispatch]);
 
-    const handleExpandedItemsChange = (
-        event: React.SyntheticEvent,
-        itemIds: string[]
-    ): void => {
-        setExpandedItems(itemIds);
-    };
-
-
     return (
-        <Paper
-            elevation={3}
-            sx={{
-                borderRadius: 2,
-                overflow: "hidden",
-            }}
-        >
-            <SimpleTreeView
-                expandedItems={expandedItems}
-                onExpandedItemsChange={handleExpandedItemsChange}
-                slots={{
-                    collapseIcon: ExpandMore,
-                    expandIcon: ChevronRight,
-                }}
-            >
-                <TreeItem
-                    itemId="cameras-root"
-                    label={
-                        <CameraConfigTreeViewHeader
-                            cameraCount={cameras.length}
-                            isLoading={isLoading}
-                            isPaused={isPaused}
-                            hasSelectedCameras={hasSelectedCameras}
-                        />
-                    }
-                >
-                    {cameras.length === 0 ? (
-                        <NoCamerasPlaceholder />
-                    ) : (
-                        <>
-                            {/* Connected Cameras Group */}
-                            {isConnectedToCameras && connectedCameras.length > 0 && (
-                                <CameraGroupTreeItem
-                                    groupId="cameras-connected"
-                                    title={t("connectedCameras")}
-                                    cameras={connectedCameras}
-                                    icon={<VideoCameraFrontIcon color="success" />}
-                                    expandedItems={expandedItems}
-                                />
-                            )}
+        <div className="camera-tree-root border-1 border-black m-1">
+            <CameraConfigTreeViewHeader
+                cameraCount={cameras.length}
+                isLoading={isLoading}
+                isPaused={isPaused}
+                hasSelectedCameras={selectedCameras.length > 0}
+            />
 
-                            {/* Available Cameras Group */}
-                            {availableCameras.length > 0 && (
-                                <CameraGroupTreeItem
-                                    groupId="cameras-available"
-                                    title={t("availableCameras")}
-                                    cameras={availableCameras}
-                                    icon={<VideoCameraFrontIcon color="info" />}
-                                    expandedItems={expandedItems}
-                                />
-                            )}
-                        </>
+            {cameras.length === 0 ? (
+                <NoCamerasPlaceholder />
+            ) : (
+                <div className="flex flex-col">
+                    {connectedCameras.length > 0 && (
+                        <CameraGroupTreeItem
+                            groupId="cameras-connected"
+                            title={t("connectedCameras")}
+                            cameras={connectedCameras}
+                        />
                     )}
-                </TreeItem>
-            </SimpleTreeView>
-        </Paper>
+                    {availableCameras.length > 0 && (
+                        <CameraGroupTreeItem
+                            groupId="cameras-available"
+                            title={t("availableCameras")}
+                            cameras={availableCameras}
+                        />
+                    )}
+                </div>
+            )}
+        </div>
     );
 };
