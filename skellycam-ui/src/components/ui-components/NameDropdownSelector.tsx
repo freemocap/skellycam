@@ -13,6 +13,7 @@ interface NameDropdownSelectorProps {
   initialValue?: string;
   onChange?: (value: string) => void;
   className?: string;
+  dropUp?: boolean;
 }
 
 const NameDropdownSelector: React.FC<NameDropdownSelectorProps> = ({
@@ -20,6 +21,7 @@ const NameDropdownSelector: React.FC<NameDropdownSelectorProps> = ({
   initialValue = "",
   onChange,
   className = "",
+  dropUp = false,
 }) => {
   const [selected, setSelected] = useState(initialValue);
   const [open, setOpen] = useState(false);
@@ -62,7 +64,10 @@ const NameDropdownSelector: React.FC<NameDropdownSelectorProps> = ({
 
       {/* Dropdown */}
       {open && (
-        <div className="mt-1 left-0 dropdown-container border-1 border-black elevated-sharp pos-abs flex flex-col right-0 p-1 bg-dark br-2 z-1 reveal slide-down">
+        <div
+          className={`left-0 dropdown-container border-1 border-black elevated-sharp pos-abs flex flex-col right-0 p-1 bg-dark br-2 z-1 reveal ${dropUp ? "slide-up mb-1" : "slide-down mt-1"}`}
+          style={dropUp ? { bottom: "100%" } : undefined}
+        >
           <div className="flex flex-col right-0 p-1 gap-2 bg-middark br-1 z-1">
             {options.map((option, index) => (
               <button

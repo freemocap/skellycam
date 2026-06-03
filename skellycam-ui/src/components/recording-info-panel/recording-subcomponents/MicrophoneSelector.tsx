@@ -68,6 +68,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                         options={options}
                         initialValue={selectedName}
                         onChange={handleChange}
+                        dropUp
                     />
                 </div>
                 <ButtonSm
