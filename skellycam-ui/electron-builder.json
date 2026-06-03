@@ -7,13 +7,13 @@
   "files": [
     "dist-electron",
     "dist",
-    "skellycam_server*",
+    "skellycam_server/**",
     "../shared/skellycam-logo/skellycam-favicon.ico",
     "../shared/skellycam-logo/skellycam-logo.png"
   ],
   "asar": true,
   "asarUnpack": [
-    "**/skellycam_server*",
+    "**/skellycam_server/**",
     "**/skellycam-logo.png"
   ],
   "compression": "maximum",
