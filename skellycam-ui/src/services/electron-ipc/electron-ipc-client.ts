@@ -16,6 +16,8 @@ interface ElectronAPI {
     // Window close confirmation (guards active recording sessions)
     onRequestCloseConfirmation: (callback: () => void) => () => void;
     sendCloseConfirmationResult: (confirmed: boolean) => void;
+    // Server readiness push (fired the moment Uvicorn is accepting connections)
+    onPythonServerReady: (callback: () => void) => () => void;
 }
 
 declare global {

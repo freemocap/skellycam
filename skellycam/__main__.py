@@ -72,8 +72,16 @@ async def main() -> None:
         )
         server = uvicorn.Server(config)
 
+        async def _emit_ready_signal(srv: uvicorn.Server) -> None:
+            while not srv.started:
+                await asyncio.sleep(0.02)
+            print("SERVER_READY", flush=True)  # flush=True required when stdout is a pipe
+            logger.info("SERVER_READY signal emitted")
+
         logger.info(f"Starting server on {HOSTNAME}:{PORT}")
+        ready_task = asyncio.create_task(_emit_ready_signal(server))
         await server.serve()
+        ready_task.cancel()
 
     except KeyboardInterrupt:
         logger.info("Keyboard interrupt received")

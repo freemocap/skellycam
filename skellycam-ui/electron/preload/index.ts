@@ -55,4 +55,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendCloseConfirmationResult: (confirmed: boolean) => {
         ipcRenderer.send('close-confirmation-result', confirmed);
     },
+
+    onPythonServerReady: (callback: () => void) => {
+        const handler = () => callback();
+        ipcRenderer.on('python-server-ready', handler);
+        return () => { ipcRenderer.removeListener('python-server-ready', handler); };
+    },
 });

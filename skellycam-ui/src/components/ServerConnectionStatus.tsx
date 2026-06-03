@@ -23,7 +23,7 @@ export interface ExecutableCandidate {
     resolvedPath?: string;
 }
 
-const WS_RECONNECT_INTERVAL_MS = 3000;
+const WS_RECONNECT_INTERVAL_MS = 500;
 
 const STORAGE_KEYS = {
     SELECTED_EXE_PATH: 'skellycam:selectedExePath',
@@ -252,6 +252,21 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
         }, WS_RECONNECT_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [compact, autoConnectWs, isConnected, connect]);
+
+    // Push-based fast path: connect immediately when Python signals it's ready,
+    // instead of waiting for the polling loop above.
+    useEffect(() => {
+        if (compact) return;
+        if (!isElectron || !autoConnectWs) return;
+        if (!window.electronAPI?.onPythonServerReady) return;
+
+        const unsubscribe = window.electronAPI.onPythonServerReady(() => {
+            console.log('[renderer] Received python-server-ready, connecting WebSocket...');
+            connect();
+        });
+
+        return unsubscribe;
+    }, [compact, isElectron, autoConnectWs, connect]);
 
     // ── Toggle handlers ──
 

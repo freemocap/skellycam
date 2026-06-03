@@ -1,4 +1,5 @@
-import {exec} from 'child_process';
+import {spawn} from 'child_process';
+import type {ChildProcess} from 'child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {LifecycleLogger} from "./logger";
@@ -7,7 +8,7 @@ import treeKill from "tree-kill";
 import {PYTHON_EXECUTABLE_CANDIDATES} from "../app-paths";
 
 const treeKillAsync = promisify(treeKill);
-let pythonProcess: ReturnType<typeof exec> | null = null;
+let pythonProcess: ChildProcess | null = null;
 
 export interface ExecutableCandidate {
     name: string;
@@ -21,6 +22,20 @@ export interface ExecutableCandidate {
 export class PythonServer {
     private static currentExecutablePath: string | null = null;
     private static validatedCandidates: ExecutableCandidate[] = [];
+    private static _serverReadyCallbacks: Array<() => void> = [];
+
+    static onServerReady(callback: () => void): () => void {
+        PythonServer._serverReadyCallbacks.push(callback);
+        return () => {
+            PythonServer._serverReadyCallbacks =
+                PythonServer._serverReadyCallbacks.filter(cb => cb !== callback);
+        };
+    }
+
+    private static _onServerReady(): void {
+        console.log('✔ Python server is ready (SERVER_READY received)');
+        for (const cb of PythonServer._serverReadyCallbacks) cb();
+    }
 
     static async start(exePath: string | null = null) {
         console.log('Starting python server subprocess...');
@@ -43,11 +58,21 @@ export class PythonServer {
 
             this.currentExecutablePath = executablePath;
             console.log(`Launching Python server from: ${executablePath}`);
-            pythonProcess = exec(`"${executablePath}"`, {
-                env: {
-                    ...process.env,
-                },
-                maxBuffer: 1024 * 1024 * 100 // 100MB buffer
+            pythonProcess = spawn(executablePath, [], {
+                env: { ...process.env },
+                stdio: ['ignore', 'pipe', 'pipe'],
+            });
+
+            pythonProcess.stdout?.on('data', (chunk: Buffer) => {
+                const text = chunk.toString();
+                console.log('[Python stdout]', text.trim());
+                if (text.includes('SERVER_READY')) {
+                    PythonServer._onServerReady();
+                }
+            });
+
+            pythonProcess.stderr?.on('data', (chunk: Buffer) => {
+                console.error('[Python stderr]', chunk.toString().trim());
             });
 
             pythonProcess.on('exit', (code) => {

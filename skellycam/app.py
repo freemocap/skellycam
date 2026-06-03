@@ -1,6 +1,7 @@
 """
 Consolidated FastAPI app factory with proper lifecycle management.
 """
+import asyncio
 import logging
 import multiprocessing
 from multiprocessing.sharedctypes import Synchronized
@@ -30,6 +31,11 @@ from starlette.responses import FileResponse
 logger = logging.getLogger(__name__)
 
 
+async def _initialize_telemetry_async() -> None:
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, initialize_telemetry)
+
+
 @asynccontextmanager
 async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage the application lifecycle."""
@@ -45,8 +51,8 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     base_path.mkdir(parents=True, exist_ok=True)
     logger.info(f"Base folder: {base_path}")
 
-    # Initialize anonymous telemetry (respects user opt-out preference)
-    initialize_telemetry()
+    # Initialize anonymous telemetry in background — don't block server startup
+    asyncio.create_task(_initialize_telemetry_async())
 
     logger.success(
         f"SkellyCam API v{skellycam.__version__} started successfully 💀📸✨\n"

@@ -57,6 +57,14 @@ if (!gotTheLock) {
         // Create window
         const mainWindow = WindowManager.createMainWindow();
 
+        // When Python reports SERVER_READY, push an IPC event to the renderer
+        // so it can attempt WS connection immediately instead of waiting for polling.
+        PythonServer.onServerReady(() => {
+            if (!mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('python-server-ready');
+            }
+        });
+
         // Initialize auto-updater (only in production)
         if (!APP_ENVIRONMENT.IS_DEV) {
             UpdateHandler.initialize(mainWindow);
