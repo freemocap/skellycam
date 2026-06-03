@@ -168,7 +168,19 @@ export const ServerConnectionStatus: React.FC<{ compact?: boolean }> = ({ compac
         setServerLoading(true);
         setError(null);
         try {
-            await api.pythonServer.start.mutate({ exePath: selectedExePath || null });
+            try {
+                await api.pythonServer.start.mutate({ exePath: selectedExePath || null });
+            } catch (err) {
+                if (selectedExePath) {
+                    // Stored path is stale (e.g. old onefile binary replaced by onedir bundle).
+                    // Clear it and retry with auto-detection.
+                    console.warn('Stored executable path failed, clearing and retrying:', err);
+                    setSelectedExePath('');
+                    await api.pythonServer.start.mutate({ exePath: null });
+                } else {
+                    throw err;
+                }
+            }
             await pollServerStatus();
         } catch (err) {
             console.error('Failed to start server:', err);
