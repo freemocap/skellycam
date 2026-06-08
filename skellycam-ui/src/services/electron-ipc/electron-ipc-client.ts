@@ -13,6 +13,9 @@ interface ElectronAPI {
     onDownloadProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => () => void;
     onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void;
     onUpdateError: (callback: (error: { message: string }) => void) => () => void;
+    // Window close confirmation (guards active recording sessions)
+    onRequestCloseConfirmation: (callback: () => void) => () => void;
+    sendCloseConfirmationResult: (confirmed: boolean) => void;
 }
 
 declare global {

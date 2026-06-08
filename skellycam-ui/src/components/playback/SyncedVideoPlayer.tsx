@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Box, Tooltip, Typography, useTheme } from '@mui/material';
 import ReactGridLayout, { noCompactor } from 'react-grid-layout';
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -74,7 +73,6 @@ function formatSeconds(frame: number, fps: number): string {
  * - React state for controls/slider updates at ~5Hz.
  */
 export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, recordingFps, frameTimestamps, manualColumns, resetKey, initialFrame = 0, onFrameChange }) => {
-    const theme = useTheme();
     const { t } = useTranslation();
     const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
@@ -258,6 +256,25 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         leaderIdRef.current = videos.length > 0 ? videos[0].videoId : null;
     }, [videos]);
 
+    // Reset all frame state when the set of videos changes (new recording loaded)
+    const videoKey = videos.map((v) => v.videoId).join(',');
+    useEffect(() => {
+        if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+        isPlayingRef.current = false;
+        currentFrameRef.current = 0;
+        totalFramesRef.current = 0;
+        didSeekInitialRef.current = false;
+        setIsPlaying(false);
+        setCurrentFrame(0);
+        setTotalFrames(0);
+        setDuration(0);
+        setVideosReady(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [videoKey]);
+
     // -----------------------------------------------------------------------
     // Direct DOM overlay updates — fast, no React involved
     // -----------------------------------------------------------------------
@@ -327,7 +344,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     // -----------------------------------------------------------------------
     const playAllVideos = useCallback(() => {
         const rate = playbackRateRef.current;
-        // Play leader first so it starts decoding immediately
         const leaderId = leaderIdRef.current;
         const leader = leaderId ? videoRefs.current.get(leaderId) : null;
         if (leader) {
@@ -347,10 +363,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
 
     // -----------------------------------------------------------------------
     // rAF playback loop — reads leader.currentTime as the time source.
-    //
-    // This eliminates the wall-clock-vs-decode-pipeline fight that causes
-    // stutter. The leader's currentTime naturally accounts for buffering,
-    // decode latency, and rate changes. We just read it and derive frames.
     // -----------------------------------------------------------------------
     const tick = useCallback((timestamp: DOMHighResTimeStamp) => {
         if (!isPlayingRef.current) return;
@@ -365,12 +377,8 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const leaderTime = leader.currentTime;
         const newFrame = leaderTime * fpsRef.current;
 
-        // End of video — loop back to start or stop
         if (newFrame >= totalFramesRef.current) {
             if (isLoopingRef.current) {
-                // Pause all videos, seek cleanly to frame 0, then restart playback.
-                // Seeking while videos are still playing causes the browser's decode
-                // pipeline to stall, producing choppy playback on subsequent loops.
                 pauseAllVideos();
                 const targetTime = 0;
                 videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
@@ -396,21 +404,16 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         const prevIntFrame = Math.floor(currentFrameRef.current);
         currentFrameRef.current = newFrame;
 
-        // Update DOM overlays on frame change
         if (intFrame !== prevIntFrame) {
             updateOverlays(intFrame);
         }
 
-        // Throttled React update for slider (~5Hz)
         if (timestamp - lastReactUpdateRef.current >= REACT_UPDATE_INTERVAL_MS) {
             lastReactUpdateRef.current = timestamp;
             setCurrentFrame(intFrame);
             onFrameChangeRef.current?.(intFrame);
         }
 
-        // Periodic follower drift correction — only when drift exceeds tolerance.
-        // This is the key to smooth playback: let browser-native playback run
-        // undisturbed and only intervene when followers genuinely desync.
         followerCheckCounter.current++;
         if (followerCheckCounter.current >= FOLLOWER_CHECK_INTERVAL) {
             followerCheckCounter.current = 0;
@@ -469,7 +472,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
             stopLoop();
             pauseAllVideos();
             setIsPlaying(false);
-            // Snap all videos to leader's position on pause for perfect alignment
             const leaderId = leaderIdRef.current;
             const leader = leaderId ? videoRefs.current.get(leaderId) : null;
             if (leader) {
@@ -487,7 +489,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         }
     }, [seekAllToFrame, startLoop, stopLoop, playAllVideos, pauseAllVideos]);
 
-    // Slider DRAG — pause once, then scrub as user drags
     const handleSeekDrag = useCallback((frame: number) => {
         if (!isDraggingRef.current) {
             isDraggingRef.current = true;
@@ -506,7 +507,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         videoRefs.current.forEach((el) => { el.currentTime = targetTime; });
     }, [stopLoop, pauseAllVideos, updateOverlays]);
 
-    // Slider COMMIT — final seek + resume if was playing
     const handleSeekCommit = useCallback((frame: number) => {
         const clamped = Math.max(0, Math.min(frame, totalFramesRef.current - 1));
         seekAllToFrame(clamped);
@@ -547,7 +547,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
         setIsLooping((prev) => !prev);
     }, []);
 
-    // Seek to initialFrame once all videos are ready (e.g. restoring position after tab switch)
     useEffect(() => {
         if (allReady && !didSeekInitialRef.current && initialFrame > 0) {
             didSeekInitialRef.current = true;
@@ -579,9 +578,9 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     // -----------------------------------------------------------------------
     if (videos.length === 0) {
         return (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'text.secondary' }}>
-                <Typography>{t("noVideosLoaded")}</Typography>
-            </Box>
+            <div className="flex items-center justify-center h-full">
+                <p className="text sm text-gray">{t('noVideosLoaded')}</p>
+            </div>
         );
     }
 
@@ -611,25 +610,12 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
     }
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+        <div className="flex flex-col h-full w-full gap-1">
             {/* Video grid */}
-            <Box
+            <div
                 ref={gridContainerRef}
-                sx={{
-                    flex: 1,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    backgroundColor: '#0a0a0a',
-                    minHeight: 0,
-                    '& .react-grid-placeholder': {
-                        backgroundColor: 'primary.main',
-                        opacity: 0.15,
-                        borderRadius: '4px',
-                    },
-                    '& .react-resizable-handle': {
-                        zIndex: 10,
-                    },
-                }}
+                className="flex-1 pos-rel overflow-hidden"
+                style={{ backgroundColor: '#0a0a0a', minHeight: 0 }}
             >
                 <ReactGridLayout
                     width={gridWidth}
@@ -648,88 +634,87 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                     onDragStop={handleGridDragStop}
                     onResizeStop={handleGridResizeStop}
                 >
-                {videos.map((video) => (
-                    <div
-                        key={video.videoId}
-                        style={{
-                            position: 'relative',
-                            overflow: 'hidden',
-                            backgroundColor: '#000',
-                            borderRadius: '4px',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                        }}
-                    >
-                        <video
-                            ref={(el) => setVideoRef(video.videoId, el)}
-                            src={video.streamUrl}
-                            preload="auto"
-                            muted
-                            playsInline
-                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                            onLoadedMetadata={handleLoadedMetadata}
-                        />
+                    {videos.map((video) => (
+                        <div
+                            key={video.videoId}
+                            style={{
+                                position: 'relative',
+                                overflow: 'hidden',
+                                backgroundColor: '#000',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255,255,255,0.15)',
+                            }}
+                        >
+                            <video
+                                ref={(el) => setVideoRef(video.videoId, el)}
+                                src={video.streamUrl}
+                                preload="auto"
+                                muted
+                                playsInline
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                onLoadedMetadata={handleLoadedMetadata}
+                            />
 
-                        {settings.showOverlays && (
-                            <>
-                                {/* FRAME NUMBER — DOM ref, updated directly */}
-                                <Box
-                                    ref={(el: HTMLElement | null) => setFrameOverlayRef(video.videoId, el)}
-                                    sx={{
-                                        position: 'absolute', top: 6, right: 6,
-                                        backgroundColor: 'rgba(0, 0, 0, 0.88)',
-                                        color: '#00ff88',
-                                        px: 1.25, py: 0.4, borderRadius: '4px',
-                                        fontSize: '14px', fontWeight: 700,
-                                        fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace',
-                                        letterSpacing: '0.5px', lineHeight: 1,
-                                        border: '1px solid rgba(0, 255, 136, 0.3)',
-                                        textShadow: '0 0 6px rgba(0, 255, 136, 0.4)',
-                                        minWidth: 60, textAlign: 'center',
+                            {settings.showOverlays && (
+                                <>
+                                    {/* FRAME NUMBER — DOM ref, updated directly */}
+                                    <div
+                                        ref={(el) => setFrameOverlayRef(video.videoId, el)}
+                                        style={{
+                                            position: 'absolute', top: 6, right: 6,
+                                            backgroundColor: 'rgba(0, 0, 0, 0.88)',
+                                            color: '#00ff88',
+                                            padding: '3px 10px', borderRadius: '4px',
+                                            fontSize: '14px', fontWeight: 700,
+                                            fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace',
+                                            letterSpacing: '0.5px', lineHeight: 1,
+                                            border: '1px solid rgba(0, 255, 136, 0.3)',
+                                            textShadow: '0 0 6px rgba(0, 255, 136, 0.4)',
+                                            minWidth: 60, textAlign: 'center',
+                                            userSelect: 'none', pointerEvents: 'none', zIndex: 10,
+                                        }}
+                                    >
+                                        {initialFrameText}
+                                    </div>
+
+                                    {/* CAMERA ID — static */}
+                                    <div style={{
+                                        position: 'absolute', bottom: 6, left: 6,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                                        color: '#ccc', padding: '2px 8px', borderRadius: '3px',
+                                        fontSize: '11px',
+                                        fontFamily: '"JetBrains Mono", "Fira Code", monospace',
                                         userSelect: 'none', pointerEvents: 'none', zIndex: 10,
-                                    }}
-                                >
-                                    {initialFrameText}
-                                </Box>
+                                    }}>
+                                        {video.videoId}
+                                    </div>
 
-                                {/* CAMERA ID — static */}
-                                <Box sx={{
-                                    position: 'absolute', bottom: 6, left: 6,
-                                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                                    color: '#ccc', px: 1, py: 0.25, borderRadius: '3px',
-                                    fontSize: '11px',
-                                    fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-                                    userSelect: 'none', pointerEvents: 'none', zIndex: 10,
-                                }}>
-                                    {video.videoId}
-                                </Box>
-
-                                {/* TIMECODE — DOM ref, updated directly */}
-                                <Tooltip title={timestampsAreReal ? t("timestampFromRecording") : t("estimatedFromFrameNumber")} placement="top-end">
-                                    <Box
-                                        ref={(el: HTMLElement | null) => setTimeOverlayRef(video.videoId, el)}
-                                        sx={{
+                                    {/* TIMECODE — DOM ref, updated directly */}
+                                    <div
+                                        ref={(el) => setTimeOverlayRef(video.videoId, el)}
+                                        title={timestampsAreReal ? t('timestampFromRecording') : t('estimatedFromFrameNumber')}
+                                        style={{
                                             position: 'absolute', bottom: 6, right: 6,
                                             backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                                            color: '#aaa', px: 0.75, py: 0.25, borderRadius: '3px',
+                                            color: '#aaa', padding: '2px 6px', borderRadius: '3px',
                                             fontSize: '10px',
                                             fontFamily: '"JetBrains Mono", "Fira Code", monospace',
                                             userSelect: 'none', zIndex: 10,
                                         }}
                                     >
                                         {initialTimeText}
-                                    </Box>
-                                </Tooltip>
-                            </>
-                        )}
-                    </div>
-                ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ))}
                 </ReactGridLayout>
-            </Box>
+            </div>
 
             {!allReady && videos.length > 0 && (
-                <Box sx={{ textAlign: 'center', py: 0.5, backgroundColor: theme.palette.warning.dark, color: '#fff' }}>
-                    <Typography variant="caption">{t("loadingVideos", { ready: videosReady, total: videos.length })}</Typography>
-                </Box>
+                <div className="text-center p-1" style={{ backgroundColor: 'var(--color-warning)', color: '#fff' }}>
+                    <p className="text sm">{t('loadingVideos', { ready: videosReady, total: videos.length })}</p>
+                </div>
             )}
 
             <PlaybackControls
@@ -753,6 +738,6 @@ export const SyncedVideoPlayer: React.FC<SyncedVideoPlayerProps> = ({ videos, re
                 isLooping={isLooping}
                 onToggleLoop={handleToggleLoop}
             />
-        </Box>
+        </div>
     );
 };

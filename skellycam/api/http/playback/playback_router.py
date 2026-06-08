@@ -22,8 +22,10 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from skellycam.core.recorders.videos.fourcc_codec_helpers import is_web_compatible_file
 from skellycam.core.recorders.videos.parse_video_filename import ParsedVideoFilename
 from skellycam.system.default_paths import get_default_skellycam_recordings_path
+from skellycam.utilities.transcode_to_h264 import transcode_to_h264
 
 logger = logging.getLogger(__name__)
 
@@ -92,16 +94,49 @@ def _resolve_recording_path(
 
 
 def _discover_videos(folder: Path) -> dict[str, Path]:
-    """Find video files in a folder, keyed by a stable ID derived from the filename stem."""
+    """Find video files in a folder, keyed by a stable ID derived from the filename stem.
+
+    Sidecar files created by _ensure_web_compatible (stem ending in '.web') are
+    excluded so they don't appear as duplicate entries in the video list.
+    """
     videos: dict[str, Path] = {}
     if not folder.is_dir():
         raise FileNotFoundError(f"Not a directory: {folder}")
 
     for p in sorted(folder.iterdir()):
         if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS:
+            if p.stem.endswith('.web'):
+                continue  # skip web-compatible sidecars created by _ensure_web_compatible
             video_id = p.stem
             videos[video_id] = p
     return videos
+
+
+def _ensure_web_compatible(video_path: Path) -> Path:
+    """Return a path to a web-playable version of the video.
+
+    If the codec is already browser-compatible (H264, HEVC, VP8/9, AV1) the
+    original path is returned unchanged.  Otherwise a '<stem>.web.mp4' sidecar
+    is created next to the original using pyav/libx264 and returned.  The
+    sidecar is cached — subsequent calls return it immediately.
+
+    Falls back to the original path on any error so the browser can report its
+    own decode error rather than a server 500.
+    """
+    if is_web_compatible_file(video_path):
+        return video_path
+
+    sidecar = video_path.parent / (video_path.stem + '.web.mp4')
+    if sidecar.is_file() and sidecar.stat().st_size > 0:
+        logger.debug(f"Serving cached web sidecar: {sidecar.name}")
+        return sidecar
+
+    logger.info(f"Transcoding to H264 for web playback: {video_path.name}")
+    try:
+        transcode_to_h264(input_path=video_path, output_path=sidecar)
+        return sidecar
+    except Exception:
+        return video_path  # transcode_to_h264 already logged the error; serve original
 
 
 def _find_video_folder(recording_path: Path) -> Path:
@@ -382,7 +417,9 @@ def stream_video(
     if not video_path.is_file():
         raise HTTPException(status_code=404, detail=f"Video file no longer exists: {video_path}")
 
-    suffix = video_path.suffix.lower()
+    serve_path = _ensure_web_compatible(video_path)
+
+    suffix = serve_path.suffix.lower()
     media_types = {
         ".mp4": "video/mp4",
         ".webm": "video/webm",
@@ -393,9 +430,10 @@ def stream_video(
     media_type = media_types.get(suffix, "application/octet-stream")
 
     return FileResponse(
-        path=str(video_path),
+        path=str(serve_path),
         media_type=media_type,
-        filename=video_path.name,
+        content_disposition_type='inline',
+        filename=serve_path.name,
     )
 
 

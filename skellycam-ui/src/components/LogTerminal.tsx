@@ -1,55 +1,21 @@
 // LogTerminal.tsx
-import {
-    alpha,
-    Box,
-    IconButton,
-    TextField,
-    ToggleButton,
-    ToggleButtonGroup,
-    Tooltip,
-    useTheme,
-} from "@mui/material";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import { useServer } from "@/services/server/ServerContextProvider";
 import { LogRecord, LogSnapshot } from "@/services/server/server-helpers/log-store";
-import {
-    DeleteSweep as DeleteSweepIcon,
-    Pause as PauseIcon,
-    PlayArrow as PlayArrowIcon,
-    Search as SearchIcon,
-    Warning as WarningIcon,
-    ContentCopy as ContentCopyIcon,
-    Save as SaveIcon,
-    SaveAlt as ScrollToBottomIcon,
-} from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import ButtonSm from "@/components/ui-components/ButtonSm";
 
 const LOG_POLL_INTERVAL_MS = 500;
-
-/** Height of a single line of monospace text in the log view. */
 const LINE_HEIGHT = 20;
-
-/** Vertical padding added to each log entry. */
 const ROW_PADDING = 8;
-
-/** Extra rows rendered above/below the visible viewport. */
 const OVERSCAN = 10;
 
-const LOG_COLORS: Record<string, string> = {
-    TRACE: "#ccc",
-    DEBUG: "#88ccFF",
-    INFO: "#00E5FF",
-    SUCCESS: "#FF66FF",
-    API: "#66FF66",
-    WARNING: "#FFFF66",
-    ERROR: "#FF6666",
-    CRITICAL: "#FF0000",
-};
+// Ordered level list used for the filter toolbar
+const LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "SUCCESS", "API", "WARNING", "ERROR", "CRITICAL"];
 
 // ---------------------------------------------------------------------------
-// URL linkification — splits text on http/https URLs and renders them as
-// clickable <a> tags. When split() is called with a capture group, matched
-// segments land at odd indices, so i % 2 === 1 identifies URLs.
+// URL linkification
 // ---------------------------------------------------------------------------
 
 const URL_REGEX = /(https?:\/\/[^\s)"'>\]]+)/g;
@@ -62,14 +28,8 @@ const Linkify = ({ text }: { text: string }) => {
         <>
             {parts.map((part, i) =>
                 i % 2 === 1 ? (
-                    <a
-                        key={i}
-                        href={part}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "#58a6ff", textDecoration: "underline" }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                    <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+                        className="log-link" onClick={(e) => e.stopPropagation()}>
                         {part}
                     </a>
                 ) : (
@@ -81,13 +41,9 @@ const Linkify = ({ text }: { text: string }) => {
 };
 
 // ---------------------------------------------------------------------------
-// Variable-height virtualization helpers.
-// Each log entry's height depends on the number of lines in its message.
-// Single-line messages get a compact row; multi-line messages expand to
-// show every line, rendered with preserved whitespace like a real terminal.
+// Variable-height virtualization helpers
 // ---------------------------------------------------------------------------
 
-/** Count lines in a message. A message with no newlines has 1 line. */
 const countLines = (text: string): number => {
     if (!text) return 1;
     let count = 1;
@@ -97,22 +53,12 @@ const countLines = (text: string): number => {
     return count;
 };
 
-/** Compute the pixel height of a log entry based on its line count. */
 const getRowHeight = (log: LogRecord): number => {
     const lines = countLines(log.message);
-    if (lines === 1) {
-        // Single-line: one line of text + padding
-        return LINE_HEIGHT + ROW_PADDING;
-    }
-    // Multi-line: header line + all message lines + padding
+    if (lines === 1) return LINE_HEIGHT + ROW_PADDING;
     return LINE_HEIGHT + lines * LINE_HEIGHT + ROW_PADDING;
 };
 
-/**
- * Build a prefix-sum array of cumulative heights for variable-height virtualization.
- * prefixHeights[i] = total height of rows 0..i-1 (the Y offset of row i).
- * prefixHeights[n] = total height of all rows.
- */
 const buildPrefixHeights = (logs: LogRecord[]): number[] => {
     const prefixes = new Array<number>(logs.length + 1);
     prefixes[0] = 0;
@@ -122,106 +68,49 @@ const buildPrefixHeights = (logs: LogRecord[]): number[] => {
     return prefixes;
 };
 
-/** Binary search for the first row whose bottom edge is past the given Y offset. */
 const findStartIndex = (prefixHeights: number[], y: number): number => {
     let lo = 0;
     let hi = prefixHeights.length - 2;
     while (lo < hi) {
         const mid = (lo + hi) >>> 1;
-        if (prefixHeights[mid + 1] <= y) {
-            lo = mid + 1;
-        } else {
-            hi = mid;
-        }
+        if (prefixHeights[mid + 1] <= y) lo = mid + 1;
+        else hi = mid;
     }
     return lo;
 };
 
 // ---------------------------------------------------------------------------
-// Lightweight log entry — renders multi-line messages with preserved whitespace
+// Log entry row
 // ---------------------------------------------------------------------------
 
 const LogEntryRow = React.memo(({ log, style }: { log: LogRecord; style: React.CSSProperties }) => {
     const [expanded, setExpanded] = useState(false);
-    const color = LOG_COLORS[log.levelname.toUpperCase()] || "#ccc";
+    const level = log.levelname.toLowerCase();
     const multiLine = log.message.includes("\n");
 
     return (
         <div
-            style={{
-                ...style,
-                borderLeft: `2px solid ${color}`,
-                paddingLeft: 8,
-                paddingTop: ROW_PADDING / 2,
-                paddingBottom: ROW_PADDING / 2,
-                backgroundColor: expanded ? `${color}1a` : "rgba(0,0,0,0.2)",
-                cursor: "pointer",
-                fontFamily: "monospace",
-                fontSize: "0.85em",
-                lineHeight: `${LINE_HEIGHT}px`,
-                overflow: "hidden",
-                position: "relative",
-            }}
+            className={clsx("log-entry", level, expanded && "expanded")}
+            style={style}
             onClick={() => setExpanded((prev) => !prev)}
         >
-            {/* Header line: timestamp + level badge + first line (or entire message if single-line) */}
-            <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                <span style={{ color: "#888", marginRight: 8, fontSize: "0.9em" }}>
-                    {log.asctime}
-                </span>
-                <span
-                    style={{
-                        backgroundColor: color,
-                        color: "#000",
-                        padding: "1px 5px",
-                        borderRadius: 2,
-                        fontSize: "0.75em",
-                        fontWeight: 600,
-                        marginRight: 8,
-                        display: "inline-block",
-                        lineHeight: "normal",
-                        verticalAlign: "middle",
-                    }}
-                >
-                    {log.levelname}
-                </span>
-                <span style={{ color: "#fff" }}>
+            <div className="log-entry-header">
+                <span className="log-timestamp">{log.asctime}</span>
+                <span className={clsx("log-level-badge", level)}>{log.levelname}</span>
+                <span className="log-message-text">
                     <Linkify text={multiLine ? log.message.split("\n")[0] : log.message} />
                 </span>
             </div>
 
-            {/* Multi-line message body: remaining lines rendered with preserved whitespace */}
             {multiLine && (
-                <div
-                    style={{
-                        whiteSpace: "pre",
-                        color: "#fff",
-                        paddingLeft: 4,
-                    }}
-                >
+                <div className="log-multiline-body">
                     <Linkify text={log.message.split("\n").slice(1).join("\n")} />
                 </div>
             )}
 
-            {/* Expanded overlay for log metadata (click to toggle) */}
             {expanded && (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: "100%",
-                        left: 0,
-                        right: 0,
-                        zIndex: 10,
-                        backgroundColor: "#1a1a1a",
-                        borderLeft: `2px solid ${color}`,
-                        borderBottom: `1px solid ${color}`,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                        overflow: "auto",
-                        maxHeight: 400,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <LogEntryDetail log={log} color={color} />
+                <div className="log-entry-detail-overlay" onClick={(e) => e.stopPropagation()}>
+                    <LogEntryDetail log={log} />
                 </div>
             )}
         </div>
@@ -229,31 +118,16 @@ const LogEntryRow = React.memo(({ log, style }: { log: LogRecord; style: React.C
 });
 LogEntryRow.displayName = "LogEntryRow";
 
-const LogEntryDetail = ({ log, color }: { log: LogRecord; color: string }) => {
+const LogEntryDetail = ({ log }: { log: LogRecord }) => {
     const { t } = useTranslation();
 
     return (
-        <div
-            style={{
-                paddingLeft: 16,
-                paddingTop: 6,
-                paddingBottom: 6,
-                fontSize: "0.8em",
-                color: "#888",
-                borderTop: "1px solid rgba(255,255,255,0.1)",
-                whiteSpace: "pre-wrap",
-                lineHeight: "1.4",
-                overflow: "visible",
-            }}
-            onClick={(e) => e.stopPropagation()}
-        >
+        <div className="log-entry-detail" onClick={(e) => e.stopPropagation()}>
             <div>Location: {log.module}:{log.funcName}:Line#{log.lineno}</div>
             <div>{t("fileLabel")}: {log.filename}</div>
             <div>{t("timeDelta")}: {log.delta_t}</div>
             <div>{t("pathLabel")}: <Linkify text={log.pathname} /></div>
-            {log.formatted_message && (
-                <div>{t("rawMessage")}: <Linkify text={log.formatted_message} /></div>
-            )}
+            {log.formatted_message && <div>{t("rawMessage")}: <Linkify text={log.formatted_message} /></div>}
             <div>Thread: {log.threadName} (ID: {log.thread})</div>
             <div>Process: {log.processName} (ID: {log.process})</div>
             {(log.exc_info || log.exc_text) && (
@@ -266,15 +140,7 @@ const LogEntryDetail = ({ log, color }: { log: LogRecord; color: string }) => {
             {log.stack_info && (
                 <div>
                     <div>{t("stackTrace")}:</div>
-                    <pre
-                        style={{
-                            whiteSpace: "pre-wrap",
-                            background: "#111",
-                            padding: 8,
-                            borderRadius: 4,
-                            margin: "8px 0",
-                        }}
-                    >
+                    <pre className="log-stack-trace">
                         <Linkify text={log.stack_info} />
                     </pre>
                 </div>
@@ -287,19 +153,11 @@ const LogEntryDetail = ({ log, color }: { log: LogRecord; color: string }) => {
 // Filtering
 // ---------------------------------------------------------------------------
 
-function applyFilters(
-    entries: LogRecord[],
-    selectedLevels: string[],
-    searchText: string,
-): LogRecord[] {
+function applyFilters(entries: LogRecord[], selectedLevels: string[], searchText: string): LogRecord[] {
     let filtered = entries;
-
     if (selectedLevels.length > 0) {
-        filtered = filtered.filter(log =>
-            selectedLevels.includes(log.levelname.toLowerCase())
-        );
+        filtered = filtered.filter(log => selectedLevels.includes(log.levelname.toLowerCase()));
     }
-
     if (searchText) {
         const searchLower = searchText.toLowerCase();
         filtered = filtered.filter(log =>
@@ -309,16 +167,78 @@ function applyFilters(
             log.formatted_message?.toLowerCase().includes(searchLower)
         );
     }
-
     return filtered;
 }
 
 // ---------------------------------------------------------------------------
-// LogTerminal
+// Collapsed summary view
 // ---------------------------------------------------------------------------
 
-export const LogTerminal = () => {
-    const theme = useTheme();
+const LogCollapsedView = ({ getLogStore, selectedLevels }: { getLogStore: ReturnType<typeof useServer>["getLogStore"]; selectedLevels: string[] }) => {
+    const { t } = useTranslation();
+    const [lastEntry, setLastEntry] = useState<LogRecord | null>(null);
+
+    useEffect(() => {
+        const poll = () => {
+            const snap = getLogStore().getSnapshot();
+            const entries = snap.entries;
+            const visible = selectedLevels.length > 0
+                ? entries.filter(e => selectedLevels.includes(e.levelname.toLowerCase()))
+                : entries;
+            setLastEntry(visible.length > 0 ? visible[visible.length - 1] : null);
+        };
+        poll();
+        const id = setInterval(poll, LOG_POLL_INTERVAL_MS);
+        return () => clearInterval(id);
+    }, [getLogStore, selectedLevels]);
+
+    if (!lastEntry) return (
+        <div className="log-collapsed-summary flex items-center h-full gap-1">
+            <p className="text bg text-gray">{t("serverLogs")}</p>
+        </div>
+    );
+
+    const level = lastEntry.levelname.toLowerCase();
+    const firstLine = lastEntry.message.split("\n")[0];
+
+    return (
+        <div className="log-collapsed-summary flex items-center h-full gap-1 overflow-hidden">
+            <p className="text bg text-gray">{t("serverLogs")}</p>
+            <p className="text sm text-gray">|</p>
+            <span className={clsx("log-level-badge", level)}>{lastEntry.levelname}</span>
+            <span className="log-timestamp">{lastEntry.asctime}</span>
+            <span className="log-message-text text-nowrap overflow-hidden" style={{ textOverflow: "ellipsis" }}>
+                {firstLine}
+            </span>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
+// LogTerminal (full view)
+// ---------------------------------------------------------------------------
+
+interface LogTerminalFullProps {
+    selectedLevels: string[];
+    setSelectedLevels: React.Dispatch<React.SetStateAction<string[]>>;
+    searchText: string;
+    setSearchText: React.Dispatch<React.SetStateAction<string>>;
+    showSearch: boolean;
+    setShowSearch: React.Dispatch<React.SetStateAction<boolean>>;
+    isPaused: boolean;
+    setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const LogTerminalFull = ({
+    selectedLevels,
+    setSelectedLevels,
+    searchText,
+    setSearchText,
+    showSearch,
+    setShowSearch,
+    isPaused,
+    setIsPaused,
+}: LogTerminalFullProps) => {
     const { t } = useTranslation();
     const { getLogStore } = useServer();
 
@@ -329,52 +249,34 @@ export const LogTerminal = () => {
         version: 0,
     });
 
-    const [isPaused, setIsPaused] = useState(false);
-    const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
-    const [searchText, setSearchText] = useState<string>("");
-    const [showSearch, setShowSearch] = useState(false);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
-    // Virtualization state
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
     const shouldAutoScroll = useRef(true);
-
-    /** Track last snapshot version so we skip no-op polls. */
     const lastVersionRef = useRef(-1);
 
-    // Poll the mutable LogStore on a fixed interval.
     useEffect(() => {
         if (isPaused) return;
-
         const poll = () => {
             const snap = getLogStore().getSnapshot();
-            // Skip setState entirely if nothing changed — avoids React reconciliation
             if (snap.version === lastVersionRef.current) return;
             lastVersionRef.current = snap.version;
             setSnapshot(snap);
         };
-
-        // Immediate snapshot when unpausing
         poll();
-
         const interval = setInterval(poll, LOG_POLL_INTERVAL_MS);
         return () => clearInterval(interval);
     }, [getLogStore, isPaused]);
 
     const filteredLogs = applyFilters(snapshot.entries, selectedLevels, searchText);
-
-    // Build prefix-sum height array for variable-height virtualization.
-    // Recomputed when filteredLogs changes (memoized to avoid recalc on scroll).
     const prefixHeights = useMemo(() => buildPrefixHeights(filteredLogs), [filteredLogs]);
     const totalHeight = prefixHeights[filteredLogs.length] || 0;
 
-    // Track container height via ResizeObserver
     useEffect(() => {
         const container = scrollContainerRef.current;
         if (!container) return;
-
         const observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 setContainerHeight(Math.round(entry.contentRect.height));
@@ -384,18 +286,11 @@ export const LogTerminal = () => {
         return () => observer.disconnect();
     }, []);
 
-    // Auto-scroll to bottom when new logs arrive.
-    // Deferred via requestAnimationFrame so that the DOM has painted the
-    // updated totalHeight before we read scrollHeight — without this, the
-    // scroll position gets set against a stale (shorter) scrollHeight and
-    // then snaps back once layout catches up, causing a visible bounce.
     useEffect(() => {
         if (!isPaused && shouldAutoScroll.current && scrollContainerRef.current) {
             requestAnimationFrame(() => {
                 const el = scrollContainerRef.current;
-                if (el) {
-                    el.scrollTop = el.scrollHeight;
-                }
+                if (el) el.scrollTop = el.scrollHeight;
             });
         }
     }, [filteredLogs, isPaused]);
@@ -404,10 +299,6 @@ export const LogTerminal = () => {
         const el = scrollContainerRef.current;
         if (!el) return;
         setScrollTop(el.scrollTop);
-        // Tight tolerance (< 2px) accounts for sub-pixel rounding while
-        // ensuring the user must be truly at the bottom to re-engage
-        // auto-scroll. A large tolerance causes auto-scroll to stay active
-        // when the user is trying to read entries near the bottom.
         const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 2;
         shouldAutoScroll.current = isAtBottom;
     }, []);
@@ -420,10 +311,8 @@ export const LogTerminal = () => {
         }
     }, []);
 
-    // Compute visible row window using variable-height prefix sums
     const startIdx = Math.max(0, findStartIndex(prefixHeights, scrollTop) - OVERSCAN);
-    const endScrollTop = scrollTop + containerHeight;
-    const endIdx = Math.min(filteredLogs.length, findStartIndex(prefixHeights, endScrollTop) + 1 + OVERSCAN);
+    const endIdx = Math.min(filteredLogs.length, findStartIndex(prefixHeights, scrollTop + containerHeight) + 1 + OVERSCAN);
     const offsetY = prefixHeights[startIdx];
 
     const formatLogsForExport = useCallback((): string => {
@@ -433,8 +322,7 @@ export const LogTerminal = () => {
     }, [filteredLogs]);
 
     const handleCopyToClipboard = useCallback(async () => {
-        const text = formatLogsForExport();
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(formatLogsForExport());
         setCopyFeedback(true);
         setTimeout(() => setCopyFeedback(false), 2000);
     }, [formatLogsForExport]);
@@ -452,15 +340,13 @@ export const LogTerminal = () => {
         URL.revokeObjectURL(url);
     }, [formatLogsForExport]);
 
-    const handleLevelToggle = (_: React.MouseEvent<HTMLElement>, newLevels: string[]): void => {
-        setSelectedLevels(newLevels);
+    const toggleLevel = (level: string) => {
+        setSelectedLevels(prev =>
+            prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
+        );
     };
 
-    const handlePauseToggle = (): void => {
-        setIsPaused(prev => !prev);
-    };
-
-    const handleClear = (): void => {
+    const handleClear = () => {
         getLogStore().clear();
         setSelectedLevels([]);
         setSearchText("");
@@ -471,226 +357,116 @@ export const LogTerminal = () => {
     };
 
     return (
-        <Box
-            sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor:
-                    theme.palette.mode === "dark" ? "#1a1a1a" : theme.palette.grey[100],
-            }}
-        >
+        <div className="log-terminal">
             {/* Toolbar */}
-            <Box
-                sx={{
-                    p: 0.5,
-                    borderBottom: "1px solid",
-                    borderColor: theme.palette.divider,
-                    display: "flex",
-                    gap: 1,
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                }}
-            >
-                <span
-                    style={{
-                        color: theme.palette.text.primary,
-                        fontSize: "0.9em",
-                        fontWeight: "bold",
-                    }}
-                >
-                    {t('serverLogs')}
-                </span>
+            <div className="log-toolbar flex items-center gap-1 p-1 flex-wrap">
+                <p className="text bg text-gray">{t('serverLogs')}</p>
 
                 {snapshot.hasErrors && (
-                    <Tooltip title={t("errorsDetected")}>
-                        <WarningIcon
-                            sx={{
-                                color: LOG_COLORS.ERROR,
-                                fontSize: "1.2em",
-                                animation: "pulse 2s infinite",
-                                "@keyframes pulse": {
-                                    "0%, 100%": { opacity: 1 },
-                                    "50%": { opacity: 0.5 },
-                                },
-                            }}
-                        />
-                    </Tooltip>
+                    <span className="icon warning-icon icon-size-20" title={t("errorsDetected")} />
                 )}
 
-                <ToggleButtonGroup
-                    size="small"
-                    value={selectedLevels}
-                    onChange={handleLevelToggle}
-                    sx={{
-                        ".MuiToggleButtonGroup-grouped": {
-                            border: `1px solid ${theme.palette.divider} !important`,
-                            mx: "1px",
-                            "&:not(:first-of-type)": {
-                                borderRadius: "2px",
-                            },
-                            "&:first-of-type": {
-                                borderRadius: "2px",
-                            },
-                        },
-                    }}
-                >
-                    {Object.entries(LOG_COLORS).map(([level, color]) => {
+                {/* Level filter buttons */}
+                <div className="flex gap-1 flex-wrap">
+                    {LOG_LEVELS.map((level) => {
                         const count = snapshot.countsByLevel[level] || 0;
+                        const isActive = selectedLevels.includes(level.toLowerCase());
                         return (
-                            <ToggleButton
+                            <button
                                 key={level}
-                                value={level.toLowerCase()}
-                                sx={{
-                                    py: 0.25,
-                                    px: 1,
-                                    minWidth: 0,
-                                    fontSize: "0.75em",
-                                    position: "relative",
-                                    color: alpha(color, 0.7),
-                                    "&.Mui-selected": {
-                                        backgroundColor: alpha(color, 0.15),
-                                        color: color,
-                                        "&:hover": {
-                                            backgroundColor: alpha(color, 0.2),
-                                        },
-                                    },
-                                    "&:hover": {
-                                        backgroundColor: alpha(color, 0.1),
-                                    },
-                                }}
+                                className={clsx("button sm br-1 log-level-filter", level.toLowerCase(), isActive && "active")}
+                                onClick={() => toggleLevel(level.toLowerCase())}
                             >
-                                {level}
-                                {count > 0 && (
-                                    <span
-                                        style={{
-                                            marginLeft: "4px",
-                                            fontSize: "0.8em",
-                                            opacity: 0.7,
-                                        }}
-                                    >
-                                        ({count})
-                                    </span>
-                                )}
-                            </ToggleButton>
+                                <p className="text sm">{level}{count > 0 ? ` (${count})` : ''}</p>
+                            </button>
                         );
                     })}
-                </ToggleButtonGroup>
+                </div>
 
-                <Box sx={{ ml: "auto", display: "flex", gap: 0.5 }}>
-                    <Tooltip title={copyFeedback ? t("copied") : t("copyLogsToClipboard")}>
-                        <IconButton
-                            size="small"
-                            onClick={handleCopyToClipboard}
-                            sx={{ color: copyFeedback ? theme.palette.success.main : theme.palette.text.secondary }}
-                        >
-                            <ContentCopyIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title={t("saveLogsToFile")}>
-                        <IconButton
-                            size="small"
-                            onClick={handleSaveToDisk}
-                            sx={{ color: theme.palette.text.secondary }}
-                        >
-                            <SaveIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title="Scroll to bottom">
-                        <IconButton
-                            size="small"
-                            onClick={scrollToBottom}
-                            sx={{ color: theme.palette.text.secondary }}
-                        >
-                            <ScrollToBottomIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-
-                    <IconButton
-                        size="small"
-                        onClick={() => setShowSearch(!showSearch)}
-                        sx={{ color: theme.palette.text.secondary }}
-                    >
-                        <SearchIcon fontSize="small" />
-                    </IconButton>
-
-                    <IconButton
-                        size="small"
-                        onClick={handlePauseToggle}
-                        sx={{
-                            color: isPaused ? theme.palette.warning.main : theme.palette.text.secondary
-                        }}
-                    >
-                        {isPaused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
-                    </IconButton>
-
-                    <IconButton
-                        size="small"
-                        onClick={handleClear}
-                        sx={{ color: theme.palette.text.secondary }}
-                    >
-                        <DeleteSweepIcon fontSize="small" />
-                    </IconButton>
-                </Box>
-            </Box>
-
-            {showSearch && (
-                <Box sx={{ p: 1, borderBottom: "1px solid", borderColor: theme.palette.divider }}>
-                    <TextField
-                        size="small"
-                        fullWidth
-                        placeholder={t("searchLogs")}
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                        InputProps={{
-                            startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
-                        }}
+                {/* Action buttons */}
+                <div className="log-actions flex gap-1">
+                    <ButtonSm
+                        text={copyFeedback ? "" : ""}
+                        iconClass={copyFeedback ? "copied-icon" : "copy-icon"}
+                        textColor="text-gray"
+                        onClick={handleCopyToClipboard}
+                        tooltip={true}
+                        tooltipText={copyFeedback ? "Copied!" : "Copy to clipboard"}
+                        tooltipPosition="pos-bottom"
                     />
-                </Box>
+                    <ButtonSm
+                        text=""
+                        iconClass="save-icon"
+                        textColor="text-gray"
+                        onClick={handleSaveToDisk}
+                        tooltip={true}
+                        tooltipText="Save"
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass="scrolldown-icon"
+                        textColor="text-gray"
+                        onClick={scrollToBottom}
+                        tooltip={true}
+                        tooltipText="Scroll to bottom"
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass="search-icon"
+                        textColor={showSearch ? "text-white" : "text-gray"}
+                        buttonType={showSearch ? "activated" : ""}
+                        onClick={() => setShowSearch(!showSearch)}
+                        tooltip={true}
+                        tooltipText="Search"
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass={isPaused ? "play-icon" : "pause-icon"}
+                        textColor={isPaused ? "text-warning" : "text-gray"}
+                        onClick={() => setIsPaused(prev => !prev)}
+                        tooltip={true}
+                        tooltipText={isPaused ? "Resume" : "Pause"}
+                        tooltipPosition="pos-bottom"
+                    />
+                    <ButtonSm
+                        text=""
+                        iconClass="clear-icon"
+                        textColor="text-gray"
+                        onClick={handleClear}
+                        tooltip={true}
+                        tooltipText="Clear"
+                        tooltipPosition="pos-bottom"
+                    />
+                </div>
+            </div>
+
+            {/* Search bar */}
+            {showSearch && (
+                <div className="log-search-bar p-1">
+                    <div className="input-with-string w-full">
+                        <input
+                            className="input-field"
+                            placeholder={t("searchLogs")}
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+                </div>
             )}
 
             {/* Virtualized log list */}
-            <div
-                ref={scrollContainerRef}
-                onScroll={handleScroll}
-                style={{
-                    flex: 1,
-                    overflowY: "auto",
-                    overflowX: "auto",
-                    position: "relative",
-                    scrollbarWidth: "thin" as any,
-                    scrollbarColor:
-                        theme.palette.mode === "dark"
-                            ? "rgba(255, 255, 255, 0.2) transparent"
-                            : "rgba(0, 0, 0, 0.2) transparent",
-                }}
-            >
+            <div ref={scrollContainerRef} onScroll={handleScroll} className="log-scroll-area">
                 {filteredLogs.length === 0 ? (
-                    <div
-                        style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            height: "100%",
-                            color: theme.palette.text.disabled,
-                        }}
-                    >
+                    <div className="log-empty-state">
                         {isPaused ? t("loggingPaused") : t("noLogsToDisplay")}
                     </div>
                 ) : (
-                    // Outer div creates the full scrollable height
-                    <div style={{ height: totalHeight, position: "relative" }}>
-                        {/* Inner div is offset to the first visible row */}
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: offsetY,
-                                left: 0,
-                                right: 0,
-                            }}
-                        >
+                    <div className="log-virtual-track" style={{ height: totalHeight }}>
+                        <div className="log-virtual-window" style={{ top: offsetY }}>
                             {filteredLogs.slice(startIdx, endIdx).map((log, i) => {
                                 const rowIdx = startIdx + i;
                                 const rowHeight = prefixHeights[rowIdx + 1] - prefixHeights[rowIdx];
@@ -706,6 +482,26 @@ export const LogTerminal = () => {
                     </div>
                 )}
             </div>
-        </Box>
+        </div>
+    );
+};
+
+export const LogTerminal = ({ isCollapsed = false }: { isCollapsed?: boolean }) => {
+    const { getLogStore } = useServer();
+    const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+    const [searchText, setSearchText] = useState("");
+    const [showSearch, setShowSearch] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+
+    if (isCollapsed) return (
+        <LogCollapsedView getLogStore={getLogStore} selectedLevels={selectedLevels} />
+    );
+    return (
+        <LogTerminalFull
+            selectedLevels={selectedLevels} setSelectedLevels={setSelectedLevels}
+            searchText={searchText} setSearchText={setSearchText}
+            showSearch={showSearch} setShowSearch={setShowSearch}
+            isPaused={isPaused} setIsPaused={setIsPaused}
+        />
     );
 };

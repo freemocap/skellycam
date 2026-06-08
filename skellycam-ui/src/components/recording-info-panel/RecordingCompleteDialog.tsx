@@ -1,73 +1,53 @@
-import React from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    IconButton,
-    Box,
-    Divider,
-} from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { recordingCompletionDismissed } from '@/store/slices/recording/recording-slice';
 import { useElectronIPC } from '@/services/electron-ipc/electron-ipc';
 import type { RecordingCompletionData, StatsSummary } from '@/store/slices/recording/recording-types';
+import ButtonSm from '@/components/ui-components/ButtonSm';
+import SubactionHeader from '@/components/ui-components/SubactionHeader';
 
-function formatStat(value: number, precision: number = 3): string {
+function formatStat(value: number, precision = 3): string {
     return value.toFixed(precision);
 }
 
-interface TimingRow {
-    label: string;
-    stats: StatsSummary;
-}
+interface TimingRow { label: string; stats: StatsSummary; }
 
 function TimingStatsTable({ data }: { data: RecordingCompletionData }) {
     const rows: TimingRow[] = [
         { label: 'Framerate / FPS (Hz)', stats: data.framerate_stats },
         { label: 'Frame Duration (ms)', stats: data.frame_duration_stats },
-        { label: 'Inter-Camera Frame Grab Sync (ms)', stats: data.inter_camera_grab_range_ms_stats },
+        { label: 'Inter-Camera Grab Sync (ms)', stats: data.inter_camera_grab_range_ms_stats },
     ];
 
     return (
-        <TableContainer>
-            <Table size="small" sx={{ '& td, & th': { py: 0.5, px: 1, fontSize: '0.8rem' } }}>
-                <TableHead>
-                    <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>Metric</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Median</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Mean</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Std</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Min</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Max</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
+        <div className="stats-table-wrapper">
+            <table className="stats-table">
+                <thead>
+                    <tr>
+                        <th className="stats-th" style={{ textAlign: 'left' }}>Metric</th>
+                        <th className="stats-th">Median</th>
+                        <th className="stats-th">Mean</th>
+                        <th className="stats-th">Std</th>
+                        <th className="stats-th">Min</th>
+                        <th className="stats-th">Max</th>
+                    </tr>
+                    <tr className="stats-divider"><td colSpan={6} /></tr>
+                </thead>
+                <tbody>
                     {rows.map((row) => (
-                        <TableRow key={row.label}>
-                            <TableCell>{row.label}</TableCell>
-                            <TableCell align="right">{formatStat(row.stats.median)}</TableCell>
-                            <TableCell align="right">{formatStat(row.stats.mean)}</TableCell>
-                            <TableCell align="right">{formatStat(row.stats.std)}</TableCell>
-                            <TableCell align="right">{formatStat(row.stats.min)}</TableCell>
-                            <TableCell align="right">{formatStat(row.stats.max)}</TableCell>
-                        </TableRow>
+                        <tr key={row.label}>
+                            <td className="stats-td" style={{ textAlign: 'left' }}>{row.label}</td>
+                            <td className="stats-td">{formatStat(row.stats.median)}</td>
+                            <td className="stats-td">{formatStat(row.stats.mean)}</td>
+                            <td className="stats-td">{formatStat(row.stats.std)}</td>
+                            <td className="stats-td">{formatStat(row.stats.min)}</td>
+                            <td className="stats-td">{formatStat(row.stats.max)}</td>
+                        </tr>
                     ))}
-                </TableBody>
-            </Table>
-        </TableContainer>
+                </tbody>
+            </table>
+        </div>
     );
 }
 
@@ -76,6 +56,15 @@ export const RecordingCompleteDialog: React.FC = () => {
     const navigate = useNavigate();
     const { api } = useElectronIPC();
     const completionData = useAppSelector((state) => state.recording.completionData);
+
+    useEffect(() => {
+        if (!completionData) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') dispatch(recordingCompletionDismissed());
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [completionData, dispatch]);
 
     if (!completionData) return null;
 
@@ -99,66 +88,67 @@ export const RecordingCompleteDialog: React.FC = () => {
     };
 
     return (
-        <Dialog open onClose={handleClose} maxWidth="md" fullWidth>
-            <DialogTitle sx={{ pb: 1 }}>Recording Complete!</DialogTitle>
-            <DialogContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Typography
-                        variant="body2"
-                        sx={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.8rem',
-                            bgcolor: 'action.hover',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            flex: 1,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
+        <div
+            className="splash-overlay inset-0 reveal fadeIn"
+            style={{ position: 'fixed', zIndex: 50 }}
+            onClick={handleClose}
+        >
+            <div
+                className="recording-complete-modal bg-dark br-2 border-1 border-black elevated-sharp flex flex-col p-4 gap-3"
+                style={{ minWidth: 360, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex justify-content-space-between items-center">
+                    <p className="text bg text-white">Recording Complete!</p>
+                    <button className="button icon-button" onClick={handleClose}>
+                        <span className="icon close-icon icon-size-20" />
+                    </button>
+                </div>
+
+                {/* Path row */}
+                <div className="flex items-center gap-1 bg-middark br-1 p-1">
+                    <p className="text sm text-gray flex-1 text-nowrap overflow-hidden"
+                       style={{ fontFamily: 'monospace', textOverflow: 'ellipsis' }}>
                         {completionData.recording_path}
-                    </Typography>
-                    <IconButton size="small" onClick={handleCopyPath} title="Copy path">
-                        <ContentCopyIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={handleOpenFolder} title="Open folder">
-                        <FolderOpenIcon fontSize="small" />
-                    </IconButton>
-                </Box>
+                    </p>
+                    <ButtonSm text="" iconClass="minus-icon" textColor="text-gray" onClick={handleCopyPath} title="Copy path" />
+                    <ButtonSm text="" iconClass="import-icon" textColor="text-gray" onClick={handleOpenFolder} title="Open folder" />
+                </div>
 
-                <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                {/* Summary */}
+                <p className="text sm text-gray">
                     {completionData.number_of_cameras} camera{completionData.number_of_cameras !== 1 ? 's' : ''}
-                    {' \u00B7 '}
+                    {' · '}
                     {completionData.number_of_frames} frames
-                    {' \u00B7 '}
+                    {' · '}
                     {completionData.total_duration_sec}s
-                    {' \u00B7 '}
+                    {' · '}
                     {completionData.mean_framerate} Hz avg
-                </Typography>
+                </p>
 
-                <Divider sx={{ mb: 1.5 }} />
+                {/* Stats */}
+                <div className="flex flex-col gap-1 bg-middark br-1 p-1">
+                    <SubactionHeader text="Frame Timing Statistics" />
+                    <TimingStatsTable data={completionData} />
+                </div>
 
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Frame Timing Statistics
-                </Typography>
-
-                <TimingStatsTable data={completionData} />
-            </DialogContent>
-            <DialogActions>
-                <Button
-                    onClick={handleOpenInPlayback}
-                    variant="outlined"
-                    size="small"
-                    startIcon={<PlayArrowIcon />}
-                >
-                    Open in Playback
-                </Button>
-                <Button onClick={handleClose} variant="contained" size="small">
-                    Close
-                </Button>
-            </DialogActions>
-        </Dialog>
+                {/* Actions */}
+                <div className="flex gap-1 justify-content-space-between">
+                    <ButtonSm
+                        text="Open in Playback"
+                        iconClass="subfolder-icon"
+                        buttonType="secondary"
+                        textColor="text-white"
+                        onClick={handleOpenInPlayback}
+                    />
+                    <ButtonSm
+                        text="Close"
+                        textColor="text-gray"
+                        onClick={handleClose}
+                    />
+                </div>
+            </div>
+        </div>
     );
 };

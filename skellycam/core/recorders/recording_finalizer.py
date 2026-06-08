@@ -66,7 +66,6 @@ class RecordingFinalizer:
         logger.success(f"Recording Finalized successfully! Timestamps statistics summary:\n\n{timestamp_stats}\n\n--------------------------------------------------------\n")
         return timestamp_stats
 
-
     def _save_folder_readme(self):
         with open(str(Path(self.recording_info.videos_folder) / SYNCHRONIZED_VIDEOS_FOLDER_README_FILENAME), "w") as f:
             f.write(SYNCHRONIZED_VIDEOS_FOLDER_README_CONTENT)

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {Box, Checkbox, FormControlLabel, TextField, useTheme} from '@mui/material';
+import ToggleComponent from '@/components/ui-components/ToggleComponent';
+import ValueSelector from '@/components/ui-components/ValueSelector';
 
 interface DelayStartControlProps {
     useDelay: boolean;
@@ -10,36 +11,25 @@ interface DelayStartControlProps {
 }
 
 export const DelayRecordingStartControl: React.FC<DelayStartControlProps> = ({
-                                                                                 useDelay,
-                                                                                 delaySeconds,
-                                                                                 onDelayToggle,
-                                                                                 onDelayChange
-                                                                             }) => {
-    const theme = useTheme();
+    useDelay, delaySeconds, onDelayToggle, onDelayChange,
+}) => {
     const { t } = useTranslation();
     return (
-        <Box display="flex" alignItems="center" gap={2}>
-            <FormControlLabel
-                control={
-                    <Checkbox
-                        checked={useDelay}
-                        onChange={(e) => onDelayToggle(e.target.checked)}
-                        color="primary"
-                    />
-                }
-                label={t("delayStart")}
+        <div className="flex items-center gap-1 flex-wrap align-end">
+            <ToggleComponent
+                text={t("delayStart")}
+                isToggled={useDelay}
+                onToggle={onDelayToggle}
             />
             {useDelay && (
-                <TextField
-                    label={t("seconds")}
-                    type="number"
+                <ValueSelector
                     value={delaySeconds}
-                    onChange={(e) => onDelayChange(Math.max(1, parseInt(e.target.value) || 1))}
-                    inputProps={{min: 1, step: 1}}
-                    size="small"
-                    sx={{width: 100}}
+                    min={1}
+                    max={60}
+                    unit="s"
+                    onChange={onDelayChange}
                 />
             )}
-        </Box>
+        </div>
     );
 };
