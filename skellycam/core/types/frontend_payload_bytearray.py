@@ -292,9 +292,8 @@ def create_frontend_payload(
 
     if cg_id is not None:
         prepare_ms = (time.perf_counter() - t_ws_payload_prepare0) * 1e3
-        for cid in camera_ids:
-            record_frontend_preview_timing_ms(
-                cg_id, str(cid), PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS, prepare_ms
-            )
+        record_frontend_preview_multiframe_ms(
+            cg_id, PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS, prepare_ms
+        )
 
     return frame_number, np.mean(frame_timestamps), frontend_bytes

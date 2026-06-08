@@ -10,6 +10,7 @@ from skellycam.core.types.frame_dtype_factories import create_frame_dtype
 from skellycam.core.types.frontend_payload_bytearray import (
     PREVIEW_MULTIFRAME_INTER_CAMERA_GRAB_SPREAD_MS,
     PREVIEW_TIMING_JPEG_RESIZE_MS,
+    PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS,
     create_frontend_payload,
     get_and_clear_frontend_preview_multiframe_samples,
     get_and_clear_frontend_preview_timing_samples,
@@ -59,3 +60,15 @@ def test_inter_camera_grab_spread_multiframe_sample() -> None:
     assert PREVIEW_MULTIFRAME_INTER_CAMERA_GRAB_SPREAD_MS in multiframe
     assert multiframe[PREVIEW_MULTIFRAME_INTER_CAMERA_GRAB_SPREAD_MS][-1] == pytest.approx(5.0)
     assert get_and_clear_frontend_preview_multiframe_samples(group_id) == {}
+
+
+def test_ws_payload_prepare_recorded_once_per_multiframe() -> None:
+    frames = _make_fake_frames(["cam0", "cam1"], frame_number=4)
+    group_id = str(uuid.uuid4())
+    create_frontend_payload(latest_frames=frames, camera_group_id=group_id)
+    per_cam = get_and_clear_frontend_preview_timing_samples(group_id)
+    for stages in per_cam.values():
+        assert PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS not in stages
+    multiframe = get_and_clear_frontend_preview_multiframe_samples(group_id)
+    assert PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS in multiframe
+    assert len(multiframe[PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS]) == 1
