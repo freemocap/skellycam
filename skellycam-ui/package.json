@@ -40,7 +40,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.42.1",
-    "@rollup/rollup-win32-x64-msvc": "^4.60.4",
     "@types/d3": "^7.4.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -54,5 +53,9 @@
     "vite": "^7.3.1",
     "vite-plugin-electron": "^0.28.8",
     "vite-plugin-electron-renderer": "^0.14.5"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4",
+    "@rollup/rollup-win32-x64-msvc": "^4.60.4"
   }
 }
