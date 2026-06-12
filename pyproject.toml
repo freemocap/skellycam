@@ -114,7 +114,7 @@ where = ["."]
 #   add --dry to any command to preview changes without writing them
 
 [tool.bumpver]
-current_version = "v2.0.0-alpha.4"
+current_version = "v2.0.0-alpha.5"
 version_pattern = "vMAJOR.MINOR.PATCH[-TAG.NUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
