@@ -5,7 +5,7 @@ from typing import Tuple, List, Dict
 
 import cv2
 import numpy as np
-import pandas as pd
+import polars as pl
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
@@ -122,10 +122,10 @@ if __name__ == "__main__":
         for result in compression_times:
             result.update({'Width': width, 'Height': height})
             data_real.append(result)
-    results_df_real = pd.DataFrame(data_real)
+    results_df_real = pl.DataFrame(data_real)
 
     print("\n--- Compression times DataFrame for Real Images ---")
-    print(results_df_real.to_string(index=False))
+    print(results_df_real)
 
     # Create and save composite images for one of the sizes
     width, height = sizes[-1]  # Use the largest size for the composite image

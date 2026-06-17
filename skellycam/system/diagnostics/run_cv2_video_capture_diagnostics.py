@@ -4,7 +4,7 @@ from typing import List, Tuple, Dict
 
 import cv2
 import numpy as np
-import pandas as pd
+import polars as pl
 
 
 class BackendSelectionEnum(enum.Enum):
@@ -108,9 +108,9 @@ def run_camera_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_codes: Lis
         f"Failed to read frame from camera using backend: {backend.name},  FourCC: {code} at resolution: {size[0]}x{size[1]}...")
     finally:
 
-        df = pd.DataFrame(results)
-        pd.set_option('display.float_format', '{:.3f}'.format)
-        print(df.to_string(index=False))
+        df = pl.DataFrame(results)
+        with pl.Config(set_float_precision=3):
+            print(df)
 
 
 if __name__ == "__main__":

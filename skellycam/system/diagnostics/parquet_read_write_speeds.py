@@ -1,7 +1,5 @@
 import numpy as np
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
+import polars as pl
 from pathlib import Path
 import time
 from dataclasses import dataclass
@@ -32,12 +30,12 @@ def benchmark_write_parquet_binary(
     start = time.perf_counter()
 
     # Store each frame as a binary blob
-    df = pd.DataFrame(data={
+    df = pl.DataFrame({
         'frame_id': np.arange(data.shape[0]),
         'data': [frame.tobytes() for frame in data]
     })
 
-    df.to_parquet(path=filepath, compression=compression, engine="pyarrow")
+    df.write_parquet(str(filepath), compression=compression)
     end = time.perf_counter()
     return end - start
 
@@ -45,12 +43,12 @@ def benchmark_write_parquet_binary(
 def benchmark_read_parquet_binary(*, filepath: Path, shape: tuple[int, ...]) -> float:
     """Benchmark read operation and reconstruct array."""
     start = time.perf_counter()
-    df = pd.read_parquet(path=filepath, engine="pyarrow")
+    df = pl.read_parquet(str(filepath))
 
     # Reconstruct the array
     dtype = np.uint8 if len(shape) == 4 else np.uint16
     _ = np.array(
-        [np.frombuffer(data, dtype=dtype).reshape(shape[1:]) for data in df['data']],
+        [np.frombuffer(bytes(data), dtype=dtype).reshape(shape[1:]) for data in df['data']],
         dtype=dtype
     )
     end = time.perf_counter()
@@ -81,12 +79,12 @@ def benchmark_write_parquet_jpeg(
         img.save(fp=buffer, format='JPEG', quality=jpeg_quality)
         jpeg_blobs.append(buffer.getvalue())
 
-    df = pd.DataFrame(data={
+    df = pl.DataFrame({
         'frame_id': np.arange(data.shape[0]),
         'jpeg_data': jpeg_blobs
     })
 
-    df.to_parquet(path=filepath, compression=compression, engine="pyarrow")
+    df.write_parquet(str(filepath), compression=compression)
     end = time.perf_counter()
     return end - start
 
@@ -94,12 +92,12 @@ def benchmark_write_parquet_jpeg(
 def benchmark_read_parquet_jpeg(*, filepath: Path, shape: tuple[int, ...]) -> float:
     """Benchmark read operation with JPEG decoding."""
     start = time.perf_counter()
-    df = pd.read_parquet(path=filepath, engine="pyarrow")
+    df = pl.read_parquet(str(filepath))
 
     # Decode JPEG blobs
     frames: list[np.ndarray] = []
     for jpeg_data in df['jpeg_data']:
-        buffer = BytesIO(jpeg_data)
+        buffer = BytesIO(bytes(jpeg_data))
         img = Image.open(fp=buffer)
         frame = np.array(img)
         if len(shape) == 4 and shape[-1] == 1:
@@ -231,12 +229,12 @@ def print_results_table(*, results: list[BenchmarkResult]) -> None:
             "Ratio": f"{compression_ratio:.2f}x"
         })
 
-    df = pd.DataFrame(data=rows)
+    df = pl.DataFrame(data=rows)
 
     print("\n" + "=" * 140)
     print("PARQUET vs JPEG PERFORMANCE BENCHMARK - PER FRAME METRICS")
     print("=" * 140)
-    print(df.to_string(index=False))
+    print(df)
     print("=" * 140)
     print(f"\nTotal tests: {len(results)}")
 
