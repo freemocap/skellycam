@@ -31,7 +31,7 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
     ('jpeg_string_length', '<i4'),  # 4 bytes, length of the JPEG string, little-endian int32
 ], align=True)
 
-JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
+JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
 
 
 
@@ -118,8 +118,8 @@ def create_frontend_payload(
             resize_image_height = int(rotated_image.shape[0] * image_scale)
             resize_image_width = int(rotated_image.shape[1] * image_scale)
         else:
-            resize_image_height = int(display_image_sizes[camera_id]['height'])
-            resize_image_width = int(display_image_sizes[camera_id]['width'])
+            resize_image_height = min(int(display_image_sizes[camera_id]['height']), int(rotated_image.shape[0] * image_scale))
+            resize_image_width = min(int(display_image_sizes[camera_id]['width']), int(rotated_image.shape[1] * image_scale))
 
         # Resize and encode image
         resized_img = cv2.resize(
