@@ -113,13 +113,25 @@ def create_frontend_payload(
         else:
             rotated_image = frame_recarray.image[0]
 
-        # Calculate resize dimensions
-        if display_image_sizes is None or camera_id not in display_image_sizes.keys():
-            resize_image_height = int(rotated_image.shape[0] * image_scale)
-            resize_image_width = int(rotated_image.shape[1] * image_scale)
+        orig_h, orig_w = rotated_image.shape[:2]
+
+        if display_image_sizes is None or camera_id not in display_image_sizes:
+            resize_image_width = int(orig_w * image_scale)
+            resize_image_height = int(orig_h * image_scale)
         else:
-            resize_image_height = min(int(display_image_sizes[camera_id]['height']), int(rotated_image.shape[0] * image_scale))
-            resize_image_width = min(int(display_image_sizes[camera_id]['width']), int(rotated_image.shape[1] * image_scale))
+            display_w = int(display_image_sizes[camera_id]['width'])
+            display_h = int(display_image_sizes[camera_id]['height'])
+            # Fit the image within the display box while PRESERVING aspect ratio.
+            # A uniform scale factor avoids the independent-axis clamping that
+            # would squish/stretch the image when the display aspect ratio
+            # differs from the camera's native aspect ratio.
+            scale = min(
+                display_w / orig_w,
+                display_h / orig_h,
+                image_scale,
+            )
+            resize_image_width = int(orig_w * scale)
+            resize_image_height = int(orig_h * scale)
 
         # Resize and encode image
         resized_img = cv2.resize(
