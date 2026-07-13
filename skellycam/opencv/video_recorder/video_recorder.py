@@ -1,90 +1,151 @@
 import logging
 import traceback
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 import cv2
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 from skellycam.detection.models.frame_payload import FramePayload
+from skellycam.opencv.video_recorder.streaming_video_writer import (
+    DEFAULT_QUEUE_CAPACITY,
+    StreamingFramePacket,
+    StreamingVideoWriter,
+    StreamingWriterResult,
+    WriterFailedError,
+    WriterSaturatedError,
+)
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "VideoRecorder",
+    "StreamingWriterResult",
+    "WriterFailedError",
+    "WriterSaturatedError",
+]
+
 
 class VideoRecorder:
-    def __init__(self):
+    """Per-camera recording handle.
 
-        self._cv2_video_writer = None
-        self._path_to_save_video_file = None
-        self._frame_payload_list: List[FramePayload] = []
-        self._timestamps_npy = np.empty(0)
+    Historically this class accumulated every captured frame in an unbounded
+    `_frame_payload_list` for the entire recording, then wrote them all out
+    (and was `deepcopy()`-ed in full, images included) at Stop. That is the
+    root cause this class was rewritten to fix -- see ARCHITECTURE_REPORT.md.
+
+    It now streams frames to disk via a bounded-queue `StreamingVideoWriter`,
+    opened at `start_streaming()` (recording Start), fed one frame at a time
+    by `append_frame_payload_to_list()` (kept under its historical name so
+    existing call sites don't need to change), and finalized by
+    `stop_streaming()` / `abort_streaming()` at Stop. No frame image is ever
+    retained by this class once it has been submitted to the writer.
+    """
+
+    def __init__(self):
+        self._streaming_writer: Optional[StreamingVideoWriter] = None
+        self._path_to_save_video_file: Optional[Path] = None
+
+    # -- new streaming lifecycle -------------------------------------------------
+    @property
+    def is_streaming(self) -> bool:
+        return self._streaming_writer is not None
 
     @property
-    def timestamps(self) -> np.ndarray:
-        return self._gather_timestamps(self._frame_payload_list)
+    def is_healthy(self) -> bool:
+        return self._streaming_writer is None or self._streaming_writer.is_healthy
+
+    def start_streaming(
+            self,
+            video_file_save_path: Union[str, Path],
+            expected_fps: float,
+            queue_capacity: int = DEFAULT_QUEUE_CAPACITY,
+    ) -> None:
+        if self._streaming_writer is not None:
+            raise RuntimeError("VideoRecorder already streaming -- call stop_streaming() first")
+
+        self._path_to_save_video_file = Path(video_file_save_path)
+        self._streaming_writer = StreamingVideoWriter(
+            output_path=self._path_to_save_video_file,
+            expected_fps=expected_fps,
+            queue_capacity=queue_capacity,
+        )
+        self._streaming_writer.start()
+
+    def stop_streaming(self, timeout_seconds: float = 10.0) -> StreamingWriterResult:
+        if self._streaming_writer is None:
+            raise RuntimeError("stop_streaming() called before start_streaming()")
+        return self._streaming_writer.stop(timeout_seconds=timeout_seconds)
+
+    def abort_streaming(self, reason: str, timeout_seconds: float = 10.0) -> StreamingWriterResult:
+        if self._streaming_writer is None:
+            raise RuntimeError("abort_streaming() called before start_streaming()")
+        return self._streaming_writer.abort(reason=reason, timeout_seconds=timeout_seconds)
 
     @property
     def number_of_frames(self) -> int:
-        return len(self._frame_payload_list)
+        """Frames *submitted* to the writer so far. Kept under its historical
+        name/shape for compatibility with existing diagnostic call sites."""
+        if self._streaming_writer is None:
+            return 0
+        return self._streaming_writer.frames_submitted
 
     @property
-    def frame_payload_list(self) -> List[FramePayload]:
-        return self._frame_payload_list
+    def peak_queue_depth(self) -> int:
+        if self._streaming_writer is None:
+            return 0
+        return self._streaming_writer.peak_queue_depth
 
-    def close(self):
-        self._cv2_video_writer.release()
+    def append_frame_payload_to_list(self, frame_payload: FramePayload, frame_index: int) -> None:
+        """Historical name, new behavior: submits directly to the bounded
+        streaming queue instead of appending to an unbounded in-RAM list.
 
-    def append_frame_payload_to_list(self, frame_payload: FramePayload):
-        self._frame_payload_list.append(frame_payload)
+        Raises WriterSaturatedError / WriterFailedError -- callers (the
+        capture loop) must treat either as grounds to abort the entire
+        synchronized recording honestly, not to silently drop this frame.
+        """
+        if self._streaming_writer is None:
+            raise RuntimeError("append_frame_payload_to_list() called before start_streaming()")
 
-    def save_frame_list_to_video_file(
-            self,
-            video_file_save_path: Union[str, Path],
-            frame_payload_list: List[FramePayload],
-            frames_per_second: float = None,
-    ):
-
-        if frames_per_second is None:
-            self._timestamps_npy = self._gather_timestamps(frame_payload_list)
-            try:
-                frames_per_second = (
-                        np.nanmedian((np.diff(self._timestamps_npy) ** -1)) * 1e9
-                )
-            except Exception as e:
-                logger.debug("Error calculating frames per second")
-                traceback.print_exc()
-                raise e
-
-        self._cv2_video_writer = self._initialize_video_writer(
-            image_height=frame_payload_list[0].image.shape[0],
-            image_width=frame_payload_list[0].image.shape[1],
-            frames_per_second=frames_per_second,
-            path_to_save_video_file=video_file_save_path,
+        packet = StreamingFramePacket(
+            frame_index=frame_index,
+            camera_id=str(frame_payload.camera_id),
+            timestamp_ns=int(frame_payload.timestamp_ns),
+            image=frame_payload.image,
         )
-        self._write_frame_list_to_video_file(frame_payload_list=frame_payload_list)
-        self._save_timestamps(timestamps_npy=self._timestamps_npy, video_file_save_path=video_file_save_path)
-        self._cv2_video_writer.release()
+        self._streaming_writer.submit(packet)
 
+    # -- legacy calibration-video path (unchanged) --------------------------
+    # save_image_list_to_disk operates on an already-complete, caller-owned
+    # image_list (e.g. a small set of calibration snapshots), not a live
+    # growing camera recording -- it was never implicated in the unbounded-
+    # memory bug and is left as-is.
     def save_image_list_to_disk(
             self,
             image_list: List[np.ndarray],
             path_to_save_video_file: Union[str, Path],
             frames_per_second: float,
     ):
-
         if len(image_list) == 0:
             logging.error(f"No frames to save for : {path_to_save_video_file}")
             return
 
-        self._cv2_video_writer = self._initialize_video_writer(
+        cv2_video_writer = self._initialize_video_writer(
             image_height=image_list[0].shape[0],
             image_width=image_list[0].shape[1],
             frames_per_second=frames_per_second,
             path_to_save_video_file=path_to_save_video_file,
         )
-        self._write_image_list_to_video_file(image_list)
+        try:
+            for image in image_list:
+                cv2_video_writer.write(image)
+        except Exception as e:
+            logger.error(f"Failed during save in video writer for video {str(path_to_save_video_file)}")
+            traceback.print_exc()
+            raise e
+        finally:
+            cv2_video_writer.release()
 
     def _initialize_video_writer(
             self,
@@ -93,9 +154,7 @@ class VideoRecorder:
             path_to_save_video_file: Union[str, Path],
             frames_per_second: Union[int, float] = None,
             fourcc: str = "mp4v",
-            # calibration_videos: bool = False,
     ) -> cv2.VideoWriter:
-
         video_writer_object = cv2.VideoWriter(
             str(path_to_save_video_file),
             cv2.VideoWriter_fourcc(*fourcc),
@@ -104,77 +163,7 @@ class VideoRecorder:
         )
 
         if not video_writer_object.isOpened():
-            logger.error(
-                f"cv2.VideoWriter failed to initialize for: {str(path_to_save_video_file)}"
-            )
+            logger.error(f"cv2.VideoWriter failed to initialize for: {str(path_to_save_video_file)}")
             raise Exception("cv2.VideoWriter is not open")
 
         return video_writer_object
-
-    def _write_frame_list_to_video_file(self, frame_payload_list: List[FramePayload]):
-
-        try:
-            for frame in tqdm(
-                    frame_payload_list,
-                    desc=f"Saving video: {self._path_to_save_video_file}",
-                    total=len(frame_payload_list),
-                    colour="cyan",
-                    unit="frames",
-                    dynamic_ncols=True,
-            ):
-                self._cv2_video_writer.write(frame.image)
-
-        except Exception as e:
-            logger.error(
-                f"Failed during save in video writer for video {str(self._path_to_save_video_file)}"
-            )
-            traceback.print_exc()
-            raise e
-        finally:
-            logger.info(f"Saved video to path: {self._path_to_save_video_file}")
-            self._cv2_video_writer.release()
-
-    def _write_image_list_to_video_file(self, image_list: List[np.ndarray]):
-        try:
-            for image in image_list:
-                self._cv2_video_writer.write(image)
-        except Exception as e:
-            logger.error(
-                f"Failed during save in video writer for video {str(self._path_to_save_video_file)}"
-            )
-            traceback.print_exc()
-            raise e
-        finally:
-            self._cv2_video_writer.release()
-
-    def _gather_timestamps(self, frame_payload_list: List[FramePayload]) -> np.ndarray:
-        timestamps_npy = np.empty(0)
-        try:
-            for frame_payload in frame_payload_list:
-                timestamps_npy = np.append(timestamps_npy, frame_payload.timestamp_ns)
-        except Exception as e:
-            logger.error("Error gathering timestamps")
-            logger.error(e)
-
-        return timestamps_npy
-
-    def _save_timestamps(self, timestamps_npy: np.ndarray, video_file_save_path: Union[str, Path]):
-        timestamp_folder_path = video_file_save_path.parent / "timestamps"
-        timestamp_folder_path.mkdir(parents=True, exist_ok=True)
-
-        base_timestamp_path_str = str(
-            timestamp_folder_path / video_file_save_path.stem
-        )
-
-        # save timestamps to npy (binary) file (via numpy.ndarray)
-        path_to_save_timestamps_npy = base_timestamp_path_str + "_binary.npy"
-        np.save(str(path_to_save_timestamps_npy), timestamps_npy)
-        logger.info(f"Saved timestamps to path: {str(path_to_save_timestamps_npy)}")
-
-        # save timestamps to human readable (csv/text) file (via pandas.DataFrame)
-        path_to_save_timestamps_csv = (
-                base_timestamp_path_str + "_timestamps_human_readable.csv"
-        )
-        timestamp_dataframe = pd.DataFrame(timestamps_npy)
-        timestamp_dataframe.to_csv(str(path_to_save_timestamps_csv))
-        logger.info(f"Saved timestamps to path: {str(path_to_save_timestamps_csv)}")

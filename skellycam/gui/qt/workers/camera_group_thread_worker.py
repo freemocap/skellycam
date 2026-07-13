@@ -1,6 +1,6 @@
 import logging
 import time
-from copy import deepcopy
+from pathlib import Path
 from typing import List, Union
 
 import cv2
@@ -14,6 +14,7 @@ from skellycam.gui.qt.workers.video_save_thread_worker import VideoSaveThreadWor
 from skellycam.opencv.camera.types.camera_id import CameraId
 from skellycam.opencv.group.camera_group import CameraGroup
 from skellycam.opencv.video_recorder.video_recorder import VideoRecorder
+from skellycam.opencv.video_recorder.streaming_video_writer import WriterFailedError, WriterSaturatedError
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,20 @@ class CamGroupThreadWorker(QThread):
         self._updating_camera_settings_bool = False
         self._current_recording_name = None
         self._video_save_process = None
+
+        # Global synchronized frame index. Assigned once per committed
+        # multi-camera frame bundle (see run()), not per camera -- this is
+        # what lets every camera's writer agree on the same frame identity
+        # without needing every frame resident in RAM for post-hoc matching.
+        self._next_frame_index = 0
+
+        # Real-time approximation of the old post-hoc nearest-timestamp
+        # match, applied per-bundle instead of across a full in-RAM buffer.
+        # Deliberately NOT proven equivalent for multi-camera use -- see
+        # _try_record_synchronized_frame_bundle()'s docstring. 50ms is a
+        # provisional default (roughly 1.5 frame periods at 30fps); tune
+        # after real multi-camera jitter is measured.
+        self._max_frame_bundle_timestamp_delta_ns = 50_000_000
 
         self._charuco_board = charuco_7x5()
 
@@ -127,13 +142,13 @@ class CamGroupThreadWorker(QThread):
                 continue
 
             frame_payload_dictionary = self._camera_group.latest_frames()
+
+            if self._should_record_frames_bool and not self._should_pause_bool:
+                self._try_record_synchronized_frame_bundle(frame_payload_dictionary)
+
             for camera_id, frame_payload in frame_payload_dictionary.items():
                 if frame_payload:
                     if not self._should_pause_bool:
-                        if self._should_record_frames_bool:
-                            self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(frame_payload)
-                            logger.info(f"camera:frame_count - {self._get_recorder_frame_count_dict()}")
-
                         if self.annotate_images:
                             draw_charuco_on_image(image=frame_payload.image, charuco_board=self.charuco_board)
 
@@ -153,6 +168,94 @@ class CamGroupThreadWorker(QThread):
                             logger.error(f"Error getting frame count for camera {camera_id}: {e}")
 
                         self.new_image_signal.emit(camera_id, q_image, frame_diagnostic_dictionary)
+
+    def _try_record_synchronized_frame_bundle(self, frame_payload_dictionary: dict) -> None:
+        """Commit one synchronized frame bundle per poll iteration: either
+        every enabled camera's writer receives this iteration's frame under
+        the same global frame_index, or none of them do.
+
+        IMPORTANT (see ARCHITECTURE_REPORT.md / STREAMING_RECORDING_ARCHITECTURE.md
+        for the full analysis): CameraGroup.latest_frames() is a per-camera
+        independent queue pop with NO cross-camera timestamp comparison --
+        the capture-loop poll was never a synchronization boundary in the
+        original design. The original algorithm synchronized post-hoc, at
+        save time, via nearest-timestamp matching across each camera's full
+        in-RAM buffer -- which this rewrite deliberately removes (that's the
+        memory bug). "Same poll iteration" alone is therefore NOT equivalent
+        to that original guarantee: a backlogged frame from a slow camera
+        could otherwise be paired with a fresh frame from a fast one under
+        the same frame_index. The max-timestamp-delta check below is a
+        real-time approximation of the same intent, not a proven-equivalent
+        replacement -- multi-camera correctness under this design is
+        deliberately treated as IMPROVED BUT UNVALIDATED, not proven, and a
+        dedicated multi-camera synchronization test is required before this
+        is trusted for real multi-camera recordings. This incident and this
+        sprint's live testing are single-camera only, where this distinction
+        does not apply (there is nothing to pair against).
+        """
+        # Stable order owned by the worker (dict insertion order, set once by
+        # _initialize_video_recorder_dictionary) -- iterating a set directly
+        # gives non-deterministic order, which makes failure-ordering
+        # unreproducible for no benefit.
+        camera_ids_in_order = list(self._video_recorder_dictionary.keys())
+        expected_camera_ids = set(camera_ids_in_order)
+        available_camera_ids = {
+            camera_id for camera_id, payload in frame_payload_dictionary.items() if payload
+        }
+        if not expected_camera_ids.issubset(available_camera_ids):
+            return  # partial bundle this iteration -- wait for the next one, never commit it
+
+        if len(camera_ids_in_order) > 1:
+            timestamps_ns = [
+                frame_payload_dictionary[camera_id].timestamp_ns for camera_id in camera_ids_in_order
+            ]
+            max_delta_ns = max(timestamps_ns) - min(timestamps_ns)
+            if max_delta_ns > self._max_frame_bundle_timestamp_delta_ns:
+                logger.debug(
+                    "Skipping frame bundle -- cameras not sufficiently synchronized this "
+                    f"iteration (max_delta_ns={max_delta_ns} > "
+                    f"threshold={self._max_frame_bundle_timestamp_delta_ns}). This is an "
+                    "expected, non-fatal skip under multi-camera jitter, not a failure."
+                )
+                return  # not a synchronized instant -- skip, never commit it under a shared index
+
+        frame_index = self._next_frame_index
+        self._next_frame_index += 1
+
+        submitted_camera_ids = []
+        try:
+            for camera_id in camera_ids_in_order:
+                self._video_recorder_dictionary[camera_id].append_frame_payload_to_list(
+                    frame_payload_dictionary[camera_id], frame_index=frame_index,
+                )
+                submitted_camera_ids.append(camera_id)
+        except (WriterSaturatedError, WriterFailedError) as exc:
+            logger.error(
+                f"Recording writer failure at frame_index={frame_index} "
+                f"({len(submitted_camera_ids)}/{len(camera_ids_in_order)} cameras already "
+                f"committed this frame before the failure): {exc}"
+            )
+            self._abort_recording(reason=str(exc))
+
+    def _abort_recording(self, reason: str) -> None:
+        """Honest failure path for queue saturation or writer death: every
+        camera's writer is aborted together so the recording never claims
+        partial success. Partial files are preserved by StreamingVideoWriter;
+        this method just makes sure nothing keeps submitting to a doomed
+        recording and that a fresh, empty set of recorders is ready for the
+        next Start."""
+        logger.error(f"Aborting synchronized recording: {reason}")
+        self._should_record_frames_bool = False
+        for camera_id, video_recorder in self._video_recorder_dictionary.items():
+            if video_recorder.is_streaming:
+                try:
+                    video_recorder.abort_streaming(reason=reason)
+                except RuntimeError:
+                    pass  # already finished (e.g. this was the camera whose failure triggered the abort)
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(f"Error aborting recorder for camera {camera_id}: {exc}")
+        self._synchronized_video_folder_path = None
+        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     def _convert_frame(self, frame: FramePayload):
         image = frame.image
@@ -188,6 +291,20 @@ class CamGroupThreadWorker(QThread):
         if self.cameras_connected:
             if self._synchronized_video_folder_path is None:
                 self._synchronized_video_folder_path = self._get_new_synchronized_videos_folder_callable()
+
+            # Writer opened here, at Start, not deferred to Stop -- this is
+            # what makes recording duration stop determining RAM usage.
+            self._next_frame_index = 0
+            for camera_id, video_recorder in self._video_recorder_dictionary.items():
+                config = self._camera_group.camera_config_dictionary[camera_id]
+                output_path = Path(self._synchronized_video_folder_path) / (
+                    f"Camera_{str(camera_id).zfill(3)}_synchronized.mp4"
+                )
+                video_recorder.start_streaming(
+                    video_file_save_path=output_path,
+                    expected_fps=float(config.framerate),
+                )
+
             self._should_record_frames_bool = True
         else:
             logger.warning("Cannot start recording - cameras not connected")
@@ -195,11 +312,7 @@ class CamGroupThreadWorker(QThread):
     def stop_recording(self):
         logger.info("Stopping recording")
         self._should_record_frames_bool = False
-
         self._launch_save_video_thread_worker()
-        # self._launch_save_video_process()
-        del self._video_recorder_dictionary
-        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
 
     def update_camera_group_configs(self, camera_config_dictionary: dict):
         if self._camera_ids is None:
@@ -224,10 +337,24 @@ class CamGroupThreadWorker(QThread):
         synchronized_videos_folder = self._synchronized_video_folder_path
         self._synchronized_video_folder_path = None
 
-        video_recorders_to_save = {}
-        for camera_id, video_recorder in self._video_recorder_dictionary.items():
-            if video_recorder.number_of_frames > 0:
-                video_recorders_to_save[camera_id] = deepcopy(video_recorder)
+        # Ownership transfer, not deepcopy: hand the already-streaming
+        # recorders (writer handles, bounded queues, small metadata -- no
+        # frame image data) straight to the background finalize worker, and
+        # immediately give the capture path a fresh, empty set of recorders
+        # for the next recording. This removes the Stop-time doubling of the
+        # frame buffer that was the acute trigger of the original freeze --
+        # see ARCHITECTURE_REPORT.md.
+        video_recorders_to_save = {
+            camera_id: video_recorder
+            for camera_id, video_recorder in self._video_recorder_dictionary.items()
+            if video_recorder.is_streaming
+        }
+        self._video_recorder_dictionary = self._initialize_video_recorder_dictionary()
+
+        if not video_recorders_to_save:
+            logger.warning("No active recorders to save -- nothing was recorded")
+            self.videos_saved_to_this_folder_signal.emit(str(synchronized_videos_folder))
+            return
 
         self._video_save_thread_worker = VideoSaveThreadWorker(
             dictionary_of_video_recorders=video_recorders_to_save,
