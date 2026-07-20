@@ -118,8 +118,15 @@ def create_frontend_payload(
             resize_image_height = int(rotated_image.shape[0] * image_scale)
             resize_image_width = int(rotated_image.shape[1] * image_scale)
         else:
-            resize_image_height = int(display_image_sizes[camera_id]['height'])
-            resize_image_width = int(display_image_sizes[camera_id]['width'])
+            # Fit the source image within the display box while preserving its
+            # aspect ratio, rather than stretching it to the box's dimensions
+            # (the box's aspect ratio may not match the camera's).
+            source_height, source_width = rotated_image.shape[0], rotated_image.shape[1]
+            box_height = display_image_sizes[camera_id]['height']
+            box_width = display_image_sizes[camera_id]['width']
+            fit_scale = min(box_width / source_width, box_height / source_height)
+            resize_image_height = max(1, int(source_height * fit_scale))
+            resize_image_width = max(1, int(source_width * fit_scale))
 
         # Resize and encode image
         resized_img = cv2.resize(
