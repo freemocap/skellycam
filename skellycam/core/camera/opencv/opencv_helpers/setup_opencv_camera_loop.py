@@ -18,6 +18,16 @@ from skellycam.utilities.wait_functions import wait_10ms
 logger = logging.getLogger(__name__)
 
 
+class CameraSetupFailedException(Exception):
+    """A camera failed to open/join its group during startup.
+
+    Expected and recoverable (bad device, camera in use, etc.) — callers should
+    let the worker exit quietly rather than treating it like an unhandled crash,
+    which would tear down the whole backend rather than just this camera group.
+    """
+    pass
+
+
 def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                              config: CameraConfig,
                              ipc: CameraGroupIPC,
@@ -59,6 +69,9 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
     except Exception as e:
         logger.exception(f"Failed to create cv2.VideoCapture for camera {config.camera_id}: {e}")
         self_status.signal_error()
-        ipc.kill_everything()
-        raise RuntimeError(f"Could not create cv2.VideoCapture for camera {config.camera_id}") from e
+        # Stop only this camera group's siblings, not the whole backend.
+        ipc.should_continue = False
+        raise CameraSetupFailedException(
+            f"Could not create cv2.VideoCapture for camera {config.camera_id}"
+        ) from e
     return camera_shm, config, cv2_video_capture, frame_rec_array
