@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
-import pandas as pd
+import polars as pl
 
 
 def get_file_extension(fourcc: str) -> str:
@@ -80,15 +80,13 @@ def run_cv2_video_writer_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_
                 results.append(outcome)
                 print(outcome)
 
-    df = pd.DataFrame(results)
-    print(df.to_string(index=False))
+    df = pl.DataFrame(results)
+    print(df)
     print("\nGrouped by FourCC")
-
-    grouped = df.groupby('FourCC')
 
     summary_results = []
 
-    for name, group in grouped:
+    for (name,), group in df.group_by('FourCC', maintain_order=True):
         group_mean = group['Mean Frame Write Time (ms)'].mean()
         group_std = group['Mean Frame Write Time (ms)'].std()
         summary_results.append({
@@ -97,14 +95,13 @@ def run_cv2_video_writer_diagnostics(image_sizes: List[Tuple[int, int]], fourcc_
             'Overall Std Dev Write Time (ms)': group_std
         })
         print(f"FourCC: {name}")
-        print(group.to_string(index=False))
-        print(
-            f"\nMean values for FourCC {name}:\n{group[['Mean Frame Write Time (ms)', 'Std Dev Frame Write Time (ms)']].mean()}")
+        print(group)
+        print(f"\nMean values for FourCC {name}:\n{group.select(['Mean Frame Write Time (ms)', 'Std Dev Frame Write Time (ms)']).mean()}")
         print("\n")
 
-    summary_df = pd.DataFrame(summary_results)
+    summary_df = pl.DataFrame(summary_results)
     print("\nSummary of Mean and Std Dev Write Times by FourCC")
-    print(summary_df.to_string(index=False))
+    print(summary_df)
 
 
 if __name__ == "__main__":

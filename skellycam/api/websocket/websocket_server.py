@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import time
 from collections import deque
 
@@ -315,6 +316,7 @@ class WebsocketServer:
                 if previous_state is None or state_dict != previous_state:
                     state_message = {
                         "message_type": WebsocketMessageType.APP_STATE,
+                        "server_pid": os.getpid(),
                         "state": state_dict
                     }
                     await self._send_msgspec_json(state_message)

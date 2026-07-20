@@ -31,7 +31,7 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
     ('jpeg_string_length', '<i4'),  # 4 bytes, length of the JPEG string, little-endian int32
 ], align=True)
 
-JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
+JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
 
 
 
@@ -113,20 +113,25 @@ def create_frontend_payload(
         else:
             rotated_image = frame_recarray.image[0]
 
-        # Calculate resize dimensions
-        if display_image_sizes is None or camera_id not in display_image_sizes.keys():
-            resize_image_height = int(rotated_image.shape[0] * image_scale)
-            resize_image_width = int(rotated_image.shape[1] * image_scale)
+        orig_h, orig_w = rotated_image.shape[:2]
+
+        if display_image_sizes is None or camera_id not in display_image_sizes:
+            resize_image_width = int(orig_w * image_scale)
+            resize_image_height = int(orig_h * image_scale)
         else:
-            # Fit the source image within the display box while preserving its
-            # aspect ratio, rather than stretching it to the box's dimensions
-            # (the box's aspect ratio may not match the camera's).
-            source_height, source_width = rotated_image.shape[0], rotated_image.shape[1]
-            box_height = display_image_sizes[camera_id]['height']
-            box_width = display_image_sizes[camera_id]['width']
-            fit_scale = min(box_width / source_width, box_height / source_height)
-            resize_image_height = max(1, int(source_height * fit_scale))
-            resize_image_width = max(1, int(source_width * fit_scale))
+            display_w = int(display_image_sizes[camera_id]['width'])
+            display_h = int(display_image_sizes[camera_id]['height'])
+            # Fit the image within the display box while PRESERVING aspect ratio.
+            # A uniform scale factor avoids the independent-axis clamping that
+            # would squish/stretch the image when the display aspect ratio
+            # differs from the camera's native aspect ratio.
+            scale = min(
+                display_w / orig_w,
+                display_h / orig_h,
+                image_scale,
+            )
+            resize_image_width = int(orig_w * scale)
+            resize_image_height = int(orig_h * scale)
 
         # Resize and encode image
         resized_img = cv2.resize(
