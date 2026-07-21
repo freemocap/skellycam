@@ -68,6 +68,7 @@ def initialize_telemetry() -> None:
     _client = TelemetryClient(
         server_url=SKELLYPINGS_SERVER_URL,
         secret=SKELLYPINGS_SECRET,
+        app_name="skellycam",
         app_version=skellycam.__version__,
         user_id_file=user_id_file,
     )

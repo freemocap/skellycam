@@ -258,3 +258,49 @@ class TestWorkerRegistry:
 
         # Clean up
         registry.shutdown_all()
+
+    def test_child_monitor_triggers_shutdown_on_kill_flag(self) -> None:
+        """A kill flag set by anyone — with no worker death — must escalate to
+        parent shutdown via SIGTERM. This is the path a main-process actor (e.g.
+        the websocket relay) relies on: it sets the flag but never exits a worker."""
+        import os
+        import signal
+        from unittest import mock
+
+        kill_flag = multiprocessing.Value("b", False)
+        registry = WorkerRegistry(
+            global_kill_flag=kill_flag,
+            worker_mode=WorkerMode.THREAD,
+        )
+        with mock.patch(
+            "skellycam.core.ipc.process_management.worker_registry.os.kill"
+        ) as mock_kill:
+            registry.start_heartbeat()
+            kill_flag.value = True
+            # Monitor polls on a ~1s cadence; allow several cycles to observe it.
+            deadline = time.perf_counter() + 5.0
+            while time.perf_counter() < deadline and not mock_kill.called:
+                time.sleep(0.05)
+            assert mock_kill.called, "monitor did not escalate on a set kill flag"
+            mock_kill.assert_called_with(os.getpid(), signal.SIGTERM)
+
+        registry.shutdown_all()
+
+    def test_child_monitor_no_shutdown_when_flag_clear(self) -> None:
+        """With the flag clear and all workers healthy, the monitor must NOT
+        escalate — guards against a spurious self-SIGTERM."""
+        from unittest import mock
+
+        kill_flag = multiprocessing.Value("b", False)
+        registry = WorkerRegistry(
+            global_kill_flag=kill_flag,
+            worker_mode=WorkerMode.THREAD,
+        )
+        with mock.patch(
+            "skellycam.core.ipc.process_management.worker_registry.os.kill"
+        ) as mock_kill:
+            registry.start_heartbeat()
+            time.sleep(2.5)  # several monitor poll cycles
+            assert not mock_kill.called
+
+        registry.shutdown_all()

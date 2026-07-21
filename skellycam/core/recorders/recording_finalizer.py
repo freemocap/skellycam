@@ -189,9 +189,9 @@ class RecordingFinalizer:
         # Check 4: Verify timestamps have the same number of frames as videos
         for camera_id, ts_file in camera_timestamp_files.items():
             try:
-                import pandas as pd
-                df = pd.read_csv(ts_file)
-                ts_frame_count = len(df)
+                import polars as pl
+                df = pl.read_csv(ts_file)
+                ts_frame_count = df.height
 
                 if ts_frame_count != frame_counts[camera_id]:
                     raise ValueError(

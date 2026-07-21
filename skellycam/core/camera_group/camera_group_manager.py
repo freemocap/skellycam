@@ -48,7 +48,21 @@ class CameraGroupManager:
             camera_group.ipc.pubsub.get_subscription(TopicTypes.FRAMERATE)
         )
         self.camera_groups[camera_group.id] = camera_group
-        await self.camera_groups[camera_group.id].start()
+        try:
+            await self.camera_groups[camera_group.id].start()
+        except Exception:
+            # Startup failed (e.g. a camera couldn't open) — tear the
+            # half-started group down so a retry creates a fresh group instead
+            # of finding this one and trying to "update" a group whose workers
+            # already exited.
+            logger.error(f"Camera group {camera_group.id} failed to start, tearing it down")
+            try:
+                await camera_group.close()
+            except Exception as close_err:
+                logger.error(f"Error closing failed camera group {camera_group.id}: {close_err}")
+            del self.camera_groups[camera_group.id]
+            del self.camera_group_framerate_subscriptions[camera_group.id]
+            raise
 
         logger.info(
             f"Creating camera group with ID: {camera_group.id} "

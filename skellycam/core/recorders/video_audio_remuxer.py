@@ -5,7 +5,7 @@ from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 logger = logging.getLogger(__name__)
 
@@ -146,14 +146,14 @@ def _do_remux(
 
 def load_frame_timestamps_from_csv(csv_path: str) -> list[int]:
     """Load per-frame perf_counter_ns timestamps from a camera timestamp CSV."""
-    df = pd.read_csv(csv_path)
+    df = pl.read_csv(csv_path)
     ts_col = "timestamp.perf_counter_ns.ns"
     if ts_col not in df.columns:
         raise ValueError(
             f"Expected column '{ts_col}' in {csv_path}, "
-            f"found columns: {list(df.columns)}"
+            f"found columns: {df.columns}"
         )
-    return df[ts_col].astype(np.int64).tolist()
+    return df[ts_col].cast(pl.Int64).to_list()
 
 
 def load_audio_start_time(audio_timestamps_path: str) -> int:

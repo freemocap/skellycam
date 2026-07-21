@@ -81,7 +81,7 @@ class WorkerRegistry:
             self._heartbeat_stop.wait(timeout=1.0)
 
     def _child_monitor_loop(self) -> None:
-        """Watch for unexpected worker death and trigger parent shutdown."""
+        """Watch for unexpected worker death or a set global kill flag, and trigger parent shutdown."""
         while not self._heartbeat_stop.is_set():
             for worker in self._workers:
                 if (worker.pid is not None
@@ -95,6 +95,17 @@ class WorkerRegistry:
                     self._global_kill_flag.value = True
                     os.kill(os.getpid(), signal.SIGTERM)
                     return
+            # Any actor sharing the flag — including a main-process asyncio task
+            # such as the websocket relay — can request whole-app shutdown by
+            # setting it. No worker exits in that case, so the worker-death scan
+            # above won't catch it; the flag value itself is the trigger.
+            if self._global_kill_flag.value:
+                logger.error(
+                    "global_kill_flag is set (no worker death detected) — "
+                    "triggering parent shutdown"
+                )
+                os.kill(os.getpid(), signal.SIGTERM)
+                return
             self._heartbeat_stop.wait(timeout=1.0)
 
     def _stop_threads(self) -> None:

@@ -2,7 +2,10 @@ import logging
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_camera_loop import run_opencv_camera_loop
-from skellycam.core.camera.opencv.opencv_helpers.setup_opencv_camera_loop import setup_opencv_camera_loop
+from skellycam.core.camera.opencv.opencv_helpers.setup_opencv_camera_loop import (
+    setup_opencv_camera_loop,
+    CameraSetupFailedException,
+)
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
@@ -25,20 +28,21 @@ def opencv_camera_worker_method(
     logger.trace(f"Camera {camera_id} worker started")
     self_status: CameraStatus = orchestrator.camera_statuses[camera_id]
     camera_shm: CameraSharedMemoryRingBuffer | None = None
-
-    (camera_shm,
-     config,
-     cv2_video_capture,
-     frame_rec_array) = setup_opencv_camera_loop(
-        camera_shm=camera_shm,
-        config=config,
-        ipc=ipc,
-        orchestrator=orchestrator,
-        self_status=self_status,
-        shm_subscription=shm_subscription,
-    )
+    cv2_video_capture = None
 
     try:
+        (camera_shm,
+         config,
+         cv2_video_capture,
+         frame_rec_array) = setup_opencv_camera_loop(
+            camera_shm=camera_shm,
+            config=config,
+            ipc=ipc,
+            orchestrator=orchestrator,
+            self_status=self_status,
+            shm_subscription=shm_subscription,
+        )
+
         logger.debug(f"Camera {config.camera_id} frame grab loop starting...")
         run_opencv_camera_loop(
             camera_shm=camera_shm,
@@ -52,6 +56,13 @@ def opencv_camera_worker_method(
             recording_info_subscription=recording_info_subscription,
         )
 
+    except CameraSetupFailedException as e:
+        # Expected, recoverable startup failure (this camera couldn't open, or a
+        # sibling in the same group failed and aborted the group's startup).
+        # await_extracted_configs() already reports a clean error to the HTTP
+        # caller — exit quietly instead of raising, so the parent's child
+        # monitor doesn't mistake this for a crash and kill the whole backend.
+        logger.error(f"Camera {camera_id} setup failed: {e}")
     except Exception as e:
         self_status.signal_error()
         logger.exception(

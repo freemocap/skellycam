@@ -46,6 +46,8 @@ class CameraGroupState(BaseModel):
     configs: dict[CameraIdString, CameraConfig]
     cameras: dict[CameraIdString, CameraState]
     alive: bool
+    recording_in_progress: bool
+    paused: bool
 
 
 @dataclass
@@ -269,6 +271,7 @@ class CameraGroup:
         logger.success("Camera group closed successfully.")
 
     def to_state(self) -> CameraGroupState:
+        orchestrator = self.cameras.orchestrator
         return CameraGroupState(
             id=self.id,
             configs=self.configs,
@@ -279,6 +282,8 @@ class CameraGroup:
             alive=all(
                 worker.is_alive() for worker in self.cameras.camera_workers.values()
             ),
+            recording_in_progress=orchestrator.all_cameras_recording,
+            paused=orchestrator.any_cameras_paused,
         )
 
 
