@@ -6,6 +6,7 @@ export { useAppDispatch, useAppSelector } from './hooks';
 // Re-export all slice actions and selectors for a nice 'barrel' design pattern, which makes imports cleaner
 export * from './slices/cameras';
 export * from './slices/recording';
+export * from './slices/connection';
 export * from './slices/theme';
 export * from './slices/videos';
 export * from './slices/settings';

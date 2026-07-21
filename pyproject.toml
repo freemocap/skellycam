@@ -1,7 +1,7 @@
 [project]
 name = "skellycam"
 readme = "README.md"
-version = "2.0.0a5"
+version = "2.0.0a6"
 requires-python = ">=3.11"
 
 
@@ -51,14 +51,14 @@ keywords = [
 ]
 
 dependencies = [
-    "numpy",#==1.26.2",
+    "numpy", #==1.26.2",
     "opencv-contrib-python==4.12.*",
     "pydantic==2.*",
     "Pillow",
-    "psutil==5.9.6",
+    "psutil>=7.0.0",
     "setproctitle==1.3.3",
     "scipy>=1.11.4",
-    "pandas",
+    "polars",
     "uvicorn>=0.30.6",
     "fastapi>=0.115.0",
     "tzlocal>=5.2",
@@ -114,7 +114,7 @@ where = ["."]
 #   add --dry to any command to preview changes without writing them
 
 [tool.bumpver]
-current_version = "v2.0.0-alpha.4"
+current_version = "v2.0.0-alpha.5"
 version_pattern = "vMAJOR.MINOR.PATCH[-TAG.NUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
@@ -189,11 +189,11 @@ dev = [
 
 [tool.poe.tasks]
 tc-check = { cmd = "ruff check --select TC skellycam/", help = "Preview type-only imports that can move behind TYPE_CHECKING" }
-tc-fix   = { cmd = "ruff check --select TC --fix skellycam/", help = "Move type-only imports behind TYPE_CHECKING" }
-tc       = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests to verify" }
-lint     = { cmd = "ruff check skellycam/", help = "Run all ruff lint rules" }
+tc-fix = { cmd = "ruff check --select TC --fix skellycam/", help = "Move type-only imports behind TYPE_CHECKING" }
+tc = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests to verify" }
+lint = { cmd = "ruff check skellycam/", help = "Run all ruff lint rules" }
 lint-fix = { cmd = "ruff check --fix skellycam/", help = "Auto-fix all ruff lint violations" }
-test     = { cmd = "pytest", help = "Run test suite" }
+test = { cmd = "pytest", help = "Run test suite" }
 
 
 # =============================================================================
@@ -223,7 +223,7 @@ asyncio_mode = "auto"
 
 [tool.ruff.lint]
 select = [
-    "TC",    # flake8-type-checking: move type-only imports behind TYPE_CHECKING
+    "TC", # flake8-type-checking: move type-only imports behind TYPE_CHECKING
 ]
 
 [tool.ruff.lint.flake8-type-checking]

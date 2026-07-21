@@ -7,7 +7,9 @@ class TestHealthEndpoint:
     def test_health_returns_200(self, client):
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == "Hello👋"
+        body = response.json()
+        assert body["alive"] is True
+        assert isinstance(body["pid"], int)
 
     def test_root_redirects_to_docs(self, client):
         response = client.get("/", follow_redirects=False)

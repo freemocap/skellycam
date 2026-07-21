@@ -7,6 +7,9 @@ import { CanvasManager } from "@/services/server/server-helpers/canvas-manager";
 import { serverUrls } from "@/services";
 import {DetailedFramerate, FramerateStore} from "@/services/server/server-helpers/framerate-store";
 import {LogStore, LogRecord} from "@/services/server/server-helpers/log-store";
+import { store } from "@/store/store";
+import { serverStateReceived, wsConnectionChanged, serverDisconnected } from "@/store/slices/connection/connection-slice";
+import type { AppStateMessage } from "@/store/slices/connection/connection-types";
 
 interface ServerContextValue {
     isConnected: boolean;
@@ -65,6 +68,18 @@ function isFramerateUpdate(data: any): data is FramerateUpdateMessage {
         typeof data.backend_framerate === 'object' &&
         data.frontend_framerate &&
         typeof data.frontend_framerate === 'object'
+    );
+}
+
+// Type guard for the server's authoritative APP_STATE snapshot
+function isAppState(data: any): data is AppStateMessage {
+    return (
+        data &&
+        typeof data === 'object' &&
+        data.message_type === 'app_state' &&
+        typeof data.server_pid === 'number' &&
+        data.state &&
+        typeof data.state === 'object'
     );
 }
 
@@ -133,6 +148,7 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
             const connected = newState === ConnectionState.CONNECTED;
             setIsConnected(connected);
             setConnectionState(newState);
+            store.dispatch(wsConnectionChanged(connected));
 
             if (newState === ConnectionState.DISCONNECTED || newState === ConnectionState.FAILED) {
                 canvasManagerRef.current?.terminateAllWorkers();
@@ -143,6 +159,9 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                 lastCameraIdsRef.current = [];
                 framerateStoreRef.current.clear();
                 setConnectedCameraIds([]);
+                // Clear all server-derived Redux state so the UI self-heals on
+                // reconnect rather than showing the previous server's stale state.
+                store.dispatch(serverDisconnected());
             }
         };
 
@@ -243,6 +262,10 @@ export const ServerContextProvider: React.FC<{ children: ReactNode }> = ({ child
                         // Update mutable framerate store (no Redux, no re-renders)
                         framerateStoreRef.current.updateBackend(jsonData.backend_framerate);
                         framerateStoreRef.current.updateFrontend(jsonData.frontend_framerate);
+                    }
+                    // Handle the authoritative server-state snapshot
+                    else if (isAppState(jsonData)) {
+                        store.dispatch(serverStateReceived(jsonData));
                     }
                     // Handle other message types (silently ignored to avoid
                     // retaining object references in the DevTools console)
