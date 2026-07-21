@@ -1,0 +1,91 @@
+---
+title: Tutorial para Principiantes
+sidebar_position: 3
+---
+import { AiGeneratedBanner, LinkedIssues } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+
+
+# Tutorial para Principiantes
+
+Este tutorial expande el [Inicio Rapido](quick-start) con mas detalles sobre seleccion de camaras, configuracion y grabacion.
+
+## Seleccion de camaras
+
+Cuando haces clic en **Detectar Camaras**, SkellyCam busca todas las camaras USB Video Class (UVC) disponibles. Esto incluye la mayoria de webcams USB (por ejemplo, Logitech C270, C920) y camaras integradas de laptops. Las camaras virtuales (como OBS Virtual Camera) se filtran por defecto.
+
+Despues de la deteccion, veras una lista de camaras disponibles. Selecciona las que quieras usar y haz clic en **Aplicar** para crear un grupo de camaras. Aparecera una vista previa en vivo para cada camara seleccionada.
+
+
+:::info API
+Detectar camaras: `POST /skellycam/camera/detect` — Crear o actualizar un grupo de camaras: `POST /skellycam/camera/group/apply`. Consulta la [Referencia de API](/docs/technical/api-reference#camera-endpoints) para mas detalles.
+:::
+
+## Configuracion de camaras
+
+:::note Captura de pantalla proximamente
+Captura de pantalla del panel de Configuracion de Camara en la interfaz, mostrando ajustes de resolucion, tasa de fotogramas, exposicion, modo de exposicion y rotacion con etiquetas para cada control.
+:::
+
+Cada camara en el grupo se puede configurar de forma independiente. El panel de configuracion en la interfaz te permite ajustar los siguientes parametros:
+
+| Parametro | Valor por defecto | Descripcion |
+|-----------|-------------------|-------------|
+| **Resolucion** | 1280 x 720 | Resolucion de captura en pixeles. Si la camara no soporta la resolucion solicitada, OpenCV recurre a la mas cercana soportada. |
+| **Tasa de fotogramas** | Por defecto de la camara | Tasa de captura objetivo. Deja el valor por defecto (`-1`) para ejecutar tan rapido como el hardware lo permita, o establece un valor especifico (por ejemplo, `30`). |
+| **Exposicion** | `-7` | Valor de exposicion dependiente del hardware. Mas negativo = tiempo de exposicion mas corto. El rango valido depende del modelo de tu camara. |
+| **Modo de exposicion** | `MANUAL` | Elige entre `MANUAL`, `AUTO` o `RECOMMENDED`. |
+| **Rotacion** | Ninguna | Rota la imagen por software despues de la captura: 90° sentido horario, 180° o 90° sentido antihorario. |
+
+:::tip Como funciona la exposicion RECOMMENDED
+El modo `RECOMMENDED` no simplemente establece un valor por defecto. Cicla a traves de multiples ajustes de exposicion y selecciona el que esta un nivel por debajo del ajuste que pone la luminancia media de pixeles mas cercana a la mitad del maximo (aproximadamente 127.5 de 255). Esto resulta en una imagen ligeramente mas oscura de lo que tenderiamos a elegir para uso estandar de camara — una eleccion deliberada que equilibra la visibilidad con tiempos de exposicion bajos para minimizar el desenfoque por movimiento. Nota: la interfaz recuerda los ajustes de camara entre sesiones. Usa **Ctrl+R** (recarga forzada) para borrar los ajustes guardados.
+:::
+
+:::info API
+La configuracion de camaras se envia como parte del grupo de camaras: `POST /skellycam/camera/group/apply`. Consulta la [Referencia de API](/docs/technical/api-reference#camera-endpoints) para el esquema completo de la solicitud.
+:::
+
+## Grabacion con audio
+
+Antes de iniciar una grabacion, puedes opcionalmente seleccionar un microfono para capturar audio junto con el video. La interfaz muestra los dispositivos de entrada de audio disponibles — selecciona uno para incluir audio en tu grabacion.
+
+:::info API
+Detectar microfonos: `GET /skellycam/camera/microphone/detect`. Consulta la [Referencia de API](/docs/technical/api-reference#camera-endpoints) para mas detalles.
+:::
+
+Haz clic en **Grabar** para comenzar. Todas las camaras capturan fotogramas sincronizados mientras el audio se graba en paralelo. Haz clic en **Detener** para finalizar.
+
+La grabacion de audio es un area de desarrollo activo:
+
+<LinkedIssues items={[
+  { label: 'Gestion de dispositivos en Mac/Linux (incluye audio)', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
+
+## Ver grabaciones
+
+Navega a la pagina de **Grabaciones** para explorar tus sesiones guardadas. Cada grabacion muestra metadatos:
+
+- Cantidad de camaras
+- Tamano del archivo
+- Duracion
+- FPS
+- Cantidad de fotogramas
+
+Las grabaciones se ordenan de la mas reciente a la mas antigua.
+
+### Reproduccion
+
+Selecciona una grabacion para abrir el visor de reproduccion sincronizada por fotograma. Caracteristicas principales:
+
+- **Sincronizacion por fotograma** — todas las camaras siempre muestran el mismo numero de fotograma, sin desfase
+- **Avance por fotograma** — avanza y retrocede un fotograma a la vez
+- **Velocidad variable** — ajusta la velocidad de reproduccion
+- **Atajos de teclado** — controla la reproduccion desde el teclado
+
+## Donde se guardan las grabaciones
+
+Por defecto, las grabaciones se guardan en `~/skellycam_data/recordings/`. Cada sesion de grabacion tiene su propia carpeta con archivos de video sincronizados y datos de marcas de tiempo.
+
+Para una vista detallada de la estructura de carpetas de grabacion y el modelo de datos, consulta el [Tutorial Avanzado](advanced-tutorial).

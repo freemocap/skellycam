@@ -1,0 +1,12 @@
+{
+  "label": "Primeros Pasos",
+  "position": 2,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "title": "Primeros Pasos",
+    "description": "Instalacion y guias paso a paso para usar SkellyCam.",
+    "slug": "getting-started"
+  }
+}

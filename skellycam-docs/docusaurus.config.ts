@@ -1,0 +1,145 @@
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
+
+const config: Config = {
+  title: 'SkellyCam',
+  tagline: 'Frame-perfect multi-camera synchronization for USB webcams',
+  favicon: 'img/skellycam-favicon.ico',
+
+  url: 'https://freemocap.github.io',
+  baseUrl: '/skellycam/',
+
+  organizationName: 'freemocap',
+  projectName: 'skellycam',
+
+  onBrokenLinks: 'throw',
+
+  markdown: { mermaid: true },
+
+  themes: ['@docusaurus/theme-mermaid'],
+
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'es', 'ar', 'zh-CN'],
+    localeConfigs: {
+      en: { label: 'English' },
+      es: { label: 'Español' },
+      ar: { label: 'العربية', direction: 'rtl' },
+      'zh-CN': { label: '简体中文' },
+    },
+  },
+
+  plugins: [
+    // webpack 5 enforces full file extensions on imports from ESM packages.
+    // tsup/esbuild strips .js extensions in unbundled output, so we relax
+    // that strictness here.
+    function disableFullySpecified() {
+      return {
+        name: 'disable-fully-specified',
+        configureWebpack() {
+          return {
+            module: {
+              rules: [{ test: /\.m?js$/, resolve: { fullySpecified: false } }],
+            },
+          };
+        },
+      };
+    },
+  ],
+
+  presets: [
+    [
+      'classic',
+      {
+        docs: {
+          sidebarPath: require.resolve('./sidebars.ts'),
+          routeBasePath: 'docs',
+          editUrl:
+            'https://github.com/freemocap/skellycam/tree/development/skellycam-docs/',
+        },
+        blog: {
+          showReadingTime: true,
+          feedOptions: { type: ['rss', 'atom'], xslt: true },
+          editUrl:
+            'https://github.com/freemocap/skellycam/tree/development/skellycam-docs/',
+          onInlineTags: 'warn',
+          onInlineAuthors: 'warn',
+          onUntruncatedBlogPosts: 'warn',
+        },
+        theme: {
+          customCss: [
+            require.resolve('@freemocap/skellydocs/css/custom.css'),
+            require.resolve('./src/css/sidebar.css'),
+          ],
+        },
+      },
+    ],
+  ],
+
+  stylesheets: [
+    'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=JetBrains+Mono:wght@400;600&display=swap',
+  ],
+
+  themeConfig: {
+    image: 'img/skellycam-logo.png',
+    colorMode: {
+      defaultMode: 'dark',
+      respectPrefersColorScheme: true,
+    },
+    navbar: {
+      title: 'SkellyCam',
+      logo: {
+        alt: 'SkellyCam Logo',
+        src: 'img/skellycam-logo.svg',
+      },
+      items: [
+        { type: 'docSidebar', sidebarId: 'docsSidebar', position: 'left', label: 'Docs' },
+        { to: '/blog', label: 'Blog', position: 'left' },
+        { to: '/download', label: 'Download', position: 'left' },
+        { to: '/roadmap', label: 'Roadmap', position: 'left' },
+        { href: 'https://github.com/freemocap/skellycam', label: 'GitHub', position: 'right' },
+        { type: 'localeDropdown', position: 'right' },
+      ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: 'Documentation',
+          items: [
+            { label: 'Getting Started', to: '/docs/getting-started/quick-start' },
+            { label: 'Architecture', to: '/docs/technical/architecture' },
+            { label: 'API Reference', to: '/docs/technical/api-reference' },
+          ],
+        },
+        {
+          title: 'Community',
+          items: [
+            { label: 'Discord', href: 'https://discord.gg/SgdnzbHDTG' },
+            { label: 'GitHub Discussions', href: 'https://github.com/freemocap/skellycam/discussions' },
+            { label: 'FreeMoCap', href: 'https://freemocap.org' },
+          ],
+        },
+        {
+          title: 'More',
+          items: [
+            { label: 'Blog', to: '/blog' },
+            { label: 'GitHub', href: 'https://github.com/freemocap/skellycam' },
+            { label: 'Download', to: '/download' },
+          ],
+        },
+      ],
+      copyright: `Copyright © ${new Date().getFullYear()} FreeMoCap Foundation. Built with Docusaurus.`,
+    },
+    prism: {
+      theme: prismThemes.github,
+      darkTheme: prismThemes.dracula,
+      additionalLanguages: ['bash', 'json', 'python', 'typescript'],
+    },
+    mermaid: {
+      theme: { light: 'neutral', dark: 'dark' },
+    },
+  },
+};
+
+export default config;

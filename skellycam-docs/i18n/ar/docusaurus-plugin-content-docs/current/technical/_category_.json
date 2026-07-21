@@ -1,0 +1,12 @@
+{
+  "label": "تقني",
+  "position": 5,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "التوثيق التقني",
+    "description": "الهندسة، مرجع الـ API، ومواصفات البروتوكولات للمطورين.",
+    "slug": "technical"
+  }
+}

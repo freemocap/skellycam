@@ -1,0 +1,30 @@
+{
+  "title": {
+    "message": "SkellyCam",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "شعار SkellyCam",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Docs": {
+    "message": "المستندات",
+    "description": "Navbar item with label Docs"
+  },
+  "item.label.Blog": {
+    "message": "المدونة",
+    "description": "Navbar item with label Blog"
+  },
+  "item.label.Download": {
+    "message": "تحميل",
+    "description": "Navbar item with label Download"
+  },
+  "item.label.Roadmap": {
+    "message": "خارطة الطريق",
+    "description": "Navbar item with label Roadmap"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}

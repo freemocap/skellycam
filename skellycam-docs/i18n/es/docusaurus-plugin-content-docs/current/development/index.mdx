@@ -1,0 +1,185 @@
+---
+sidebar_position: 7
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# Desarrollo
+
+## Configuracion del Entorno de Desarrollo
+
+```bash
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv
+source .venv/bin/activate
+uv sync --group dev
+```
+
+Esto instala las dependencias de ejecucion mas las herramientas de desarrollo: pytest, pytest-asyncio, ruff, poethepoet y herramientas de compilacion.
+
+## Ejecucion de Pruebas
+
+### Backend (Python)
+
+```bash
+# Ejecutar todas las pruebas
+uv run pytest skellycam/tests/ -v
+
+# Ejecutar un archivo de pruebas especifico
+uv run pytest skellycam/tests/test_health.py -v
+
+# Ejecutar con trazas cortas
+uv run pytest skellycam/tests/ -v --tb=short
+```
+
+El conjunto de pruebas usa un `TestClient` ligero de FastAPI con dependencias de camara simuladas. No se requieren camaras fisicas.
+
+:::note
+`asyncio_mode = "auto"` esta configurado en `pyproject.toml`, por lo que las funciones de prueba asincronas no necesitan el decorador `@pytest.mark.asyncio`.
+:::
+
+### Estructura de Pruebas
+
+```
+skellycam/tests/
+├── conftest.py                            # Fixtures compartidos (app mock, cliente, managers mock)
+├── mocks/
+│   ├── camera_mock.py                     # MockVideoCapture (simula cv2.VideoCapture)
+│   └── test_camera_mock.py                # Pruebas para el mock
+├── test_camera_config.py                  # Logica del modelo CameraConfig
+├── test_camera_config_extended.py         # Pruebas extendidas de configuracion
+├── test_camera_group_manager.py           # Creacion y singleton de CameraGroupManager
+├── test_camera_orchestrator.py            # Pruebas de sincronizacion del orquestador
+├── test_camera_router.py                  # Pruebas de endpoints REST de camara
+├── test_frontend_payload_and_recording.py # Pruebas de creacion de carga binaria y grabacion
+├── test_health.py                         # Pruebas de endpoints de salud y raiz
+├── test_playback.py                       # Pruebas de endpoints de reproduccion
+├── test_pubsub.py                         # Pruebas de publicacion/suscripcion IPC
+├── test_shared_memory.py                  # Pruebas de buffer circular de memoria compartida
+├── test_shutdown.py                       # Pruebas de endpoint de apagado
+├── test_timestamps_and_framerate.py       # Pruebas de marcas de tiempo y velocidad de fotogramas
+├── test_websocket.py                      # Pruebas de conexion y protocolo WebSocket
+├── test_websocket_internals.py            # Pruebas de logica interna del servidor WebSocket
+└── test_worker_lifecycle.py               # Pruebas de ciclo de vida de procesos worker
+```
+
+### Fixtures Clave de Prueba (conftest.py)
+
+- `mock_camera_group_manager` — Un MagicMock que reemplaza a CameraGroupManager con metodos asincronos AsyncMock. Parchea `get_or_create_camera_group_manager` en todos los sitios de importacion.
+- `app` — Una aplicacion FastAPI ligera con las mismas rutas pero sin lifespan pesado (sin compilacion de bytecode, sin configuracion de logging).
+- `client` — Un `TestClient` sincrono que envuelve la aplicacion de prueba, adecuado tanto para pruebas HTTP como WebSocket.
+
+### Frontend (TypeScript)
+
+```bash
+cd skellycam-ui
+
+# Verificacion de tipos
+npx tsc --noEmit
+
+# Pruebas end-to-end (requiere Electron)
+npm run e2e
+```
+
+## Linting
+
+SkellyCam usa [Ruff](https://docs.astral.sh/ruff/) para linting, configurado en `pyproject.toml`.
+
+```bash
+# Verificar problemas de lint
+uv run ruff check skellycam/
+
+# Corregir automaticamente problemas de lint
+uv run ruff check --fix skellycam/
+```
+
+La regla principal de lint habilitada es `TC` (flake8-type-checking), que mueve las importaciones solo de tipo detras de bloques `if TYPE_CHECKING:`. Esto reduce el tiempo de importacion para procesos hijos generados.
+
+### Supresion de Falsos Positivos
+
+Si Ruff intenta mover una importacion que se necesita en tiempo de ejecucion (por ejemplo, usada en `isinstance()`, `TypeAdapter`, o tipos de campo Pydantic), agrega un comentario `# noqa: TC001/TC002/TC003`:
+
+```python
+from skellycam.core.camera.config.camera_config import CameraConfig  # noqa: TC003
+```
+
+## Ejecutor de Tareas
+
+[poethepoet](https://github.com/nat-n/poethepoet) proporciona comandos de tarea abreviados:
+
+```bash
+uv run poe test        # Ejecutar pytest
+uv run poe lint        # Ejecutar ruff check
+uv run poe lint-fix    # Corregir automaticamente violaciones de ruff
+uv run poe tc-check    # Previsualizar movimientos de importacion TYPE_CHECKING
+uv run poe tc-fix      # Aplicar movimientos de importacion TYPE_CHECKING
+uv run poe tc          # Aplicar importaciones + ejecutar pruebas para verificar
+```
+
+## Integracion Continua
+
+GitHub Actions se ejecuta en cada push y pull request (`.github/workflows/test.yml`):
+
+- **Pruebas de backend** — Python 3.11 y 3.12 en Ubuntu, Windows y macOS
+- **Linting** — Verificacion con Ruff en todas las plataformas
+- **Verificacion de tipos del frontend** — TypeScript `tsc --noEmit` en Ubuntu
+
+## Convenciones de Organizacion de Codigo
+
+### Python
+
+- **Anotaciones de tipo en todas partes** — Todas las firmas de funciones, tipos de retorno y variables deben tener anotaciones de tipo.
+- **Anotaciones de tipo de nuevo estilo** — Usar `str | None` en lugar de `Optional[str]`, `dict[str, int]` en lugar de `Dict[str, int]`.
+- **Solo importaciones globales** — No importaciones locales dentro de funciones o metodos.
+- **Fallar ruidosamente** — Lanzar excepciones en errores en lugar de imprimir advertencias o devolver valores predeterminados.
+- **Modelos Pydantic** — Usados para todos los esquemas de solicitud/respuesta de API y objetos de configuracion.
+- **Logging** — Usa [skellylogs](https://github.com/freemocap/skellylogs) con niveles personalizados como `logger.trace()`, `logger.success()` y `logger.api()`.
+
+### TypeScript (Frontend)
+
+- Componentes funcionales **React 19** con hooks
+- **Redux Toolkit** para gestion de estado con hooks tipados
+- **Material UI** para estilado de componentes
+- Workers de **OffscreenCanvas** para renderizado de fotogramas de camara en vivo
+- **Reproduccion bloqueada por fotograma** — los videos grabados usan una estrategia de sincronizacion basada en lider: el primer video impulsa el tiempo canonico via su `.play()` nativo, un bucle `requestAnimationFrame` lee `leader.currentTime` para derivar el numero de fotograma, y los videos seguidores se corrigen cuando divergen mas de 2 fotogramas. Las superposiciones se actualizan mediante referencias DOM directas para evitar re-renderizados de React durante la reproduccion.
+
+## Agregar un Nuevo Endpoint de API
+
+1. Crea un nuevo archivo de router en el subdirectorio apropiado de `skellycam/api/http/`.
+2. Define tus modelos Pydantic de solicitud/respuesta.
+3. Agrega el router a `skellycam/api/routers.py`:
+   ```python
+   from skellycam.api.http.your_module.your_router import your_router
+   SKELLYCAM_ROUTERS = [..., your_router]
+   ```
+4. Escribe pruebas en `skellycam/tests/test_your_router.py` usando el fixture `client` de `conftest.py`.
+
+## Agregar una Nueva Prueba
+
+1. Crea un archivo de prueba en `skellycam/tests/test_*.py`.
+2. Usa el fixture `client` para pruebas de endpoints HTTP/WebSocket.
+3. Usa `mock_camera_group_manager` para pruebas que necesiten interactuar con la gestion de camaras.
+4. Las funciones de prueba asincronas funcionan automaticamente — no se necesita decorador (`asyncio_mode = "auto"`).
+
+## Compilacion de Instaladores
+
+### Ejecutable Python (Nuitka)
+
+```bash
+cd skellycam-ui
+..\installers\nuitka_scripts\nuitka_installer_windows.bat
+```
+
+Esto produce un ejecutable independiente (la compilacion tarda aproximadamente 1 hora).
+
+### Aplicacion Electron
+
+```bash
+cd skellycam-ui
+npm install && npm run build
+```
+
+Consulta `electron-builder.json` para la configuracion de empaquetado.

@@ -1,35 +1,42 @@
+
 """Top-level package for skellycam."""
 
 __author__ = """Skelly FreeMoCap"""
 __email__ = "info@freemocap.org"
-__version__ = "v2025.09.1097"
+__version__ = "v2.0.0-alpha.6"
 
 __description__ = "A simple python API for efficiently connecting to and recording synchronized videos from one or multiple cameras 💀📸"
 __package_name__ = "skellycam"
-__repo_url__ = f"https://github.com/freemocap/{__package_name__}/"
-__repo_issues_url__ = f"{__repo_url__}issues"
+__repo_url__ = f"https://github.com/freemocap/{__package_name__}"
+__repo_issues_url__ = f"{__repo_url__}/issues"
+__pypi_url__ = f"https://pypi.org/project/{__package_name__}"
 
-import sys
-from pathlib import Path
+__package_root__ = str(__import__("pathlib").Path(__file__).parent)
 
-base_package_path = Path(__file__).parent
-print(f"adding base_package_path: {base_package_path} : to sys.path")
-sys.path.insert(0, str(base_package_path))  # add parent directory to sys.path
+from beartype.claw import beartype_this_package
+beartype_this_package()
 
-from skellycam.system.environment.default_paths import get_log_file_path
-from skellycam.system.log_config.logsetup import configure_logging
+import multiprocessing
 
-configure_logging(log_file_path=get_log_file_path())
 
-import logging
+multiprocessing.freeze_support()
 
-logger = logging.getLogger(__name__)
-logger.info(f"Initializing {__package_name__} package, version: {__version__}, from file: {__file__}")
+from skellylogs import configure_logging, LogLevels
 
-from skellycam.opencv.camera.camera import Camera
-from skellycam.opencv.camera.models.camera_config import CameraConfig
+from skellycam.system.default_paths import get_log_file_path
 
-from skellycam.gui.qt.widgets.skelly_cam_config_parameter_tree_widget import SkellyCamParameterTreeWidget
-from skellycam.gui.qt.widgets.skelly_cam_controller_widget import SkellyCamControllerWidget
-from skellycam.gui.qt.skelly_cam_widget import SkellyCamWidget
-from skellycam.gui.qt.widgets.skelly_cam_directory_view_widget import SkellyCamDirectoryViewWidget
+LOG_LEVEL = LogLevels.TRACE
+configure_logging(level=LOG_LEVEL, log_file_path=get_log_file_path())
+
+
+
+__all__ = [
+    "__author__",
+    "__email__",
+    "__version__",
+    "__description__",
+    "__package_name__",
+    "__repo_url__",
+    "__repo_issues_url__",
+    "__pypi_url__",
+]

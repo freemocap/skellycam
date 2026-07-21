@@ -1,0 +1,18 @@
+{
+  "version.label": {
+    "message": "下一个",
+    "description": "The label for version current"
+  },
+  "sidebar.docsSidebar.category.Core Concepts": {
+    "message": "核心概念",
+    "description": "The label for category 'Core Concepts' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Core Concepts.link.generated-index.title": {
+    "message": "核心概念",
+    "description": "The generated-index page title for category 'Core Concepts' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Core Concepts.link.generated-index.description": {
+    "message": "SkellyCam 的基本设计原则和核心功能。",
+    "description": "The generated-index page description for category 'Core Concepts' in sidebar 'docsSidebar'"
+  }
+}

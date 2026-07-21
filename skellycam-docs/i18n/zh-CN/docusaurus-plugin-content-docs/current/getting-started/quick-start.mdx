@@ -1,0 +1,66 @@
+---
+title: 快速开始
+sidebar_position: 2
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# 快速开始
+
+本指南将引导您通过五个步骤完成第一次同步多摄像头录制。
+
+:::note 截图即将推出
+SkellyCam 应用程序首次启动时的窗口截图，展示主界面中的摄像头检测和录制控制功能。
+:::
+
+## 1. 安装 SkellyCam
+
+从[下载页面](/download)下载并安装 SkellyCam。运行适用于您平台的安装程序——无需额外依赖项。
+
+:::tip 已经是开发者？
+您也可以[从源代码运行](/docs/development/)。
+:::
+
+## 2. 启动应用
+
+安装后打开 SkellyCam。服务器会在后台自动启动，用户界面会在应用窗口中打开。
+
+## 3. 连接和检测摄像头
+
+插入您的 USB 摄像头（或使用内置摄像头）。在界面中，点击**检测摄像头**扫描可用设备。SkellyCam 将列出所有检测到的摄像头。
+
+选择您要使用的摄像头，然后点击**应用**创建摄像头组。您将看到每个摄像头的实时预览画面。
+
+:::tip API
+摄像头检测也可通过 `POST /skellycam/camera/detect` 使用。详见 [API 参考](/docs/technical/api-reference)。
+:::
+
+## 4. 录制
+
+点击**录制**开始录制。所有摄像头将捕获同步视频——每个摄像头产生完全相同数量的帧。
+
+您还可以选择麦克风，在录制视频的同时捕获音频。
+
+完成后点击**停止**。
+
+:::tip API
+开始录制：[`POST /skellycam/camera/group/all/record/start`](/docs/technical/api-reference#post-skellycamcameragroupallrecordstart)
+停止录制：[`GET /skellycam/camera/group/all/record/stop`](/docs/technical/api-reference#get-skellycamcameragroupallrecordstop)
+:::
+
+## 5. 查看录制内容
+
+在界面中导航到**录制内容**页面。您的录制将显示在列表中，附带元数据（摄像头数量、时长、帧率、帧数）。
+
+选择一个录制以打开**回放**查看器。所有视频以帧锁定方式回放——每个摄像头始终显示相同的帧号，没有偏移。
+
+:::tip API
+列出录制内容：`GET /skellycam/playback/recordings`
+加载录制：`POST /skellycam/playback/load`
+:::
+
+## 后续步骤
+
+- [初学者教程](beginner-tutorial) — 了解更多关于摄像头选择、配置选项和音频录制的内容
+- [进阶教程](advanced-tutorial) — 探索数据模型、录制文件夹结构和服务器配置

@@ -1,0 +1,39 @@
+---
+title: 日志记录
+sidebar_position: 5
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# 日志记录
+
+## 可观测性是关键！
+
+SkellyCam 是一个复杂的多进程系统——每个摄像头在自己的进程中运行，通过共享内存和 IPC 通道进行通信。当出现问题时（或者当您只是想了解底层发生了什么），良好的日志记录至关重要。可观测性是理解一个无法轻松通过调试器单步调试的系统行为的关键。
+
+## 配置
+
+SkellyCam 使用 [skellylogs](https://github.com/freemocap/skellylogs) 进行日志记录，它提供自定义日志级别和 WebSocket 日志转发。日志级别在 `skellycam/__init__.py` 中设置：
+
+```python
+LOG_LEVEL = LogLevels.TRACE  # Change to LogLevels.INFO for less verbose output
+```
+
+`TRACE` 级别及以上的日志会转发到已连接的 WebSocket 客户端，以便在界面的日志终端中显示。
+
+日志文件保存在 `~/skellycam_data/logs_info_and_settings/logs/`。
+
+## 界面日志查看器
+
+SkellyCam 界面包含一个日志终端，可实时镜像后端服务器日志。但是，这仅在服务器处于健康状态且 WebSocket 连接活跃时才有效——而这往往不是您最需要查看日志的情况。
+
+:::tip 最大可观测性
+为了获得最大可观测性，请在界面设置中将**自动连接**设置为 `false`，并在自己的终端窗口中运行 SkellyCam 服务器。这样，即使界面无法连接或服务器在将相关日志发送到界面之前就失败了，您也可以看到原始服务器日志。
+:::
+
+## 分享日志
+
+界面的日志终端包含**复制到剪贴板**和**保存到磁盘**按钮。在 [Discord 服务器](https://discord.gg/SgdnzbHDTG)上寻求帮助或提交 [GitHub 问题](https://github.com/freemocap/skellycam/issues)时，这些功能非常有用。附上您的日志可以让其他人更容易诊断问题。
+
+请参阅[社区](/docs/community)页面了解更多参与和获取帮助的方式。

@@ -1,0 +1,131 @@
+---
+title: Advanced Tutorial
+sidebar_position: 4
+---
+import { AiGeneratedBanner, LinkedIssues } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# Advanced Tutorial
+
+This guide covers the data model, recording folder structure, server configuration, and other advanced topics.
+
+## Recording Folder Structure
+
+All SkellyCam data is stored under `~/skellycam_data/recordings/` by default.
+
+:::tip FreeMoCap integration
+Set the recording directory to `~/freemocap_data/recording_sessions/` to save SkellyCam recordings directly where FreeMoCap v1 expects them, enabling automatic discovery.
+:::
+
+### Naming convention
+
+The **recording name** is an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp (seconds precision, filename-safe) with an optional tag appended after an underscore. This name is used as both the folder name and the prefix for all files inside the recording. The format is produced by `default_recording_name()` in `skellycam/system/default_paths.py`:
+
+```
+{YYYY}-{MM}-{DD}T{HH}_{MM}_{SS}_gmt{offset}[_{tag}]
+```
+
+For example: `2025-03-24T14_30_45_gmt-5` or `2025-03-24T14_30_45_gmt-5_calibration`.
+
+### Template
+
+```
+~/skellycam_data/recordings/
+└── {recording_name}/
+    ├── {recording_name}_info.json
+    └── synchronized_videos/
+        ├── {recording_name}.camera.id{camera_id}.idx{camera_index}.mp4
+        ├── {recording_name}.audio.wav                    # If audio was recorded
+        ├── {recording_name}.audio_timestamps.json
+        └── timestamps/
+            ├── {recording_name}_timestamps.csv           # Multi-frame sync timestamps
+            ├── {recording_name}_stats.txt                # Human-readable statistics
+            ├── {recording_name}_stats.json               # Machine-readable statistics
+            └── camera_timestamps/
+                ├── {recording_name}.camera0.timestamps.csv
+                └── {recording_name}.camera1.timestamps.csv
+```
+
+Video files use the pattern `{recording_name}.camera.id{camera_id}.idx{camera_index}.{ext}`, where `camera_id` is the camera's string identifier and `camera_index` is its numeric index in the group.
+
+### Example
+
+A two-camera recording with the tag `calibration` (`recording_name = '2025-03-24T14_30_45_gmt-5_calibration'`):
+
+```
+~/skellycam_data/recordings/
+└── 2025-03-24T14_30_45_gmt-5_calibration/
+    ├── 2025-03-24T14_30_45_gmt-5_calibration_info.json
+    └── synchronized_videos/
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id0.idx0.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id1.idx1.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio.wav
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio_timestamps.json
+        └── timestamps/
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_timestamps.csv
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.txt
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.json
+            └── camera_timestamps/
+                ├── 2025-03-24T14_30_45_gmt-5_calibration.camera0.timestamps.csv
+                └── 2025-03-24T14_30_45_gmt-5_calibration.camera1.timestamps.csv
+```
+
+### Recording Metadata
+
+The `{recording_name}_info.json` file contains the recording configuration: camera settings, recording name, UUID, and start timestamp. This file is written when a recording begins and can be used to reconstruct the camera setup.
+
+### Timestamp CSVs
+
+Per-camera timestamp files contain one row per frame with high-resolution [`perf_counter_ns`](https://docs.python.org/3/library/time.html#time.perf_counter_ns) timestamps at each lifecycle stage (grab, retrieve, write, etc.). The multi-frame timestamp file contains inter-camera synchronization data, useful for post-hoc analysis of synchronization quality.
+
+## Server Configuration
+
+The SkellyCam server runs on `http://localhost:53117` by default. When using the desktop app, the server starts automatically. If you need to change the port or hostname, these are defined in `skellycam/api/server_constants.py`:
+
+```python
+PROTOCOL = "http"
+HOSTNAME = "localhost"
+PORT = 53117
+APP_URL = f"{PROTOCOL}://{HOSTNAME}:{PORT}"
+```
+
+### Running the Server Standalone
+
+The server can be run independently of the Electron UI. This is useful for headless setups, remote access, or using your own frontend.
+
+When running the standalone server executable (downloaded from the [Download page](/download) as the "Backend Server only" option), launch it directly and it will start listening on `localhost:53117`.
+
+- **Health check:** `http://localhost:53117/health`
+- **Swagger API docs:** `http://localhost:53117/docs`
+- **WebSocket:** `ws://localhost:53117/skellycam/websocket/connect`
+
+See the [API Reference](/docs/technical/api-reference) for the full list of endpoints.
+
+## Advanced Camera Settings
+
+### FOURCC Codecs
+
+SkellyCam uses two FOURCC codes for video handling:
+
+<LinkedIssues items={[
+  { label: 'Improve FOURCC codec handling', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `capture_fourcc` | `MJPG` | Codec used for capturing frames from the camera. MJPEG is widely supported and efficient for USB bandwidth. |
+| `writer_fourcc` | `X264` | Codec used for writing recorded video files. H.264 provides good compression for storage. |
+
+These can be changed via the camera configuration if your cameras or workflow require different codecs.
+
+### Exposure Modes
+
+- **MANUAL** — Fixed exposure value. Gives consistent brightness across frames but requires manual tuning.
+- **AUTO** — Camera adjusts exposure automatically. Convenient but can cause brightness flickering in recordings.
+- **RECOMMENDED** — Cycles through multiple exposure settings and selects one level lower than the setting that puts mean pixel luminance closest to half-maximum (~127.5/255). This results in a slightly darker image that balances visibility with low exposure times to minimize motion blur.
+
+## See Also
+
+- [Logging](/docs/technical/logging) — Log levels, WebSocket log forwarding, log file locations
+- [Telemetry](/docs/technical/telemetry) — What is collected, how to opt out

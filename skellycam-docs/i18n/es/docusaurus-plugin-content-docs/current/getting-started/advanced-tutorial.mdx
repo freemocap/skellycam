@@ -1,0 +1,131 @@
+---
+title: Tutorial Avanzado
+sidebar_position: 4
+---
+import { AiGeneratedBanner, LinkedIssues } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# Tutorial Avanzado
+
+Esta guia cubre el modelo de datos, la estructura de carpetas de grabacion, la configuracion del servidor y otros temas avanzados.
+
+## Estructura de carpetas de grabacion
+
+Todos los datos de SkellyCam se almacenan en `~/skellycam_data/recordings/` por defecto.
+
+:::tip Integracion con FreeMoCap
+Configura el directorio de grabacion a `~/freemocap_data/recording_sessions/` para guardar las grabaciones de SkellyCam directamente donde FreeMoCap v1 las espera, habilitando el descubrimiento automatico.
+:::
+
+### Convencion de nombres
+
+El **nombre de la grabacion** es una marca de tiempo [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) (precision de segundos, segura para nombres de archivo) con una etiqueta opcional agregada despues de un guion bajo. Este nombre se usa tanto como nombre de carpeta como prefijo para todos los archivos dentro de la grabacion. El formato es producido por `default_recording_name()` en `skellycam/system/default_paths.py`:
+
+```
+{YYYY}-{MM}-{DD}T{HH}_{MM}_{SS}_gmt{offset}[_{tag}]
+```
+
+Por ejemplo: `2025-03-24T14_30_45_gmt-5` o `2025-03-24T14_30_45_gmt-5_calibration`.
+
+### Plantilla
+
+```
+~/skellycam_data/recordings/
+└── {recording_name}/
+    ├── {recording_name}_info.json
+    └── synchronized_videos/
+        ├── {recording_name}.camera.id{camera_id}.idx{camera_index}.mp4
+        ├── {recording_name}.audio.wav                    # If audio was recorded
+        ├── {recording_name}.audio_timestamps.json
+        └── timestamps/
+            ├── {recording_name}_timestamps.csv           # Multi-frame sync timestamps
+            ├── {recording_name}_stats.txt                # Human-readable statistics
+            ├── {recording_name}_stats.json               # Machine-readable statistics
+            └── camera_timestamps/
+                ├── {recording_name}.camera0.timestamps.csv
+                └── {recording_name}.camera1.timestamps.csv
+```
+
+Los archivos de video usan el patron `{recording_name}.camera.id{camera_id}.idx{camera_index}.{ext}`, donde `camera_id` es el identificador de texto de la camara y `camera_index` es su indice numerico en el grupo.
+
+### Ejemplo
+
+Una grabacion con dos camaras y la etiqueta `calibration` (`recording_name = '2025-03-24T14_30_45_gmt-5_calibration'`):
+
+```
+~/skellycam_data/recordings/
+└── 2025-03-24T14_30_45_gmt-5_calibration/
+    ├── 2025-03-24T14_30_45_gmt-5_calibration_info.json
+    └── synchronized_videos/
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id0.idx0.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.camera.id1.idx1.mp4
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio.wav
+        ├── 2025-03-24T14_30_45_gmt-5_calibration.audio_timestamps.json
+        └── timestamps/
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_timestamps.csv
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.txt
+            ├── 2025-03-24T14_30_45_gmt-5_calibration_stats.json
+            └── camera_timestamps/
+                ├── 2025-03-24T14_30_45_gmt-5_calibration.camera0.timestamps.csv
+                └── 2025-03-24T14_30_45_gmt-5_calibration.camera1.timestamps.csv
+```
+
+### Metadatos de grabacion
+
+El archivo `{recording_name}_info.json` contiene la configuracion de la grabacion: ajustes de camara, nombre de grabacion, UUID y marca de tiempo de inicio. Este archivo se escribe cuando comienza una grabacion y puede usarse para reconstruir la configuracion de camaras.
+
+### CSVs de marcas de tiempo
+
+Los archivos de marcas de tiempo por camara contienen una fila por fotograma con marcas de tiempo de alta resolucion [`perf_counter_ns`](https://docs.python.org/3/library/time.html#time.perf_counter_ns) en cada etapa del ciclo de vida (grab, retrieve, write, etc.). El archivo de marcas de tiempo multi-fotograma contiene datos de sincronizacion entre camaras, util para analisis posterior de la calidad de sincronizacion.
+
+## Configuracion del servidor
+
+El servidor de SkellyCam se ejecuta en `http://localhost:53117` por defecto. Cuando usas la aplicacion de escritorio, el servidor se inicia automaticamente. Si necesitas cambiar el puerto o el nombre de host, estos se definen en `skellycam/api/server_constants.py`:
+
+```python
+PROTOCOL = "http"
+HOSTNAME = "localhost"
+PORT = 53117
+APP_URL = f"{PROTOCOL}://{HOSTNAME}:{PORT}"
+```
+
+### Ejecutar el servidor de forma independiente
+
+El servidor puede ejecutarse de forma independiente de la interfaz Electron. Esto es util para configuraciones sin pantalla, acceso remoto o para usar tu propio frontend.
+
+Al ejecutar el servidor independiente (descargado desde la [pagina de Descargas](/download) como la opcion "Backend Server only"), ejecutalo directamente y comenzara a escuchar en `localhost:53117`.
+
+- **Verificacion de salud:** `http://localhost:53117/health`
+- **Documentacion Swagger de la API:** `http://localhost:53117/docs`
+- **WebSocket:** `ws://localhost:53117/skellycam/websocket/connect`
+
+Consulta la [Referencia de API](/docs/technical/api-reference) para la lista completa de endpoints.
+
+## Ajustes avanzados de camara
+
+### Codecs FOURCC
+
+SkellyCam usa dos codigos FOURCC para el manejo de video:
+
+<LinkedIssues items={[
+  { label: 'Mejorar el manejo de codecs FOURCC', url: 'https://github.com/freemocap/skellycam/issues/105' }
+]} />
+
+| Parametro | Valor por defecto | Descripcion |
+|-----------|-------------------|-------------|
+| `capture_fourcc` | `MJPG` | Codec usado para capturar fotogramas de la camara. MJPEG es ampliamente soportado y eficiente para el ancho de banda USB. |
+| `writer_fourcc` | `X264` | Codec usado para escribir archivos de video grabados. H.264 proporciona buena compresion para almacenamiento. |
+
+Estos pueden cambiarse a traves de la configuracion de camara si tus camaras o flujo de trabajo requieren codecs diferentes.
+
+### Modos de exposicion
+
+- **MANUAL** — Valor de exposicion fijo. Da brillo consistente entre fotogramas pero requiere ajuste manual.
+- **AUTO** — La camara ajusta la exposicion automaticamente. Conveniente pero puede causar parpadeo de brillo en las grabaciones.
+- **RECOMMENDED** — Cicla a traves de multiples ajustes de exposicion y selecciona un nivel por debajo del ajuste que pone la luminancia media de pixeles mas cercana a la mitad del maximo (~127.5/255). Esto resulta en una imagen ligeramente mas oscura que equilibra la visibilidad con tiempos de exposicion bajos para minimizar el desenfoque por movimiento.
+
+## Ver tambien
+
+- [Logging](/docs/technical/logging) — Niveles de log, reenvio de logs por WebSocket, ubicaciones de archivos de log
+- [Telemetria](/docs/technical/telemetry) — Que se recopila, como desactivarla

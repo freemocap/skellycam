@@ -1,0 +1,185 @@
+---
+sidebar_position: 7
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# 开发
+
+## 设置开发环境
+
+```bash
+git clone https://github.com/freemocap/skellycam
+cd skellycam
+uv venv
+source .venv/bin/activate
+uv sync --group dev
+```
+
+这将安装运行时依赖以及开发工具：pytest、pytest-asyncio、ruff、poethepoet 和构建工具。
+
+## 运行测试
+
+### 后端（Python）
+
+```bash
+# 运行所有测试
+uv run pytest skellycam/tests/ -v
+
+# 运行特定测试文件
+uv run pytest skellycam/tests/test_health.py -v
+
+# 使用简短回溯运行
+uv run pytest skellycam/tests/ -v --tb=short
+```
+
+测试套件使用轻量级 FastAPI `TestClient` 和模拟的摄像头依赖。不需要物理摄像头。
+
+:::note
+`asyncio_mode = "auto"` 在 `pyproject.toml` 中设置，因此异步测试函数不需要 `@pytest.mark.asyncio` 装饰器。
+:::
+
+### 测试结构
+
+```
+skellycam/tests/
+├── conftest.py                            # 共享 fixtures（mock app、client、mock managers）
+├── mocks/
+│   ├── camera_mock.py                     # MockVideoCapture（模拟 cv2.VideoCapture）
+│   └── test_camera_mock.py                # 模拟对象本身的测试
+├── test_camera_config.py                  # CameraConfig 模型逻辑
+├── test_camera_config_extended.py         # 扩展配置测试
+├── test_camera_group_manager.py           # CameraGroupManager 创建和单例
+├── test_camera_orchestrator.py            # 协调器同步测试
+├── test_camera_router.py                  # 摄像头 REST 端点测试
+├── test_frontend_payload_and_recording.py # 二进制负载创建和录制测试
+├── test_health.py                         # 健康检查和根端点测试
+├── test_playback.py                       # 回放端点测试
+├── test_pubsub.py                         # IPC 发布/订阅测试
+├── test_shared_memory.py                  # 共享内存环形缓冲区测试
+├── test_shutdown.py                       # 关闭端点测试
+├── test_timestamps_and_framerate.py       # 时间戳和帧率跟踪测试
+├── test_websocket.py                      # WebSocket 连接和协议测试
+├── test_websocket_internals.py            # WebSocket 服务器内部逻辑测试
+└── test_worker_lifecycle.py               # 工作进程生命周期测试
+```
+
+### 关键测试 Fixtures（conftest.py）
+
+- `mock_camera_group_manager` — 一个 MagicMock，作为 CameraGroupManager 的替身，带有 AsyncMock 异步方法。在所有导入位置修补 `get_or_create_camera_group_manager`。
+- `app` — 一个轻量级 FastAPI 应用，具有相同的路由但无重型生命周期（无字节码编译，无日志设置）。
+- `client` — 包装测试应用的同步 `TestClient`，适用于 HTTP 和 WebSocket 测试。
+
+### 前端（TypeScript）
+
+```bash
+cd skellycam-ui
+
+# 类型检查
+npx tsc --noEmit
+
+# 端到端测试（需要 Electron）
+npm run e2e
+```
+
+## 代码检查
+
+SkellyCam 使用 [Ruff](https://docs.astral.sh/ruff/) 进行代码检查，配置在 `pyproject.toml` 中。
+
+```bash
+# 检查 lint 问题
+uv run ruff check skellycam/
+
+# 自动修复 lint 问题
+uv run ruff check --fix skellycam/
+```
+
+启用的主要 lint 规则是 `TC`（flake8-type-checking），它将仅类型导入移到 `if TYPE_CHECKING:` 块中。这减少了生成子进程的导入时间。
+
+### 抑制误报
+
+如果 Ruff 试图移动运行时需要的导入（例如在 `isinstance()`、`TypeAdapter` 或 Pydantic 字段类型中使用），添加 `# noqa: TC001/TC002/TC003` 注释：
+
+```python
+from skellycam.core.camera.config.camera_config import CameraConfig  # noqa: TC003
+```
+
+## 任务运行器
+
+[poethepoet](https://github.com/nat-n/poethepoet) 提供简写任务命令：
+
+```bash
+uv run poe test        # 运行 pytest
+uv run poe lint        # 运行 ruff check
+uv run poe lint-fix    # 自动修复 ruff 违规
+uv run poe tc-check    # 预览 TYPE_CHECKING 导入移动
+uv run poe tc-fix      # 应用 TYPE_CHECKING 导入移动
+uv run poe tc          # 应用导入 + 运行测试验证
+```
+
+## 持续集成
+
+GitHub Actions 在每次推送和拉取请求时运行（`.github/workflows/test.yml`）：
+
+- **后端测试** — 在 Ubuntu、Windows 和 macOS 上使用 Python 3.11 和 3.12
+- **代码检查** — 在所有平台上运行 Ruff 检查
+- **前端类型检查** — 在 Ubuntu 上运行 TypeScript `tsc --noEmit`
+
+## 代码组织规范
+
+### Python
+
+- **到处使用类型提示** — 所有函数签名、返回类型和变量都应有类型注解。
+- **新式类型提示** — 使用 `str | None` 而不是 `Optional[str]`，使用 `dict[str, int]` 而不是 `Dict[str, int]`。
+- **仅全局导入** — 函数或方法内部不使用局部导入。
+- **大声失败** — 出错时抛出异常，而不是打印警告或返回默认值。
+- **Pydantic 模型** — 用于所有 API 请求/响应模式和配置对象。
+- **日志** — 使用 [skellylogs](https://github.com/freemocap/skellylogs)，带有自定义级别如 `logger.trace()`、`logger.success()` 和 `logger.api()`。
+
+### TypeScript（前端）
+
+- **React 19** 函数式组件与 hooks
+- **Redux Toolkit** 用于状态管理，带类型化 hooks
+- **Material UI** 用于组件样式
+- **OffscreenCanvas workers** 用于实时摄像头帧渲染
+- **帧锁定回放** — 录制视频使用基于领导者的同步策略：第一个视频通过原生 `.play()` 驱动权威时间，`requestAnimationFrame` 循环读取 `leader.currentTime` 推导帧号，跟随者视频在偏差超过 2 帧时进行漂移校正。覆盖层通过直接 DOM 引用更新，避免回放期间的 React 重渲染。
+
+## 添加新的 API 端点
+
+1. 在适当的 `skellycam/api/http/` 子目录中创建新的路由文件。
+2. 定义您的 Pydantic 请求/响应模型。
+3. 将路由添加到 `skellycam/api/routers.py`：
+   ```python
+   from skellycam.api.http.your_module.your_router import your_router
+   SKELLYCAM_ROUTERS = [..., your_router]
+   ```
+4. 在 `skellycam/tests/test_your_router.py` 中使用 `conftest.py` 的 `client` fixture 编写测试。
+
+## 添加新测试
+
+1. 在 `skellycam/tests/test_*.py` 中创建测试文件。
+2. 对 HTTP/WebSocket 端点测试使用 `client` fixture。
+3. 对需要与摄像头管理交互的测试使用 `mock_camera_group_manager`。
+4. 异步测试函数自动工作——不需要装饰器（`asyncio_mode = "auto"`）。
+
+## 构建安装程序
+
+### Python 可执行文件（Nuitka）
+
+```bash
+cd skellycam-ui
+..\installers\nuitka_scripts\nuitka_installer_windows.bat
+```
+
+这将生成独立可执行文件（构建大约需要 1 小时）。
+
+### Electron 应用
+
+```bash
+cd skellycam-ui
+npm install && npm run build
+```
+
+打包配置请参见 `electron-builder.json`。

@@ -1,0 +1,71 @@
+---
+title: Design Philosophy
+sidebar_position: 2
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+# Design Philosophy
+
+These principles are shared with the broader [FreeMoCap](https://freemocap.org) project's philosophy — the idea that research-grade tools should be freely available and accessible to everyone.
+
+## Universal Design
+
+SkellyCam should be simultaneously usable by a 13-year-old with no technical background and by a researcher running a multi-camera motion capture lab. The same tool, the same interface, the same documentation — just different levels of depth.
+
+This means:
+
+- **Big friendly buttons** for the common path: detect cameras, record, play back. No prior knowledge required.
+- **Fine-grained controls** for experts: codec selection, exposure tuning, custom recording directories, direct API access.
+- No feature should *require* technical expertise to use at a basic level, but it should *reward* expertise with additional capability.
+
+## Progressive Disclosure
+
+Information and complexity are revealed in layers, not all at once. The default experience is simple and approachable. Details are available on demand for those who want them.
+
+In practice this looks like:
+
+- **In the UI** — The main controls are always visible. Advanced settings are behind expandable panels. Technical details are behind collapsible sections.
+- **In the documentation** — Each page leads with the practical "how to use it" content. Technical depth is available in collapsible `<details>` blocks. The bottom of each disclosure tree links to external resources (Wikipedia, tutorials, etc.) so users who want to keep learning have a path forward.
+- **In the API** — Sensible defaults for everything. You can start a recording with a single POST request. Custom configuration is available but never required.
+
+## Accessibility Over Complexity
+
+When choosing between a more "correct" technical implementation and one that is easier to understand, prefer the one that is easier to understand — unless correctness is required for safety, data integrity, or scientific accuracy.
+
+## Cameras as Scientific Instruments
+
+A camera captures light from a particular area at a particular time — it is a spatiotemporal measurement instrument. The image defines the *spatial* aspects of the data, with fidelity determined by the camera sensor, lens, environment, and settings. The timestamps define the *temporal* aspect. Within the [FreeMoCap](https://freemocap.org) pipeline, extracting quantified 2D spatial information (e.g. skeleton joint positions) is handled by [skellytracker](https://github.com/freemocap/skellytracker). SkellyCam's focus is the temporal dimension: ensuring multi-camera frames are precisely synchronized in time.
+
+Most research-grade multi-camera systems use **hardware triggers** — an external signal that fires all camera sensors simultaneously. This provides near-perfect synchronization but requires expensive, specialized cameras. SkellyCam is designed to deliver **research-quality synchronization** using **software-side control** of inexpensive consumer-grade USB cameras — making synchronized multi-camera capture accessible without proprietary hardware.
+
+This framing — cameras as empirical measurement instruments — informs every major design decision in SkellyCam, from the frame-count-gated capture protocol to the detailed timestamp pipeline.
+
+## Hot, Hard, and Soft Loops
+
+SkellyCam's architecture classifies operations into three categories that drive both technical decisions and development governance:
+
+- **Hot loops** — Time-critical operations where any delay directly degrades temporal fidelity. The camera capture loops, frame synchronization gating, and shared memory writes. These run in isolated processes with minimal dependencies.
+- **Hard loops** — Correctness-critical operations where the math must be right, but timing is flexible. Timestamp computation, recording finalization, inter-camera statistics. Performance is obviously important for general usability, but we're happy trade speed for accuracy and robustness here.
+- **Soft loops** — Best-effort operations where some squish and slop is acceptable (in the short term). UI rendering, WebSocket streaming, log forwarding are all examples of soft-loops. If the frontend lags, frames are dropped from the stream — but recordings are never affected.
+
+This classification also drives development governance: contributions touching hot/hard loops receive much higher scrutiny than those only touching soft loops. See the [Architecture](/docs/technical/architecture#hot-hard-and-soft-loops) page for the full technical treatment.
+
+## Type Safety
+
+SkellyCam treats type annotations as contracts, not comments. If a function says it takes a `CameraConfig`, passing a `dict` should fail immediately — not silently propagate until something breaks three process boundaries away.
+
+[beartype](https://beartype.readthedocs.io/) enforces type hints at runtime across the entire package with near-zero overhead. Every annotated function and method is automatically checked at the call site. This is especially important in a multi-process architecture where bugs that cross shared memory boundaries are difficult to trace.
+
+The codebase uses three type systems, each chosen for its layer:
+
+- **[Pydantic](https://docs.pydantic.dev/)** — For API-facing models that receive untrusted input from the frontend (HTTP request/response bodies, camera configuration). These benefit from Pydantic's validation, coercion, and JSON schema generation.
+- **[dataclasses](https://docs.python.org/3/library/dataclasses.html)** — For internal containers that hold multiprocessing primitives, numpy arrays, or shared memory objects. These are never serialized to JSON and don't need validation overhead.
+- **[msgspec](https://jcristharif.com/msgspec/)** — For types that are serialized at high frequency over the WebSocket (framerate updates, application state). msgspec provides fast JSON encoding with struct-based type definitions.
+
+This layered approach means each type pays only for what it needs: API models get full validation, internal machinery gets zero overhead, and high-frequency serialization gets maximum throughput.
+
+## Open Source, Open Science
+
+SkellyCam is free and open-source software, developed in the open as part of the FreeMoCap Foundation's mission to make research-grade motion capture accessible to everyone. Contributions, questions, and feedback are always welcome.

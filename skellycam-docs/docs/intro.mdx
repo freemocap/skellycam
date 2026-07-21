@@ -1,0 +1,69 @@
+---
+title: SkellyCam Documentation
+sidebar_position: 1
+---
+
+import {AiGeneratedBanner} from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated />
+
+SkellyCam turns cheap USB webcams into a frame-perfect synchronized multi-camera system. It is the camera backend for the [FreeMoCap](https://github.com/freemocap/freemocap) motion capture project.
+
+## What Makes SkellyCam Different
+
+A camera is, at its core, a device that captures light from a particular area at a particular time. It is a spatiotemporal measurement instrument — and when you use cameras for science, the *temporal* dimension becomes critical.
+
+The image itself defines the *spatial* aspects of the data, with fidelity determined by the camera sensor, lens, environment, and settings. The timestamps define the *temporal* aspect of the empirical data represented by a video. Within the [FreeMoCap](https://freemocap.org) pipeline, extracting quantified 2D spatial information (e.g. skeleton joint positions) is handled by [skellytracker](https://github.com/freemocap/skellytracker). SkellyCam's focus is the temporal dimension: ensuring multi-camera frames are precisely synchronized in time.
+
+Most research-grade multi-camera systems use **hardware triggers** — an external signal that fires all camera sensors simultaneously. This provides near-perfect synchronization but requires expensive, specialized cameras. SkellyCam is designed to deliver **research-quality synchronization** using **software-side control** of inexpensive consumer-grade USB cameras — making synchronized multi-camera capture accessible without proprietary hardware.
+
+When using multiple cameras, each one captures its own slice of the world at its own moment. If those moments aren't aligned, the measurements from different cameras can't be meaningfully compared or combined. Multi-view triangulation, 3D reconstruction, motion capture — all of these require that "frame N" from every camera corresponds to the same instant in time.
+
+Most multi-camera setups cannot guarantee this. Each USB camera runs on its own internal clock, delivering frames at its own pace. The cameras drift apart over time, and there is no built-in mechanism to keep them synchronized. SkellyCam solves this with a frame-count-gated capture protocol that coordinates all cameras at the frame level.
+
+**SkellyCam is carefully designed to guarantee:**
+
+- All recorded videos have **precisely the same frame count** — corresponding frames across cameras are from the same temporal time slice
+- Each multi-frame payload contains one image per camera, **guaranteed to be captured at the same time slice**
+- Recording quality is **protected from real-time streaming** — variations in the live stream never cause blocking, lagging, or frame loss in the recording pipeline
+
+
+## Quick Start
+
+1. **Download** — Get the installer for your platform from the [Download page](/download)
+2. **Install and launch** — Run the installer and open SkellyCam
+3. **Connect cameras** — Plug in USB cameras and click **Detect Cameras**
+4. **Record** — Click **Record**, then **Stop** when done
+5. **Play back** — Open the **Recordings** page and select your recording for frame-locked playback
+
+See the [Quick Start guide](getting-started/quick-start) for more detail.
+
+:::tip Run from source?
+If you're a developer, see the [Development](development/) section for instructions on running from source code.
+:::
+
+## Documentation
+
+| Page | Description |
+|------|-------------|
+| [Installation](getting-started/installation) | Download and install SkellyCam |
+| [Quick Start](getting-started/quick-start) | Your first recording in five steps |
+| [Beginner Tutorial](getting-started/beginner-tutorial) | Camera selection, configuration, and recording details |
+| [Advanced Tutorial](getting-started/advanced-tutorial) | Data model, folder structure, server configuration |
+| [Architecture](technical/architecture) | System overview, process model, data flow |
+| [Frame Synchronization](technical/frame-synchronization) | Deep-dive into the capture loop and synchronization protocol |
+| [API Reference](technical/api-reference) | HTTP and WebSocket endpoint documentation |
+| [WebSocket Protocol](technical/websocket-protocol) | Binary frame format, JSON messages, backpressure |
+| [Logging](technical/logging) | Log levels, WebSocket forwarding, log file locations |
+| [Telemetry](technical/telemetry) | What is collected, how to opt out |
+| [Development](development/) | Running from source, testing, linting, CI, and contributing |
+| [Design Philosophy](development/design-philosophy) | Universal design and progressive disclosure principles |
+| [Contributing](development/contributing) | How to report bugs and submit pull requests |
+| [Translating](development/translating) | Help translate the UI into your language |
+| [Community](community) | Discord, GitHub Discussions, project roadmap |
+
+## Community
+
+- **[Discord](https://discord.gg/SgdnzbHDTG)** — Conversations, support, and community discussions
+- **[GitHub Discussions](https://github.com/freemocap/skellycam/discussions)** — Longer-form questions and ideas
+- **[Community page](/docs/community)** — Roadmap links and more ways to get involved

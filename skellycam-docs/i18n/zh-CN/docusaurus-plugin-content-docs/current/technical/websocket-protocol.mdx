@@ -1,0 +1,222 @@
+---
+sidebar_position: 5
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# WebSocket 协议
+
+位于 `/skellycam/websocket/connect` 的 WebSocket 端点承载三种类型的流量：
+
+1. **二进制帧负载**（服务器 -> 客户端）— 多摄像头 JPEG 帧
+2. **JSON 消息**（服务器 -> 客户端）— 日志记录、帧率更新、应用状态
+3. **文本消息**（客户端 -> 服务器）— 帧确认和 ping/pong
+
+## 连接生命周期
+
+1. 客户端打开到 `/skellycam/websocket/connect` 的 WebSocket 连接。
+2. 服务器接受连接并启动四个并发任务：图像中继、日志中继、状态发送器和客户端消息处理器。
+3. 客户端立即开始接收消息。
+4. 当客户端断开连接（或服务器关闭）时，所有任务被取消，连接关闭。
+
+## 二进制帧负载格式
+
+当摄像头处于活动状态时，服务器发送包含活动组中所有摄像头 JPEG 压缩帧的二进制（字节）消息。每条二进制消息是一个自包含的多帧负载，结构如下：
+
+```
++--------------------------------------------+
+|              Payload Header (24 bytes)      |
++--------------------------------------------+
+|         Frame Header Camera 0 (56 bytes)   |
++--------------------------------------------+
+|         JPEG Data Camera 0 (variable)      |
++--------------------------------------------+
+|         Frame Header Camera 1 (56 bytes)   |
++--------------------------------------------+
+|         JPEG Data Camera 1 (variable)      |
++--------------------------------------------+
+|                    ...                      |
++--------------------------------------------+
+|         Frame Header Camera N (56 bytes)   |
++--------------------------------------------+
+|         JPEG Data Camera N (variable)      |
++--------------------------------------------+
+|              Payload Footer (24 bytes)      |
++--------------------------------------------+
+```
+
+所有多字节整数为**小端序**。结构使用**对齐**布局（numpy `align=True`），这会引入填充字节以实现自然对齐。
+
+### Payload Header（24 字节）
+
+| Offset | Size | Type | Field | Description |
+|--------|------|------|-------|-------------|
+| 0 | 1 | `uint8` | `message_type` | 始终为 `0` (PAYLOAD_HEADER) |
+| 1-7 | 7 | — | *(padding)* | 8 字节 `frame_number` 的对齐填充 |
+| 8 | 8 | `int64` | `frame_number` | 单调递增的帧计数器 |
+| 16 | 4 | `int32` | `number_of_cameras` | 此负载中的摄像头帧数 |
+| 20-23 | 4 | — | *(padding)* | 结构对齐填充 |
+
+### Frame Header（56 字节，每个摄像头一个）
+
+| Offset | Size | Type | Field | Description |
+|--------|------|------|-------|-------------|
+| 0 | 1 | `uint8` | `message_type` | 始终为 `1` (FRAME_HEADER) |
+| 1-7 | 7 | — | *(padding)* | 对齐填充 |
+| 8 | 8 | `int64` | `frame_number` | 与 payload header 相同的帧号 |
+| 16 | 16 | `ascii` | `camera_id` | 以 null 结尾的 ASCII 字符串，零填充至 16 字节 |
+| 32 | 4 | `int32` | `camera_index` | 摄像头的整数索引 |
+| 36 | 4 | `int32` | `image_width` | JPEG 图像宽度（像素） |
+| 40 | 4 | `int32` | `image_height` | JPEG 图像高度（像素） |
+| 44 | 4 | `int32` | `color_channels` | 颜色通道数（通常为 3） |
+| 48 | 4 | `int32` | `jpeg_string_length` | 后续 JPEG 数据的字节长度 |
+| 52-55 | 4 | — | *(padding)* | 结构对齐填充 |
+
+每个 frame header 后面紧跟原始 JPEG 数据（`jpeg_string_length` 字节）。JPEG 数据和下一个 frame header 之间没有填充。
+
+### Payload Footer（24 字节）
+
+| Offset | Size | Type | Field | Description |
+|--------|------|------|-------|-------------|
+| 0 | 1 | `uint8` | `message_type` | 始终为 `2` (PAYLOAD_FOOTER) |
+| 1-7 | 7 | — | *(padding)* | 对齐填充 |
+| 8 | 8 | `int64` | `frame_number` | 必须与 payload header 的帧号匹配 |
+| 16 | 4 | `int32` | `number_of_cameras` | 必须与 payload header 的摄像头数匹配 |
+| 20-23 | 4 | — | *(padding)* | 结构对齐填充 |
+
+Footer 用作一致性检查——解析器可以验证 `frame_number` 和 `number_of_cameras` 是否与 header 匹配。
+
+### 消息类型常量
+
+| Value | Name | Description |
+|-------|------|-------------|
+| `0` | `PAYLOAD_HEADER` | 多帧负载的开始 |
+| `1` | `FRAME_HEADER` | 每个摄像头的帧元数据（后跟 JPEG 数据） |
+| `2` | `PAYLOAD_FOOTER` | 多帧负载的结束 |
+
+### 解析负载
+
+解析二进制负载的步骤：
+
+1. 读取 24 字节 -> payload header。验证 `message_type == 0`。提取 `frame_number` 和 `number_of_cameras`。
+2. 对每个摄像头（重复 `number_of_cameras` 次）：
+    1. 读取 56 字节 -> frame header。验证 `message_type == 1`。提取 `jpeg_string_length`。
+    2. 读取 `jpeg_string_length` 字节 -> 原始 JPEG 图像数据。
+3. 读取 24 字节 -> payload footer。验证 `message_type == 2` 且 `frame_number` / `number_of_cameras` 与 header 匹配。
+
+### 实现参考
+
+- **Python（服务器）：** `skellycam/core/types/frontend_payload_bytearray.py` — `create_frontend_payload()` 使用 numpy 结构化数组构建二进制负载。
+- **TypeScript（客户端）：** `skellycam-ui/src/services/server/server-helpers/frame-processor/binary-protocol.ts` — 结构定义和字段偏移量。`binary-frame-parser.ts` — `parseMultiFramePayload()` 解析二进制数据并创建 `ImageBitmap` 对象。
+
+### 图像处理说明
+
+服务器在 JPEG 编码前调整每个摄像头帧的大小。如果客户端在帧确认中发送了 `displayImageSizes`，服务器将调整到匹配客户端的显示尺寸。否则，图像缩放到原始分辨率的 50%。JPEG 编码默认使用质量级别 80。
+
+## JSON 消息（服务器 -> 客户端）
+
+### 日志记录
+
+```json
+{
+  "message_type": "log_record",
+  "levelname": "INFO",
+  "levelno": 20,
+  "message": "Camera group started",
+  "name": "skellycam.core.camera_group",
+  "filename": "camera_group.py",
+  "lineno": 42,
+  "funcName": "start",
+  "created": 1700000000.123,
+  "formatted_message": "2024-01-01 12:00:00 [INFO] Camera group started",
+  "delta_t": "0.123ms"
+}
+```
+
+`TRACE` 级别（级别 5）及以上的日志记录被转发到 WebSocket。前端在日志终端面板中显示这些记录。日志记录由 [skellylogs](https://github.com/freemocap/skellylogs) 生成。
+
+### 帧率更新
+
+```json
+{
+  "message_type": "framerate_update",
+  "camera_group_id": "group-0",
+  "backend_framerate": {
+    "mean_frame_duration_ms": 33.3,
+    "mean_frames_per_second": 30.0,
+    "frame_duration_max": 40.1,
+    "frame_duration_min": 28.5,
+    "frame_duration_mean": 33.3,
+    "frame_duration_stddev": 2.1,
+    "frame_duration_median": 33.2,
+    "frame_duration_coefficient_of_variation": 0.063,
+    "calculation_window_size": 100,
+    "framerate_source": "Server"
+  },
+  "frontend_framerate": {
+    "mean_frame_duration_ms": 34.1,
+    "mean_frames_per_second": 29.3,
+    "framerate_source": "Display"
+  }
+}
+```
+
+摄像头活动时大约每 250ms 发送一次。`backend_framerate` 表示真实的摄像头捕获速率（根据帧号和捕获时间戳计算，即使 WebSocket 因背压跳过帧也是准确的）。`frontend_framerate` 表示 WebSocket 传输速率（UI 实际接收到的）。
+
+### 应用状态
+
+```json
+{
+  "message_type": "app_state",
+  "state": {
+    "camera_groups": {
+      "group-0": {
+        "id": "group-0",
+        "camera_ids": ["0", "1"],
+        "is_recording": false,
+        "is_paused": false
+      }
+    }
+  }
+}
+```
+
+大约每 1 秒发送一次，以及应用状态更改时（例如录制开始/停止）。
+
+## 客户端 -> 服务器消息
+
+### 帧确认
+
+处理完二进制帧负载后，客户端发送确认：
+
+```json
+{
+  "frameNumber": 42,
+  "displayImageSizes": {
+    "group-0": {
+      "0": { "width": 640, "height": 480 },
+      "1": { "width": 640, "height": 480 }
+    }
+  }
+}
+```
+
+`frameNumber` 字段告诉服务器哪个帧已被渲染。服务器使用此信息进行背压管理——在前一帧被确认之前不会发送新帧。如果前端落后，服务器会跳过帧以防止缓冲区膨胀。
+
+`displayImageSizes` 字段（可选）告诉服务器每个摄像头的当前显示尺寸，使其能够调整 JPEG 帧大小以匹配，从而减少带宽。
+
+### Ping/Pong
+
+发送文本 `"ping"` 将收到 `"pong"` 响应。这可用于连接健康检查。
+
+## 背压管理
+
+服务器跟踪最后发送的帧号和最后确认的帧号。如果前端尚未确认最近的帧：
+
+1. 服务器跳过发送新帧。
+2. 确认到达后，服务器额外跳过一帧让前端赶上。
+3. 如果差距超过 1000 帧，会记录一条 trace 级别的警告。
+
+这确保即使前端渲染速度慢于摄像头捕获速率，WebSocket 缓冲区也不会无限增长。

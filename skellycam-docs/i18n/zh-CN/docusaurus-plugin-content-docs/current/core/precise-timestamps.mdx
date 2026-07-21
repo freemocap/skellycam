@@ -1,0 +1,50 @@
+---
+sidebar_position: 4
+title: 精确时间戳
+description: 在捕获管道的每个阶段记录高分辨率时间戳，以人类可读格式存储。
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '@site/content.config';
+
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'precise-timestamps')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## 为什么时间戳很重要
+
+大多数 USB 摄像头**不**提供真实的时间戳。`cv2.VideoCapture` 的时间戳属性（`CAP_PROP_POS_MSEC`）在不同平台和驱动程序间表现不一致——有时返回零，有时返回墙钟时间，有时返回摄像头打开后的时间。您不能依赖它进行科学测量。
+
+但如果您正在进行动作捕捉、生物力学或任何时间敏感的分析，您需要知道每帧是*何时*捕获的——不仅仅是它的帧索引。
+
+## SkellyCam 记录的内容
+
+SkellyCam 在每帧生命周期的多个阶段捕获高分辨率 `perf_counter_ns` 时间戳：
+
+- **Pre-grab** — 调用 `cv2.VideoCapture.grab()` 之前
+- **Post-grab** — `grab()` 返回后立即
+- **Pre-retrieve** — 调用 `retrieve()` 之前
+- **Post-retrieve** — `retrieve()` 返回解码帧后立即
+- **Pre/post shared memory copy** — 帧写入共享内存环形缓冲区时
+- **Pre/post record** — 帧写入视频文件时（录制期间）
+
+这些时间戳为**每个摄像头**的**每一帧**记录，加上组装的多摄像头负载的时间戳。
+
+## 输出格式
+
+录制完成后，`RecordingFinalizer` 处理所有累积的时间戳并将其写为人类可读格式的 **CSV 文件**。输出包括：
+
+- 包含所有生命周期阶段的每摄像头时间戳 CSV
+- 多摄像头同步统计信息（每个帧事件的摄像头间差异）
+- 整个录制的摘要统计信息
+
+时间戳使用 Python 的 `time.perf_counter_ns()`，提供纳秒级分辨率的单调计时。虽然*绝对*精度取决于操作系统调度器，但帧周期内事件之间的*相对*计时非常精确——通常在亚毫秒级。
+
+## 在分析中使用时间戳
+
+时间戳数据使您能够：
+
+- 测量每个帧事件中摄像头之间的实际时间差异
+- 验证同步是否按预期工作
+- 通过对齐单调时间戳将帧与外部数据源（IMU、测力板等）关联
+- 量化系统性能（抓取延迟、检索延迟、I/O 延迟）

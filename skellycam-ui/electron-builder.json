@@ -1,0 +1,108 @@
+{
+  "appId": "skellycam.app",
+  "productName": "skellycam",
+  "directories": {
+    "output": "release/${version}"
+  },
+  "files": [
+    "dist-electron",
+    "dist",
+    "skellycam_server/**",
+    "../shared/skellycam-logo/skellycam-favicon.ico",
+    "../shared/skellycam-logo/skellycam-logo.png"
+  ],
+  "asar": true,
+  "asarUnpack": [
+    "**/skellycam_server/**",
+    "**/skellycam-logo.png"
+  ],
+  "compression": "maximum",
+
+  "win": {
+    "icon": "../shared/skellycam-logo/skellycam-favicon.ico",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "${productName}_${version}_${arch}_installer.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false,
+    "language": "1033"
+  },
+
+  "mac": {
+    "icon": "../shared/skellycam-logo/skellycam-logo.png",
+    "category": "public.app-category.video",
+    "entitlements": "entitlements.mac.plist",
+    "entitlementsInherit": "entitlements.mac.plist",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "artifactName": "${productName}_${version}_${arch}_installer.${ext}",
+    "hardenedRuntime": true,
+    "notarize": true,
+    "extendInfo": {
+      "NSCameraUsageDescription": "SkellyCam needs camera access to capture video for motion capture recording.",
+      "NSMicrophoneUsageDescription": "SkellyCam needs microphone access to record audio alongside video.",
+      "NSCameraUseContinuityCameraDeviceType": true
+    }
+  },
+  "dmg": {
+    "contents": [
+      { "x": 130, "y": 220 },
+      { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+    ]
+  },
+
+  "linux": {
+    "icon": "../shared/skellycam-logo/skellycam-logo.png",
+    "category": "Video",
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "artifactName": "${productName}_${version}_${arch}.${ext}",
+    "desktop": {
+      "entry": {
+        "Name": "SkellyCam",
+        "Comment": "Camera backend for FreeMoCap",
+        "Categories": "Video;AudioVideo;"
+      }
+    }
+  },
+  "deb": {
+    "depends": [
+      "libgl1-mesa-glx",
+      "libglib2.0-0",
+      "libsm6",
+      "libxext6",
+      "libxrender1",
+      "libv4l-0"
+    ]
+  },
+
+  "publish": {
+    "provider": "github",
+    "owner": "freemocap",
+    "repo": "skellycam"
+  }
+}

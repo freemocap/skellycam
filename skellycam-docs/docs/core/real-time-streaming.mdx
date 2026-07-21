@@ -1,0 +1,48 @@
+---
+title: Real-Time Streaming
+sidebar_position: 4
+description: "WebSocket protocol streams multi-camera frames to the frontend. The API treats a camera group like a single camera."
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '../../content.config';
+
+<AiGeneratedBanner humanCurated />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'real-time-streaming')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## Single-camera semantics for multi-camera systems
+
+A key design goal of SkellyCam's API is that **a multi-camera group behaves like a single camera**. Instead of managing N independent camera streams with independent frame rates and connection lifecycles, you connect to one WebSocket endpoint and receive a single stream of synchronized multi-frame payloads.
+
+Each payload contains exactly **one image per camera per frame event, captured at the same realworld timeslice**, delivered at a consistent frame rate. Your application code doesn't need to correlate frames across cameras, handle drift, or manage per-camera connections. You just process each payload knowing it represents a single synchronized moment across all cameras.
+
+## The WebSocket protocol
+
+SkellyCam uses a compact binary WebSocket protocol to stream frames:
+
+1. **JPEG compression** — Each camera's frame is JPEG-compressed (quality 80 by default) and optionally downscaled to match the client's display dimensions.
+2. **Binary packing** — All compressed frames for a single multi-frame event are packed into one binary WebSocket message, along with per-camera metadata (camera ID, resolution, timestamp).
+3. **Backpressure management** — If the client can't keep up, the server drops frames rather than buffering indefinitely. This prevents memory buildup and keeps the stream responsive.
+
+The same WebSocket connection also carries JSON messages for logs, state updates, framerate statistics, and control commands.
+
+For full protocol details, see the [WebSocket Protocol](../technical/websocket-protocol) reference. The server-side implementation lives in the [websocket_server.py](https://github.com/freemocap/skellycam/blob/development/skellycam/api/websocket/websocket_server.py) module.
+
+## Frontend rendering
+
+The React/Electron frontend processes incoming frames through a pipeline optimized for performance (see the [camera view components](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/components/camera-views) and [server services](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/services/server) in the UI source):
+
+1. **Binary parse** — The binary payload is parsed to extract per-camera JPEG blobs.
+2. **ImageBitmap creation** — Each JPEG blob is decoded into an `ImageBitmap`, which can be transferred to a worker thread without copying.
+3. **OffscreenCanvas rendering** — Each camera's feed is rendered on an `OffscreenCanvas` in a dedicated Web Worker, keeping the main thread free for UI interactions.
+
+This architecture supports many simultaneous camera feeds without frame drops in the UI.
+
+:::note Work in progress
+In practice, our frontend streaming still struggles to consistently hit the 30-60 FPS it SHOULD be capable of. This is an active area of improvement, and we could use help! See the [Development](/docs/development/) section if you're interested in contributing to frontend performance.
+:::
+
+## What's next
+
+The current implementation uses WebSocket over TCP, which works well for most use cases. Future plans include introducing additional streaming methods beyond WebSocket — including UDP and potentially memory-based approaches (such as shared memory or memory-mapped files) that could achieve higher frame rates by bypassing the network card entirely. These alternative transports would be especially useful for local, same-machine consumers that need maximum throughput. See the roadmap items above for planned transport and client improvements.

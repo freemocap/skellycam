@@ -1,0 +1,68 @@
+---
+title: 遥测
+sidebar_position: 6
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated humanNotes="Should link 'convivial tool' reference to Ivan Illich's definition of the term. Prob also should reference the 4 Freedoms definition of Free Software too." />
+# 遥测
+
+SkellyCam 收集匿名使用遥测数据，以帮助开发团队了解软件的使用情况。遥测由 [skellypings](https://github.com/freemocap/skellypings) 包管理。
+
+## 矛盾
+
+构建一个自由的、共生的、非榨取性工具与使用数据无可辩驳的价值之间存在着内在矛盾。SkellyCam 是开源的，由社区驱动——我们对监控或数据变现没有兴趣。但作为一个小团队，我们确实需要了解一些基本信息，例如：有多少人在使用 SkellyCam、他们运行的操作系统和硬件是什么、某些功能是否被采用。没有这些信息，我们在做开发决策时就是在盲目飞行。
+
+此外，看到人们确实在使用这个工具，是为我们构建它所需的情感燃料箱加油的主要动力之一。这真的很不容易！
+
+我们认真对待这一矛盾，致力于收集做出明智决策所需的最少数据，并对发送的内容保持完全透明。
+
+## 收集的内容
+
+启动时会发送一个 `app_opened` 事件，包含匿名系统规格。不会收集摄像头数据、录制内容或个人身份信息。
+
+### 示例 ping
+
+以下是每次 `app_opened` 事件发送的数据的代表性示例，以及发送该数据的计算机的 IP 地址：
+
+```json
+{
+  "event": "app_opened",
+  "app_name": "skellycam",
+  "app_version": "2.1.0",
+  "system": {
+    "os": "Windows",
+    "os_version": "10.0.22631",
+    "architecture": "AMD64",
+    "cpu_count": 16,
+    "total_ram_gb": 32.0,
+    "python_version": "3.12.4"
+  }
+}
+```
+
+
+## 渐进式同意（未来计划）
+
+我们认识到不同用户对遥测有不同的接受程度。SkellyCam 的未来版本计划实施**渐进式同意**模型，让用户对分享内容拥有细粒度控制：
+
+- **存在性 ping** — 仅一次 Ping。启动时发送单个匿名的"你好，我存在"ping。无系统详情。
+- **系统指纹** — 基本硬件和操作系统信息（当前收集的内容）。帮助我们了解应优先支持哪些平台并追踪特定于操作系统的错误。
+- **使用分析** — 界面交互、按钮点击、功能采用。帮助我们了解哪些功能被使用以及哪些需要改进。
+
+每个级别都可以独立开关，并清楚解释每个层级发送的确切内容。目标是尊重用户自主权，同时让那些想要帮助改进软件的人能够轻松参与。
+
+## 退出
+
+遥测默认启用。要禁用它，可以：
+
+- 在界面的**设置**页面中关闭遥测，或
+- 编辑 `~/skellycam_data/telemetry_config.json`：
+
+```json
+{
+  "telemetry_enabled": false
+}
+```
+
+该设置在下次服务器启动时生效，只要该路径上的 `telemetery_config.json` 存在就会被记住。

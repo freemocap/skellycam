@@ -1,0 +1,44 @@
+---
+sidebar_position: 3
+title: 实时流传输
+description: SkellyCam 如何通过 WebSocket 以单摄像头语义流传输同步的多摄像头帧。
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '@site/content.config';
+
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'real-time-streaming')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## 多摄像头系统的单摄像头语义
+
+SkellyCam API 的一个关键设计目标是**多摄像头组的行为就像单个摄像头**。您无需管理 N 个独立的摄像头流，每个都有独立的帧率和连接生命周期，而是连接到一个 WebSocket 端点，接收同步的多帧负载的单一流。
+
+每个负载包含每个帧事件中每个摄像头**恰好一张图像**，以一致的帧率传递。您的应用代码无需跨摄像头关联帧、处理漂移或管理每个摄像头的连接。您只需处理每个负载，知道它代表所有摄像头的单个同步时刻。
+
+## WebSocket 协议
+
+SkellyCam 使用紧凑的二进制 WebSocket 协议来流传输帧：
+
+1. **JPEG 压缩** — 每个摄像头的帧经过 JPEG 压缩（默认质量 80），并可选择缩小到匹配客户端的显示尺寸。
+2. **二进制打包** — 单个多帧事件的所有压缩帧被打包到一条二进制 WebSocket 消息中，连同每个摄像头的元数据（摄像头 ID、分辨率、时间戳）。
+3. **背压管理** — 如果客户端跟不上，服务器丢弃帧而不是无限缓冲。这防止了内存积累并保持流的响应性。
+
+同一 WebSocket 连接还承载日志、状态更新、帧率统计和控制命令的 JSON 消息。
+
+完整协议详情请参见 [WebSocket 协议](../technical/websocket-protocol)参考。
+
+## 前端渲染
+
+React/Electron 前端通过优化性能的管道处理传入的帧：
+
+1. **二进制解析** — 解析二进制负载以提取每个摄像头的 JPEG blob。
+2. **ImageBitmap 创建** — 每个 JPEG blob 被解码为 `ImageBitmap`，可以无需复制地传输到工作线程。
+3. **OffscreenCanvas 渲染** — 每个摄像头的画面在专用 Web Worker 中的 `OffscreenCanvas` 上渲染，保持主线程可用于 UI 交互。
+
+此架构支持多个同时的摄像头画面而不会在 UI 中丢帧。
+
+## 未来计划
+
+当前实现使用基于 TCP 的 WebSocket，可靠但 TCP 的排序保证增加了延迟。对于高吞吐量的局域网场景，UDP 传输可以通过在传输层而非应用层允许丢帧来减少延迟。请参见上方的路线图项目了解计划中的传输和客户端改进。

@@ -1,0 +1,47 @@
+---
+sidebar_position: 2
+title: Camaras USB Genericas
+description: SkellyCam funciona con cualquier camara web USB compatible con UVC — no se necesita hardware propietario.
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '@site/content.config';
+
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'generic-usb-cameras')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## La filosofia
+
+SkellyCam es parte del ecosistema [FreeMoCap](https://freemocap.org), que esta construido sobre un principio fundamental: **la captura de movimiento debe ser accesible para todos**. Eso significa sin sistemas de camaras propietarios costosos, sin controladores especiales, sin dependencia de un proveedor.
+
+Si tienes camaras web USB — cualquier camara web USB — puedes hacer captura multicamara sincronizada.
+
+## Que funciona hoy
+
+SkellyCam usa `VideoCapture` de OpenCV para comunicarse con las camaras. Cualquier camara que se presente como un dispositivo **UVC (USB Video Class)** funcionara. UVC es el protocolo estandar utilizado por practicamente todas las camaras web USB, incluyendo:
+
+- Camaras web economicas (Logitech C270, etc.)
+- Camaras web de gama media (Logitech C920, C922)
+- Camaras USB de gama alta (Logitech Brio, Razer Kiyo)
+- Muchas camaras USB industriales que exponen una interfaz UVC
+- La mayoria de las camaras integradas de laptops
+
+Si tu sistema operativo reconoce la camara sin instalar controladores especiales, es casi seguro que es compatible con UVC y funcionara con SkellyCam.
+
+## Limitaciones de las camaras USB
+
+Las camaras web USB estan disenadas para videollamadas, no para medicion cientifica. Tienen limitaciones reales que vale la pena comprender:
+
+- **Sin sincronizacion por hardware** — Cada camara funciona con su propio reloj interno. El protocolo de sincronizacion por software de SkellyCam mitiga esto (ver [Sincronizacion Perfecta de Fotogramas](./frame-perfect-sync)), pero los momentos fisicos de captura aun tienen cierta dispersion.
+- **Sin marcas de tiempo reales** — La mayoria de las camaras USB no proporcionan marcas de tiempo precisas de cuando se capturo cada fotograma. SkellyCam soluciona esto con su propio [sistema de marcas de tiempo](./precise-timestamps).
+- **Obturador rodante** — La mayoria de las camaras web usan sensores de obturador rodante, lo que significa que el movimiento rapido puede producir artefactos de deformacion.
+- **Ancho de banda USB** — Cada camara consume ancho de banda USB. Ejecutar muchas camaras puede requerir multiples controladores host USB.
+
+Estas son limitaciones inherentes al hardware — el trabajo de SkellyCam es obtener los mejores resultados posibles de las camaras que tienes.
+
+## Consejos para configuracion multicamara
+
+- **Usa controladores USB separados** — Conecta las camaras a puertos de diferentes controladores host USB para evitar contension de ancho de banda. En computadoras de escritorio, los puertos en diferentes lados de la maquina a menudo estan en controladores diferentes.
+- **Reduce la resolucion si es necesario** — Si estas alcanzando limites de ancho de banda, configura las camaras a una resolucion mas baja. La sincronizacion sera mas ajustada tambien, ya que los fotogramas mas pequenos se transfieren mas rapido.
+- **Camaras consistentes** — Usar modelos de camara identicos simplifica la configuracion y produce resultados mas consistentes, aunque mezclar modelos funciona bien.

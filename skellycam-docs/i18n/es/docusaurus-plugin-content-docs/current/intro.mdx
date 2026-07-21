@@ -1,0 +1,49 @@
+---
+sidebar_position: 1
+title: Documentacion de SkellyCam
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+SkellyCam convierte camaras web USB economicas en un sistema multicamara sincronizado con precision de fotograma. Es el backend de camaras para el proyecto de captura de movimiento [FreeMoCap](https://github.com/freemocap/freemocap).
+
+## Que Hace Diferente a SkellyCam
+
+La mayoria de las configuraciones multicamara sufren de deriva entre camaras: las camaras funcionan con relojes independientes, por lo que el fotograma N de la camara A no corresponde al fotograma N de la camara B. SkellyCam resuelve esto con un protocolo de captura controlado por conteo de fotogramas: el ciclo de captura/recuperacion de cada camara se coordina para que ninguna camara se adelante mas de un fotograma respecto a las demas, asegurando que cada evento "multi-fotograma" contenga una imagen de cada camara capturada aproximadamente en el mismo instante.
+
+**Las garantias:**
+
+- Todos los videos grabados tienen **exactamente el mismo numero de fotogramas**
+- Cada carga multi-fotograma entregada por WebSocket contiene **exactamente una imagen por camara** para ese evento de fotograma
+- La reproduccion de videos grabados esta **bloqueada por fotograma de forma rigida** — todos los videos siempre muestran el mismo numero de fotograma, sin deriva, sin tolerancia
+
+## Documentacion
+
+| Pagina | Descripcion |
+|--------|-------------|
+| [Instalacion](getting-started/installation) | Descargar e instalar SkellyCam |
+| [Inicio Rapido](getting-started/quick-start) | Tu primera grabacion en cinco pasos |
+| [Tutorial para Principiantes](getting-started/beginner-tutorial) | Seleccion de camaras, configuracion y detalles de grabacion |
+| [Tutorial Avanzado](getting-started/advanced-tutorial) | Modelo de datos, estructura de carpetas, configuracion del servidor |
+| [Arquitectura](technical/architecture) | Protocolo de sincronizacion, modelo de procesos, flujo de datos |
+| [Referencia de API](technical/api-reference) | Documentacion de endpoints HTTP y WebSocket |
+| [Protocolo WebSocket](technical/websocket-protocol) | Formato binario de fotogramas, mensajes JSON, contrapresion |
+| [Desarrollo](development/) | Ejecucion desde codigo fuente, pruebas, linting, CI y contribuciones |
+| [Contribuir](development/contributing) | Como reportar errores y enviar pull requests |
+| [Traducir](development/translating) | Ayuda a traducir la interfaz a tu idioma |
+
+## Inicio Rapido
+
+1. **Descargar** — Obtener el instalador para tu plataforma desde la [pagina de descarga](/download)
+2. **Instalar y ejecutar** — Ejecutar el instalador y abrir SkellyCam
+3. **Conectar camaras** — Conectar camaras USB y hacer clic en **Detectar Camaras**
+4. **Grabar** — Hacer clic en **Grabar**, luego en **Detener** cuando hayas terminado
+5. **Reproducir** — Abrir la pagina de **Grabaciones** y seleccionar tu grabacion para reproduccion sincronizada
+
+Consulta la [guia de inicio rapido](getting-started/quick-start) para mas detalles.
+
+:::tip Ejecutar desde codigo fuente?
+Si eres desarrollador, consulta la seccion de [Desarrollo](development/) para instrucciones sobre como ejecutar desde el codigo fuente.
+:::

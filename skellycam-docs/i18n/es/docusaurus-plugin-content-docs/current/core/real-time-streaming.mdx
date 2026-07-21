@@ -1,0 +1,44 @@
+---
+sidebar_position: 3
+title: Transmision en Tiempo Real
+description: Como SkellyCam transmite fotogramas multicamara sincronizados por WebSocket con semantica de camara unica.
+---
+
+import { AiGeneratedBanner, CoreFeatureHeader } from '@freemocap/skellydocs';
+import config from '@site/content.config';
+
+<AiGeneratedBanner />
+
+<CoreFeatureHeader feature={config.features.find(f => f.id === 'real-time-streaming')} repoUrl="https://github.com/freemocap/skellycam" />
+
+## Semantica de camara unica para sistemas multicamara
+
+Un objetivo clave del diseno de la API de SkellyCam es que **un grupo multicamara se comporte como una sola camara**. En lugar de gestionar N flujos de camara independientes con velocidades de fotogramas y ciclos de vida de conexion independientes, te conectas a un endpoint WebSocket y recibes un unico flujo de cargas multi-fotograma sincronizadas.
+
+Cada carga contiene exactamente **una imagen por camara por evento de fotograma**, entregada a una velocidad de fotogramas consistente. Tu codigo de aplicacion no necesita correlacionar fotogramas entre camaras, manejar deriva o gestionar conexiones por camara. Simplemente procesas cada carga sabiendo que representa un unico momento sincronizado a traves de todas las camaras.
+
+## El protocolo WebSocket
+
+SkellyCam usa un protocolo binario WebSocket compacto para transmitir fotogramas:
+
+1. **Compresion JPEG** — El fotograma de cada camara se comprime en JPEG (calidad 80 por defecto) y opcionalmente se reduce para coincidir con las dimensiones de visualizacion del cliente.
+2. **Empaquetado binario** — Todos los fotogramas comprimidos para un solo evento multi-fotograma se empaquetan en un unico mensaje binario WebSocket, junto con metadatos por camara (ID de camara, resolucion, marca de tiempo).
+3. **Gestion de contrapresion** — Si el cliente no puede mantener el ritmo, el servidor descarta fotogramas en lugar de almacenarlos indefinidamente. Esto previene la acumulacion de memoria y mantiene el flujo responsivo.
+
+La misma conexion WebSocket tambien transporta mensajes JSON para logs, actualizaciones de estado, estadisticas de velocidad de fotogramas y comandos de control.
+
+Para detalles completos del protocolo, consulta la referencia del [Protocolo WebSocket](../technical/websocket-protocol).
+
+## Renderizado del frontend
+
+El frontend React/Electron procesa los fotogramas entrantes a traves de un pipeline optimizado para rendimiento:
+
+1. **Analisis binario** — La carga binaria se analiza para extraer los blobs JPEG por camara.
+2. **Creacion de ImageBitmap** — Cada blob JPEG se decodifica en un `ImageBitmap`, que puede transferirse a un hilo worker sin copiar.
+3. **Renderizado con OffscreenCanvas** — La transmision de cada camara se renderiza en un `OffscreenCanvas` en un Web Worker dedicado, manteniendo el hilo principal libre para interacciones de la interfaz.
+
+Esta arquitectura soporta muchas transmisiones de camara simultaneas sin perdida de fotogramas en la interfaz.
+
+## Que sigue
+
+La implementacion actual usa WebSocket sobre TCP, que es fiable pero agrega latencia por las garantias de ordenamiento de TCP. Para escenarios de red local de alto rendimiento, el transporte UDP reduciria la latencia al permitir la perdida de fotogramas a nivel de transporte en lugar de a nivel de aplicacion. Consulta los elementos de la hoja de ruta arriba para mejoras planificadas de transporte y cliente.

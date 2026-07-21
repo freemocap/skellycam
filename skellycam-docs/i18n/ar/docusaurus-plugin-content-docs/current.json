@@ -1,0 +1,18 @@
+{
+  "version.label": {
+    "message": "التالي",
+    "description": "The label for version current"
+  },
+  "sidebar.docsSidebar.category.Core Concepts": {
+    "message": "المفاهيم الأساسية",
+    "description": "The label for category 'Core Concepts' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Core Concepts.link.generated-index.title": {
+    "message": "المفاهيم الأساسية",
+    "description": "The generated-index page title for category 'Core Concepts' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Core Concepts.link.generated-index.description": {
+    "message": "مبادئ التصميم الأساسية وميزات SkellyCam.",
+    "description": "The generated-index page description for category 'Core Concepts' in sidebar 'docsSidebar'"
+  }
+}

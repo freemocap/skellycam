@@ -1,0 +1,12 @@
+{
+  "label": "Core Concepts",
+  "position": 3,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "Core Concepts",
+    "description": "The foundational design principles and features of SkellyCam.",
+    "slug": "core"
+  }
+}

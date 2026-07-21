@@ -1,0 +1,12 @@
+{
+  "label": "核心概念",
+  "position": 3,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "核心概念",
+    "description": "SkellyCam 的基础设计原则和功能特性。",
+    "slug": "core"
+  }
+}

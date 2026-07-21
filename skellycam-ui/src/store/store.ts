@@ -1,0 +1,20 @@
+import {configureStore} from "@reduxjs/toolkit";
+import {cameraSlice} from "./slices/cameras/cameras-slice";
+import {recordingSlice} from "./slices/recording/recording-slice";
+import {connectionSlice} from "./slices/connection/connection-slice";
+import {themeSlice} from "./slices/theme/theme-slice";
+import {videosSlice} from "./slices/videos/videos-slice";
+import {settingsSlice} from "./slices/settings/settings-slice";
+import {uiSlice} from "./slices/ui/ui-slice";
+
+export const store = configureStore({
+    reducer: {
+        cameras: cameraSlice.reducer,
+        recording: recordingSlice.reducer,
+        connection: connectionSlice.reducer,
+        theme: themeSlice.reducer,
+        videos: videosSlice.reducer,
+        settings: settingsSlice.reducer,
+        ui: uiSlice.reducer,
+    }
+});

@@ -1,0 +1,49 @@
+---
+sidebar_position: 1
+title: SkellyCam 文档
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+SkellyCam 将廉价的 USB 摄像头转变为帧级精确同步的多摄像头系统。它是 [FreeMoCap](https://github.com/freemocap/freemocap) 动作捕捉项目的摄像头后端。
+
+## SkellyCam 的独特之处
+
+大多数多摄像头设置都存在摄像头间漂移问题——各摄像头运行在独立的时钟上，因此摄像头 A 的第 N 帧并不对应摄像头 B 的第 N 帧。SkellyCam 通过帧计数门控捕获协议解决了这个问题：每个摄像头的抓取/检索周期是协调的，确保没有摄像头比其他摄像头超前一帧以上，从而保证每个"多帧"事件包含来自每个摄像头在大约相同时刻捕获的一张图像。
+
+**保证：**
+
+- 所有录制的视频具有**完全相同的帧数**
+- 通过 WebSocket 传递的每个多帧负载包含该帧事件中**每个摄像头恰好一张图像**
+- 录制视频的回放是**硬帧锁定的**——所有视频始终显示相同的帧号，无漂移，无容差
+
+## 文档
+
+| 页面 | 描述 |
+|------|------|
+| [安装](getting-started/installation) | 下载并安装 SkellyCam |
+| [快速入门](getting-started/quick-start) | 五步完成首次录制 |
+| [初学者教程](getting-started/beginner-tutorial) | 摄像头选择、配置和录制详情 |
+| [高级教程](getting-started/advanced-tutorial) | 数据模型、文件夹结构、服务器配置 |
+| [架构](technical/architecture) | 同步协议、进程模型、数据流 |
+| [API 参考](technical/api-reference) | HTTP 和 WebSocket 端点文档 |
+| [WebSocket 协议](technical/websocket-protocol) | 二进制帧格式、JSON 消息、背压 |
+| [开发](development/) | 从源码运行、测试、代码检查、CI 和贡献 |
+| [贡献](development/contributing) | 如何报告错误和提交拉取请求 |
+| [翻译](development/translating) | 帮助将 UI 翻译成您的语言 |
+
+## 快速开始
+
+1. **下载** — 从[下载页面](/download)获取适合您平台的安装程序
+2. **安装并启动** — 运行安装程序并打开 SkellyCam
+3. **连接摄像头** — 插入 USB 摄像头并点击**检测摄像头**
+4. **录制** — 点击**录制**，完成后点击**停止**
+5. **回放** — 打开**录制**页面并选择您的录制进行帧锁定回放
+
+查看[快速入门指南](getting-started/quick-start)了解更多详情。
+
+:::tip 从源码运行？
+如果您是开发者，请查看[开发](development/)部分了解从源码运行的说明。
+:::

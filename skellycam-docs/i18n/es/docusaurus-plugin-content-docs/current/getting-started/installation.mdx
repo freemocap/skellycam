@@ -1,0 +1,29 @@
+---
+title: Instalacion
+sidebar_position: 1
+---
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner humanCurated humanNotes="Maybe some screenshots or something? more info about the installer and the difference between the app and the server_only stuff"/>
+
+# Instalacion
+
+## Descargar SkellyCam
+
+La forma mas facil de empezar es descargar el instalador precompilado para tu sistema operativo desde la [pagina de Descargas](/download).
+
+Plataformas disponibles:
+- **Windows** — Instalador `.exe`
+- **macOS** — `.dmg` (Intel y Apple Silicon)
+- **Linux** — `.AppImage` o `.deb`
+
+El instalador es autocontenido — incluye tanto el servidor de SkellyCam como la interfaz de usuario, asi que no necesitas instalar Python, Node.js, ni ninguna otra dependencia.
+
+### Notas para Linux
+
+- El `.AppImage` puede necesitar permisos de ejecucion: `chmod +x SkellyCam-*.AppImage`
+- La grabacion de audio requiere PortAudio: `sudo apt install portaudio19-dev`
+
+## Instalar desde el codigo fuente
+
+Si eres desarrollador o colaborador y quieres ejecutar desde el codigo fuente, consulta la seccion de [Desarrollo](/docs/development/) para las instrucciones completas de configuracion.

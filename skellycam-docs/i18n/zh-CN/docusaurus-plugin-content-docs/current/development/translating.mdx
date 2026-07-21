@@ -1,0 +1,45 @@
+---
+sidebar_position: 9
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# 翻译 SkellyCam
+
+我们使用社区翻译让动作捕捉在全球范围内普及。无需编程——只需编辑 JSON 文件并提交 PR。
+
+**[在 GitHub 上浏览翻译文件](https://github.com/freemocap/skellycam/tree/development/skellycam-ui/src/i18n/locales)**
+
+## 当前状态
+
+所有非英语翻译都是**由 AI 生成且未经审核的**——几乎肯定包含错误。即使修正几个字符串也很有帮助！
+
+## 翻译文件
+
+所有 UI 字符串位于 `skellycam-ui/src/i18n/locales/`。英语（`en-english.json`）是权威来源。所有其他语言都是 AI 生成的，等待社区审核。
+
+目前支持：英语、西班牙语、法语、德语、意大利语、葡萄牙语（巴西）、加泰罗尼亚语、荷兰语、瑞典语、波兰语、捷克语、罗马尼亚语、匈牙利语、希腊语、克罗地亚语、塞尔维亚语、乌克兰语、俄语、格鲁吉亚语、土耳其语、阿拉伯语、波斯语、乌尔都语、印地语、孟加拉语、泰米尔语、尼泊尔语、僧伽罗语、中文（简体）、日语、韩语、泰语、越南语、印尼语、马来语、他加禄语、缅甸语、斯瓦希里语和阿姆哈拉语。
+
+## 如何贡献
+
+1. 点击上方的任何语言文件（或在 `skellycam-ui/src/i18n/locales/` 中找到）
+2. 点击铅笔图标直接在 GitHub 上编辑
+3. 修正您看到的任何错误或不自然的翻译
+4. 提交拉取请求
+
+字符串使用 i18next 格式——请保持 `{{variables}}` 完全不变，并保留复数的 `_one`/`_other` 后缀。
+
+后端字符串（摄像头名称、日志消息、编解码器、文件路径）不需要翻译。
+
+## 添加新语言
+
+1. 将 `en-english.json` 复制为 `<locale-code>-<language-name>.json`
+2. 翻译值（不是键）
+3. 将 `_meta.translationSource` 设置为 `"ai-generated"` 或 `"human-authored"`
+4. 创建 issue 或 PR——我们会将其接入应用
+
+## 有问题？
+
+在 GitHub 上创建 issue 或在 [FreeMoCap Discord](https://discord.gg/SgdnzbHDTG) 上联系我们。

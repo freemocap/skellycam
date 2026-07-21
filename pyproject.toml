@@ -1,21 +1,17 @@
-# pyproject.toml
-# originally based on - https://realpython.com/pypi-publish-python-package/
-
-[build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
-
 [project]
 name = "skellycam"
 readme = "README.md"
+version = "2.0.0a6"
+requires-python = ">=3.11"
+
+
 authors = [
-    {name = "Skelly FreeMoCap", email = "info@freemocap.org"},
-    {name = "Endurance Idehen"},
-    {name = "Jonathan Samir Matthis"},
-    ]
+    { name = "Skelly FreeMoCap", email = "info@freemocap.org" },
+    { name = "Endurance Idehen" },
+    { name = "Jonathan Samir Matthis" },
+]
 license = { file = "LICENSE" }
 classifiers = [
-    "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
@@ -26,10 +22,8 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
     "Topic :: Multimedia :: Video",
@@ -42,7 +36,7 @@ classifiers = [
     "Topic :: System :: Hardware",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
     "Topic :: System :: Hardware :: Universal Serial Bus (USB) :: Video (UVC)",
-    ]
+]
 keywords = [
     "camera",
     "stream",
@@ -53,55 +47,194 @@ keywords = [
     "freemocap",
     "motion capture",
     "synchronization",
-    "computer vision"
+    "computer vision",
 ]
 
-#dynamic = ["dependencies"]
 dependencies = [
-"numpy==1.26.2",
-"opencv-contrib-python==4.8.*",
-"pydantic==2.*",
-"Pillow==10.0.1",
-"psutil==5.9.6",
-"setproctitle==1.3.3",
-"pyside6==6.6.*",
-"matplotlib==3.8.2",
-"scipy==1.11.4",
-"rich==13.7.0",
-"pandas==2.1.4",
-"pyqtgraph==0.13.3",
-"qtpy==2.4.1",
-"toml==0.10.2",
-"tqdm==4.66.1",
+    "numpy", #==1.26.2",
+    "opencv-contrib-python==4.12.*",
+    "pydantic==2.*",
+    "Pillow",
+    "psutil>=7.0.0",
+    "setproctitle==1.3.3",
+    "scipy>=1.11.4",
+    "polars",
+    "uvicorn>=0.30.6",
+    "fastapi>=0.115.0",
+    "tzlocal>=5.2",
+    "httpx>=0.27.2",
+    "websockets>=13.1",
+    "sounddevice>=0.4.6",
+    "av>=12.0.0",
+    "tabulate>=0.9.0",
+    "numpydantic>=1.6.9",
+    "cv2-enumerate-cameras>=1.2.2",
+    "skellylogs",
+    "skellypings",
+    "beartype>=0.19",
+    "msgspec>=0.19",
 ]
-requires-python = ">=3.9,<3.13"
+[tool.uv.sources]
+skellylogs = { git = "https://github.com/freemocap/skellylogs" }
+skellypings = { git = "https://github.com/freemocap/skellypings" }
 
-dynamic = ["version", "description"]
+[tool.uv]
+package = true
 
-[project.optional-dependencies]
-dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
 
 [project.urls]
 Homepage = "https://github.com/freemocap/skellycam"
 
-[tool.bumpver]
-current_version = "v2025.09.1097"
+[project.scripts]
+skellycam = "skellycam.__main__:entry_point"
 
-version_pattern = "vYYYY.0M.BUILD[-TAG]"
-commit_message  = "Bump version {old_version} -> {new_version}"
-commit          = true
-tag             = true
-push            = true
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+# ---- Version Bumping (bumpver) ----
+# Run with: uv run bumpver update <flag>
+#
+# The canonical version is `current_version` below (e.g. v2.0.0-alpha.1).
+# bumpver writes it to three files in the format each ecosystem requires:
+#   - pyproject.toml `version`        PEP 440,  e.g. 2.0.0a1        (required by pip/uv)
+#   - skellycam/__init__.py           display,  e.g. v2.0.0-alpha.1
+#   - skellycam-ui/package.json       npm semver, e.g. 2.0.0-alpha.1 (required by Electron)
+#
+# Common commands (--ignore-vcs-tag bypasses old CalVer git tags from before the v2 rewrite):
+#   bumpver update --tag=alpha --tag-num --ignore-vcs-tag   # v2.0.0-alpha.1 -> v2.0.0-alpha.2
+#   bumpver update --tag=beta            --ignore-vcs-tag   # v2.0.0-alpha.X -> v2.0.0-beta.0
+#   bumpver update --tag=rc              --ignore-vcs-tag   # v2.0.0-beta.X  -> v2.0.0-rc.0
+#   bumpver update --tag=final           --ignore-vcs-tag   # v2.0.0-rc.X    -> v2.0.0
+#   bumpver update --minor --tag=alpha   --ignore-vcs-tag   # v2.0.0         -> v2.1.0-alpha.0
+#   bumpver update --major --tag=alpha   --ignore-vcs-tag   # v2.0.0         -> v3.0.0-alpha.0
+#   add --dry to any command to preview changes without writing them
+
+[tool.bumpver]
+current_version = "v2.0.0-alpha.5"
+version_pattern = "vMAJOR.MINOR.PATCH[-TAG.NUM]"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = true
 
 [tool.bumpver.file_patterns]
-#"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
-"skellycam/__init__.py" = ["{version}"]
+"pyproject.toml" = ['version = "{pep440_version}"']
+"skellycam/__init__.py" = ['__version__ = "{version}"']
+"skellycam-ui/package.json" = ['"version": "MAJOR.MINOR.PATCH[-TAG.NUM]"']
+"skellycam-docs/src/components/download/data/downloads.ts" = ["DEFAULT_VERSION = 'MAJOR.MINOR.PATCH[-TAG.NUM]'"]
 
-#[tool.setuptools.dynamic]
-#dependencies = {file = "requirements.txt"}
 
-[project.scripts]
-skellycam = "skellycam.__main__:run"
+# =============================================================================
+# Dev dependencies
+# =============================================================================
+# Install with:  uv sync --group dev
+# =============================================================================
 
-[tool.setuptools]
-py-modules = ["skellycam"]
+[dependency-groups]
+dev = [
+    "bumpver",
+    "pip-tools",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=0.24.0",
+    "pyinstaller>=6.15.0",
+    "ruff>=0.9.0",
+    "poethepoet>=0.32.0",
+]
+
+
+# =============================================================================
+# Task runner (poethepoet)
+# =============================================================================
+# List all tasks:        uv run poe --help
+#
+# Type-checking imports:
+#   uv run poe tc-check    Preview which imports can move behind TYPE_CHECKING
+#   uv run poe tc-fix      Move them automatically
+#   uv run poe tc          Move them + run tests to verify nothing broke
+#
+# Linting:
+#   uv run poe lint        Run all ruff lint rules (report only)
+#   uv run poe lint-fix    Auto-fix all ruff lint violations
+#
+# Testing:
+#   uv run poe test        Run pytest
+#
+# ---- Handling false positives ----
+#
+# Ruff is smart about isinstance/issubclass — it won't move imports that
+# appear in those calls. But if ruff tries to move an import that IS used
+# at runtime (e.g. passed to a registry, used in a TypeAdapter, or checked
+# in a way ruff can't see), suppress it with a noqa comment on the import:
+#
+#   from freemocap.core.pipeline.pipeline_configs import DetectorSpec  # noqa: TC001
+#
+# The rule codes are:
+#   TC001 — stdlib import (e.g. pathlib.Path used in isinstance)
+#   TC002 — third-party import (e.g. numpy.ndarray used in isinstance)
+#   TC003 — first-party import (e.g. your own types used in isinstance)
+#
+# Common situations where you MUST keep an import at runtime (use noqa):
+#   - isinstance(x, SomeClass) / issubclass(x, SomeClass)
+#     (ruff usually catches these, but check if it doesn't)
+#   - TypeAdapter(SomeModel) or model_validate() with a type argument
+#   - Passing a class to a function that does runtime type inspection
+#   - Using a class as a dict key or in a set for type dispatch
+#   - Base classes (class Foo(SomeBase):) — ruff always catches these
+#
+# =============================================================================
+
+[tool.poe.tasks]
+tc-check = { cmd = "ruff check --select TC skellycam/", help = "Preview type-only imports that can move behind TYPE_CHECKING" }
+tc-fix = { cmd = "ruff check --select TC --fix skellycam/", help = "Move type-only imports behind TYPE_CHECKING" }
+tc = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests to verify" }
+lint = { cmd = "ruff check skellycam/", help = "Run all ruff lint rules" }
+lint-fix = { cmd = "ruff check --fix skellycam/", help = "Auto-fix all ruff lint violations" }
+test = { cmd = "pytest", help = "Run test suite" }
+
+
+# =============================================================================
+# Pytest config
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["skellycam/tests"]
+asyncio_mode = "auto"
+
+# =============================================================================
+# Ruff linter config
+# =============================================================================
+# TC rules move imports that are ONLY used in type annotations behind an
+# `if TYPE_CHECKING:` block, so they don't execute at runtime. This makes
+# multiprocessing child process spawns faster (fewer files to import).
+#
+# Ruff automatically detects and preserves imports used in:
+#   - isinstance() / issubclass() calls
+#   - Base classes
+#   - Default values and runtime expressions
+#   - Pydantic field types (via runtime-evaluated-base-classes below)
+#   - Dataclass field types (via runtime-evaluated-decorators below)
+#
+# If ruff incorrectly flags an import that IS needed at runtime,
+# add  # noqa: TC003  (or TC001/TC002) to that import line.
+# =============================================================================
+
+[tool.ruff.lint]
+select = [
+    "TC", # flake8-type-checking: move type-only imports behind TYPE_CHECKING
+]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic evaluates field type annotations at runtime for validation/serialization.
+# Imports used as field types on these base classes must NOT be moved behind
+# TYPE_CHECKING or Pydantic will fail at class creation.
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic.BaseSettings",
+]
+runtime-evaluated-decorators = [
+    "dataclasses.dataclass",
+]
+exempt-modules = ["typing", "typing_extensions"]

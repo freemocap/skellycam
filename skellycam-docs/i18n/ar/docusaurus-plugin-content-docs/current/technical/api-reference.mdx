@@ -1,0 +1,232 @@
+---
+sidebar_position: 4
+---
+
+import { AiGeneratedBanner } from '@freemocap/skellydocs';
+
+<AiGeneratedBanner />
+
+# مرجع API
+
+يوفر خادم SkellyCam واجهة REST API لإدارة الكاميرات ونقطة نهاية WebSocket للبث في الوقت الفعلي. توثيق Swagger التفاعلي متاح على `http://localhost:53117/docs` عند تشغيل الخادم.
+
+## عنوان URL الأساسي
+
+تُقدَّم جميع نقاط النهاية من `http://localhost:53117`. نقاط النهاية الخاصة بالكاميرا مسبوقة بـ `/skellycam`.
+
+## نقاط نهاية التطبيق
+
+### `GET /health`
+
+نقطة نهاية فحص الصحة.
+
+**الاستجابة:** `"Hello"` (200 OK)
+
+### `GET /shutdown`
+
+تبدأ إغلاق الخادم التدريجي. تُعيّن علم الإيقاف العام، وترسل `SIGTERM` إلى عملية الخادم، وتعود فورًا.
+
+**الاستجابة:**
+```json
+{
+  "status": "shutdown_initiated",
+  "message": "Server shutting down. Goodbye!"
+}
+```
+
+## نقاط نهاية الكاميرا
+
+جميع نقاط نهاية الكاميرا مسبوقة بـ `/skellycam/camera`.
+
+### `POST /skellycam/camera/detect`
+
+يكتشف أجهزة الكاميرا المتاحة على النظام.
+
+**معاملات الاستعلام:**
+
+| Parameter | Type | Default | الوصف |
+|-----------|------|---------|-------------|
+| `filter_virtual` | `bool` | `true` | استبعاد الكاميرات الافتراضية من النتائج |
+| `backend_id` | `int \| null` | `null` | معرّف واجهة OpenCV الخلفية المستخدمة للاكتشاف |
+
+**الاستجابة:**
+```json
+{
+  "cameras": [
+    {
+      "index": 0,
+      "name": "HD Webcam",
+      "vendor_id": 1234,
+      "product_id": 5678,
+      "path": "/dev/video0",
+      "backend_id": 200,
+      "backend_name": "V4L2"
+    }
+  ]
+}
+```
+
+### `GET /skellycam/camera/microphone/detect`
+
+يكتشف أجهزة الميكروفون المتاحة على النظام. يُرجع تعيينًا من فهرس الجهاز إلى اسم الجهاز.
+
+**الاستجابة:**
+```json
+{
+  "microphones": {
+    "0": "Built-in Microphone",
+    "1": "USB Audio Device"
+  }
+}
+```
+
+### `POST /skellycam/camera/group/apply`
+
+يُنشئ مجموعة كاميرات جديدة أو يُحدّث مجموعة موجودة. إذا تطابقت معرّفات الكاميرا المقدمة مع مجموعة موجودة، يتم تحديث إعدادات المجموعة؛ وإلا، يتم إنشاء مجموعة جديدة وبدء تشغيلها.
+
+**نص الطلب:**
+```json
+{
+  "camera_configs": {
+    "000": {
+      "camera_id": "000",
+      "camera_index": 0,
+      "camera_name": "Camera-000",
+      "use_this_camera": true,
+      "resolution": { "width": 1280, "height": 720 },
+      "framerate": -1,
+      "color_channels": 3,
+      "pixel_format": "RGB",
+      "exposure_mode": "MANUAL",
+      "exposure": -7,
+      "rotation": -1,
+      "capture_fourcc": "MJPG",
+      "writer_fourcc": "X264"
+    }
+  }
+}
+```
+
+**الاستجابة:**
+```json
+{
+  "group_id": "group-0",
+  "camera_configs": {
+    "0": { }
+  }
+}
+```
+
+### `POST /skellycam/camera/group/all/record/start`
+
+يبدأ التسجيل لجميع مجموعات الكاميرات النشطة.
+
+**نص الطلب:**
+```json
+{
+  "recording_name": "2024-09-15T14_30_00",
+  "recording_directory": "~/skellycam_data/recordings",
+  "mic_device_index": -1
+}
+```
+
+جميع الحقول لها قيم افتراضية. `mic_device_index: -1` يعطّل تسجيل الصوت.
+
+**الاستجابة:** `true` (200 OK)
+
+### `GET /skellycam/camera/group/all/record/stop`
+
+يوقف التسجيل لجميع مجموعات الكاميرات النشطة. يُفعّل معالجة الطوابع الزمنية وتوليد الإحصائيات.
+
+**الاستجابة:** `true` (200 OK)
+
+### `DELETE /skellycam/camera/group/close/all`
+
+يغلق جميع مجموعات الكاميرات، ويحرر جميع موارد الكاميرا ويوقف جميع عمليات العمال.
+
+**الاستجابة:** `true` (200 OK)
+
+### `GET /skellycam/camera/group/all/pause_unpause`
+
+يُبدّل الإيقاف المؤقت/الاستئناف على جميع مجموعات الكاميرات. عند الإيقاف المؤقت، تتوقف الكاميرات عن التقاط الإطارات لكنها تبقى مفتوحة.
+
+**الاستجابة:** `true` (200 OK)
+
+## نقطة نهاية WebSocket
+
+### `WS /skellycam/websocket/connect`
+
+اتصال WebSocket مستمر للبث المباشر للإطارات، وتوجيه السجلات، وتحديثات حالة التطبيق. انظر [بروتوكول WebSocket](websocket-protocol) للمواصفات الكاملة للبروتوكول.
+
+## نقاط نهاية التشغيل
+
+جميع نقاط نهاية التشغيل مسبوقة بـ `/skellycam/playback`. تقدم ملفات فيديو مسجلة مسبقًا عبر HTTP لتشغيل `<video>` الأصلي في المتصفح مع دعم كامل للتقديم عبر طلبات HTTP range.
+
+### `GET /skellycam/playback/recordings`
+
+يسرد مجلدات التسجيلات المتاحة في مجلد التسجيلات الافتراضي (`~/skellycam_data/recordings/`).
+
+**الاستجابة:**
+```json
+[
+  {
+    "name": "2024-09-15T14_30_00",
+    "path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
+    "video_count": 3,
+    "total_size_bytes": 157286400,
+    "created_timestamp": "2024-09-15T14:30:00",
+    "total_frames": 9000,
+    "duration_seconds": 300.0,
+    "fps": 30.0
+  }
+]
+```
+
+### `POST /skellycam/playback/load`
+
+يُحمّل مجلد تسجيل للتشغيل. يتحقق الخادم من المسار، ويكتشف ملفات الفيديو (يتحقق من المجلد مباشرة ومن مجلد فرعي `synchronized_videos/`)، ويجعلها متاحة للبث.
+
+**نص الطلب:**
+```json
+{
+  "recording_path": "~/skellycam_data/recordings/2024-09-15T14_30_00"
+}
+```
+
+**الاستجابة:**
+```json
+{
+  "recording_path": "/home/user/skellycam_data/recordings/2024-09-15T14_30_00",
+  "videos": [
+    {
+      "video_id": "recording.camera0",
+      "filename": "recording.camera0.mp4",
+      "size_bytes": 52428800,
+      "stream_url": "/skellycam/playback/video/recording.camera0"
+    }
+  ]
+}
+```
+
+### `GET /skellycam/playback/video/{video_id}`
+
+يبث ملف فيديو محمّل. الاستجابة هي `FileResponse` قياسي مع ترويسة `Content-Type` الصحيحة، ويتعامل Starlette مع طلبات HTTP range تلقائيًا — مما يتيح التقديم الأصلي في المتصفح، والتخزين المؤقت، وفك الترميز المُسرّع بالعتاد عبر عناصر `<video>`.
+
+### `GET /skellycam/playback/timestamps/{video_id}`
+
+يُرجع بيانات وصفية حول ملف CSV للطوابع الزمنية لفيديو معين، إن كان متاحًا. يبحث في مجلد `timestamps/camera_timestamps/` الخاص بالتسجيل.
+
+## معالجة الأخطاء
+
+تُرجع جميع نقاط النهاية رموز خطأ HTTP القياسية:
+
+- **200** — نجاح
+- **400** — طلب غير صالح (معاملات غير صحيحة)
+- **500** — خطأ داخلي في الخادم (مع تفاصيل الخطأ في نص الاستجابة)
+
+تُرجع الأخطاء بالشكل:
+```json
+{
+  "detail": "Error description string"
+}
+```

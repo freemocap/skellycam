@@ -1,0 +1,12 @@
+{
+  "label": "البداية",
+  "position": 2,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "title": "البداية",
+    "description": "التثبيت وأدلة خطوة بخطوة لاستخدام SkellyCam.",
+    "slug": "getting-started"
+  }
+}

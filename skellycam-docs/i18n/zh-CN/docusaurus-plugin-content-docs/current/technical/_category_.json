@@ -1,0 +1,12 @@
+{
+  "label": "技术文档",
+  "position": 5,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "技术文档",
+    "description": "面向开发者的架构、API 参考和协议规范。",
+    "slug": "technical"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "label": "Conceptos Fundamentales",
+  "position": 3,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "Conceptos Fundamentales",
+    "description": "Los principios de diseno fundamentales y las caracteristicas de SkellyCam.",
+    "slug": "core"
+  }
+}
