@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {useAppDispatch, useAppSelector} from "@/store";
 import {
     StartStopRecordingButton
@@ -39,11 +39,20 @@ export const RecordingInfoPanel: React.FC = () => {
     const [customSubfolderName, setCustomSubfolderName] = useState<string>("");
     const [recordingTag, setRecordingTag] = useState<string>("");
     const [micDeviceIndex, setMicDeviceIndex] = useState<number>(-1);
+    const [micFetchTrigger, setMicFetchTrigger] = useState<number>(0);
     const [pathModalOpen, setPathModalOpen] = useState<boolean>(false);
 
     const {isElectron, api} = useElectronIPC();
     const {connectedCameraIds} = useServer();
     const noCamerasConnected = connectedCameraIds.length === 0;
+    const prevCameraCount = useRef(0);
+
+    useEffect(() => {
+        if (prevCameraCount.current === 0 && connectedCameraIds.length > 0) {
+            setMicFetchTrigger(t => t + 1);
+        }
+        prevCameraCount.current = connectedCameraIds.length;
+    }, [connectedCameraIds]);
 
     useEffect(() => {
         if (pendingOperation) {
@@ -215,6 +224,7 @@ export const RecordingInfoPanel: React.FC = () => {
                 selectedMicIndex={micDeviceIndex}
                 onMicSelected={setMicDeviceIndex}
                 disabled={recordingInfo.isRecording}
+                fetchTrigger={micFetchTrigger}
             />
         </div>
         

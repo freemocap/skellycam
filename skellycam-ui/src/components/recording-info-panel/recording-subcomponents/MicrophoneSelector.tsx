@@ -10,6 +10,7 @@ type MicrophoneSelectorProps = {
     selectedMicIndex: number;
     onMicSelected: (micIndex: number) => void;
     disabled: boolean;
+    fetchTrigger?: number;
 };
 
 type MicrophoneMap = Record<number, string>;
@@ -17,7 +18,7 @@ type MicrophoneMap = Record<number, string>;
 const NO_MIC_LABEL = "No microphone";
 
 export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
-    selectedMicIndex, onMicSelected, disabled,
+    selectedMicIndex, onMicSelected, disabled, fetchTrigger,
 }) => {
     const [microphones, setMicrophones] = useState<MicrophoneMap>({});
     const [loading, setLoading] = useState<boolean>(false);
@@ -41,7 +42,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
         }
     };
 
-    useEffect(() => { detectMicrophones(); }, []);
+    useEffect(() => { if (fetchTrigger) detectMicrophones(); }, [fetchTrigger]);
 
     const micEntries = Object.entries(microphones).map(([id, name]) => ({
         id: Number(id), name: name as string,
@@ -67,6 +68,7 @@ export const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
                         options={options}
                         initialValue={selectedName}
                         onChange={handleChange}
+                        dropUp
                     />
                 </div>
                 <ButtonSm
