@@ -25,35 +25,40 @@ jobs:
             platform: windows
             arch: x64
             label: windows-x64
-            server-binary: skellycam_server.exe
+            server-dir: skellycam_server
+            server-exe: skellycam_server.exe
             electron-arch: x64
 
           - os: macos-15-intel
             platform: macos
             arch: x64
             label: macos-x64-intel
-            server-binary: skellycam_server
+            server-dir: skellycam_server
+            server-exe: skellycam_server
             electron-arch: x64
 
           - os: macos-latest
             platform: macos
             arch: arm64
             label: macos-arm64-apple-silicon
-            server-binary: skellycam_server
+            server-dir: skellycam_server
+            server-exe: skellycam_server
             electron-arch: arm64
 
           - os: ubuntu-22.04
             platform: linux
             arch: x64
             label: linux-x64
-            server-binary: skellycam_server
+            server-dir: skellycam_server
+            server-exe: skellycam_server
             electron-arch: x64
 
           - os: ubuntu-22.04-arm
             platform: linux
             arch: arm64
             label: linux-arm64
-            server-binary: skellycam_server
+            server-dir: skellycam_server
+            server-exe: skellycam_server
             electron-arch: arm64
 
     steps:
@@ -209,20 +214,22 @@ jobs:
           uv pip install pyinstaller
           uv run pyinstaller ./skellycam.spec --clean
 
-      # ── Move server binary into skellycam-ui/ ──
-      - name: Move server binary into skellycam-ui (Windows)
+      # ── Move server directory into skellycam-ui/ ──
+      # PyInstaller onedir produces dist/<server-dir>/ with the executable at
+      # dist/<server-dir>/<server-exe>.
+      - name: Move server directory into skellycam-ui (Windows)
         if: matrix.platform == 'windows'
         run: |
-          Move-Item -Path ".\dist\${{ matrix.server-binary }}" -Destination ".\skellycam-ui\${{ matrix.server-binary }}"
+          Move-Item -Path ".\dist\${{ matrix.server-dir }}" -Destination ".\skellycam-ui\${{ matrix.server-dir }}"
 
-      - name: Move server binary into skellycam-ui (macOS/Linux)
+      - name: Move server directory into skellycam-ui (macOS/Linux)
         if: matrix.platform != 'windows'
         run: |
-          mv "./dist/${{ matrix.server-binary }}" "./skellycam-ui/${{ matrix.server-binary }}"
-          chmod +x "./skellycam-ui/${{ matrix.server-binary }}"
+          mv "./dist/${{ matrix.server-dir }}" "./skellycam-ui/${{ matrix.server-dir }}"
+          chmod +x "./skellycam-ui/${{ matrix.server-dir }}/${{ matrix.server-exe }}"
 
       # ── Windows code signing (server binary) ──
-      - name: Sign skellycam_server.exe with Trusted Signing
+      - name: Sign ${{ matrix.server-exe }} with Trusted Signing
         if: matrix.platform == 'windows'
         uses: azure/trusted-signing-action@v0
         with:
@@ -232,20 +239,24 @@ jobs:
           endpoint: https://eus.codesigning.azure.net/
           trusted-signing-account-name: ${{ secrets.TRUSTED_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.CERTIFICATE_PROFILE_NAME }}
-          files: ${{ github.workspace }}\skellycam-ui\skellycam_server.exe
+          files: ${{ github.workspace }}\skellycam-ui\${{ matrix.server-dir }}\${{ matrix.server-exe }}
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
 
-      # ── macOS code signing (server binary) ──
-      - name: Sign skellycam_server with codesign
+      # ── macOS code signing (server directory) ──
+      # Sign inner dylibs/so files first, then the main executable.
+      - name: Sign ${{ matrix.server-exe }} with codesign
         if: matrix.platform == 'macos'
         run: |
+          find "./skellycam-ui/${{ matrix.server-dir }}/_internal" \( -name "*.dylib" -o -name "*.so" \) | while read f; do
+            codesign --force --options runtime --sign "Developer ID Application" --timestamp "$f"
+          done
           codesign --force --options runtime --sign "Developer ID Application" \
             --timestamp \
-            "./skellycam-ui/${{ matrix.server-binary }}"
-          codesign --verify --verbose "./skellycam-ui/${{ matrix.server-binary }}"
+            "./skellycam-ui/${{ matrix.server-dir }}/${{ matrix.server-exe }}"
+          codesign --verify --verbose "./skellycam-ui/${{ matrix.server-dir }}/${{ matrix.server-exe }}"
           echo "Server binary signed and verified successfully"
       # ── Upload server-only artifact ──
       - name: Upload server binary artifact
@@ -253,7 +264,7 @@ jobs:
         with:
           name: server-${{ matrix.label }}
           path: |
-            skellycam-ui/${{ matrix.server-binary }}
+            skellycam-ui/${{ matrix.server-dir }}/**
           include-hidden-files: true
 
       # ── Electron build ──
@@ -426,16 +437,16 @@ jobs:
           # Artifact directories are named server-<label>, e.g.:
           #   server-windows-x64, server-macos-x64-intel,
           #   server-macos-arm64-apple-silicon, server-linux-x64, server-linux-arm64
-          # Strip the "server-" prefix to get the human-readable suffix.
+          # PyInstaller onedir produces a directory, so we archive it for release.
           for dir in artifacts/server-*; do
             label=$(basename "$dir" | sed 's/^server-//')
 
-            if [ -f "$dir/skellycam_server.exe" ]; then
-              cp "$dir/skellycam_server.exe" "release-assets/skellycam_server_${VERSION}_${label}.exe"
-            elif [ -f "$dir/skellycam_server" ]; then
-              cp "$dir/skellycam_server" "release-assets/skellycam_server_${VERSION}_${label}"
+            if [ -f "$dir/skellycam_server/skellycam_server.exe" ]; then
+              (cd "$dir" && zip -r "../../release-assets/skellycam_server_${VERSION}_${label}.zip" skellycam_server/)
+            elif [ -d "$dir/skellycam_server" ]; then
+              tar -czf "release-assets/skellycam_server_${VERSION}_${label}.tar.gz" -C "$dir" skellycam_server/
             else
-              echo "::error::No server binary found in $dir"
+              echo "::error::No server directory found in $dir"
               exit 1
             fi
           done

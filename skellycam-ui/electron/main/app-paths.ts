@@ -39,26 +39,28 @@ const getDefaultInstallUnpackedPath = (): string => {
     }
 };
 
-// Python server executable candidates in order of preference
+// Python server executable candidates in order of preference.
+// PyInstaller onedir mode produces dist/skellycam_server/skellycam_server —
+// the directory and the executable inside it share the same name.
 export const PYTHON_EXECUTABLE_CANDIDATES = [
     {
         name: 'bundled',
-        path: path.join(getResourcesPath(), SERVER_EXE_NAME),
+        path: path.join(getResourcesPath(), SERVER_EXE_NAME, SERVER_EXE_NAME),
         description: 'Executable bundled with the running app (asar-unpacked)'
     },
     {
         name: 'default-install',
-        path: path.join(getDefaultInstallUnpackedPath(), SERVER_EXE_NAME),
+        path: path.join(getDefaultInstallUnpackedPath(), SERVER_EXE_NAME, SERVER_EXE_NAME),
         description: 'Executable in the platform default install location'
     },
     {
         name: 'development',
-        path: path.join(getResourcesPath(), '..', 'dist', SERVER_EXE_NAME),
-        description: 'Development build executable (../dist/)'
+        path: path.join(getResourcesPath(), '..', 'dist', SERVER_EXE_NAME, SERVER_EXE_NAME),
+        description: 'Development build executable (../dist/skellycam_server/)'
     },
     {
         name: 'portable',
-        path: path.join(process.cwd(), SERVER_EXE_NAME),
+        path: path.join(process.cwd(), SERVER_EXE_NAME, SERVER_EXE_NAME),
         description: 'Portable executable in the current working directory'
     },
     {
