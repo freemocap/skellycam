@@ -143,6 +143,7 @@ class CameraGroup:
         return create_frontend_payload(
             latest_frames=latest_frames,
             display_image_sizes=display_image_sizes,
+            camera_group_id=self.id,
         )
 
     def get_frontend_payload_by_frame_number(
@@ -160,6 +161,7 @@ class CameraGroup:
         frame_number_out, mf_timestamp, frames_bytearray = create_frontend_payload(
             latest_frames=latest_frames,
             display_image_sizes=display_image_sizes,
+            camera_group_id=self.id,
         )
         if frame_number_out != frame_number:
             logger.warning(f"Requested frame number {frame_number} but got {frame_number_out}")

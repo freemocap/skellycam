@@ -1,12 +1,87 @@
 import logging
+import threading
+import time
+from collections import defaultdict
 
 import cv2
 import numpy as np
 
 from skellycam.core.ipc.shared_memory.ring_buffer_shared_memory import ONE_MEGABYTE, ONE_KILOBYTE
+from skellycam.core.types.type_overloads import CameraGroupIdString, FrameNumberInt, MultiframeTimestampFloat
 
 logger = logging.getLogger(__name__)
-from skellycam.core.types.type_overloads import FrameNumberInt, MultiframeTimestampFloat
+
+# Pipeline timing row keys (merged into websocket ``per_camera`` for UI).
+PREVIEW_TIMING_JPEG_ROTATE_MS = "jpeg_rotate_ms"
+PREVIEW_TIMING_JPEG_RESIZE_MS = "jpeg_resize_ms"
+PREVIEW_TIMING_JPEG_ENCODE_MS = "jpeg_encode_ms"
+# Wall-clock for entire multiplex binary (header + all cameras + footer) in create_frontend_payload.
+PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS = "ws_payload_prepare_ms"
+# Per multiframe: max(post_frame_grab_ns) - min(...) across cameras, in ms (live preview telemetry).
+PREVIEW_MULTIFRAME_INTER_CAMERA_GRAB_SPREAD_MS = "inter_camera_grab_spread_ms"
+
+# Thread-safe rolling samples for telemetry (drained by websocket relay).
+_frontend_preview_timing_lock = threading.Lock()
+_frontend_preview_timing_samples: dict[str, dict[str, dict[str, list[float]]]] = defaultdict(
+    lambda: defaultdict(lambda: defaultdict(list))
+)
+_MAX_FRONTEND_PREVIEW_TIMING_SAMPLES_PER_STAGE = 512
+
+_frontend_preview_multiframe_lock = threading.Lock()
+_frontend_preview_multiframe_samples: dict[str, dict[str, list[float]]] = defaultdict(
+    lambda: defaultdict(list)
+)
+_MAX_FRONTEND_PREVIEW_MULTIFRAME_SAMPLES_PER_STAGE = 512
+
+
+def record_frontend_preview_multiframe_ms(
+    camera_group_id: str, stage: str, elapsed_ms: float
+) -> None:
+    """Append one multiframe-wide preview telemetry sample (ms) for a logical stage."""
+    with _frontend_preview_multiframe_lock:
+        bucket = _frontend_preview_multiframe_samples[camera_group_id][stage]
+        bucket.append(elapsed_ms)
+        if len(bucket) > _MAX_FRONTEND_PREVIEW_MULTIFRAME_SAMPLES_PER_STAGE:
+            del bucket[: len(bucket) - _MAX_FRONTEND_PREVIEW_MULTIFRAME_SAMPLES_PER_STAGE]
+
+
+def get_and_clear_frontend_preview_multiframe_samples(
+    camera_group_id: str,
+) -> dict[str, list[float]]:
+    """Pop all pending multiframe preview samples: ``stage -> list of ms``."""
+    with _frontend_preview_multiframe_lock:
+        raw = _frontend_preview_multiframe_samples.pop(camera_group_id, {})
+        return {stage: list(samples) for stage, samples in raw.items()}
+
+
+def record_frontend_preview_timing_ms(
+    camera_group_id: str, camera_id: str, stage: str, elapsed_ms: float
+) -> None:
+    """Append one server-side preview step duration (ms) for telemetry."""
+    with _frontend_preview_timing_lock:
+        bucket = _frontend_preview_timing_samples[camera_group_id][camera_id][stage]
+        bucket.append(elapsed_ms)
+        if len(bucket) > _MAX_FRONTEND_PREVIEW_TIMING_SAMPLES_PER_STAGE:
+            del bucket[: len(bucket) - _MAX_FRONTEND_PREVIEW_TIMING_SAMPLES_PER_STAGE]
+
+
+def get_and_clear_frontend_preview_timing_samples(
+    camera_group_id: str,
+) -> dict[str, dict[str, list[float]]]:
+    """Pop all pending preview timing samples: ``camera_id -> stage -> list of ms``."""
+    with _frontend_preview_timing_lock:
+        raw = _frontend_preview_timing_samples.pop(camera_group_id, {})
+        return {
+            str(cam_id): {stage: list(samples) for stage, samples in stages.items()}
+            for cam_id, stages in raw.items()
+        }
+
+
+def record_jpeg_encode_ms(camera_group_id: str, camera_id: str, elapsed_ms: float) -> None:
+    """Record JPEG encode duration only (alias for external callers/tests)."""
+    record_frontend_preview_timing_ms(
+        camera_group_id, camera_id, PREVIEW_TIMING_JPEG_ENCODE_MS, elapsed_ms
+    )
 
 
 class MessageType:
@@ -34,14 +109,14 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype([
 JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
 
 
-
 _reusable_bytes_payload: bytearray = bytearray(0)
 
 
 def create_frontend_payload(
         latest_frames: dict[str, np.recarray],
         display_image_sizes: dict[str, dict[str, float]] | None = None,
-        jpeg_encoding_parameters: list[int] | None = None
+        jpeg_encoding_parameters: list[int] | None = None,
+        camera_group_id: CameraGroupIdString | None = None,
 ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]:
     """
     Convert a multi-frame record array into bytes for websocket transmission.
@@ -67,6 +142,19 @@ def create_frontend_payload(
 
     frame_number = frame_numbers[0]
     number_of_cameras = len(camera_ids)
+
+    cg_id = str(camera_group_id) if camera_group_id is not None else None
+    if cg_id is not None and camera_ids:
+        posts = [
+            int(latest_frames[camera_id].frame_metadata.timestamps.post_frame_grab_ns[0])
+            for camera_id in camera_ids
+        ]
+        spread_ms = (max(posts) - min(posts)) / 1e6
+        record_frontend_preview_multiframe_ms(
+            cg_id, PREVIEW_MULTIFRAME_INTER_CAMERA_GRAB_SPREAD_MS, spread_ms
+        )
+
+    t_ws_payload_prepare0 = time.perf_counter()
 
     # Pre-allocate with extra space for config data
     config_overhead = 300 * number_of_cameras  # Full config is included
@@ -106,10 +194,16 @@ def create_frontend_payload(
 
         # Handle image rotation
         if frame_recarray.frame_metadata.camera_info.rotation != -1:
+            t_rot0 = time.perf_counter()
             rotated_image = cv2.rotate(
                 src=frame_recarray.image[0],
                 rotateCode=frame_recarray.frame_metadata.camera_info.rotation[0]
             )
+            if cg_id is not None:
+                record_frontend_preview_timing_ms(
+                    cg_id, str(camera_id), PREVIEW_TIMING_JPEG_ROTATE_MS,
+                    (time.perf_counter() - t_rot0) * 1e3,
+                )
         else:
             rotated_image = frame_recarray.image[0]
 
@@ -133,17 +227,29 @@ def create_frontend_payload(
             resize_image_width = int(orig_w * scale)
             resize_image_height = int(orig_h * scale)
 
-        # Resize and encode image
+        t_resize0 = time.perf_counter()
         resized_img = cv2.resize(
             src=rotated_image,
             dsize=(resize_image_width, resize_image_height),
             interpolation=cv2.INTER_LINEAR
         )
+        if cg_id is not None:
+            record_frontend_preview_timing_ms(
+                cg_id, str(camera_id), PREVIEW_TIMING_JPEG_RESIZE_MS,
+                (time.perf_counter() - t_resize0) * 1e3,
+            )
+
+        t_enc0 = time.perf_counter()
         _, jpeg_data = cv2.imencode(
             ext='.jpg',
             img=resized_img,
             params=jpeg_encoding_parameters
         )
+        if cg_id is not None:
+            record_frontend_preview_timing_ms(
+                cg_id, str(camera_id), PREVIEW_TIMING_JPEG_ENCODE_MS,
+                (time.perf_counter() - t_enc0) * 1e3,
+            )
         jpeg_string = jpeg_data.tobytes()
         jpeg_string_length = len(jpeg_string)
 
@@ -195,5 +301,11 @@ def create_frontend_payload(
     current_pos += len(footer_bytes)
 
     frontend_bytes = _reusable_bytes_payload[:current_pos]
+
+    if cg_id is not None:
+        prepare_ms = (time.perf_counter() - t_ws_payload_prepare0) * 1e3
+        record_frontend_preview_multiframe_ms(
+            cg_id, PREVIEW_TIMING_WS_PAYLOAD_PREPARE_MS, prepare_ms
+        )
 
     return frame_number, np.mean(frame_timestamps), frontend_bytes
