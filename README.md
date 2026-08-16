@@ -32,7 +32,7 @@ SkellyCam is the camera backend for the [FreeMoCap](https://github.com/freemocap
 - **Audio capture** — optional microphone recording alongside video
 - **Recording browser** — browse saved sessions with metadata (camera count, file size, duration, FPS, frame count), sorted newest-first
 - **Internationalization** — UI available in 36+ languages ([help us translate!](TRANSLATING.md))
-
+.
 ---
 
 ## Quick Start
