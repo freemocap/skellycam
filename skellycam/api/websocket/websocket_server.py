@@ -87,6 +87,7 @@ class WebsocketServer:
         self.last_received_frontend_confirmation: int = -1
 
         self.last_sent_frame_number: int = -1
+        self._last_sent_by_group: dict[CameraGroupIdString, int] = {}
         self._display_image_sizes: dict[CameraGroupIdString, dict[str, float]] | None = None
         self._server_framerate_calculators: dict[CameraGroupIdString, ServerFramerateCalculator] = {}
         self._display_framerate_trackers: dict[CameraGroupIdString, FramerateTracker] = {}
@@ -138,7 +139,7 @@ class WebsocketServer:
             if self.websocket.client_state == WebSocketState.CONNECTED:
                 await self.websocket.send_json(data)
 
-    async def _send_bytes(self, data: bytes|bytearray) -> None:
+    async def _send_bytes(self, data: bytes|bytearray|memoryview) -> None:
         """Send bytes through the websocket, serialized by the send lock."""
         async with self._send_lock:
             if self.websocket.client_state == WebSocketState.CONNECTED:
@@ -201,8 +202,8 @@ class WebsocketServer:
                     else:
                         new_frontend_payloads: dict[
                             CameraGroupIdString, tuple[
-                                FrameNumberInt, MultiframeTimestampFloat, bytes]] = self._cgm.get_latest_frontend_payloads(
-                            if_newer_than=self.last_sent_frame_number,
+                                FrameNumberInt, MultiframeTimestampFloat, memoryview]] = self._cgm.get_latest_frontend_payloads(
+                            if_newer_than=self._last_sent_by_group,
                             display_image_sizes=self._display_image_sizes)
 
                         for camera_group_id, (frame_number,
@@ -210,6 +211,7 @@ class WebsocketServer:
                                               payload_bytes) in new_frontend_payloads.items():
                             await self._send_bytes(payload_bytes)
                             self.last_sent_frame_number = int(frame_number)
+                            self._last_sent_by_group[camera_group_id] = int(frame_number)
 
                             # Server framerate: computed from frame_number + capture timestamp.
                             # frame_number increments by 1 per actual camera capture,
