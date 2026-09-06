@@ -5,6 +5,12 @@ from dataclasses import dataclass
 import math
 from pathlib import Path
 from enum import StrEnum
+from skellycam.system.default_paths import CAMERA_TIMESTAMPS_FOLDER_NAME
+
+
+def camera_timing_path(*, recording_folder: Path, camera_id: str) -> Path:
+    """Resolve a camera sidecar without creating directories during playback."""
+    return recording_folder / CAMERA_TIMESTAMPS_FOLDER_NAME / f"{recording_folder.name}.camera{camera_id}.timestamps.csv"
 
 
 class TimingMethod(StrEnum):

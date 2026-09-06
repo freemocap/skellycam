@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.recorders.videos.parse_video_filename import ParsedVideoFilename
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
+from skellycam.core.timestamps.recording_timing_reader import camera_timing_path
 from skellycam.system.default_paths import get_default_recording_folder_path, CAMERA_TIMESTAMPS_FOLDER_NAME, \
     TIMESTAMPS_FOLDER_NAME, SYNCHRONIZED_VIDEOS_FOLDER_NAME
 from skellycam.core.camera.config.image_rotation_types import rotation_int_to_name
@@ -101,7 +102,9 @@ class RecordingInfo(BaseModel):
         return str(videos_dir / parsed.filename)
 
     def camera_timestamps_file_path_from_camera_id(self, camera_id: str) -> str:
-        return str(Path(self.camera_timestamps_folder) / f"{self.recording_name}.camera{camera_id}.timestamps.csv")
+        path = camera_timing_path(recording_folder=Path(self.recording_directory) / self.recording_name, camera_id=camera_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
     @property
     def audio_file_path(self) -> str:
