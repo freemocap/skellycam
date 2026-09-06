@@ -7,7 +7,6 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_camera_worker_method import opencv_camera_worker_method
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
-from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.process_management.managed_worker import ManagedWorker
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
@@ -46,6 +45,8 @@ class CameraWorker:
         recording_info_subscription: TopicSubscriptionQueue,
     ) -> "CameraWorker":
         worker = worker_registry.create_worker(
+            shutdown_flag=ipc.shutdown_camera_group_flag,
+            worker_mode=worker_registry.worker_mode,
             target=opencv_camera_worker_method,
             name=f"Camera{config.camera_index}-{camera_id}-Worker",
             log_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication,

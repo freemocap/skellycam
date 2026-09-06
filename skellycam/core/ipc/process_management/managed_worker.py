@@ -4,18 +4,18 @@ ManagedWorker: ABC for managed processes and threads with a common interface.
 WorkerMode enum lets callers swap between multiprocessing.Process and
 threading.Thread backends. Both provide:
   - Escalating shutdown (wait → terminate → kill, always joins)
-  - Unhandled exception → sets global_kill_flag
+  - Unhandled exception → sets shutdown_flag
   - Common interface for pid, exitcode, is_alive, join, start, etc.
 
 ManagedProcess additionally:
-  - Installs SIGTERM/SIGINT handlers in child → sets global_kill_flag
+  - Installs SIGTERM/SIGINT handlers in child → sets shutdown_flag
   - Auto child-process logging config (including ws log forwarding)
   - atexit safety net (only fires on unclean exit)
   - Queue feeder thread cancellation so processes exit promptly
 
 ManagedThread:
   - Shares parent's logging config (no queue-based logging needed)
-  - Cannot be force-killed; terminate/kill set the global_kill_flag
+  - Cannot be force-killed; terminate/kill set the shutdown_flag
     and rely on the worker function checking it
 """
 import abc
@@ -28,7 +28,7 @@ import os
 import signal
 import threading
 from enum import Enum
-from typing import Callable, Optional
+from typing import Callable
 
 from skellycam import LOG_LEVEL
 from skellylogs import configure_logging
@@ -51,15 +51,41 @@ class ManagedWorker(abc.ABC):
         self,
         *,
         name: str,
-        global_kill_flag: Synchronized,
+        shutdown_flag: Synchronized,
     ) -> None:
         self._name = name
-        self._global_kill_flag = global_kill_flag
+        self._shutdown_flag = shutdown_flag
         self._intentionally_terminated: bool = False
+        self._failure_exitcode: int | None = None
 
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def intentionally_terminated(self) -> bool:
+        return self._intentionally_terminated
+
+    def mark_stopping(self) -> None:
+        """Mark expected termination before signaling any workers in the owner."""
+        self._intentionally_terminated = True
+
+    def signal_owner_shutdown(self) -> None:
+        self._shutdown_flag.value = True
+
+    def shares_owner(self, other: "ManagedWorker") -> bool:
+        return self._shutdown_flag is other._shutdown_flag
+
+    @property
+    def failure_exitcode(self) -> int | None:
+        if self._failure_exitcode is not None:
+            return self._failure_exitcode
+        if not self.intentionally_terminated and self.exitcode not in (None, 0):
+            return self.exitcode
+        return None
+
+    def record_failure(self) -> None:
+        self._failure_exitcode = self.exitcode
 
     @abc.abstractmethod
     def start(self) -> None: ...
@@ -97,9 +123,8 @@ class ManagedWorker(abc.ABC):
         Escalating shutdown for a single worker. Always joins to prevent
         zombies or leaked threads.
 
-        Does NOT touch global_kill_flag — that's the caller's responsibility.
-        The caller (CameraManager.close or WorkerRegistry.shutdown_all)
-        already told the worker to stop via ipc flags or the global kill flag.
+        Callers signal the owner or node before waiting. Forced thread termination
+        signals the owner flag; processes receive OS termination signals.
 
         1. Wait for worker to exit on its own
         2. terminate() → wait
@@ -158,7 +183,7 @@ def _process_entry_point(
     *,
     target_fn: Callable[..., None],
     name: str,
-    global_kill_flag: Synchronized,
+    shutdown_flag: Synchronized,
     log_queue: multiprocessing.queues.Queue | None,
     worker_kwargs: dict,
 ) -> None:
@@ -166,16 +191,16 @@ def _process_entry_point(
     Entry point for child processes. Runs in the spawned process.
 
     Installs signal handlers, configures logging, runs the target function,
-    and sets the global kill flag on unhandled exceptions.
+    and sets the owner shutdown flag on unhandled exceptions.
     """
 
     def _on_signal(signum: int, frame: object) -> None:
         sig_name = signal.Signals(signum).name
         logger.info(
             f"ManagedProcess {name} (PID: {os.getpid()}) "
-            f"received {sig_name}, setting global kill flag"
+            f"received {sig_name}, setting owner shutdown flag"
         )
-        global_kill_flag.value = True
+        shutdown_flag.value = True
 
     signal.signal(signal.SIGTERM, _on_signal)
     signal.signal(signal.SIGINT, _on_signal)
@@ -186,12 +211,12 @@ def _process_entry_point(
     clean_exit = False
 
     def _atexit_safety_net() -> None:
-        if not clean_exit and not global_kill_flag.value:
+        if not clean_exit and not shutdown_flag.value:
             logger.warning(
                 f"ManagedProcess {name} (PID: {os.getpid()}) "
-                f"exiting uncleanly — setting global kill flag"
+                f"exiting uncleanly — setting owner shutdown flag"
             )
-            global_kill_flag.value = True
+            shutdown_flag.value = True
 
     atexit.register(_atexit_safety_net)
 
@@ -205,7 +230,7 @@ def _process_entry_point(
             f"Unhandled exception in ManagedProcess {name} "
             f"(PID: {os.getpid()}): {e}"
         )
-        global_kill_flag.value = True
+        shutdown_flag.value = True
         raise
     finally:
         # Cancel queue feeder threads so the process can exit promptly
@@ -229,12 +254,12 @@ class ManagedProcess(ManagedWorker):
         *,
         target: Callable[..., None],
         name: str,
-        global_kill_flag: Synchronized,
+        shutdown_flag: Synchronized,
         log_queue: multiprocessing.queues.Queue | None,
         daemon: bool = True,
         kwargs: dict | None = None,
     ) -> None:
-        super().__init__(name=name, global_kill_flag=global_kill_flag)
+        super().__init__(name=name, shutdown_flag=shutdown_flag)
         self._log_queue = log_queue
         self._process = multiprocessing.Process(
             target=_process_entry_point,
@@ -243,7 +268,7 @@ class ManagedProcess(ManagedWorker):
             kwargs=dict(
                 target_fn=target,
                 name=name,
-                global_kill_flag=global_kill_flag,
+                shutdown_flag=shutdown_flag,
                 log_queue=log_queue,
                 worker_kwargs=kwargs or {},
             ),
@@ -293,12 +318,12 @@ class ManagedThread(ManagedWorker):
         *,
         target: Callable[..., None],
         name: str,
-        global_kill_flag: Synchronized,
+        shutdown_flag: Synchronized,
         log_queue: multiprocessing.queues.Queue | None,
         daemon: bool = True,
         kwargs: dict | None = None,
     ) -> None:
-        super().__init__(name=name, global_kill_flag=global_kill_flag)
+        super().__init__(name=name, shutdown_flag=shutdown_flag)
         self._target_fn = target
         self._worker_kwargs = kwargs or {}
         self._exitcode: int | None = None
@@ -318,7 +343,7 @@ class ManagedThread(ManagedWorker):
                 f"Unhandled exception in ManagedThread {self.name}: {e}"
             )
             self._exitcode = 1
-            self._global_kill_flag.value = True
+            self._shutdown_flag.value = True
             raise
         finally:
             logger.debug(f"ManagedThread {self.name} (TID: {threading.get_ident()}) exiting")
@@ -344,15 +369,15 @@ class ManagedThread(ManagedWorker):
         return self._exitcode
 
     def terminate(self) -> None:
-        """Threads cannot receive SIGTERM. Sets the global kill flag instead."""
+        """Threads cannot receive SIGTERM. Sets the owner shutdown flag instead."""
         logger.debug(
             f"ManagedThread {self.name} cannot be terminated directly, setting kill flag"
         )
-        self._global_kill_flag.value = True
+        self._shutdown_flag.value = True
 
     def kill(self) -> None:
-        """Threads cannot be force-killed. Sets the global kill flag instead."""
+        """Threads cannot be force-killed. Sets the owner shutdown flag instead."""
         logger.warning(
             f"ManagedThread {self.name} cannot be force-killed, setting kill flag"
         )
-        self._global_kill_flag.value = True
+        self._shutdown_flag.value = True

@@ -68,7 +68,7 @@ def opencv_camera_worker_method(
         logger.exception(
             f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}"
         )
-        ipc.kill_everything()
+        ipc.should_continue = False
         raise
     finally:
         logger.debug(f"Releasing camera {camera_id} `cv2.VideoCapture` and shutting down CameraProcess")

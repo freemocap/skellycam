@@ -7,7 +7,7 @@ import os
 import signal
 import threading
 import time
-from typing import Callable, Optional
+from typing import Callable
 
 from skellycam.core.ipc.process_management.managed_worker import (
     ManagedWorker,
@@ -81,20 +81,25 @@ class WorkerRegistry:
             self._heartbeat_stop.wait(timeout=1.0)
 
     def _child_monitor_loop(self) -> None:
-        """Watch for unexpected worker death or a set global kill flag, and trigger parent shutdown."""
+        """Stop failed worker owners; reserve parent shutdown for the application kill flag."""
         while not self._heartbeat_stop.is_set():
             for worker in self._workers:
                 if (worker.pid is not None
                         and not worker.is_alive()
                         and worker.exitcode not in (None, 0)
-                        and not worker._intentionally_terminated):
+                        and not worker.intentionally_terminated):
                     logger.error(
                         f"Worker {worker.name} (PID: {worker.pid}) died with "
-                        f"exit code {worker.exitcode} — triggering parent shutdown"
+                        f"exit code {worker.exitcode} — stopping its owner"
                     )
-                    self._global_kill_flag.value = True
-                    os.kill(os.getpid(), signal.SIGTERM)
-                    return
+                    worker.record_failure()
+                    worker.signal_owner_shutdown()
+                    siblings = [item for item in self._workers if item.shares_owner(worker)]
+                    for sibling in siblings:
+                        sibling.mark_stopping()
+                    for sibling in siblings:
+                        if sibling.is_alive():
+                            sibling.terminate_gracefully()
             # Any actor sharing the flag — including a main-process asyncio task
             # such as the websocket relay — can request whole-app shutdown by
             # setting it. No worker exits in that case, so the worker-death scan
@@ -128,6 +133,8 @@ class WorkerRegistry:
     def create_worker(
         self,
         *,
+        shutdown_flag: Synchronized,
+        worker_mode: WorkerMode,
         target: Callable[..., None],
         name: str,
         log_queue: multiprocessing.queues.Queue | None = None,
@@ -135,26 +142,26 @@ class WorkerRegistry:
         kwargs: dict | None = None,
     ) -> ManagedWorker:
         """Create a ManagedWorker (process or thread based on worker_mode), register it, and return it."""
-        if self._worker_mode == WorkerMode.PROCESS:
+        if worker_mode == WorkerMode.PROCESS:
             worker: ManagedWorker = ManagedProcess(
                 target=target,
                 name=name,
-                global_kill_flag=self._global_kill_flag,
+                shutdown_flag=shutdown_flag,
                 log_queue=log_queue,
                 daemon=daemon,
                 kwargs=kwargs,
             )
-        elif self._worker_mode == WorkerMode.THREAD:
+        elif worker_mode == WorkerMode.THREAD:
             worker = ManagedThread(
                 target=target,
                 name=name,
-                global_kill_flag=self._global_kill_flag,
+                shutdown_flag=shutdown_flag,
                 log_queue=log_queue,
                 daemon=daemon,
                 kwargs=kwargs,
             )
         else:
-            raise ValueError(f"Unknown worker mode: {self._worker_mode}")
+            raise ValueError(f"Unknown worker mode: {worker_mode}")
         self._workers.append(worker)
         return worker
 
@@ -179,6 +186,9 @@ class WorkerRegistry:
 
         # Step 1: kill flag — THIS is the right place to set it (whole-app shutdown)
         self._global_kill_flag.value = True
+        for worker in alive:
+            worker.mark_stopping()
+            worker.signal_owner_shutdown()
         for worker in alive:
             worker.join(timeout=kill_flag_timeout)
 

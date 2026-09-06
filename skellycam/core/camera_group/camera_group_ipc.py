@@ -65,6 +65,3 @@ class CameraGroupIPC:
             camera_group_shm_dto=shm_dto,
         )
         self.pubsub.topics[TopicTypes.SHM_UPDATES].publish(shm_update_message)
-
-    def kill_everything(self) -> None:
-        self.global_kill_flag.value = True

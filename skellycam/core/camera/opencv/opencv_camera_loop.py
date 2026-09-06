@@ -119,7 +119,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
     except Exception as e:
         self_status.signal_error()
         logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")
-        ipc.kill_everything()
+        ipc.should_continue = False
         raise
     finally:
         if video_recorder:

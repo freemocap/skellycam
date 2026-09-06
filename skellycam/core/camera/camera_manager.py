@@ -100,7 +100,7 @@ class CameraManager:
         # Mark all workers as intentionally terminated before shutdown
         # so the child monitor doesn't trigger a cascade kill
         for camera_worker in self.camera_workers.values():
-            camera_worker.worker._intentionally_terminated = True
+            camera_worker.worker.mark_stopping()
 
         # Phase 1: Wait for all processes to exit on their own (parallel)
         for camera_worker in self.camera_workers.values():
