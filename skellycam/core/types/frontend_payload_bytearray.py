@@ -1,7 +1,10 @@
+from dataclasses import dataclass
+
 import logging
 
 import cv2
 import numpy as np
+from numpy.typing import NDArray
 
 
 logger = logging.getLogger(__name__)
@@ -49,148 +52,108 @@ FRONTEND_FRAME_HEADER_DTYPE = np.dtype(
 JPEG_ENCODING_PARAMETERS = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
 
 
+@dataclass(frozen=True)
+class ImagePayloadFrame:
+    """An oriented BGR image with explicit transport identity and output size.
+
+    Transport IDs occupy the wire's ASCII camera slot. Playback sessions map
+    these bounded IDs to full media identities separately from calibration IDs.
+    The caller retains image ownership until encoding returns.
+    """
+
+    transport_id: str
+    transport_index: int
+    frame_number: int
+    timestamp: float
+    image: NDArray[np.uint8]
+    output_width: int
+    output_height: int
+
+    def __post_init__(self) -> None:
+        encoded_id = self.transport_id.encode("ascii")
+        if not encoded_id or len(encoded_id) > 16 or b"\0" in encoded_id:
+            raise ValueError("Image transport IDs must contain 1–16 non-null ASCII bytes")
+        if self.frame_number < 0 or self.transport_index < 0:
+            raise ValueError("Frame ordinal and transport index must be nonnegative")
+        if not np.isfinite(self.timestamp):
+            raise ValueError("Image timestamp must be finite")
+        if self.image.dtype != np.uint8 or self.image.ndim != 3 or self.image.shape[2] != 3:
+            raise ValueError("Image payload requires uint8 BGR pixels")
+        if min(self.image.shape[:2]) < 1 or min(self.output_width, self.output_height) < 1:
+            raise ValueError("Image dimensions must be positive")
+
+
+@dataclass(frozen=True)
+class ImagePayloadRequest:
+    frames: tuple[ImagePayloadFrame, ...]
+    jpeg_encoding_parameters: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        if not self.frames:
+            raise ValueError("Cannot serialize an empty image group")
+        if len({frame.frame_number for frame in self.frames}) != 1:
+            raise ValueError("Camera frame numbers must agree")
+        if len({frame.transport_id for frame in self.frames}) != len(self.frames):
+            raise ValueError("Image transport IDs must be unique")
+        if len({frame.transport_index for frame in self.frames}) != len(self.frames):
+            raise ValueError("Image transport indices must be unique")
+        if len(self.jpeg_encoding_parameters) % 2:
+            raise ValueError("JPEG encoding parameters must be key/value pairs")
+
+
+def encode_image_payload(request: ImagePayloadRequest) -> tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview]:
+    """Encode one synchronized image group into an independently owned wire buffer."""
+    frame_number = request.frames[0].frame_number
+    payload = bytearray()
+    header = np.zeros(1, dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
+    header["message_type"] = MessageType.PAYLOAD_HEADER
+    header["frame_number"] = frame_number
+    header["number_of_cameras"] = len(request.frames)
+    payload.extend(header.tobytes())
+    for frame in request.frames:
+        image = frame.image
+        if image.shape[:2] != (frame.output_height, frame.output_width):
+            image = cv2.resize(src=image, dsize=(frame.output_width, frame.output_height), interpolation=cv2.INTER_LINEAR)
+        success, jpeg = cv2.imencode(ext=".jpg", img=image, params=list(request.jpeg_encoding_parameters))
+        if not success:
+            raise RuntimeError(f"JPEG encoding failed for image {frame.transport_id}")
+        frame_header = np.zeros(1, dtype=FRONTEND_FRAME_HEADER_DTYPE)
+        frame_header["message_type"] = MessageType.FRAME_HEADER
+        frame_header["frame_number"] = frame_number
+        frame_header["camera_id"] = frame.transport_id.encode("ascii")
+        frame_header["camera_index"] = frame.transport_index
+        frame_header["color_channels"] = 3
+        frame_header["image_width"] = frame.output_width
+        frame_header["image_height"] = frame.output_height
+        frame_header["jpeg_string_length"] = jpeg.nbytes
+        payload.extend(frame_header.tobytes())
+        payload.extend(jpeg.tobytes())
+    header["message_type"] = MessageType.PAYLOAD_FOOTER
+    payload.extend(header.tobytes())
+    return frame_number, float(np.mean([frame.timestamp for frame in request.frames])), memoryview(payload).toreadonly()
+
+
 def create_frontend_payload(
     latest_frames: dict[str, np.recarray],
     display_image_sizes: dict[str, dict[str, float]] | None = None,
     jpeg_encoding_parameters: list[int] | None = None,
 ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview]:
-    """
-    Convert a multi-frame record array into bytes for websocket transmission.
-
-    Args:
-        latest_frames: Dictionary of camera_id to frame recarray
-        display_image_sizes: Optional display sizes for each camera
-        jpeg_encoding_parameters: JPEG encoding parameters
-
-    Returns:
-        Tuple of (frame_number, mean_timestamp, payload_view)
-
-    Each returned read-only view owns a distinct backing buffer. Building another
-    payload cannot mutate it, including while an asynchronous send is suspended.
-    No view is exported until all buffer growth is complete.
-    """
-    payload = bytearray()
-
-    if jpeg_encoding_parameters is None:
-        jpeg_encoding_parameters = JPEG_ENCODING_PARAMETERS
-
-    if not latest_frames:
-        raise ValueError("Cannot serialize an empty camera group")
-    camera_ids = list(latest_frames.keys())
-    frame_numbers = [
-        latest_frames[camera_id].frame_metadata.frame_number[0]
-        for camera_id in camera_ids
-    ]
-
-    if len(set(frame_numbers)) != 1:
-        raise ValueError(f"Camera frame numbers must agree: {frame_numbers}")
-
-    frame_number = frame_numbers[0]
-    number_of_cameras = len(camera_ids)
-
-    current_pos = 0
-
-    # Add header with proper message type
-    payload_header = np.recarray(1, dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
-    payload_header.message_type = MessageType.PAYLOAD_HEADER
-    payload_header.frame_number = frame_number
-    payload_header.number_of_cameras = number_of_cameras
-    header_bytes = payload_header.tobytes()
-    payload[current_pos : current_pos + len(header_bytes)] = header_bytes
-    current_pos += len(header_bytes)
-
-    image_scale = 0.5
-    frame_timestamps: list[float | np.floating] = []
-
-    for camera_id in camera_ids:
-        frame_recarray = latest_frames[camera_id]
-        frame_timestamps.append(
-            np.mean(
-                [
-                    frame_recarray.frame_metadata.timestamps.pre_frame_grab_ns,
-                    frame_recarray.frame_metadata.timestamps.post_frame_grab_ns,
-                ]
-            )
-        )
-
-        # Handle image rotation
-        if frame_recarray.frame_metadata.camera_info.rotation != -1:
-            rotated_image = cv2.rotate(
-                src=frame_recarray.image[0],
-                rotateCode=frame_recarray.frame_metadata.camera_info.rotation[0],
-            )
-        else:
-            rotated_image = frame_recarray.image[0]
-
-        orig_h, orig_w = rotated_image.shape[:2]
-
-        if display_image_sizes is None or camera_id not in display_image_sizes:
-            resize_image_width = int(orig_w * image_scale)
-            resize_image_height = int(orig_h * image_scale)
-        else:
-            display_w = int(display_image_sizes[camera_id]["width"])
-            display_h = int(display_image_sizes[camera_id]["height"])
-            # Fit the image within the display box while PRESERVING aspect ratio.
-            # A uniform scale factor avoids the independent-axis clamping that
-            # would squish/stretch the image when the display aspect ratio
-            # differs from the camera's native aspect ratio.
-            scale = min(
-                display_w / orig_w,
-                display_h / orig_h,
-                image_scale,
-            )
-            resize_image_width = int(orig_w * scale)
-            resize_image_height = int(orig_h * scale)
-
-        # Resize and encode image
-        resized_img = cv2.resize(
-            src=rotated_image,
-            dsize=(resize_image_width, resize_image_height),
-            interpolation=cv2.INTER_LINEAR,
-        )
-        encoded, jpeg_data = cv2.imencode(
-            ext=".jpg", img=resized_img, params=jpeg_encoding_parameters
-        )
-        if not encoded:
-            raise RuntimeError(f"JPEG encoding failed for camera {camera_id}")
-        jpeg_string = jpeg_data.tobytes()
-        jpeg_string_length = len(jpeg_string)
-
-        # Create frame header
-        frame_header = np.recarray(1, dtype=FRONTEND_FRAME_HEADER_DTYPE)
-        frame_header.message_type = MessageType.FRAME_HEADER
-        frame_header.frame_number = frame_number
-        frame_header.camera_id = camera_id.encode("utf-8")[:16]  # Truncate if necessary
-        frame_header.camera_index = (
-            frame_recarray.frame_metadata.camera_info.camera_index[0]
-        )
-        frame_header.color_channels = (
-            frame_recarray.frame_metadata.camera_info.color_channels[0]
-        )
-        frame_header.image_width = resize_image_width
-        frame_header.image_height = resize_image_height
-        frame_header.jpeg_string_length = jpeg_string_length
-
-        frame_header_bytes = frame_header.tobytes()
-
-        # Copy data
-        payload[current_pos : current_pos + len(frame_header_bytes)] = (
-            frame_header_bytes
-        )
-        current_pos += len(frame_header_bytes)
-        payload[current_pos : current_pos + jpeg_string_length] = jpeg_string
-        current_pos += jpeg_string_length
-
-    # Add footer with proper message type
-    payload_footer = np.array(
-        [(MessageType.PAYLOAD_FOOTER, frame_number, number_of_cameras)],
-        dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE,
-    )
-    footer_bytes = payload_footer.tobytes()
-
-    payload[current_pos : current_pos + len(footer_bytes)] = footer_bytes
-    current_pos += len(footer_bytes)
-
-    frontend_bytes = memoryview(payload).toreadonly()
-
-    return frame_number, np.mean(frame_timestamps), frontend_bytes
+    """Adapt live camera records to the shared image encoder with live display policy."""
+    frames: list[ImagePayloadFrame] = []
+    for camera_id, record in latest_frames.items():
+        rotation = int(record.frame_metadata.camera_info.rotation[0])
+        image = cv2.rotate(src=record.image[0], rotateCode=rotation) if rotation != -1 else record.image[0]
+        height, width = image.shape[:2]
+        scale = 0.5
+        if display_image_sizes is not None and camera_id in display_image_sizes:
+            display = display_image_sizes[camera_id]
+            scale = min(int(display["width"]) / width, int(display["height"]) / height, scale)
+        frames.append(ImagePayloadFrame(
+            transport_id=camera_id, transport_index=int(record.frame_metadata.camera_info.camera_index[0]),
+            frame_number=int(record.frame_metadata.frame_number[0]),
+            timestamp=float(np.mean([record.frame_metadata.timestamps.pre_frame_grab_ns,
+                                     record.frame_metadata.timestamps.post_frame_grab_ns])),
+            image=image, output_width=int(width * scale), output_height=int(height * scale),
+        ))
+    return encode_image_payload(ImagePayloadRequest(frames=tuple(frames),
+        jpeg_encoding_parameters=tuple(JPEG_ENCODING_PARAMETERS if jpeg_encoding_parameters is None else jpeg_encoding_parameters)))
