@@ -1,6 +1,5 @@
 import logging
-from copy import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -28,7 +27,6 @@ class CameraGroupSharedMemory:
     camera_configs: CameraConfigs
     read_only: bool
     original: bool = False
-    _latest_frames: dict[CameraIdString, np.recarray] = field(default_factory=dict)
 
     @property
     def latest_multiframe_number(self) -> int:
@@ -127,18 +125,19 @@ class CameraGroupSharedMemory:
             logger.exception(e)
 
     def get_latest_multiframe(self) -> dict[CameraIdString, np.recarray]|None:
-        target_frame_number = copy(self.latest_multiframe_number) #copy to avoid index changing during read loop
+        target_frame_number = self.latest_multiframe_number
         if target_frame_number < 0:
             return None
-        self._latest_frames = {
+        # Each caller owns its snapshots through encoding and asynchronous delivery.
+        frames = {
             camera_id: camera_shared_memory.get_data_by_index(index=target_frame_number,
-                                                            rec_array=self._latest_frames[camera_id] if camera_id in self._latest_frames else None)
+                                                            rec_array=None)
             for camera_id, camera_shared_memory in self.camera_shms.items()
         }
-        frame_numbers = set([frame.frame_metadata.frame_number[0] for frame in self._latest_frames.values()])
+        frame_numbers = set([frame.frame_metadata.frame_number[0] for frame in frames.values()])
         if len(frame_numbers) != 1:
             raise ValueError(f"Frame numbers do not match across cameras! {frame_numbers}")
-        return self._latest_frames
+        return frames
 
     def get_images_by_frame_number(self,
                                    frame_number: int,
