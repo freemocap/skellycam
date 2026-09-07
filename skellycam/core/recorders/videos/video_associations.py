@@ -1,5 +1,6 @@
 """Declared recording source-to-video associations, independent of filename conventions."""
 
+import json
 from pathlib import Path, PureWindowsPath
 from typing import Self
 
@@ -7,6 +8,33 @@ from pydantic import RootModel, model_validator
 
 
 class VideoAssociations(RootModel[dict[str, str]]):
+    @classmethod
+    def from_recording_folder(cls, *, recording_folder: Path) -> "VideoAssociations | None":
+        declared: VideoAssociations | None = None
+        for suffix in ("recording_info", "info"):
+            path = recording_folder / f"{recording_folder.name}_{suffix}.json"
+            if not path.exists():
+                continue
+            with path.open(encoding="utf-8") as manifest_file:
+                metadata = json.load(manifest_file)
+            if not isinstance(metadata, dict):
+                raise ValueError(f"Recording metadata must be an object: {path}")
+            if "videos" not in metadata:
+                continue
+            associations = cls.model_validate(metadata["videos"], strict=True)
+            if declared is not None and declared != associations:
+                raise ValueError(f"Conflicting video associations in recording metadata: {recording_folder}")
+            declared = associations
+        return declared
+
+    def source_for_path(self, *, video_folder: Path, video_path: Path) -> str | None:
+        target = video_path.resolve()
+        matches = [source for source, filename in self.root.items()
+                   if (video_folder / filename).resolve() == target]
+        if len(matches) > 1:
+            raise ValueError(f"Multiple sources reference video {video_path}")
+        return matches[0] if matches else None
+
     @model_validator(mode="after")
     def validate_associations(self) -> Self:
         if not self.root:
