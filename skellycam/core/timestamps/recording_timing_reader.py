@@ -1,5 +1,7 @@
 """Read finalized capture timing in the recording's shared clock."""
 
+from pydantic import TypeAdapter
+from skellycam.core.recorders.videos.recording_metadata import RecordingFileField, read_recording_field, resolve_recording_file
 import csv
 from dataclasses import dataclass
 import math
@@ -11,6 +13,22 @@ from skellycam.system.default_paths import CAMERA_TIMESTAMPS_FOLDER_NAME
 def camera_timing_path(*, recording_folder: Path, camera_id: str) -> Path:
     """Resolve a camera sidecar without creating directories during playback."""
     return recording_folder / CAMERA_TIMESTAMPS_FOLDER_NAME / f"{recording_folder.name}.camera{camera_id}.timestamps.csv"
+
+
+def recorded_camera_timing_path(*, recording_folder: Path, camera_id: str) -> Path | None:
+    value = read_recording_field(recording_folder=recording_folder, field=RecordingFileField.CAMERA_TIMING)
+    if value is None:
+        return None
+    paths = TypeAdapter(dict[str, str]).validate_python(value, strict=True)
+    relative_path = paths.get(camera_id)
+    return resolve_recording_file(recording_folder=recording_folder, relative_path=relative_path) if relative_path is not None else None
+
+
+def recorded_multiframe_timing_path(*, recording_folder: Path) -> Path | None:
+    value = read_recording_field(recording_folder=recording_folder, field=RecordingFileField.MULTIFRAME_TIMING)
+    if value is None:
+        return None
+    return resolve_recording_file(recording_folder=recording_folder, relative_path=TypeAdapter(str).validate_python(value, strict=True))
 
 
 class TimingMethod(StrEnum):
@@ -32,7 +50,7 @@ class RecordingTiming:
 
 def resolve_camera_timing(
     *,
-    path: Path,
+    path: Path | None,
     frame_count: int,
     fps: float,
     offset_s: float,
@@ -40,7 +58,9 @@ def resolve_camera_timing(
     """Prefer recorded timing; absent sidecars use nominal FPS and the supplied offset."""
     if frame_count < 1 or not math.isfinite(offset_s):
         raise ValueError("Positive frame_count and finite offset_s are required")
-    if path.exists():
+    if path is not None:
+        if not path.is_file():
+            raise FileNotFoundError(f"Declared camera timing is missing: {path}")
         recorded = read_recording_timing(path=path, kind=TimingFileKind.CAMERA)
         if tuple(recorded) != tuple(range(frame_count)):
             raise ValueError(

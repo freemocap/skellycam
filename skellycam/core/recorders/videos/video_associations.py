@@ -1,31 +1,17 @@
 """Declared recording source-to-video associations, independent of filename conventions."""
 
-import json
 from pathlib import Path, PureWindowsPath
 from typing import Self
 
 from pydantic import RootModel, model_validator
+from skellycam.core.recorders.videos.recording_metadata import RecordingFileField, read_recording_field
 
 
 class VideoAssociations(RootModel[dict[str, str]]):
     @classmethod
     def from_recording_folder(cls, *, recording_folder: Path) -> "VideoAssociations | None":
-        declared: VideoAssociations | None = None
-        for suffix in ("recording_info", "info"):
-            path = recording_folder / f"{recording_folder.name}_{suffix}.json"
-            if not path.exists():
-                continue
-            with path.open(encoding="utf-8") as manifest_file:
-                metadata = json.load(manifest_file)
-            if not isinstance(metadata, dict):
-                raise ValueError(f"Recording metadata must be an object: {path}")
-            if "videos" not in metadata:
-                continue
-            associations = cls.model_validate(metadata["videos"], strict=True)
-            if declared is not None and declared != associations:
-                raise ValueError(f"Conflicting video associations in recording metadata: {recording_folder}")
-            declared = associations
-        return declared
+        value = read_recording_field(recording_folder=recording_folder, field=RecordingFileField.VIDEOS)
+        return cls.model_validate(value, strict=True) if value is not None else None
 
     def source_for_path(self, *, video_folder: Path, video_path: Path) -> str | None:
         target = video_path.resolve()

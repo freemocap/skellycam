@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.recorders.videos.video_filename import VideoFilename
 from skellycam.core.recorders.videos.video_associations import VideoAssociations
+from skellycam.core.recorders.videos.recording_metadata import RecordingFileField
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.recording_timing_reader import camera_timing_path
 from skellycam.system.default_paths import get_default_recording_folder_path, CAMERA_TIMESTAMPS_FOLDER_NAME, \
@@ -87,7 +88,13 @@ class RecordingInfo(BaseModel):
             for camera_id, config in camera_configs.items()
         })
         associations.resolve_paths(video_folder=Path(self.videos_folder))
-        recording_info_dict["videos"] = associations.model_dump()
+        recording_info_dict[RecordingFileField.VIDEOS] = associations.model_dump()
+        root = Path(self.full_recording_path)
+        recording_info_dict[RecordingFileField.CAMERA_TIMING] = {
+            source: Path(self.camera_timestamps_file_path_from_camera_id(source)).relative_to(root).as_posix()
+            for source in camera_configs
+        }
+        recording_info_dict[RecordingFileField.MULTIFRAME_TIMING] = Path(self.timestamp_file_path).relative_to(root).as_posix()
         recording_info_dict["camera_configs"] = {camera_id: config.model_dump() for camera_id, config in
                                                  camera_configs.items()}
         for camera_id, config in recording_info_dict["camera_configs"].items():

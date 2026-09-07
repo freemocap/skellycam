@@ -9,7 +9,7 @@ from skellycam.core.timestamps.recording_timing_reader import resolve_camera_tim
 
 def test_inferred_timing_retains_supplied_offset(tmp_path: Path) -> None:
     result = resolve_camera_timing(
-        path=tmp_path / "missing.csv", frame_count=3, fps=120.0, offset_s=2.0
+        path=None, frame_count=3, fps=120.0, offset_s=2.0
     )
     assert result.method == "inferred_from_fps"
     assert result.timestamps_s == (2.0, 2.0 + 1 / 120, 2.0 + 2 / 120)
@@ -30,7 +30,7 @@ def test_recorded_timing_is_not_rebased(tmp_path: Path) -> None:
 def test_invalid_fps_cannot_generate_timing(tmp_path: Path, fps: float) -> None:
     with pytest.raises(ValueError, match="positive FPS"):
         resolve_camera_timing(
-            path=tmp_path / "missing.csv", frame_count=2, fps=fps, offset_s=0.0
+            path=None, frame_count=2, fps=fps, offset_s=0.0
         )
 
 

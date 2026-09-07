@@ -61,7 +61,7 @@ def test_conflicting_recording_declarations_fail(tmp_path: Path) -> None:
         (tmp_path / f"{tmp_path.name}_{suffix}.json").write_text(
             json.dumps({"videos": {"source": filename}}), encoding="utf-8",
         )
-    with pytest.raises(ValueError, match="Conflicting video associations"):
+    with pytest.raises(ValueError, match="Conflicting"):
         VideoAssociations.from_recording_folder(recording_folder=tmp_path)
 
 

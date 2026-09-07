@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from skellycam.core.recorders.videos.video_associations import VideoAssociations
 from skellycam.core.recorders.videos.video_file_metadata import probe_video_files
-from skellycam.core.timestamps.recording_timing_reader import camera_timing_path, resolve_camera_timing
+from skellycam.core.timestamps.recording_timing_reader import recorded_camera_timing_path, resolve_camera_timing
 from skellycam.system.default_paths import get_default_skellycam_recordings_path
 
 logger = logging.getLogger(__name__)
@@ -304,7 +304,7 @@ def get_all_timestamps(
         source = associations.source_for_path(video_folder=video_folder, video_path=path) if associations else None
         values = tuple(frame / metadata.reported_fps for frame in range(metadata.reported_frame_count))
         if source is not None:
-            values = resolve_camera_timing(path=camera_timing_path(recording_folder=recording_path, camera_id=source),
+            values = resolve_camera_timing(path=recorded_camera_timing_path(recording_folder=recording_path, camera_id=source),
                 frame_count=metadata.reported_frame_count, fps=metadata.reported_fps, offset_s=0.0).timestamps_s
         timestamps[path.name] = values
     return {"timestamps": timestamps, "warnings": []}
