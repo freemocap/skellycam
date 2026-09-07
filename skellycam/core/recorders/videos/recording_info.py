@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
 from skellycam.core.recorders.videos.parse_video_filename import ParsedVideoFilename
+from skellycam.core.recorders.videos.video_associations import VideoAssociations
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.recording_timing_reader import camera_timing_path
 from skellycam.system.default_paths import get_default_recording_folder_path, CAMERA_TIMESTAMPS_FOLDER_NAME, \
@@ -75,9 +76,18 @@ class RecordingInfo(BaseModel):
     def timestamp_stats_json_file_path(self) -> str:
         return f"{self.timestamps_folder}/{self.recording_name}_stats.json"
 
-    def save_to_file(self, camera_configs: CameraConfigs):
+    def save_to_file(self, camera_configs: CameraConfigs) -> None:
         logger.debug(f"Saving recording info to [{self.recording_info_path}]")
         recording_info_dict = self.model_dump()
+        for camera_id, config in camera_configs.items():
+            if camera_id != config.camera_id:
+                raise ValueError(f"Camera configuration key {camera_id!r} disagrees with {config.camera_id!r}")
+        associations = VideoAssociations({
+            camera_id: Path(self.video_file_path_from_camera_config(config=config)).name
+            for camera_id, config in camera_configs.items()
+        })
+        associations.resolve_paths(video_folder=Path(self.videos_folder))
+        recording_info_dict["videos"] = associations.model_dump()
         recording_info_dict["camera_configs"] = {camera_id: config.model_dump() for camera_id, config in
                                                  camera_configs.items()}
         for camera_id, config in recording_info_dict["camera_configs"].items():
@@ -94,10 +104,12 @@ class RecordingInfo(BaseModel):
             extension=ext,
         )
         videos_dir = Path(self.videos_folder)
-        existing = sorted(videos_dir.glob(f"{parsed.stem}.*"))
+        existing = sorted(path for path in videos_dir.glob(f"{parsed.stem}.*") if path.is_file())
+        if len(existing) > 1:
+            raise ValueError(f"Multiple videos match camera {config.camera_id!r}: {existing}")
         if existing:
-            if extension and Path(existing[-1]).suffix != f".{ext}":
-                logger.warning(f"Existing video file [{existing[-1]}] has different extension than expected [{ext}]")
+            if extension and existing[0].suffix != f".{ext}":
+                raise ValueError(f"Existing video {existing[0]} conflicts with requested extension {ext!r}")
             return str(existing[0])
         return str(videos_dir / parsed.filename)
 
