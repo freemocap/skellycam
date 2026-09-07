@@ -91,11 +91,11 @@ class FullTimestamp(BaseModel):
     def utc(self) -> float:
         return self.unix_timestamp_utc
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.day_of_week}, {self.human_friendly_local} (local timezone: {self.local_time_zone})"
 
-    def __repr__(self):
-        self.__str__()
+    def __repr__(self) -> str:
+        return str(self)
 
     def field_description_dict(self) -> dict:
         """
@@ -137,3 +137,4 @@ if __name__ == "__main__":
 
     print("Printing `Timestamp.now().to_descriptive_dict()`:")
     print(FullTimestamp.now().to_descriptive_dict(), indent=4)
+
