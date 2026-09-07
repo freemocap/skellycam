@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
-from skellycam.core.recorders.videos.parse_video_filename import ParsedVideoFilename
+from skellycam.core.recorders.videos.video_filename import VideoFilename
 from skellycam.core.recorders.videos.video_associations import VideoAssociations
 from skellycam.core.timestamps.full_timestamp import FullTimestamp
 from skellycam.core.timestamps.recording_timing_reader import camera_timing_path
@@ -98,7 +98,7 @@ class RecordingInfo(BaseModel):
 
     def video_file_path_from_camera_config(self, config: CameraConfig, extension: str | None = None) -> str:
         ext = (extension or config.video_file_extension).lstrip(".")
-        parsed = ParsedVideoFilename.from_camera_config(
+        parsed = VideoFilename.from_camera_config(
             recording_name=self.recording_name,
             config=config,
             extension=ext,

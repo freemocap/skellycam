@@ -3,6 +3,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import numpy as np
+from skellycam.core.recorders.videos.pyav_video_writer import PyavVideoWriter
 
 
 @pytest.fixture()
@@ -21,7 +23,10 @@ def fake_recording(tmp_path: Path) -> Path:
     # Create minimal but valid-ish files (actual playback isn't tested, just serving)
     for cam_id in ["camera0", "camera1"]:
         video_file = videos_dir / f"recording.{cam_id}.mp4"
-        video_file.write_bytes(b"\x00" * 1024)  # Dummy bytes
+        writer = PyavVideoWriter(path=str(video_file), fps=30.0, width=64, height=48)
+        for _ in range(2):
+            writer.write(np.zeros((48, 64, 3), dtype=np.uint8))
+        writer.release()
 
     # Create a timestamp CSV
     ts_dir = videos_dir / "timestamps" / "camera_timestamps"
@@ -92,12 +97,12 @@ class TestListVideos:
         assert len(data) == 2
 
         video_ids = {v["video_id"] for v in data}
-        assert "recording.camera0" in video_ids
-        assert "recording.camera1" in video_ids
+        assert "recording.camera0.mp4" in video_ids
+        assert "recording.camera1.mp4" in video_ids
 
         for v in data:
             assert v["stream_url"].startswith(f"/skellycam/playback/{rec_id}/videos/")
-            assert v["size_bytes"] == 1024
+            assert v["size_bytes"] > 0
 
     def test_list_videos_with_parent_dir(self, client, fake_recording):
         """GET with recording_parent_directory query param works."""
@@ -127,10 +132,10 @@ class TestStreamVideo:
             "skellycam.api.http.playback.playback_router.get_default_skellycam_recordings_path",
             return_value=_recordings_root(fake_recording),
         ):
-            response = client.get(f"/skellycam/playback/{rec_id}/videos/recording.camera0")
+            response = client.get(f"/skellycam/playback/{rec_id}/videos/recording.camera0.mp4")
         assert response.status_code == 200
         assert response.headers["content-type"] == "video/mp4"
-        assert len(response.content) == 1024
+        assert response.content == (fake_recording / "synchronized_videos" / "recording.camera0.mp4").read_bytes()
 
     def test_stream_nonexistent_video(self, client, fake_recording):
         """GET returns 404 for unknown video_id."""
@@ -157,29 +162,6 @@ class TestTimestamps:
         assert "timestamps" in data
         assert "warnings" in data
 
-    def test_get_video_timestamps(self, client, fake_recording):
-        """GET /skellycam/playback/{recording_id}/videos/{video_id}/timestamps returns CSV info."""
-        rec_id = _recording_id(fake_recording)
-        with patch(
-            "skellycam.api.http.playback.playback_router.get_default_skellycam_recordings_path",
-            return_value=_recordings_root(fake_recording),
-        ):
-            response = client.get(f"/skellycam/playback/{rec_id}/videos/camera0/timestamps")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["video_id"] == "camera0"
-        assert data["row_count"] == 2
-        assert "frame_number" in data["headers"]
-
-    def test_get_video_timestamps_not_found_returns_warning(self, client, fake_recording):
-        """GET returns warning (not 404) for unknown video timestamps."""
-        rec_id = _recording_id(fake_recording)
-        with patch(
-            "skellycam.api.http.playback.playback_router.get_default_skellycam_recordings_path",
-            return_value=_recordings_root(fake_recording),
-        ):
-            response = client.get(f"/skellycam/playback/{rec_id}/videos/nonexistent/timestamps")
-        assert response.status_code == 200
-        data = response.json()
-        assert "warning" in data
-        assert data["row_count"] == 0
+    def test_per_video_timestamp_endpoint_is_absent(self, client, fake_recording):
+        response = client.get(f"/skellycam/playback/{fake_recording.name}/videos/camera0/timestamps")
+        assert response.status_code == 404

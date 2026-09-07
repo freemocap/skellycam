@@ -104,6 +104,8 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
             # On macOS (AVFoundation), VID/PID are often unavailable even for real USB cameras.
             if camera_info.vid is None or camera_info.pid is None:
                 continue
+        if any(camera.camera_id == device.camera_id for camera in cameras):
+            raise ValueError(f"Detected devices have colliding camera IDs: {device.camera_id}. Device paths: {[camera.path for camera in cameras]} and {device.path}")
         cameras.append(device)
     logger.debug(f"Detected {len(cameras)} cameras:\n {tabulate([camera.model_dump() for camera in cameras], headers='keys')}\n)")
     return cameras

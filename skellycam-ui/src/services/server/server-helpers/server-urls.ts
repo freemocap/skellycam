@@ -63,8 +63,6 @@ class ServerUrls {
                 `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}`,
             playbackAllTimestamps: (recordingId: string) =>
                 `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/timestamps`,
-            playbackVideoTimestamps: (recordingId: string, videoId: string) =>
-                `${baseUrl}/skellycam/playback/${encodeURIComponent(recordingId)}/videos/${encodeURIComponent(videoId)}/timestamps`,
 
             // WebSocket
             websocket: this.getWebSocketUrl(),

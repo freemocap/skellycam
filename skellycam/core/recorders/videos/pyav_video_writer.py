@@ -22,6 +22,11 @@ class PyavVideoWriter:
     def isOpened(self) -> bool:  # noqa: N802 — match cv2.VideoWriter API
         return self._open
 
+    def set_container_metadata(self, *, metadata: dict[str, str]) -> None:
+        if not self._open or self._frame_count:
+            raise RuntimeError("Container metadata must be supplied before writing frames")
+        self._container.metadata.update(metadata)
+
     def write(self, frame: np.ndarray) -> None:
         import av  # noqa: TC002 — av is cached in sys.modules after __init__; this just binds the name
         av_frame = av.VideoFrame.from_ndarray(frame, format='bgr24')
