@@ -12,6 +12,7 @@ Endpoints:
   GET  /playback/{recording_id}/videos/{video_id}        — stream a video file
 """
 import logging
+from urllib.parse import quote, urlencode
 from skellycam.core.recorders.videos.recording_statistics import read_recording_statistics
 from pathlib import Path
 from typing import Optional
@@ -77,7 +78,7 @@ def _resolve_recording_path(
     recording_path = (parent / recording_id).resolve()
 
     # Path traversal guard
-    if not str(recording_path).startswith(str(parent)):
+    if recording_path.parent != parent:
         raise HTTPException(status_code=400, detail="Invalid recording_id")
 
     if not recording_path.is_dir():
@@ -223,7 +224,8 @@ def list_videos(
             video_id=vid_id,
             filename=path.name,
             size_bytes=path.stat().st_size,
-            stream_url=f"/skellycam/playback/{recording_id}/videos/{vid_id}",
+            stream_url=f"/skellycam/playback/{quote(recording_id, safe='')}/videos/{quote(vid_id, safe='')}"
+                + (f"?{urlencode({'recording_parent_directory': recording_parent_directory})}" if recording_parent_directory else ""),
         ))
     return result
 

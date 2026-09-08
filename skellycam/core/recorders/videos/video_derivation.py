@@ -1,10 +1,11 @@
 """Frame-preserving source relationships carried inside derived video containers."""
 
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 from typing import ClassVar
 
 import av
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from skellycam.core.recorders.videos.recording_metadata import validate_recording_relative_path
 
 
 class VideoDerivation(BaseModel):
@@ -16,10 +17,7 @@ class VideoDerivation(BaseModel):
     @field_validator("source_video")
     @classmethod
     def validate_relative_source(cls, value: str) -> str:
-        path = PureWindowsPath(value)
-        if not value or path.drive or path.root or ".." in path.parts:
-            raise ValueError("Derived video source must be relative to the recording folder")
-        return value
+        return validate_recording_relative_path(relative_path=value)
 
     def to_container_metadata(self) -> dict[str, str]:
         return {"comment": self.metadata_prefix + self.model_dump_json()}

@@ -25,6 +25,18 @@ def test_duplicate_file_association_fails(tmp_path: Path) -> None:
         VideoAssociations({"one": "clip.mp4", "two": "./clip.mp4"}).resolve_paths(video_folder=tmp_path)
 
 
+@pytest.mark.parametrize("separator", ["/", "\\"])
+def test_nested_relative_paths_resolve_consistently(tmp_path: Path, separator: str) -> None:
+    folder = tmp_path / "videos"
+    folder.mkdir()
+    video = folder / "arbitrary # name.mov"
+    video.touch()
+    associations = VideoAssociations({"source": f"videos{separator}{video.name}"})
+    assert associations.root == {"source": f"videos/{video.name}"}
+    assert associations.resolve_paths(video_folder=tmp_path) == {"source": video}
+    assert associations.source_for_path(video_folder=tmp_path, video_path=video) == "source"
+
+
 @pytest.mark.parametrize("filename", ["../clip.mp4", "C:/clip.mp4", "/clip.mp4", "", "..\\clip.mp4"])
 def test_paths_cannot_escape_recording(filename: str) -> None:
     with pytest.raises(ValidationError):

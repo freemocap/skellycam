@@ -29,10 +29,15 @@ def read_recording_field(*, recording_folder: Path, field: RecordingFileField) -
     return declared
 
 
-def resolve_recording_file(*, recording_folder: Path, relative_path: str) -> Path:
+def validate_recording_relative_path(*, relative_path: str) -> str:
     path = PureWindowsPath(relative_path)
-    if not relative_path or path.drive or path.root or ".." in path.parts:
+    if not relative_path.strip() or not path.parts or path.drive or path.root or ".." in path.parts:
         raise ValueError(f"Expected a recording-relative path: {relative_path!r}")
+    return path.as_posix()
+
+
+def resolve_recording_file(*, recording_folder: Path, relative_path: str) -> Path:
+    relative_path = validate_recording_relative_path(relative_path=relative_path)
     folder = recording_folder.resolve()
     resolved = (folder / relative_path).resolve()
     if not resolved.is_relative_to(folder):
