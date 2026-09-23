@@ -27,14 +27,6 @@ def camera_loop_update_checks(config: CameraConfig,
                                 framerate: float | None = None
                               ) -> tuple[
     CameraConfig, np.recarray, VideoRecorder | None, CameraStatus]:
-    video_recorder = check_for_new_recording_info(config=config,
-                                                  ipc=ipc,
-                                                  orchestrator=orchestrator,
-                                                  recording_info_subscription=recording_info_subscription,
-                                                  self_status=self_status,
-                                                  video_recorder=video_recorder,
-                                                  framerate=framerate)
-
     frame_rec_array, config = check_for_new_config(current_config=config,
                                                    frame_rec_array=frame_rec_array,
                                                    cv2_video_capture=cv2_video_capture,
@@ -46,6 +38,13 @@ def camera_loop_update_checks(config: CameraConfig,
                                             ipc=ipc,
                                             self_status=self_status)
 
+    # Create/replace the recorder last so a configuration error cannot lose the
+    # new writer before the outer camera loop takes ownership of it.
+    video_recorder = check_for_new_recording_info(
+        config=config, ipc=ipc, orchestrator=orchestrator,
+        recording_info_subscription=recording_info_subscription,
+        self_status=self_status, video_recorder=video_recorder, framerate=framerate,
+    )
     return config, frame_rec_array, video_recorder, self_status
 
 

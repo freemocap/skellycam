@@ -130,11 +130,13 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
         raise
     finally:
         self_status.grabbing_frame.value = False
-        if video_recorder:
-            finish_recording(ipc=ipc, video_recorder=video_recorder)
-            logger.warning(f"Camera {config.camera_id} closed mid-recording!"   )
-        self_status.connected.value = False
-        self_status.closed.value = True
+        try:
+            if video_recorder:
+                finish_recording(ipc=ipc, video_recorder=video_recorder)
+                logger.warning(f"Camera {config.camera_id} closed mid-recording!"   )
+        finally:
+            self_status.connected.value = False
+            self_status.closed.value = True
         logger.debug(f"Camera {config.camera_id} loop ended.")
 
 

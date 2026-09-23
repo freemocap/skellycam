@@ -66,8 +66,12 @@ if (!gotTheLock) {
 
     app.on('window-all-closed', async () => {
         console.log('All windows closed, shutting down...');
-        await PythonServer.shutdown();
-        app.quit();
+        try {
+            await PythonServer.shutdown();
+            app.quit();
+        } catch (error) {
+            console.error('Leaving backend running to protect video saves:', error);
+        }
     });
 
     app.on('activate', () => {
@@ -80,7 +84,11 @@ if (!gotTheLock) {
         event.preventDefault();
         console.log('App is quitting, cleaning up...');
         UpdateHandler.shutdown();
-        await PythonServer.shutdown();
-        app.exit(0);
+        try {
+            await PythonServer.shutdown();
+            app.exit(0);
+        } catch (error) {
+            console.error('Quit deferred to protect video saves:', error);
+        }
     });
 }

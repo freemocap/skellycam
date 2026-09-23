@@ -14,7 +14,6 @@ async def main() -> None:
     from skellycam.app import create_fastapi_app
     from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
     from skellycam.core.ipc.process_management.managed_worker import WorkerMode
-    from skellycam.utilities.kill_process_on_port import kill_process_on_port
     from skellycam.utilities.wait_functions import await_1s
 
     # Suppress benign ConnectionResetError from Windows ProactorEventLoop.
@@ -56,8 +55,6 @@ async def main() -> None:
     signal.signal(signal.SIGINT, handle_signal)
 
     try:
-        kill_process_on_port(port=PORT)
-
         app = create_fastapi_app(
             global_kill_flag=global_kill_flag,
             worker_registry=worker_registry,

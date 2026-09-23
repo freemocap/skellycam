@@ -39,7 +39,10 @@ class PyavVideoWriter:
         if not self._open:
             return
         self._open = False
-        for packet in self._stream.encode():
-            self._container.mux(packet)
-        self._container.close()
+        try:
+            for packet in self._stream.encode():
+                self._container.mux(packet)
+        finally:
+            # Even a flush/mux failure must attempt to finalize the container.
+            self._container.close()
 

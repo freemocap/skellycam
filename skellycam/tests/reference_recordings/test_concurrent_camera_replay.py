@@ -7,6 +7,7 @@ import multiprocessing
 from multiprocessing import shared_memory
 import threading
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -19,7 +20,10 @@ import skellycam.core.camera.opencv.opencv_camera_worker_method as worker_module
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
-from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager
+from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, TopicTypes
+from skellycam.core.ipc.pubsub.pubsub_topics import RecordingFinishedTopic, RecordingInfoMessage
+from skellycam.core.recorders.videos.recording_info import RecordingInfo
+from skellycam.core.recorders.videos.fourcc_codec_helpers import PYAV_H264_FOURCC
 from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.types.frame_dtype_factories import create_frame_dtype
 from skellycam.tests.reference_recordings.datasets import TEST, acquire
@@ -36,6 +40,10 @@ async def wait_until(predicate, errors, description):
 @pytest.mark.real_data
 @pytest.mark.parametrize("fail_camera", [False, True], ids=["complete", "one-camera-eof"])
 async def test_concurrent_replay_pause_and_group_shutdown(monkeypatch, fail_camera):
+    await run_concurrent_replay(monkeypatch, fail_camera)
+
+
+async def run_concurrent_replay(monkeypatch, fail_camera, recording_directory=None):
     paths = acquire(TEST)
     monkeypatch.setattr(logging.Logger, "trace", logging.Logger.debug, raising=False)
 
@@ -48,9 +56,13 @@ async def test_concurrent_replay_pause_and_group_shutdown(monkeypatch, fail_came
         queues = [multiprocessing.Queue() for _ in range(6)]
         for queue in queues:
             cleanup.callback(queue.close)
+        finished_topic = RecordingFinishedTopic()
+        finished_queue = finished_topic.get_subscription()
+        cleanup.callback(finished_topic.close)
         ipc = CameraGroupIPC(
-            group_id="concurrent-reference", pubsub=PubSubTopicManager(topics={}),
-            extracted_config_subscription=queues[0], recording_finished_subscription=queues[1],
+            group_id="concurrent-reference",
+            pubsub=PubSubTopicManager(topics={TopicTypes.RECORDING_FINISHED: finished_topic}),
+            extracted_config_subscription=queues[0], recording_finished_subscription=finished_queue,
             global_kill_flag=multiprocessing.Value("b", False),
             heartbeat_timestamp=multiprocessing.Value("d", time.perf_counter()),
         )
@@ -58,6 +70,13 @@ async def test_concurrent_replay_pause_and_group_shutdown(monkeypatch, fail_came
         for status in statuses.values():
             status.connected.value = True
         orchestrator = CameraOrchestrator.from_statuses(statuses)
+        recording_info = None
+        if recording_directory is not None:
+            recording_info = RecordingInfo(recording_name="replay", recording_directory=str(recording_directory))
+            orchestrator.first_recording_frame_number.value = 0
+            for queue in queues[1::2]:
+                queue.put(RecordingInfoMessage(recording_info=recording_info))
+            await wait_until(lambda: all(not queue.empty() for queue in queues[1::2]), {}, "recording requests")
         cameras = {}
         received = {camera_id: [] for camera_id in statuses}
         errors = {}
@@ -75,6 +94,7 @@ async def test_concurrent_replay_pause_and_group_shutdown(monkeypatch, fail_came
             config = CameraConfig(
                 camera_id=camera_id, camera_index=index,
                 resolution=ImageResolution(width=720, height=1280),
+                framerate=6.0, writer_fourcc=PYAV_H264_FOURCC,
             )
             frame = np.zeros(1, dtype=create_frame_dtype(config)).view(np.recarray)
             frame.frame_metadata.camera_info = config.to_frame_camera_info()[0]
@@ -187,6 +207,29 @@ async def test_concurrent_replay_pause_and_group_shutdown(monkeypatch, fail_came
             assert all(not item[2].read()[0] for item in cameras.values())
         assert not any(t.is_alive() for t in threads)
         assert ipc.shutdown_camera_group_flag.value and not ipc.global_kill_flag.value
+        if recording_info is not None:
+            messages = [finished_queue.get(timeout=5) for _ in cameras]
+            assert {message.camera_id for message in messages} == set(cameras)
+            for message in messages:
+                camera_id = message.camera_id
+                assert [int(md.frame_number[0]) for md in message.frame_metadatas] == received[camera_id]
+                config = cameras[camera_id][0]
+                video_path = recording_info.video_file_path_from_camera_config(config)
+                assert Path(video_path).is_file()
+                saved = cv2.VideoCapture(video_path)
+                source = cv2.VideoCapture(str(paths[int(camera_id)]))
+                try:
+                    assert saved.isOpened() and source.isOpened()
+                    for number in received[camera_id]:
+                        ok, actual = saved.read()
+                        source_ok, expected = source.read()
+                        assert ok and source_ok, f"Finalized camera {camera_id} lost frame {number}"
+                        difference = np.abs(actual[80:].astype(np.int16) - expected[80:].astype(np.int16))
+                        assert float(difference.mean()) < 8, (camera_id, number)
+                    assert not saved.read()[0]
+                finally:
+                    saved.release()
+                    source.release()
         for camera_id, (_, capture, _, _, owner, writer) in cameras.items():
             frames = received[camera_id]
             assert frames == list(range(len(frames)))

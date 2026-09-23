@@ -57,6 +57,21 @@ class ManagedWorker(abc.ABC):
         self._shutdown_flag = shutdown_flag
         self._intentionally_terminated: bool = False
         self._failure_exitcode: int | None = None
+        self._recording_in_progress: Synchronized | None = None
+
+    def protect_recording(self, recording_in_progress: Synchronized) -> None:
+        """Prevent automatic force termination while a camera owns an open writer."""
+        self._recording_in_progress = recording_in_progress
+
+    def wait_for_recording_save(self) -> None:
+        if self._recording_in_progress is None or not self._recording_in_progress.value:
+            return
+        self.signal_owner_shutdown()
+        logger.warning(f"Waiting for {self.name} to finish saving video; force termination is deferred")
+        # Deliberately no timeout: corrupting an active recording is worse than
+        # a slow shutdown. An already-dead process cannot finish saving.
+        while self.is_alive() and self._recording_in_progress.value:
+            self.join(timeout=0.1)
 
     @property
     def name(self) -> str:
@@ -133,6 +148,8 @@ class ManagedWorker(abc.ABC):
         if not self.is_alive():
             self._reap()
             return
+
+        self.wait_for_recording_save()
 
         # Mark as intentionally terminated so the child monitor doesn't
         # treat exit codes as crashes
@@ -292,10 +309,14 @@ class ManagedProcess(ManagedWorker):
         return self._process.exitcode
 
     def terminate(self) -> None:
-        self._process.terminate()
+        self.wait_for_recording_save()
+        if self.is_alive():
+            self._process.terminate()
 
     def kill(self) -> None:
-        self._process.kill()
+        self.wait_for_recording_save()
+        if self.is_alive():
+            self._process.kill()
 
 
 # ══════════════════════════════════════════════════════════════════

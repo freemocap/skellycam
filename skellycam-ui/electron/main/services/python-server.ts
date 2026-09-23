@@ -2,11 +2,10 @@ import {exec} from 'child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {LifecycleLogger} from "./logger";
-import {promisify} from 'util';
-import treeKill from "tree-kill";
+import {gracefulPythonShutdown} from './graceful-python-shutdown';
+import {DEFAULT_PORT} from '../../../src/services/server/server-helpers/server-urls';
 import {PYTHON_EXECUTABLE_CANDIDATES} from "../app-paths";
 
-const treeKillAsync = promisify(treeKill);
 let pythonProcess: ReturnType<typeof exec> | null = null;
 
 export interface ExecutableCandidate {
@@ -21,6 +20,7 @@ export interface ExecutableCandidate {
 export class PythonServer {
     private static currentExecutablePath: string | null = null;
     private static validatedCandidates: ExecutableCandidate[] = [];
+    private static shutdownPromise: Promise<void> | null = null;
 
     static async start(exePath: string | null = null) {
         console.log('Starting python server subprocess...');
@@ -75,6 +75,7 @@ export class PythonServer {
     }
 
     static async shutdown() {
+        if (this.shutdownPromise) return this.shutdownPromise;
         if (!pythonProcess || !pythonProcess.pid) {
             console.log('No Python server process to shutdown');
             return;
@@ -82,31 +83,20 @@ export class PythonServer {
 
         console.log(`Shutting down Python server (PID: ${pythonProcess.pid})`);
 
-        try {
-            // Kill entire process tree
-            await treeKillAsync(pythonProcess.pid);
-            console.log('✔ Python server process tree terminated');
-        } catch (error) {
-            console.error('Error killing process tree:', error);
-            // Fallback to direct kill
-            try {
-                pythonProcess?.kill('SIGKILL');
-                console.log('✔ Python server force-killed as fallback');
-            } catch (killError) {
-                console.error('Failed to force-kill Python server:', killError);
+        const child = pythonProcess;
+        this.shutdownPromise = (async () => {
+            await gracefulPythonShutdown(child, `http://127.0.0.1:${DEFAULT_PORT}/shutdown`);
+            if (pythonProcess === child) {
+                pythonProcess = null;
+                this.currentExecutablePath = null;
             }
+            console.log('✔ Python server exited after recording finalization');
+        })();
+        try {
+            await this.shutdownPromise;
+        } finally {
+            this.shutdownPromise = null;
         }
-
-        // Wait a moment for cleanup
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        if (pythonProcess && !pythonProcess.killed) {
-            console.warn('Python server may not have exited cleanly');
-        }
-
-        pythonProcess = null;
-        this.currentExecutablePath = null;
-        console.log('✔ Python server shutdown complete');
     }
 
     static getCurrentExecutablePath(): string | null {

@@ -8,6 +8,7 @@ poe -C repos/skellycam test-reference-sample
 poe -C repos/skellycam test-reference-loop
 poe -C repos/skellycam test-reference-concurrent
 poe -C repos/skellycam test-camera-lifecycle
+poe -C repos/skellycam test-recording-safety
 ```
 
 From a standalone SkellyCam checkout, omit `-C repos/skellycam`. The existing
@@ -59,7 +60,7 @@ stops its synchronization-waiting sibling, preserves its error status, releases 
 capture handles, and closes both shared-memory attachments without stopping the app.
 
 The lifecycle suite checks pause/resume acknowledgements, failure detection and the
-10-second response deadline, plus bounded worker shutdown despite stale status flags.
+10-second response deadline, plus bounded non-recording worker shutdown despite stale status flags.
 It also checks that closed groups report inactive and that recording failure does not
 block group cleanup. Existing worker-isolation tests exercise actual thread/process
 exceptions and abrupt process exit. Failure policy is to stop the affected group;
@@ -90,7 +91,35 @@ other two videos still have unread frames. Both cases check capture release,
 worker exit, and removal of all 27 shared-memory allocations. Test cleanup also
 signals stop and joins workers before releasing their buffers if assertions fail.
 
-These tests do not prove cross-process delivery, physical camera driver behavior,
-recording to disk, or wall-clock replay pacing. Timestamps are execution-clock measurements,
+Recording-safety tests reuse the concurrent replay with real H.264 writers, covering
+shutdown during recording and failure of one camera while the others are recording.
+Every saved video is reopened and every accepted frame decoded; lossy pixel error
+must remain below a mean absolute difference of 8/255 outside the text overlay.
+Recording-finished messages must contain every accepted frame number. This validates
+video finalization and its completion messages, not the later group timing/metadata
+export pipeline. Test outputs live in fresh temporary directories under
+`~/freemocap_data/testing/skellycam/`, with a conspicuous deletion warning at the root,
+and are removed after workers exit and saved videos have been checked. Source videos
+and retained processed reference data are untouched.
+
+Active recordings take priority over shutdown deadlines. Camera workers are not
+daemon workers; automatic termination waits while their recording flag is set.
+The API asks the worker monitor to shut down after saves finish. Electron requests
+the API shutdown and waits for backend exit instead of killing the process tree.
+A failed request leaves the backend running for a retry. Backend startup no longer
+kills an existing server occupying the port. A stuck save can therefore hold shutdown
+open indefinitely; automatic timeouts must not sacrifice recordings. External force
+kills, power loss, and storage/encoder failures cannot be made lossless by this policy.
+
+Additional safety tests use a real child process with a buffered H.264 writer and
+verify terminate/kill requests wait for finalization, then decode every written frame.
+Fault injection checks that flush errors still attempt container closure and that
+completion-notification errors do not prevent playable video output.
+Electron shutdown protocol tests use Node's TypeScript stripping (tested with Node 24):
+`npm.cmd --prefix skellycam-ui run test:recording-shutdown` on Windows from the SkellyCam
+checkout (`npm` instead of `npm.cmd` on macOS/Linux).
+
+These tests do not prove cross-process multi-camera delivery, physical camera driver
+behavior, or wall-clock replay pacing. Timestamps are execution-clock measurements,
 not original sensor capture times. Sample-video decoding here does not run the
 expensive sample-data calibration or motion-capture pipeline.

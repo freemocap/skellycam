@@ -117,6 +117,9 @@ class CameraManager:
         for camera_worker in self.camera_workers.values():
             camera_worker.worker.mark_stopping()
 
+        for camera_worker in self.camera_workers.values():
+            camera_worker.worker.wait_for_recording_save()
+
         # Phase 1: Wait for all processes to exit on their own (parallel)
         for camera_worker in self.camera_workers.values():
             if camera_worker.worker.pid is not None:

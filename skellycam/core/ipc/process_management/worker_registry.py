@@ -105,6 +105,8 @@ class WorkerRegistry:
             # setting it. No worker exits in that case, so the worker-death scan
             # above won't catch it; the flag value itself is the trigger.
             if self._global_kill_flag.value:
+                for worker in self._workers:
+                    worker.wait_for_recording_save()
                 logger.error(
                     "global_kill_flag is set (no worker death detected) — "
                     "triggering parent shutdown"
@@ -190,6 +192,7 @@ class WorkerRegistry:
             worker.mark_stopping()
             worker.signal_owner_shutdown()
         for worker in alive:
+            worker.wait_for_recording_save()
             worker.join(timeout=kill_flag_timeout)
 
         # Step 2: terminate stragglers

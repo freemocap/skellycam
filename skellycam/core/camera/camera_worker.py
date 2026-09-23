@@ -47,6 +47,7 @@ class CameraWorker:
         worker = worker_registry.create_worker(
             shutdown_flag=ipc.shutdown_camera_group_flag,
             worker_mode=worker_registry.worker_mode,
+            daemon=False,  # Normal interpreter exit must wait for video finalization.
             target=opencv_camera_worker_method,
             name=f"Camera{config.camera_index}-{camera_id}-Worker",
             log_queue=ipc.pubsub.topics[TopicTypes.LOGS].publication,
@@ -60,6 +61,7 @@ class CameraWorker:
                 recording_info_subscription=recording_info_subscription,
             ),
         )
+        worker.protect_recording(orchestrator.camera_statuses[camera_id].recording_in_progress)
         return cls(
             camera_id=camera_id,
             ipc=ipc,
