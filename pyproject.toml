@@ -194,6 +194,8 @@ tc = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests
 lint = { cmd = "ruff check skellycam/", help = "Run all ruff lint rules" }
 lint-fix = { cmd = "ruff check --fix skellycam/", help = "Auto-fix all ruff lint violations" }
 test = { cmd = "pytest", help = "Run test suite" }
+test-reference = { cmd = "python -B -m pytest skellycam/tests/reference_recordings -v -m 'not sample_data'", executor = { type = "virtualenv", location = ".venv" }, help = "Run real capture reads on the 222-frame reference recording" }
+test-reference-sample = { cmd = "python -B -m pytest skellycam/tests/reference_recordings -v -m sample_data", executor = { type = "virtualenv", location = ".venv" }, help = "Run capture reads on the 1108-frame sample recording" }
 
 
 # =============================================================================
@@ -202,6 +204,10 @@ test = { cmd = "pytest", help = "Run test suite" }
 [tool.pytest.ini_options]
 testpaths = ["skellycam/tests"]
 asyncio_mode = "auto"
+markers = [
+    "real_data: reads reference videos, downloading missing recordings",
+    "sample_data: full 1108-frame sample recording capture reads",
+]
 
 # =============================================================================
 # Ruff linter config
