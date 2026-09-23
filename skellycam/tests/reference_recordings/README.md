@@ -5,6 +5,7 @@ From the polyrepo workspace (`project`):
 ```powershell
 poe -C repos/skellycam test-reference
 poe -C repos/skellycam test-reference-sample
+poe -C repos/skellycam test-camera-lifecycle
 ```
 
 From a standalone SkellyCam checkout, omit `-C repos/skellycam`. The existing
@@ -13,6 +14,8 @@ tasks use it directly without running uv sync or installing packages. The first 
 runs all 222 frames of each of three test cameras, two injected read-failure
 cases, and acquisition-helper tests. The second runs all 1,108 frames of each
 of three sample cameras. Plain pytest on this directory runs both datasets.
+The first task also includes camera-loop failure regressions. The lifecycle task
+runs the focused camera/group shutdown and worker tests without datasets or hardware.
 
 ## Data locations and acquisition
 
@@ -44,11 +47,25 @@ frame buffer. Its image must match a separate sequential OpenCV reader exactly,
 except for the top 80 pixel rows where the production helper stamps frame text.
 Checks cover frame numbering, image shape/type, ordered capture-call timestamps,
 EOF, repeated EOF, reads after release, and release of both capture handles.
-Injected grab/retrieve failures verify no successful-frame increment; only those
-two negative cases use a mock capture.
+Injected grab/retrieve failures verify no successful-frame increment. Additional
+failure tests run the production camera loop and worker cleanup with mocked captures
+and shared-memory publication spies: exhausted retries and shutdown during a failed
+read must not publish stale frames. A two-camera test checks that one failing camera
+stops its synchronization-waiting sibling, preserves its error status, releases both
+capture handles, and closes both shared-memory attachments without stopping the app.
 
-This exercises the same helper used for live cameras, but not physical camera
-drivers, camera-loop scheduling, group synchronization, shared-memory publication,
-recording, or wall-clock replay pacing. Timestamps are execution-clock measurements,
+The lifecycle suite checks pause/resume acknowledgements, failure detection and the
+10-second response deadline, plus bounded worker shutdown despite stale status flags.
+It also checks that closed groups report inactive and that recording failure does not
+block group cleanup. Existing worker-isolation tests exercise actual thread/process
+exceptions and abrupt process exit. Failure policy is to stop the affected group;
+there is no automatic camera restart. Python threads cannot be forcibly killed:
+shutdown raises if a worker survives escalation, rather than reporting success.
+
+The real-video tests exercise the same helper used for live cameras, but not physical
+camera drivers, camera-loop scheduling, group synchronization, shared-memory
+publication, recording, or wall-clock replay pacing. The injected-failure tests cover
+loop/group control flow; successful real-video publication through real shared memory
+remains separate work. Timestamps are execution-clock measurements,
 not original sensor capture times. Sample-video decoding here does not run the
 expensive sample-data calibration or motion-capture pipeline.

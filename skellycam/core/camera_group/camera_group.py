@@ -65,8 +65,15 @@ class CameraGroup:
 
     @property
     def alive(self) -> bool:
-        return self.cameras.all_ready and all(
-            worker.is_alive() for worker in self.cameras.camera_workers.values()
+        return (
+            self.ipc.should_continue
+            and bool(self.cameras.camera_workers)
+            and all(
+                status.connected.value and not status.closed.value
+                and not status.closing.value and not status.error.value
+                for status in self.cameras.orchestrator.camera_statuses.values()
+            )
+            and all(worker.is_alive() for worker in self.cameras.camera_workers.values())
         )
 
     @classmethod
@@ -279,9 +286,7 @@ class CameraGroup:
                 camera_id: worker.to_state()
                 for camera_id, worker in self.cameras.camera_workers.items()
             },
-            alive=all(
-                worker.is_alive() for worker in self.cameras.camera_workers.values()
-            ),
+            alive=self.alive,
             recording_in_progress=orchestrator.all_cameras_recording,
             paused=orchestrator.any_cameras_paused,
         )

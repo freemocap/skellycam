@@ -46,7 +46,6 @@ class CameraStatus:
         self.updating.value = False
         self.recording_in_progress.value = False
         self.is_recording_frame.value = False
-        self.error.value = False
 
     def serialize(self):
         return {

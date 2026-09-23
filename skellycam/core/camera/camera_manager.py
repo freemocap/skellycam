@@ -87,10 +87,25 @@ class CameraManager:
             await self.pause(await_paused=await_state)
 
     async def pause(self, await_paused: bool) -> None:
-        await self.orchestrator.pause(await_paused=await_paused)
+        await self._set_paused(paused=True, await_state=await_paused)
 
     async def unpause(self, await_unpaused: bool) -> None:
-        await self.orchestrator.unpause(await_unpaused=await_unpaused)
+        await self._set_paused(paused=False, await_state=await_unpaused)
+
+    async def _set_paused(self, paused: bool, await_state: bool) -> None:
+        try:
+            if not self.ipc.should_continue:
+                raise RuntimeError("Cannot change camera state: camera group has stopped.")
+            if paused:
+                await self.orchestrator.pause(await_paused=await_state)
+            else:
+                await self.orchestrator.unpause(await_unpaused=await_state)
+            if not self.ipc.should_continue:
+                raise RuntimeError("Camera group stopped while changing camera state.")
+        except (RuntimeError, TimeoutError):
+            self.ipc.should_continue = False
+            self.orchestrator.close()
+            raise
 
     def close(self) -> None:
         logger.info("Closing camera manager and all camera processes...")
@@ -104,7 +119,8 @@ class CameraManager:
 
         # Phase 1: Wait for all processes to exit on their own (parallel)
         for camera_worker in self.camera_workers.values():
-            camera_worker.worker.join(timeout=3.0)
+            if camera_worker.worker.pid is not None:
+                camera_worker.worker.join(timeout=3.0)
 
         # Phase 2: SIGTERM any stragglers (parallel)
         still_alive = [w for w in self.camera_workers.values() if w.worker.is_alive()]
@@ -135,6 +151,11 @@ class CameraManager:
                 f"{[w.camera_id for w in zombies]}"
             )
 
+        # A forcibly stopped or never-started worker cannot acknowledge closure.
+        # Only update these flags after confirming that every worker has exited.
+        for status in self.orchestrator.camera_statuses.values():
+            status.signal_closing()
+            status.closed.value = True
         self.camera_workers.clear()
         logger.success("Camera manager closed all camera processes successfully.")
 

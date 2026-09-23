@@ -196,6 +196,7 @@ lint-fix = { cmd = "ruff check --fix skellycam/", help = "Auto-fix all ruff lint
 test = { cmd = "pytest", help = "Run test suite" }
 test-reference = { cmd = "python -B -m pytest skellycam/tests/reference_recordings -v -m 'not sample_data'", executor = { type = "virtualenv", location = ".venv" }, help = "Run real capture reads on the 222-frame reference recording" }
 test-reference-sample = { cmd = "python -B -m pytest skellycam/tests/reference_recordings -v -m sample_data", executor = { type = "virtualenv", location = ".venv" }, help = "Run capture reads on the 1108-frame sample recording" }
+test-camera-lifecycle = { cmd = "python -B -m pytest skellycam/tests/test_camera_shutdown.py skellycam/tests/reference_recordings/test_camera_loop_failures.py skellycam/tests/test_worker_isolation.py skellycam/tests/test_camera_orchestrator.py skellycam/tests/test_camera_group_manager.py skellycam/tests/test_worker_lifecycle.py -v", executor = { type = "virtualenv", location = ".venv" }, help = "Test camera group failure, bounded shutdown, and worker lifecycle without hardware or downloads" }
 
 
 # =============================================================================

@@ -83,6 +83,13 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                 if len(frame_durations_seconds) >= 30:
                     framerate = 1.0 / np.median(np.array(frame_durations_seconds))
 
+            if not ipc.should_continue:
+                break
+            if not frame_success:
+                raise RuntimeError(
+                    f"Camera {config.camera_id} failed to capture a frame "
+                    f"after {MAX_FAIL_COUNT} attempts."
+                )
             fail_count = 0
             # NOTE - Get `should_record` flags BEFORE unsetting 'grabbing_frame' to avoid
             # potential race-condition-generating flag setting gaps between cameras
@@ -122,6 +129,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
         ipc.should_continue = False
         raise
     finally:
+        self_status.grabbing_frame.value = False
         if video_recorder:
             finish_recording(ipc=ipc, video_recorder=video_recorder)
             logger.warning(f"Camera {config.camera_id} closed mid-recording!"   )
