@@ -9,6 +9,7 @@ poe -C repos/skellycam test-reference-loop
 poe -C repos/skellycam test-reference-concurrent
 poe -C repos/skellycam test-camera-lifecycle
 poe -C repos/skellycam test-recording-safety
+poe -C repos/skellycam test-recording-lifecycle
 ```
 
 From a standalone SkellyCam checkout, omit `-C repos/skellycam`. The existing
@@ -101,6 +102,22 @@ export pipeline. Test outputs live in fresh temporary directories under
 `~/freemocap_data/testing/skellycam/`, with a conspicuous deletion warning at the root,
 and are removed after workers exit and saved videos have been checked. Source videos
 and retained processed reference data are untouched.
+
+The recording-lifecycle tests use the same three concurrent file-backed cameras and
+call the real camera group's start/stop methods. One case completes two recordings
+without reconnecting cameras; another completes the first recording and fails a
+camera during the second. Successful stops must leave capture running. For each
+successful recording, tests decode every saved frame against its original source
+frame, check camera/video associations, recording-local and connection frame indices,
+camera and multiframe timing, and statistics. The playback HTTP routes must list the
+generated videos, return the recorded timing, and serve the saved MP4 bytes.
+The second session must leave every file from the first unchanged. After camera
+failure, all workers must exit and every frame reported saved must remain decodable;
+stopping the failed group must raise without producing successful group metadata.
+These cases use fresh disposable folders under the same testing root and remove
+them after worker shutdown, so previous runs cannot satisfy output assertions.
+They exercise real writers and group finalization with threads; physical camera
+setup, audio recording, frontend rendering, and process spawning are outside this test.
 
 Active recordings take priority over shutdown deadlines. Camera workers are not
 daemon workers; automatic termination waits while their recording flag is set.

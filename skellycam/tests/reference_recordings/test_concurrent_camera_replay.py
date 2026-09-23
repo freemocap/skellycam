@@ -18,10 +18,14 @@ from skellycam.core.camera.config.image_resolution import ImageResolution
 import skellycam.core.camera.opencv.opencv_camera_loop as loop_module
 import skellycam.core.camera.opencv.opencv_camera_worker_method as worker_module
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera.camera_manager import CameraManager
+from skellycam.core.camera.camera_worker import CameraWorker
+from skellycam.core.camera_group.camera_group import CameraGroup
+from skellycam.core.ipc.process_management.managed_worker import ManagedThread
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import PubSubTopicManager, TopicTypes
-from skellycam.core.ipc.pubsub.pubsub_topics import RecordingFinishedTopic, RecordingInfoMessage
+from skellycam.core.ipc.pubsub.pubsub_topics import RecordingFinishedTopic, RecordingInfoMessage, RecordingInfoTopic
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.recorders.videos.fourcc_codec_helpers import PYAV_H264_FOURCC
 from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
@@ -43,9 +47,10 @@ async def test_concurrent_replay_pause_and_group_shutdown(monkeypatch, fail_came
     await run_concurrent_replay(monkeypatch, fail_camera)
 
 
-async def run_concurrent_replay(monkeypatch, fail_camera, recording_directory=None):
+async def run_concurrent_replay(monkeypatch, fail_camera, recording_directory=None, controller=None):
     paths = acquire(TEST)
     monkeypatch.setattr(logging.Logger, "trace", logging.Logger.debug, raising=False)
+    monkeypatch.setattr(logging.Logger, "success", logging.Logger.info, raising=False)
 
     def forbid_hardware_reopen(*args, **kwargs):
         raise AssertionError("File replay attempted to reopen a physical camera")
@@ -61,7 +66,10 @@ async def run_concurrent_replay(monkeypatch, fail_camera, recording_directory=No
         cleanup.callback(finished_topic.close)
         ipc = CameraGroupIPC(
             group_id="concurrent-reference",
-            pubsub=PubSubTopicManager(topics={TopicTypes.RECORDING_FINISHED: finished_topic}),
+            pubsub=PubSubTopicManager(topics={
+                TopicTypes.RECORDING_FINISHED: finished_topic,
+                TopicTypes.RECORDING_INFO: RecordingInfoTopic(subscriptions=queues[1::2]),
+            }),
             extracted_config_subscription=queues[0], recording_finished_subscription=finished_queue,
             global_kill_flag=multiprocessing.Value("b", False),
             heartbeat_timestamp=multiprocessing.Value("d", time.perf_counter()),
@@ -99,6 +107,7 @@ async def run_concurrent_replay(monkeypatch, fail_camera, recording_directory=No
             frame = np.zeros(1, dtype=create_frame_dtype(config)).view(np.recarray)
             frame.frame_metadata.camera_info = config.to_frame_camera_info()[0]
             frame.frame_metadata.frame_number[0] = -1
+            frame.frame_metadata.timebase_mapping = ipc.timebase_mapping.to_numpy_record_array()[0]
             owner = CameraSharedMemoryRingBuffer.create(
                 example_data=frame, read_only=False, ring_buffer_length=4,
             )
@@ -165,46 +174,64 @@ async def run_concurrent_replay(monkeypatch, fail_camera, recording_directory=No
                 # Observe only: the production worker must signal group shutdown.
                 errors[camera_id] = error
 
-        threads = [threading.Thread(target=run_camera, args=(key,), daemon=True) for key in cameras]
+        workers = {}
+        for key in cameras:
+            worker = ManagedThread(
+                target=run_camera, kwargs={"camera_id": key}, name=f"replay-{key}",
+                shutdown_flag=ipc.shutdown_camera_group_flag, log_queue=None, daemon=False,
+            )
+            worker.protect_recording(statuses[key].recording_in_progress)
+            workers[key] = CameraWorker(camera_id=key, worker=worker, ipc=ipc, orchestrator=orchestrator)
+        threads = [worker.worker for worker in workers.values()]
+        started = []
+        group = CameraGroup(
+            ipc=ipc, configs={key: item[0] for key, item in cameras.items()},
+            cameras=CameraManager(ipc=ipc, orchestrator=orchestrator, camera_workers=workers),
+        )
 
         def stop_and_join():
             ipc.should_continue = False
             finish.set()
             deadline = time.monotonic() + 10
-            for thread in threads:
-                if thread.ident is not None:
-                    thread.join(timeout=max(0, deadline - time.monotonic()))
+            for thread in started:
+                thread.wait_for_recording_save()
+                thread.join(timeout=max(0.0, deadline - time.monotonic()))
             assert all(not thread.is_alive() for thread in threads), "Camera thread survived shutdown"
 
         # Stop/join before closing buffers, including when an assertion fails.
         cleanup.callback(stop_and_join)
         for thread in threads:
             thread.start()
-        await wait_until(lambda: min(map(len, received.values())) >= 20, errors, "initial frames")
-        await asyncio.wait_for(orchestrator.pause(), timeout=5)
-        assert all(thread.is_alive() for thread in threads)
-        before = [(item[4].last_written_index.value, item[1].get(cv2.CAP_PROP_POS_FRAMES))
-                  for item in cameras.values()]
-        await asyncio.sleep(0.05)
-        after = [(item[4].last_written_index.value, item[1].get(cv2.CAP_PROP_POS_FRAMES))
-                 for item in cameras.values()]
-        assert before == after
-        assert orchestrator.all_cameras_paused
-        await asyncio.wait_for(orchestrator.unpause(), timeout=5)
-        await wait_until(lambda: min(map(len, received.values())) >= 60, errors, "resumed frames")
-        if fail_camera:
-            failure_requested.set()
-            await wait_until(lambda: not any(t.is_alive() for t in threads), {}, "failure shutdown")
-            assert set(errors) == {"0"}, errors
-            assert isinstance(errors["0"], RuntimeError)
-            assert "failed to capture a frame after 30 attempts" in str(errors["0"])
-            assert all(60 <= len(frames) < TEST.frames for frames in received.values())
-        else:
-            await wait_until(lambda: all(len(frames) == TEST.frames for frames in received.values()),
-                             errors, "complete replay")
+            started.append(thread)
+        if controller is not None:
+            await controller(group, received, errors, failure_requested)
             stop_and_join()
-            assert not errors
-            assert all(not item[2].read()[0] for item in cameras.values())
+        else:
+            await wait_until(lambda: min(map(len, received.values())) >= 20, errors, "initial frames")
+            await asyncio.wait_for(orchestrator.pause(), timeout=5)
+            assert all(thread.is_alive() for thread in threads)
+            before = [(item[4].last_written_index.value, item[1].get(cv2.CAP_PROP_POS_FRAMES))
+                      for item in cameras.values()]
+            await asyncio.sleep(0.05)
+            after = [(item[4].last_written_index.value, item[1].get(cv2.CAP_PROP_POS_FRAMES))
+                     for item in cameras.values()]
+            assert before == after
+            assert orchestrator.all_cameras_paused
+            await asyncio.wait_for(orchestrator.unpause(), timeout=5)
+            await wait_until(lambda: min(map(len, received.values())) >= 60, errors, "resumed frames")
+            if fail_camera:
+                failure_requested.set()
+                await wait_until(lambda: not any(t.is_alive() for t in threads), {}, "failure shutdown")
+                assert set(errors) == {"0"}, errors
+                assert isinstance(errors["0"], RuntimeError)
+                assert "failed to capture a frame after 30 attempts" in str(errors["0"])
+                assert all(60 <= len(frames) < TEST.frames for frames in received.values())
+            else:
+                await wait_until(lambda: all(len(frames) == TEST.frames for frames in received.values()),
+                                 errors, "complete replay")
+                stop_and_join()
+                assert not errors
+                assert all(not item[2].read()[0] for item in cameras.values())
         assert not any(t.is_alive() for t in threads)
         assert ipc.shutdown_camera_group_flag.value and not ipc.global_kill_flag.value
         if recording_info is not None:
