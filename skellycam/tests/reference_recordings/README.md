@@ -6,6 +6,7 @@ From the polyrepo workspace (`project`):
 poe -C repos/skellycam test-reference
 poe -C repos/skellycam test-reference-sample
 poe -C repos/skellycam test-reference-loop
+poe -C repos/skellycam test-reference-concurrent
 poe -C repos/skellycam test-camera-lifecycle
 ```
 
@@ -16,7 +17,8 @@ runs all 222 frames of each of three test cameras, two injected read-failure
 cases, and acquisition-helper tests. The second runs all 1,108 frames of each
 of three sample cameras. Plain pytest on this directory runs both datasets.
 The first task also includes camera-loop failure regressions and the real shared-memory
-tests available separately through `test-reference-loop`. The lifecycle task
+tests available separately through `test-reference-loop`, plus concurrent replay
+available through `test-reference-concurrent`. The lifecycle task
 runs the focused camera/group shutdown and worker tests without datasets or hardware.
 
 ## Data locations and acquisition
@@ -75,8 +77,20 @@ Each video tests both requested shutdown and EOF failure, with no stale publicat
 The worker must release capture and close all nine shared-memory handles, and fixture
 cleanup must remove all nine named allocations. No recording outputs are written.
 
-These tests run one camera loop at a time. They do not prove concurrent multi-camera
-scheduling, cross-process delivery, physical camera driver behavior, recording to
-disk, or wall-clock replay pacing. Timestamps are execution-clock measurements,
+The concurrent tests run three production camera workers in separate threads,
+with a shared production orchestrator and separate real four-slot buffers. Each
+publication is read through a separate shared-memory attachment and compared with
+an independent decoder. Extra work in one camera exercises unequal progress;
+published frame counts must stay within one frame of one another. There are no
+test barriers between ordinary frames. Group pause/resume uses the real orchestrator
+and checks that all video cursors and publication indices stay fixed while paused.
+One case completes all 222 frames per camera; the other seeks one capture to EOF
+after resuming and requires production code to stop all three workers while the
+other two videos still have unread frames. Both cases check capture release,
+worker exit, and removal of all 27 shared-memory allocations. Test cleanup also
+signals stop and joins workers before releasing their buffers if assertions fail.
+
+These tests do not prove cross-process delivery, physical camera driver behavior,
+recording to disk, or wall-clock replay pacing. Timestamps are execution-clock measurements,
 not original sensor capture times. Sample-video decoding here does not run the
 expensive sample-data calibration or motion-capture pipeline.
