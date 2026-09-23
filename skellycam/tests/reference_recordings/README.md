@@ -5,6 +5,7 @@ From the polyrepo workspace (`project`):
 ```powershell
 poe -C repos/skellycam test-reference
 poe -C repos/skellycam test-reference-sample
+poe -C repos/skellycam test-reference-loop
 poe -C repos/skellycam test-camera-lifecycle
 ```
 
@@ -14,7 +15,8 @@ tasks use it directly without running uv sync or installing packages. The first 
 runs all 222 frames of each of three test cameras, two injected read-failure
 cases, and acquisition-helper tests. The second runs all 1,108 frames of each
 of three sample cameras. Plain pytest on this directory runs both datasets.
-The first task also includes camera-loop failure regressions. The lifecycle task
+The first task also includes camera-loop failure regressions and the real shared-memory
+tests available separately through `test-reference-loop`. The lifecycle task
 runs the focused camera/group shutdown and worker tests without datasets or hardware.
 
 ## Data locations and acquisition
@@ -62,10 +64,19 @@ exceptions and abrupt process exit. Failure policy is to stop the affected group
 there is no automatic camera restart. Python threads cannot be forcibly killed:
 shutdown raises if a worker survives escalation, rather than reporting success.
 
-The real-video tests exercise the same helper used for live cameras, but not physical
-camera drivers, camera-loop scheduling, group synchronization, shared-memory
-publication, recording, or wall-clock replay pacing. The injected-failure tests cover
-loop/group control flow; successful real-video publication through real shared memory
-remains separate work. Timestamps are execution-clock measurements,
+The shared-memory tests replay all 222 frames from each of the three test videos
+through the production camera worker and capture loop. Hardware setup is replaced
+with a file-backed capture; publication writes into a real four-slot ring buffer.
+A separately attached consumer checks every frame's pixels, camera identity, frame
+number and capture timestamps, including repeated buffer wraparound. Synchronous
+observation hooks consume each frame before the next write and request pause/resume.
+While paused, neither the video cursor nor the publication index may advance.
+Each video tests both requested shutdown and EOF failure, with no stale publication.
+The worker must release capture and close all nine shared-memory handles, and fixture
+cleanup must remove all nine named allocations. No recording outputs are written.
+
+These tests run one camera loop at a time. They do not prove concurrent multi-camera
+scheduling, cross-process delivery, physical camera driver behavior, recording to
+disk, or wall-clock replay pacing. Timestamps are execution-clock measurements,
 not original sensor capture times. Sample-video decoding here does not run the
 expensive sample-data calibration or motion-capture pipeline.
