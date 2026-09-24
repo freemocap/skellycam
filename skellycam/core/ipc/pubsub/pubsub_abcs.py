@@ -59,10 +59,26 @@ class PubSubTopicABC(ABC):
     def close(self):
         """
         Close all subscriptions for this topic.
+
+        cancel_join_thread() is required alongside close(): multiprocessing.Queue
+        registers an untimed atexit finalizer that joins its feeder thread on
+        interpreter shutdown. If the process on the other end of the pipe already
+        exited, that feeder thread can be stuck retrying a write and the join
+        hangs forever -- causing a process to print its final output but never
+        exit.
+
+        Note this doesn't wait for a queued message's flush to finish before
+        returning, only for the wait_100ms() below to elapse -- so a message
+        put() immediately before close() could in principle still be in flight
+        and get dropped rather than delivered. In practice that window is the
+        same one wait_100ms() already existed to paper over; we're not making
+        it wider, just no longer blocking indefinitely if the feeder thread
+        happens to be stuck rather than merely slow.
         """
         logger.debug(f"Closing PubSubTopicABC {self.__class__.__name__} with {len(self.subscriptions)} subscriptions")
         for sub in self.subscriptions:
             sub.close()
+            sub.cancel_join_thread()
         wait_100ms()
         self.subscriptions.clear()
         logger.debug(f"Closed PubSubTopicABC {self.__class__.__name__}")
