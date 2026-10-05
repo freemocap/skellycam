@@ -75,7 +75,7 @@ dependencies = [
     "msgspec>=0.19",
 ]
 [tool.uv.sources]
-skellylogs = { git = "https://github.com/freemocap/skellylogs", branch = "aaron/better_logging" }
+skellylogs = { git = "https://github.com/freemocap/skellylogs" }
 skellypings = { git = "https://github.com/freemocap/skellypings" }
 
 [tool.uv]
