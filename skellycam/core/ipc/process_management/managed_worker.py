@@ -30,8 +30,7 @@ import threading
 from enum import Enum
 from typing import Callable, Optional
 
-from skellycam import LOG_LEVEL
-from skellylogs import configure_logging
+from skellylogs import configure_logging, LogLevels
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +180,7 @@ def _process_entry_point(
     signal.signal(signal.SIGINT, _on_signal)
 
     if log_queue is not None:
-        configure_logging(LOG_LEVEL, ws_queue=log_queue)
+        configure_logging(LogLevels.TRACE, ws_queue=log_queue, use_file_handler = False)
 
     clean_exit = False
 

@@ -21,13 +21,6 @@ import multiprocessing
 
 multiprocessing.freeze_support()
 
-from skellylogs import configure_logging, LogLevels
-
-from skellycam.system.default_paths import get_log_file_path
-
-LOG_LEVEL = LogLevels.TRACE
-configure_logging(level=LOG_LEVEL, log_file_path=get_log_file_path())
-
 
 
 __all__ = [
