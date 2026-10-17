@@ -1,7 +1,7 @@
 """Generate capture filenames from explicit recording and camera configuration."""
 
 from dataclasses import dataclass
-from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig  # noqa: TC001 — beartype checks annotations at runtime
 from skellycam.core.types.type_overloads import CameraIdString, CameraIndexInt
 
 VIDEO_STEM_FORMAT = "{recording_name}.id-{camera_id}.idx-{camera_index}"
@@ -36,4 +36,3 @@ class VideoFilename:
             camera_index=config.camera_index,
             extension=extension.lstrip("."),
         )
-

@@ -1,14 +1,14 @@
 """Frame-indexed decoding that advances through every intervening video frame."""
 
 from collections import OrderedDict
-from collections.abc import Iterator
+from collections.abc import Iterator  # noqa: TC003 — beartype checks annotations at runtime
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 
 import av
-from av.container import InputContainer
-from av.video.frame import VideoFrame
+from av.container import InputContainer  # noqa: TC002 — beartype checks annotations at runtime
+from av.video.frame import VideoFrame  # noqa: TC002 — beartype checks annotations at runtime
 import cv2
 import numpy as np
 

@@ -17,7 +17,7 @@ from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
-from skellycam.core.recorders.videos.video_recorder import VideoRecorder
+from skellycam.core.recorders.videos.video_recorder import VideoRecorder  # noqa: TC001 — beartype checks annotations at runtime
 
 logger = logging.getLogger(__name__) 
 
