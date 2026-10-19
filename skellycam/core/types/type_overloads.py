@@ -1,5 +1,5 @@
 import enum
-import multiprocessing.sharedctypes
+import multiprocessing.queues
 import threading
 
 import numpy as np

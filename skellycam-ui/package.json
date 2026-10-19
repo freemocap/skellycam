@@ -13,6 +13,7 @@
   },
   "type": "module",
   "scripts": {
+    "test:recording-shutdown": "node --experimental-strip-types --test tests/graceful-python-shutdown.test.mjs",
     "dev": "cross-env NODE_ENV=development vite",
     "build": "tsc && vite build && electron-builder",
     "build:dev": "tsc && vite build && electron-builder --config.mac.hardenedRuntime=false --config.mac.notarize=false",

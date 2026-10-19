@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import time
 from dataclasses import dataclass
 from copy import deepcopy
 from multiprocessing.sharedctypes import Synchronized
@@ -8,9 +9,11 @@ import numpy as np
 
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.utilities.wait_functions import wait_10ms, wait_100ms, await_10ms
+from skellycam.utilities.wait_functions import await_10ms
 
 logger = logging.getLogger(__name__)
+
+CAMERA_STATE_TIMEOUT_SECONDS = 10.0
 
 
 @dataclass
@@ -62,8 +65,7 @@ class CameraOrchestrator:
 
         if await_paused:
             logger.info("Waiting for all cameras to pause...")
-            while not self.all_cameras_paused:
-                await await_10ms()
+            await self._await_pause_state(paused=True)
             logger.trace("All cameras paused.")
 
     async def unpause(self, await_unpaused: bool = True) -> None:
@@ -73,9 +75,29 @@ class CameraOrchestrator:
 
         if await_unpaused:
             logger.info("Waiting for all cameras to unpause...")
-            while self.any_cameras_paused:
-                await await_10ms()
+            await self._await_pause_state(paused=False)
             logger.trace("All cameras unpaused.")
+
+    async def _await_pause_state(self, paused: bool) -> None:
+        action = "pause" if paused else "resume"
+        deadline = time.monotonic() + CAMERA_STATE_TIMEOUT_SECONDS
+        while True:
+            unavailable = [
+                camera_id for camera_id, status in self.camera_statuses.items()
+                if status.error.value or status.closing.value
+                or status.closed.value or status.should_close.value
+            ]
+            if unavailable:
+                raise RuntimeError(f"Cannot {action}: cameras failed or closed: {unavailable}")
+            pending = [
+                camera_id for camera_id, status in self.camera_statuses.items()
+                if bool(status.is_paused.value) != paused
+            ]
+            if not pending:
+                return
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"Timed out waiting for cameras to {action}: {pending}")
+            await await_10ms()
 
     def should_record_frame_number(self, frame_number: int | np.integer) -> tuple[bool, bool]:
 
@@ -109,9 +131,7 @@ class CameraOrchestrator:
         return False
 
     def close(self):
+        """Signal closure; CameraManager owns bounded worker joins and escalation."""
         for status in self.camera_statuses.values():
             status.should_close.value = True
-        logger.info("Waiting for all cameras to close...")
-        while self.any_cameras_alive:
-            wait_100ms()
-        logger.info("All cameras closed.")
+        logger.info("Requested closure of all cameras.")

@@ -1,4 +1,6 @@
 import logging
+
+from skellycam.core.camera_group.camera_setup_failure import CameraSetupFailedException
 import multiprocessing
 from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass
@@ -65,8 +67,15 @@ class CameraGroup:
 
     @property
     def alive(self) -> bool:
-        return self.cameras.all_ready and all(
-            worker.is_alive() for worker in self.cameras.camera_workers.values()
+        return (
+            self.ipc.should_continue
+            and bool(self.cameras.camera_workers)
+            and all(
+                status.connected.value and not status.closed.value
+                and not status.closing.value and not status.error.value
+                for status in self.cameras.orchestrator.camera_statuses.values()
+            )
+            and all(worker.is_alive() for worker in self.cameras.camera_workers.values())
         )
 
     @classmethod
@@ -134,7 +143,7 @@ class CameraGroup:
         self,
         if_newer_than: int,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray] | None:
+    ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview] | None:
         if not self.cameras.all_ready:
             return None
         latest_frames = self.get_latest_frames()
@@ -149,7 +158,7 @@ class CameraGroup:
         self,
         frame_number: FrameNumberInt,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> tuple[bytearray, MultiframeTimestampFloat] | None:
+    ) -> tuple[memoryview, MultiframeTimestampFloat] | None:
         if not self.cameras.all_ready:
             return None
         if frame_number > self.shm.latest_multiframe_number:
@@ -279,9 +288,7 @@ class CameraGroup:
                 camera_id: worker.to_state()
                 for camera_id, worker in self.cameras.camera_workers.items()
             },
-            alive=all(
-                worker.is_alive() for worker in self.cameras.camera_workers.values()
-            ),
+            alive=self.alive,
             recording_in_progress=orchestrator.all_cameras_recording,
             paused=orchestrator.any_cameras_paused,
         )
@@ -309,6 +316,14 @@ async def await_extracted_configs(
             ] = extracted_config_message.extracted_config
         await await_100ms()
 
+    failure = ipc.take_setup_failure()
+    if failure is not None:
+        raise CameraSetupFailedException(str(failure))
+    missing = [camera_id for camera_id, config in updated_configs.items() if config is None]
+    if missing or not ipc.should_continue:
+        raise CameraSetupFailedException(
+            f"Camera group startup/update aborted; cameras without configurations: {missing}"
+        )
     validate_camera_configs(updated_configs)
 
     return updated_configs

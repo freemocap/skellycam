@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
+
 from skellycam.core.camera_group.camera_group_manager import (
     CameraGroupManager,
     get_or_create_camera_group_manager,
@@ -17,7 +19,7 @@ def kill_flag():
 
 @pytest.fixture()
 def worker_registry():
-    reg = MagicMock()
+    reg = MagicMock(spec=WorkerRegistry)
     reg.heartbeat_timestamp = multiprocessing.Value("d", 0.0)
     return reg
 

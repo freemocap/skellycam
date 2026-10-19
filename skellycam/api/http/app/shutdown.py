@@ -2,13 +2,10 @@
 Clean shutdown endpoint with proper async handling.
 """
 import logging
-import os
-import signal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from skellycam.utilities.wait_functions import await_100ms
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +31,10 @@ async def shutdown_server(
     """
     logger.api(f"Shutdown requested via API - {request.url}")
 
-    # Send SIGTERM to ourselves - this triggers the existing shutdown flow
+    # The worker monitor waits for active video saves before signaling the server.
+    # Self-termination here would bypass that protection (especially on Windows).
     request.app.state.global_kill_flag.value = True
-    await await_100ms()
-    os.kill(os.getpid(), signal.SIGTERM)
-    logger.info("Sent SIGTERM signal to initiate shutdown")
+    logger.info("Requested shutdown after active video saves finish")
     return JSONResponse(
         content={
             "status": "shutdown_initiated",

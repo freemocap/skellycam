@@ -36,15 +36,24 @@ def check_for_new_recording_info(config: CameraConfig,
 
         logger.info(
             f"Camera {config.camera_id} creating recorder for recording: {recording_info.recording_name}")
-        video_recorder = VideoRecorder.create(
-            recording_info=recording_info,
-            config=config,
-            framerate=framerate
-        )
         self_status.recording_in_progress.value = True
-        while not orchestrator.all_cameras_recording and ipc.should_continue:
-            # Wait for all cameras to be ready to record before starting the recording
-            wait_1ms()
+        video_recorder = None
+        try:
+            video_recorder = VideoRecorder.create(
+                recording_info=recording_info,
+                config=config,
+                framerate=framerate,
+            )
+            while not orchestrator.all_cameras_recording and ipc.should_continue:
+                # Wait for all cameras to be ready before starting the recording.
+                wait_1ms()
+        except BaseException:
+            try:
+                if video_recorder is not None:
+                    video_recorder.close()
+            finally:
+                self_status.recording_in_progress.value = False
+            raise
     return video_recorder
 
 def finish_recording(ipc: CameraGroupIPC,
@@ -56,4 +65,4 @@ def finish_recording(ipc: CameraGroupIPC,
         frame_metadatas=frame_metadatas,
     ))
     video_recorder = None
-    return video_recorder 
+    return video_recorder

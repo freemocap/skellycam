@@ -81,7 +81,11 @@ class VideoRecorder:
             writer_fourcc=working_fourcc,
             recording_info=recording_info,
         )
-        instance._initialize_video_writer()
+        try:
+            instance._initialize_video_writer()
+        except BaseException:
+            instance.close()
+            raise
         return instance
 
     def record_frame(self, frame: np.recarray) -> np.ndarray:
@@ -158,6 +162,7 @@ class VideoRecorder:
     def close(self) -> None:
         if self.video_writer:
             self.video_writer.release()
+            self.video_writer = None
             logger.info(
                 f"Camera {self.camera_id} - Video file saved to {self.video_file_path}"
             )

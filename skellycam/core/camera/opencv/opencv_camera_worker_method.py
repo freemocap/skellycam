@@ -9,8 +9,8 @@ from skellycam.core.camera.opencv.opencv_helpers.setup_opencv_camera_loop import
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.types.type_overloads import CameraIdString, TopicSubscriptionQueue
-from skellycam.core.camera_group.camera_status import CameraStatus
-from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
+from skellycam.core.camera_group.camera_status import CameraStatus  # noqa: TC001 — beartype checks annotations at runtime
+from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer  # noqa: TC001 — beartype checks annotations at runtime
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def opencv_camera_worker_method(
         logger.exception(
             f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}"
         )
-        ipc.kill_everything()
+        ipc.should_continue = False
         raise
     finally:
         logger.debug(f"Releasing camera {camera_id} `cv2.VideoCapture` and shutting down CameraProcess")

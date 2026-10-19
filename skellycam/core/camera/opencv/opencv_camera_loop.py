@@ -17,7 +17,7 @@ from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.shared_memory.camera_shared_memory_ring_buffer import CameraSharedMemoryRingBuffer
 from skellycam.core.types.type_overloads import TopicSubscriptionQueue
 from skellycam.utilities.wait_functions import wait_1ms, wait_10us
-from skellycam.core.recorders.videos.video_recorder import VideoRecorder
+from skellycam.core.recorders.videos.video_recorder import VideoRecorder  # noqa: TC001 — beartype checks annotations at runtime
 
 logger = logging.getLogger(__name__) 
 
@@ -83,6 +83,13 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                 if len(frame_durations_seconds) >= 30:
                     framerate = 1.0 / np.median(np.array(frame_durations_seconds))
 
+            if not ipc.should_continue:
+                break
+            if not frame_success:
+                raise RuntimeError(
+                    f"Camera {config.camera_id} failed to capture a frame "
+                    f"after {MAX_FAIL_COUNT} attempts."
+                )
             fail_count = 0
             # NOTE - Get `should_record` flags BEFORE unsetting 'grabbing_frame' to avoid
             # potential race-condition-generating flag setting gaps between cameras
@@ -119,14 +126,17 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
     except Exception as e:
         self_status.signal_error()
         logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")
-        ipc.kill_everything()
+        ipc.should_continue = False
         raise
     finally:
-        if video_recorder:
-            finish_recording(ipc=ipc, video_recorder=video_recorder)
-            logger.warning(f"Camera {config.camera_id} closed mid-recording!"   )
-        self_status.connected.value = False
-        self_status.closed.value = True
+        self_status.grabbing_frame.value = False
+        try:
+            if video_recorder:
+                finish_recording(ipc=ipc, video_recorder=video_recorder)
+                logger.warning(f"Camera {config.camera_id} closed mid-recording!"   )
+        finally:
+            self_status.connected.value = False
+            self_status.closed.value = True
         logger.debug(f"Camera {config.camera_id} loop ended.")
 
 

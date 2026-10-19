@@ -48,7 +48,7 @@ class TestManagedThread:
         thread = ManagedThread(
             target=_worker_that_exits_cleanly,
             name="test-exit",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
         )
         thread.start()
@@ -62,7 +62,7 @@ class TestManagedThread:
         thread = ManagedThread(
             target=_worker_that_raises,
             name="test-raise",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
         )
         thread.start()
@@ -76,7 +76,7 @@ class TestManagedThread:
         thread = ManagedThread(
             target=_worker_that_respects_kill_flag,
             name="test-terminate",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
             kwargs={"global_kill_flag": kill_flag},
         )
@@ -93,7 +93,7 @@ class TestManagedThread:
         thread = ManagedThread(
             target=_worker_that_exits_cleanly,
             name="test-pid",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
         )
         assert thread.pid == os.getpid()
@@ -103,7 +103,7 @@ class TestManagedThread:
         thread = ManagedThread(
             target=_worker_that_exits_cleanly,
             name="my-thread-name",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
         )
         assert thread.name == "my-thread-name"
@@ -119,7 +119,7 @@ class TestTerminateGracefully:
         thread = ManagedThread(
             target=_worker_that_exits_cleanly,
             name="test-already-dead",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
         )
         thread.start()
@@ -132,7 +132,7 @@ class TestTerminateGracefully:
         thread = ManagedThread(
             target=_worker_that_respects_kill_flag,
             name="test-cooperative",
-            global_kill_flag=kill_flag,
+            shutdown_flag=kill_flag,
             log_queue=None,
             kwargs={"global_kill_flag": kill_flag},
         )
@@ -156,7 +156,8 @@ class TestWorkerRegistry:
             global_kill_flag=kill_flag,
             worker_mode=WorkerMode.THREAD,
         )
-        worker = registry.create_worker(
+        worker = registry.create_worker(worker_mode=registry.worker_mode,
+            shutdown_flag=kill_flag,
             target=_worker_that_exits_cleanly,
             name="test-create",
         )
@@ -169,7 +170,8 @@ class TestWorkerRegistry:
             global_kill_flag=kill_flag,
             worker_mode=WorkerMode.PROCESS,
         )
-        worker = registry.create_worker(
+        worker = registry.create_worker(worker_mode=registry.worker_mode,
+            shutdown_flag=kill_flag,
             target=_worker_that_exits_cleanly,
             name="test-create-proc",
         )
@@ -181,7 +183,8 @@ class TestWorkerRegistry:
             global_kill_flag=kill_flag,
             worker_mode=WorkerMode.THREAD,
         )
-        worker = registry.create_worker(
+        worker = registry.create_worker(worker_mode=registry.worker_mode,
+            shutdown_flag=kill_flag,
             target=_worker_that_respects_kill_flag,
             name="test-alive",
             kwargs={"global_kill_flag": kill_flag},
@@ -202,7 +205,8 @@ class TestWorkerRegistry:
         registry.start_heartbeat()
 
         for i in range(3):
-            w = registry.create_worker(
+            w = registry.create_worker(worker_mode=registry.worker_mode,
+            shutdown_flag=kill_flag,
                 target=_worker_that_respects_kill_flag,
                 name=f"shutdown-test-{i}",
                 kwargs={"global_kill_flag": kill_flag},
@@ -233,7 +237,8 @@ class TestWorkerRegistry:
             global_kill_flag=kill_flag,
             worker_mode=WorkerMode.THREAD,
         )
-        w = registry.create_worker(
+        w = registry.create_worker(worker_mode=registry.worker_mode,
+            shutdown_flag=kill_flag,
             target=_worker_that_exits_cleanly,
             name="test-dead",
         )

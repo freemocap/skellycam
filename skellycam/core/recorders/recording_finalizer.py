@@ -15,7 +15,7 @@ from skellycam.core.recorders.videos.recording_info import RecordingInfo, SYNCHR
 from skellycam.core.timestamps.numpy_timestamps.process_and_save_recording_timestamps import \
     process_and_save_recording_timestamps
 from skellycam.core.types.type_overloads import CameraIdString
-from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats  # noqa: TC001 — beartype checks annotations at runtime
 
 
 # TODO - Create a 'recording folder schema' of some kind specifying the structure of the recording folder

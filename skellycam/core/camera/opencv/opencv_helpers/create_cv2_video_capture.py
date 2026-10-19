@@ -43,7 +43,11 @@ def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tupl
                 wait_1s()
                 capture = None
                 continue
-            raise FailedToOpenCameraException()
+            capture.release()
+            raise FailedToOpenCameraException(
+                f"Camera {config.camera_id} (index {config.camera_index}, backend {cap_backend.name}) "
+                f"could not open after {attempts + 1} attempts."
+            )
 
         # Set fourcc, resolution, and framerate before the first read() so that the V4L2
         # driver negotiates the correct pixel format, frame size, and frame interval when
@@ -78,7 +82,11 @@ def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tupl
                 wait_1s()
                 capture = None
                 continue
-            raise FailedToReadFrameFromCameraException()
+            capture.release()
+            raise FailedToReadFrameFromCameraException(
+                f"Camera {config.camera_id} (index {config.camera_index}) opened but "
+                f"could not read a frame after {attempts + 1} attempts."
+            )
     if not isinstance(capture, cv2.VideoCapture) or not capture.isOpened():
         raise FailedToOpenCameraException(f"Failed to open camera {config.camera_index} after {retry_count} attempts.")
     extracted_config = apply_camera_configuration(cv2_vid_capture=capture,

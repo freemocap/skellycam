@@ -1,13 +1,22 @@
 """Tests for frontend payload serialization, recording info, and descriptive statistics."""
+
 import uuid
+import asyncio
+from unittest.mock import MagicMock
 from pathlib import Path
 
 import numpy as np
 import pytest
+from starlette.websockets import WebSocketState
+from skellycam.api.websocket.websocket_server import WebsocketServer
+from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.config.image_resolution import ImageResolution
-from skellycam.core.camera.config.image_rotation_types import RotationTypes, rotation_int_to_name
+from skellycam.core.camera.config.image_rotation_types import (
+    RotationTypes,
+    rotation_int_to_name,
+)
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.frontend_payload_bytearray import (
     FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE,
@@ -15,8 +24,14 @@ from skellycam.core.types.frontend_payload_bytearray import (
     MessageType,
     create_frontend_payload,
 )
-from skellycam.core.types.frame_dtype_factories import create_frame_dtype, create_multiframe_dtype
-from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE, FRAME_CAMERA_INFO_DTYPE
+from skellycam.core.types.frame_dtype_factories import (
+    create_frame_dtype,
+    create_multiframe_dtype,
+)
+from skellycam.core.types.numpy_record_dtypes import (
+    FRAME_METADATA_DTYPE,
+    FRAME_CAMERA_INFO_DTYPE,
+)
 from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 
 
@@ -24,7 +39,45 @@ from skellycam.utilities.descriptive_statistics import DescriptiveStatistics
 # Frontend Payload Protocol
 # ---------------------------------------------------------------------------
 
+
 class TestFrontendPayloadProtocol:
+    def test_manager_keeps_payloads_and_cursors_independent(self) -> None:
+        manager = MagicMock(spec=CameraGroupManager)
+        manager.closing = False
+        groups: dict[str, MagicMock] = {}
+        for name, frame_number in (("fast", 120), ("slow", 30)):
+            group = MagicMock()
+            group.id = name
+            frames = self._make_fake_frames([name], frame_number=frame_number)
+
+            def build_payload(
+                *,
+                if_newer_than: int,
+                display_image_sizes: dict[str, dict[str, float]] | None,
+                frames: dict[str, np.recarray] = frames,
+            ) -> tuple[int, float, memoryview]:
+                number, timestamp, payload = create_frontend_payload(
+                    latest_frames=frames
+                )
+                return int(number), float(timestamp), payload
+
+            group.get_latest_frontend_payload.side_effect = build_payload
+            groups[name] = group
+        manager.camera_groups = groups
+        results = CameraGroupManager.get_latest_frontend_payloads(
+            manager,
+            if_newer_than={"fast": 119, "slow": 29},
+        )
+        for name, expected in (("fast", 120), ("slow", 30)):
+            groups[name].get_latest_frontend_payload.assert_called_once_with(
+                if_newer_than=expected - 1,
+                display_image_sizes=None,
+            )
+            header = np.frombuffer(
+                results[name][2], dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE, count=1
+            )
+            assert int(header["frame_number"][0]) == expected
+
     @staticmethod
     def _make_fake_frames(
         camera_ids: list[str],
@@ -55,12 +108,15 @@ class TestFrontendPayloadProtocol:
         )
 
         assert frame_number == 10
-        assert isinstance(payload_bytes, (bytes, bytearray))
+        assert isinstance(payload_bytes, memoryview)
+        assert payload_bytes.readonly
         assert len(payload_bytes) > 0
 
         # Parse the header
         header_size = FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE.itemsize
-        header = np.frombuffer(payload_bytes[:header_size], dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
+        header = np.frombuffer(
+            payload_bytes[:header_size], dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE
+        )
         assert int(header["message_type"][0]) == MessageType.PAYLOAD_HEADER
         assert int(header["frame_number"][0]) == 10
         assert int(header["number_of_cameras"][0]) == 1
@@ -68,7 +124,7 @@ class TestFrontendPayloadProtocol:
         # Parse the footer (last N bytes)
         footer_size = FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE.itemsize
         footer = np.frombuffer(
-            payload_bytes[len(payload_bytes) - footer_size:],
+            payload_bytes[len(payload_bytes) - footer_size :],
             dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE,
         )
         assert int(footer["message_type"][0]) == MessageType.PAYLOAD_FOOTER
@@ -82,8 +138,55 @@ class TestFrontendPayloadProtocol:
 
         assert frame_number == 99
         header_size = FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE.itemsize
-        header = np.frombuffer(payload_bytes[:header_size], dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE)
+        header = np.frombuffer(
+            payload_bytes[:header_size], dtype=FRONTEND_PAYLOAD_HEADER_FOOTER_DTYPE
+        )
         assert int(header["number_of_cameras"][0]) == 3
+
+    def test_retained_payload_survives_other_groups_and_buffer_growth(self) -> None:
+        _, _, first = create_frontend_payload(
+            latest_frames=self._make_fake_frames(["first"], frame_number=10)
+        )
+        original = bytes(first)
+        for count in (1, 8, 2):
+            _, _, other = create_frontend_payload(
+                latest_frames=self._make_fake_frames(
+                    [f"other{i}" for i in range(count)], frame_number=99
+                )
+            )
+            assert first.obj is not other.obj
+            assert bytes(first) == original
+
+    async def test_suspended_websocket_send_survives_another_client(self) -> None:
+        entered = asyncio.Event()
+        resume = asyncio.Event()
+        received: list[bytes] = []
+
+        async def send_bytes(data: bytes | bytearray | memoryview) -> None:
+            entered.set()
+            await resume.wait()
+            received.append(bytes(data))
+
+        server = object.__new__(WebsocketServer)
+        server._send_lock = asyncio.Lock()
+        server.websocket = MagicMock()
+        server.websocket.client_state = WebSocketState.CONNECTED
+        server.websocket.send_bytes = send_bytes
+        _, _, first = create_frontend_payload(
+            latest_frames=self._make_fake_frames(["first"], frame_number=10)
+        )
+        expected = bytes(first)
+        task = asyncio.create_task(server._send_bytes(first))
+        await asyncio.wait_for(entered.wait(), timeout=2)
+        try:
+            _, _, second = create_frontend_payload(
+                latest_frames=self._make_fake_frames(["second"], frame_number=20)
+            )
+            assert bytes(second) != expected
+        finally:
+            resume.set()
+            await asyncio.wait_for(task, timeout=2)
+        assert received == [expected]
 
     def test_payload_contains_jpeg_data(self) -> None:
         frames = self._make_fake_frames(["cam0"], frame_number=1)
@@ -102,6 +205,7 @@ class TestFrontendPayloadProtocol:
 # Numpy Dtype Construction
 # ---------------------------------------------------------------------------
 
+
 class TestNumpyDtypes:
     def test_create_frame_dtype(self) -> None:
         config = CameraConfig(
@@ -114,8 +218,16 @@ class TestNumpyDtypes:
 
     def test_create_multiframe_dtype(self) -> None:
         configs = {
-            "cam0": CameraConfig(camera_id="cam0", camera_index=0, resolution=ImageResolution(height=48, width=64)),
-            "cam1": CameraConfig(camera_id="cam1", camera_index=1, resolution=ImageResolution(height=48, width=64)),
+            "cam0": CameraConfig(
+                camera_id="cam0",
+                camera_index=0,
+                resolution=ImageResolution(height=48, width=64),
+            ),
+            "cam1": CameraConfig(
+                camera_id="cam1",
+                camera_index=1,
+                resolution=ImageResolution(height=48, width=64),
+            ),
         }
         dtype = create_multiframe_dtype(configs)
         assert "cam0" in dtype.names
@@ -131,6 +243,7 @@ class TestNumpyDtypes:
 # ---------------------------------------------------------------------------
 # RecordingInfo
 # ---------------------------------------------------------------------------
+
 
 class TestRecordingInfo:
     def test_create_temp(self) -> None:
@@ -171,9 +284,24 @@ class TestRecordingInfo:
 
     def test_equality(self) -> None:
         shared_ts = RecordingInfo.create_temp().recording_start_timestamp
-        a = RecordingInfo(recording_name="a", recording_directory="/tmp/a", recording_uuid="uuid1", recording_start_timestamp=shared_ts)
-        b = RecordingInfo(recording_name="a", recording_directory="/tmp/a", recording_uuid="uuid1", recording_start_timestamp=shared_ts)
-        c = RecordingInfo(recording_name="c", recording_directory="/tmp/c", recording_uuid="uuid2", recording_start_timestamp=shared_ts)
+        a = RecordingInfo(
+            recording_name="a",
+            recording_directory="/tmp/a",
+            recording_uuid="uuid1",
+            recording_start_timestamp=shared_ts,
+        )
+        b = RecordingInfo(
+            recording_name="a",
+            recording_directory="/tmp/a",
+            recording_uuid="uuid1",
+            recording_start_timestamp=shared_ts,
+        )
+        c = RecordingInfo(
+            recording_name="c",
+            recording_directory="/tmp/c",
+            recording_uuid="uuid2",
+            recording_start_timestamp=shared_ts,
+        )
         assert a == b
         assert a != c
 
@@ -188,6 +316,7 @@ class TestRecordingInfo:
 # RotationTypes utilities
 # ---------------------------------------------------------------------------
 
+
 class TestRotationTypes:
     def test_rotation_int_to_name_known(self) -> None:
         assert rotation_int_to_name(-1) == "NO_ROTATION"
@@ -201,10 +330,13 @@ class TestRotationTypes:
 # DescriptiveStatistics
 # ---------------------------------------------------------------------------
 
+
 class TestDescriptiveStatistics:
     def test_basic_statistics(self) -> None:
         data = [1.0, 2.0, 3.0, 4.0, 5.0]
-        stats = DescriptiveStatistics.from_samples(samples=data, name="test", units="ms")
+        stats = DescriptiveStatistics.from_samples(
+            samples=data, name="test", units="ms"
+        )
         assert stats.mean == pytest.approx(3.0)
         assert stats.median == pytest.approx(3.0)
         assert stats.min == pytest.approx(1.0)

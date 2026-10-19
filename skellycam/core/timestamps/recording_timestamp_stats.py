@@ -132,6 +132,19 @@ class RecordingTimestampsStats:
                         value = getattr(obj, field.name)
                         result[field.name.replace("_value", "")] = _to_serializable(value)
                 return result
+            elif isinstance(obj, np.ndarray) and obj.dtype.names:
+                # np.recarray (e.g. the per-metric stats produced by calculate_statistics)
+                # is not a dataclass, so it fell through to json.dumps' `default=`, whose
+                # `o.__dict__` is always {} for ndarrays - the fields live in the C buffer,
+                # not the instance dict. Pull them out by name instead.
+                return {
+                    name.replace("_value", ""): _to_serializable(obj[name])
+                    for name in obj.dtype.names
+                }
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.generic):
+                return obj.item()
             elif isinstance(obj, list):
                 return [_to_serializable(item) for item in obj]
             elif isinstance(obj, dict):

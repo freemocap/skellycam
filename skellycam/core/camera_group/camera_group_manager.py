@@ -21,7 +21,7 @@ from skellycam.core.types.type_overloads import (
     MultiframeTimestampFloat,
     TopicSubscriptionQueue,
 )
-from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats  # noqa: TC001 — beartype checks annotations at runtime
 
 logger = logging.getLogger(__name__)
 
@@ -130,17 +130,17 @@ class CameraGroupManager:
 
     def get_latest_frontend_payloads(
         self,
-        if_newer_than: int,
+        if_newer_than: dict[CameraGroupIdString, int],
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
-    ) -> dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]]:
+    ) -> dict[CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview]]:
         if self.closing:
             return {}
         fe_payloads: dict[
-            CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, bytearray]
+            CameraGroupIdString, tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview]
         ] = {}
         for camera_group in self.camera_groups.values():
             fe_return = camera_group.get_latest_frontend_payload(
-                if_newer_than=if_newer_than,
+                if_newer_than=if_newer_than.get(camera_group.id, -1),
                 display_image_sizes=display_image_sizes,
             )
             if fe_return is None:
