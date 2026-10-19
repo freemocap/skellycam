@@ -1,4 +1,6 @@
 import logging
+
+from skellycam.core.camera_group.camera_setup_failure import CameraSetupFailedException
 import multiprocessing
 from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass
@@ -314,6 +316,14 @@ async def await_extracted_configs(
             ] = extracted_config_message.extracted_config
         await await_100ms()
 
+    failure = ipc.take_setup_failure()
+    if failure is not None:
+        raise CameraSetupFailedException(str(failure))
+    missing = [camera_id for camera_id, config in updated_configs.items() if config is None]
+    if missing or not ipc.should_continue:
+        raise CameraSetupFailedException(
+            f"Camera group startup/update aborted; cameras without configurations: {missing}"
+        )
     validate_camera_configs(updated_configs)
 
     return updated_configs

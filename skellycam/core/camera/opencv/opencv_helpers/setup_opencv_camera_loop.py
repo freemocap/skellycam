@@ -1,5 +1,7 @@
 import logging
 
+from skellycam.core.camera_group.camera_setup_failure import CameraSetupFailure, CameraSetupFailedException
+
 import cv2
 import numpy as np
 
@@ -18,16 +20,6 @@ from skellycam.utilities.wait_functions import wait_10ms
 logger = logging.getLogger(__name__)
 
 
-class CameraSetupFailedException(Exception):
-    """A camera failed to open/join its group during startup.
-
-    Expected and recoverable (bad device, camera in use, etc.) — callers should
-    let the worker exit quietly rather than treating it like an unhandled crash,
-    which would tear down the whole backend rather than just this camera group.
-    """
-    pass
-
-
 def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                              config: CameraConfig,
                              ipc: CameraGroupIPC,
@@ -36,9 +28,12 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                              shm_subscription: TopicSubscriptionQueue) -> tuple[
     CameraSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
     # Create cv2.VideoCapture object
+    phase = "opening camera and reading first frame"
+    cv2_video_capture = None
     try:
         cv2_video_capture, config = create_cv2_video_capture(config)
 
+        phase = "joining camera group shared memory"
         ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(DeviceExtractedConfigMessage(extracted_config=config))
         logger.debug(f"Camera {config.camera_id} connected, awaiting shm message...")
         while camera_shm is None and ipc.should_continue and not self_status.should_close.value:
@@ -70,8 +65,13 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
         logger.exception(f"Failed to create cv2.VideoCapture for camera {config.camera_id}: {e}")
         self_status.signal_error()
         # Stop only this camera group's siblings, not the whole backend.
-        ipc.should_continue = False
-        raise CameraSetupFailedException(
-            f"Could not create cv2.VideoCapture for camera {config.camera_id}"
-        ) from e
+        failure = CameraSetupFailure(
+            camera_id=config.camera_id, phase=phase,
+            exception_type=type(e).__name__, message=str(e),
+        )
+        ipc.report_setup_failure(failure)
+        # This function owns the capture until it returns successfully.
+        if cv2_video_capture is not None:
+            cv2_video_capture.release()
+        raise CameraSetupFailedException(str(failure)) from e
     return camera_shm, config, cv2_video_capture, frame_rec_array

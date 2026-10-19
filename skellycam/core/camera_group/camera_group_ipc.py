@@ -1,6 +1,10 @@
 import logging
 import multiprocessing
 from multiprocessing.sharedctypes import Synchronized
+from multiprocessing.queues import SimpleQueue
+from multiprocessing.synchronize import Lock
+
+from skellycam.core.camera_group.camera_setup_failure import CameraSetupFailure
 from dataclasses import dataclass, field
 
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
@@ -24,6 +28,29 @@ class CameraGroupIPC:
     timebase_mapping: TimebaseMapping = field(default_factory=TimebaseMapping)
     should_pause: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
     shutdown_camera_group_flag: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+
+    # SimpleQueue writes synchronously: the error reaches the pipe before the
+    # shared shutdown flag changes. A Queue feeder thread would race that flag.
+    setup_failures: SimpleQueue = field(default_factory=multiprocessing.SimpleQueue)
+    setup_failure_lock: Lock = field(default_factory=multiprocessing.Lock)
+
+    def report_setup_failure(self, failure: CameraSetupFailure) -> None:
+        with self.setup_failure_lock:
+            # Preserve the initiating failure, not a sibling's shutdown error.
+            if not self.shutdown_camera_group_flag.value:
+                # Keep the first record below pipe capacity, even for verbose
+                # native errors, so publishing never waits for the parent reader.
+                self.setup_failures.put(CameraSetupFailure(
+                    camera_id=failure.camera_id[:128], phase=failure.phase[:128],
+                    exception_type=failure.exception_type[:128], message=failure.message[:512],
+                ))
+                self.shutdown_camera_group_flag.value = True
+
+    def take_setup_failure(self) -> CameraSetupFailure | None:
+        with self.setup_failure_lock:
+            if self.setup_failures.empty():
+                return None
+            return self.setup_failures.get()
 
     @classmethod
     def create(cls,
