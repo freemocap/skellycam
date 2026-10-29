@@ -1521,8 +1521,8 @@ requires-dist = [
     { name = "pydantic", specifier = "==2.*" },
     { name = "scipy", specifier = ">=1.11.4" },
     { name = "setproctitle", specifier = "==1.3.3" },
-    { name = "skellylogs", git = "https://github.com/freemocap/skellylogs" },
-    { name = "skellypings", git = "https://github.com/freemocap/skellypings" },
+    { name = "skellylogs", editable = "../utils/skellylogs" },
+    { name = "skellypings", editable = "../utils/skellypings" },
     { name = "sounddevice", specifier = ">=0.4.6" },
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "tzlocal", specifier = ">=5.2" },
@@ -1544,19 +1544,34 @@ dev = [
 [[package]]
 name = "skellylogs"
 version = "0.1.0"
-source = { git = "https://github.com/freemocap/skellylogs#535206f8e7b7d1d73e904c340cdcbdfeeed7a26f" }
+source = { editable = "../utils/skellylogs" }
 dependencies = [
     { name = "tqdm" },
 ]
 
+[package.metadata]
+requires-dist = [{ name = "tqdm", specifier = ">=4.66" }]
+
+[package.metadata.requires-dev]
+test = [{ name = "pytest" }]
+
 [[package]]
 name = "skellypings"
 version = "0.1.0"
-source = { git = "https://github.com/freemocap/skellypings#94b9e4b58322fdf105d48583fb970cade8977de7" }
+source = { editable = "../utils/skellypings" }
 dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
 ]
+
+[package.metadata]
+requires-dist = [
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "requests", specifier = ">=2.31.0" },
+]
+
+[package.metadata.requires-dev]
+admin = [{ name = "google-cloud-firestore", specifier = ">=2.19.0" }]
 
 [[package]]
 name = "sounddevice"

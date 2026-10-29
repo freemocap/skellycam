@@ -75,8 +75,8 @@ dependencies = [
     "msgspec>=0.19",
 ]
 [tool.uv.sources]
-skellylogs = { git = "https://github.com/freemocap/skellylogs" }
-skellypings = { git = "https://github.com/freemocap/skellypings" }
+skellylogs = { path = "../utils/skellylogs", editable = true }
+skellypings = { path = "../utils/skellypings", editable = true }
 
 [tool.uv]
 package = true
