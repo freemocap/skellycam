@@ -37,7 +37,7 @@ impl PyO3CameraGroupManager {
     /// `camera_index`, and starts a new `CameraGroup`. The group runs until
     /// `close_all_groups()` is called or the manager is dropped.
     pub fn create_or_update_group(
-        &mut self,
+        manager: Py<Self>,
         py: Python<'_>,
         configs: &Bound<'_, PyDict>,
     ) -> PyResult<String> {
@@ -86,11 +86,14 @@ impl PyO3CameraGroupManager {
                 PyRuntimeError::new_err(format!("Failed to start camera group: {e}"))
             })?;
 
-        self.camera_statuses = group.camera_statuses();
+        // Borrow only to publish the completed group. Detection and startup
+        // detach from Python, so state/frame polling must remain available.
+        let mut manager = manager.borrow_mut(py);
+        manager.camera_statuses = group.camera_statuses();
 
         let group_id = group.group_id().to_string();
 
-        self.groups.insert(group_id.clone(), Mutex::new(group));
+        manager.groups.insert(group_id.clone(), Mutex::new(group));
         Ok(group_id)
     }
 
@@ -333,8 +336,11 @@ impl PyO3CameraGroupManager {
         recording_summary_to_pydict(py, &summary)
     }
 
-    pub fn close_group(&mut self, py: Python<'_>, group_id: &str) -> PyResult<()> {
-        if let Some(group) = self.groups.remove(group_id) {
+    pub fn close_group(manager: Py<Self>, py: Python<'_>, group_id: &str) -> PyResult<()> {
+        // Release the exclusive Python borrow before detaching for shutdown.
+        // Other Python threads may poll the remaining groups during this wait.
+        let group = manager.borrow_mut(py).groups.remove(group_id);
+        if let Some(group) = group {
             py.detach(|| group.into_inner().unwrap().shutdown())
                 .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
         }
