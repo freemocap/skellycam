@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import os
 import signal
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,16 @@ async def main() -> None:
 
 def entry_point() -> None:
     """Sync entry point for the `skellycam` console script."""
+    if getattr(sys, "frozen", False):
+        # Electron consumes UTF-8 pipes; frozen Python ignores PYTHONIOENCODING.
+        for stream in (sys.stdout, sys.stderr):
+            if stream is not None:
+                stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     multiprocessing.freeze_support()
+    from skellycam import LOG_LEVEL
+    from skellylogs import configure_logging
+
+    configure_logging(level=LOG_LEVEL)
     try:
         asyncio.run(main())
     except Exception as e:

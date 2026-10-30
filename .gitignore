@@ -1,3 +1,7 @@
+# Local build and capture validation outputs
+/.test-artifacts/
+!/skellycam-ui/src/**/index.ts
+
 # macOS
 .DS_Store
 .AppleDouble
@@ -239,13 +243,7 @@ pyapp-v*
 CLAUDE.md
 skellycam-ui/skellycam_server
 test_timestamps.json
-skellycam-ui/package-lock.json
-skellycam-ui/package-lock.json
-skellycam-ui/package-lock.json
-skellycam-ui/package-lock.json
-uv.lock
-tsconfig.json
-package.json
-index.ts
-bun.lock
-package-lock.json
+/skellycam-rust/src/camera_group/.claude/settings.local.json
+/skellycam-rust/.claude/settings.local.json
+.remember/
+.superpowers/

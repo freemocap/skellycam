@@ -19,6 +19,7 @@ from skellycam.api.middleware.cors import cors
 from skellycam.api.routers import SKELLYCAM_ROUTERS
 from skellycam.api.server_constants import APP_URL
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
+from skellycam.core.camera_group.camera_group_manager import close_native_camera_groups
 from skellycam.system.default_paths import (
     SKELLYCAM_FAVICON_ICO_PATH,
     get_default_skellycam_base_folder_path,
@@ -59,6 +60,8 @@ async def app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ===== SHUTDOWN =====
     logger.api("SkellyCam API shutting down...")
+
+    await close_native_camera_groups()
 
     shutdown_telemetry()
 

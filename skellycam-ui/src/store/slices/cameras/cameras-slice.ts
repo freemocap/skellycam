@@ -1,7 +1,7 @@
 // cameras-slice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import {
-    CamerasState,
+    CamerasState, CameraBackend,
     CameraConfig, extractConfigSettings, areConfigsEqual, createDefaultCameraConfig,
 } from './cameras-types';
 import {
@@ -28,6 +28,7 @@ function persistAllCameraSettings(state: CamerasState): void {
 }
 
 const initialState: CamerasState = {
+    backend: 'python',
     cameras: [],
     isPaused: false,
     isLoading: false,
@@ -38,6 +39,11 @@ export const cameraSlice = createSlice({
     name: 'cameras',
     initialState,
     reducers: {
+        cameraBackendSelected(state, action: PayloadAction<CameraBackend>) {
+            if (!state.isLoading && !state.cameras.some(camera => camera.connectionStatus === 'connected')) {
+                state.backend = action.payload;
+            }
+        },
         // ========== Selection ==========
         cameraSelectionToggled: (state, action: PayloadAction<string>) => {
             const camera = state.cameras.find(cam => cam.id === action.payload);
@@ -171,6 +177,7 @@ export const cameraSlice = createSlice({
                 const connectedIds = new Set<string>();
                 let anyPaused = false;
                 for (const group of groups) {
+                    if (group.backend) state.backend = group.backend;
                     if (group.paused) anyPaused = true;
                     if (group.alive) {
                         for (const cameraId of Object.keys(group.configs)) {
@@ -197,6 +204,7 @@ export const cameraSlice = createSlice({
 });
 
 export const {
+    cameraBackendSelected,
     cameraSelectionToggled,
     cameraDesiredConfigUpdated,
     configCopiedToAll,

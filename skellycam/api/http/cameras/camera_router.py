@@ -7,6 +7,7 @@ import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
 from skellycam.core.camera_group.camera_group_manager import get_or_create_camera_group_manager
+from skellycam.core.camera_group.camera_backend_manager import CameraBackend, CameraBackendInUseError
 from skellycam.core.device_detection.detect_cameras_devices import CameraDeviceInfo, detect_available_cameras
 from skellycam.core.device_detection.detect_microphone_devices import get_available_microphones
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
@@ -20,6 +21,7 @@ camera_router = APIRouter(prefix="/camera", tags=["Cameras"])
 
 class CameraGroupCreateRequest(BaseModel):
     camera_configs: dict[CameraIdString, CameraConfig]
+    backend: CameraBackend = "python"
 
     @classmethod
     def example(cls) -> "CameraGroupCreateRequest":
@@ -121,12 +123,14 @@ async def camera_group_apply_post_endpoint(
 
         configs = request_body.camera_configs
         camera_group = await get_or_create_camera_group_manager(app=request.app).create_or_update_camera_group(
-            camera_configs=configs)
+            camera_configs=configs, backend=request_body.backend)
 
         return CreateCameraGroupResponse(
             group_id=camera_group.id,
             camera_configs=camera_group.configs
         )
+    except CameraBackendInUseError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

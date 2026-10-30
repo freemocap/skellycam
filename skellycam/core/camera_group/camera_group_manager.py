@@ -228,17 +228,25 @@ class CameraGroupManager:
         }
 
 
-_CAMERA_GROUP_MANAGER: CameraGroupManager | None = None
+from skellycam.core.camera_group.camera_backend_manager import CameraBackendManager
+
+_CAMERA_GROUP_MANAGER: CameraBackendManager | None = None
 
 
-def get_or_create_camera_group_manager(app: FastAPI) -> CameraGroupManager:
+async def close_native_camera_groups() -> None:
+    """Finalize in-process native recorders before the worker monitor exits."""
+    if _CAMERA_GROUP_MANAGER is not None and _CAMERA_GROUP_MANAGER.backend == "rust":
+        await _CAMERA_GROUP_MANAGER.close_all_camera_groups()
+
+
+def get_or_create_camera_group_manager(app: FastAPI) -> CameraBackendManager:
     """Create the singleton CameraGroupManager instance."""
     global _CAMERA_GROUP_MANAGER
 
     if _CAMERA_GROUP_MANAGER is not None:
         return _CAMERA_GROUP_MANAGER
 
-    _CAMERA_GROUP_MANAGER = CameraGroupManager(
+    _CAMERA_GROUP_MANAGER = CameraBackendManager(
         global_kill_flag=app.state.global_kill_flag,
         worker_registry=app.state.worker_registry,
     )

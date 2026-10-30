@@ -73,10 +73,13 @@ dependencies = [
     "skellypings",
     "beartype>=0.19",
     "msgspec>=0.19",
+    "skellycam-rust", # Required native backend, bundled with the application.
+    "imageio-ffmpeg>=0.6,<0.8", # Ships the encoder used by native recording.
 ]
 [tool.uv.sources]
-skellylogs = { path = "../utils/skellylogs", editable = true }
-skellypings = { path = "../utils/skellypings", editable = true }
+skellylogs = { git = "https://github.com/freemocap/skellylogs", rev = "33a3611932ce3d43e54cefb2051171d565137445" }
+skellypings = { git = "https://github.com/freemocap/skellypings", rev = "2fedf21356758569ccab069967f127a804f5241d" }
+skellycam-rust = { path = "skellycam-rust" }
 
 [tool.uv]
 package = true
@@ -94,6 +97,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
+exclude = ["skellycam-rust*", "skellycam-rust-old*", "skellycam-ui*"]
 
 # ---- Version Bumping (bumpver) ----
 # Run with: uv run bumpver update <flag>
@@ -114,7 +118,7 @@ where = ["."]
 #   add --dry to any command to preview changes without writing them
 
 [tool.bumpver]
-current_version = "v2.0.0-alpha.5"
+current_version = "v2.0.0-alpha.6"
 version_pattern = "vMAJOR.MINOR.PATCH[-TAG.NUM]"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
@@ -136,6 +140,7 @@ push = true
 
 [dependency-groups]
 dev = [
+    "maturin>=1.9,<2",
     "bumpver",
     "pip-tools",
     "pytest>=8.4.0",
@@ -188,19 +193,13 @@ dev = [
 # =============================================================================
 
 [tool.poe.tasks]
+rebuild  = { cmd = "uv sync -v --reinstall-package skellycam-rust --reinstall-package skellycam", help = "Rebuild Rust engine with full cargo output" }
 tc-check = { cmd = "ruff check --select TC skellycam/", help = "Preview type-only imports that can move behind TYPE_CHECKING" }
-tc-fix = { cmd = "ruff check --select TC --fix skellycam/", help = "Move type-only imports behind TYPE_CHECKING" }
-tc = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests to verify" }
-lint = { cmd = "ruff check skellycam/", help = "Run all ruff lint rules" }
+tc-fix   = { cmd = "ruff check --select TC --fix skellycam/", help = "Move type-only imports behind TYPE_CHECKING" }
+tc       = { sequence = ["tc-fix", "test"], help = "Move type-only imports + run tests to verify" }
+lint     = { cmd = "ruff check skellycam/", help = "Run all ruff lint rules" }
 lint-fix = { cmd = "ruff check --fix skellycam/", help = "Auto-fix all ruff lint violations" }
-test = { cmd = "pytest", help = "Run test suite" }
-test-reference = { cmd = "python -B -m pytest skellycam/tests/reference_recordings -v -m 'not sample_data'", executor = { type = "virtualenv", location = ".venv" }, help = "Run real capture reads on the 222-frame reference recording" }
-test-reference-sample = { cmd = "python -B -m pytest skellycam/tests/reference_recordings -v -m sample_data", executor = { type = "virtualenv", location = ".venv" }, help = "Run capture reads on the 1108-frame sample recording" }
-test-reference-loop = { cmd = "python -B -m pytest skellycam/tests/reference_recordings/test_camera_loop_shared_memory.py -v", executor = { type = "virtualenv", location = ".venv" }, help = "Replay test videos through the camera loop and real shared memory" }
-test-reference-concurrent = { cmd = "python -B -m pytest skellycam/tests/reference_recordings/test_concurrent_camera_replay.py -v", executor = { type = "virtualenv", location = ".venv" }, help = "Replay three test cameras concurrently and verify group synchronization and failure shutdown" }
-test-recording-safety = { cmd = "python -B -m pytest skellycam/tests/test_recording_shutdown_safety.py skellycam/tests/test_shutdown.py skellycam/tests/reference_recordings/test_recording_finalization.py -v", executor = { type = "virtualenv", location = ".venv" }, help = "Verify active video saves survive shutdown and camera failure" }
-test-recording-lifecycle = { cmd = "python -B -m pytest skellycam/tests/reference_recordings/test_recording_lifecycle.py -v", executor = { type = "virtualenv", location = ".venv" }, help = "Record twice on connected reference cameras and validate finalization, playback, and failure recovery" }
-test-camera-lifecycle = { cmd = "python -B -m pytest skellycam/tests/test_camera_shutdown.py skellycam/tests/reference_recordings/test_camera_loop_failures.py skellycam/tests/test_worker_isolation.py skellycam/tests/test_camera_orchestrator.py skellycam/tests/test_camera_group_manager.py skellycam/tests/test_worker_lifecycle.py -v", executor = { type = "virtualenv", location = ".venv" }, help = "Test camera group failure, bounded shutdown, and worker lifecycle without hardware or downloads" }
+test     = { cmd = "pytest", help = "Run test suite" }
 
 
 # =============================================================================
@@ -210,8 +209,7 @@ test-camera-lifecycle = { cmd = "python -B -m pytest skellycam/tests/test_camera
 testpaths = ["skellycam/tests"]
 asyncio_mode = "auto"
 markers = [
-    "real_data: reads reference videos, downloading missing recordings",
-    "sample_data: full 1108-frame sample recording capture reads",
+    "hardware: tests that require physical USB cameras (skipped in CI)",
 ]
 
 # =============================================================================
@@ -234,7 +232,7 @@ markers = [
 
 [tool.ruff.lint]
 select = [
-    "TC", # flake8-type-checking: move type-only imports behind TYPE_CHECKING
+    "TC",    # flake8-type-checking: move type-only imports behind TYPE_CHECKING
 ]
 
 [tool.ruff.lint.flake8-type-checking]

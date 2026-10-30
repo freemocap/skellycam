@@ -6,6 +6,7 @@ import {app} from "electron";
 export const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const APP_NAME = 'skellycam';
+const SERVER_DIRECTORY_NAME = 'skellycam_server';
 const SERVER_EXE_NAME = process.platform === 'win32' ? 'skellycam_server.exe' : 'skellycam_server';
 
 // Function to get the correct resources path based on environment
@@ -45,22 +46,22 @@ const getDefaultInstallUnpackedPath = (): string => {
 export const PYTHON_EXECUTABLE_CANDIDATES = [
     {
         name: 'bundled',
-        path: path.join(getResourcesPath(), SERVER_EXE_NAME, SERVER_EXE_NAME),
+        path: path.join(getResourcesPath(), SERVER_DIRECTORY_NAME, SERVER_EXE_NAME),
         description: 'Executable bundled with the running app (asar-unpacked)'
     },
     {
         name: 'default-install',
-        path: path.join(getDefaultInstallUnpackedPath(), SERVER_EXE_NAME, SERVER_EXE_NAME),
+        path: path.join(getDefaultInstallUnpackedPath(), SERVER_DIRECTORY_NAME, SERVER_EXE_NAME),
         description: 'Executable in the platform default install location'
     },
     {
         name: 'development',
-        path: path.join(getResourcesPath(), '..', 'dist', SERVER_EXE_NAME, SERVER_EXE_NAME),
+        path: path.join(getResourcesPath(), '..', 'dist', SERVER_DIRECTORY_NAME, SERVER_EXE_NAME),
         description: 'Development build executable (../dist/skellycam_server/)'
     },
     {
         name: 'portable',
-        path: path.join(process.cwd(), SERVER_EXE_NAME, SERVER_EXE_NAME),
+        path: path.join(process.cwd(), SERVER_DIRECTORY_NAME, SERVER_EXE_NAME),
         description: 'Portable executable in the current working directory'
     },
     {

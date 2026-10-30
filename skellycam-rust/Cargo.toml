@@ -1,0 +1,98 @@
+[package]
+name = "skellycam"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "skellycam"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "skellycam-rust"
+path = "src/main.rs"
+
+[dependencies]
+# PyO3 — Python bindings
+pyo3 = { version = "0.28" }
+
+# Bridge Rust tracing/log to Python logging
+log = "0.4"
+tracing-log = "0.2"
+pyo3-log = "0.13"
+
+# Signal handling (Ctrl+C)
+ctrlc = "3"
+
+# Image processing (rotate, resize, JPEG encode/decode)
+image = "0.25"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP + WebSocket
+axum = { version = "0.7", features = ["ws"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# OpenAPI docs
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+# SHA hashing (camera ID generation — must match Python hashlib.sha256)
+sha2 = "0.10"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# UUID
+uuid = { version = "1", features = ["v4"] }
+
+# Time
+chrono = "0.4"
+
+# Home directory lookup
+dirs = "6"
+
+# Streaming CSV
+csv = "1"
+
+# Native microphone recording using the application's PortAudio library.
+libloading = "0.8"
+hound = "3.5"
+rtrb = "0.3"
+
+# HTTP client (API integration tests)
+reqwest = { version = "0.12", features = ["json"] }
+# WebSocket client (API integration tests)
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
+# ffmpeg auto-download
+ffmpeg-sidecar = "2"
+
+# DataFrames (Phase 3 — recording)
+# polars = { version = "0.41", features = ["lazy", "csv-file"] }
+
+[build-dependencies]
+ureq = { version = "3" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# The python-bindings feature gates `pyo3/extension-module` so rust-analyzer can
+# analyze without linking against Python (avoids spurious E0425 / "cannot find
+# type PyResult" errors). Default builds include the python-bindings feature.
+[features]
+default = ["python-bindings"]
+python-bindings = ["pyo3/extension-module"]

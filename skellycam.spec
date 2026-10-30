@@ -1,18 +1,30 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_submodules, collect_delvewheel_libs_directory
 import cv2
 import os
 
 datas = []
 binaries = []
-hiddenimports = ["encodings.idna"]
+hiddenimports = ["encodings.idna", "_skellycam_rust"]
+
+# Both camera implementations ship in every installer. The Rust extension
+# statically links OpenPNP; collect its Python module and native dependencies.
+# PortAudio retains sounddevice's package layout so UI device indices match.
+for package in ('imageio_ffmpeg', '_sounddevice_data'):
+    package_datas, package_binaries, package_hidden = collect_all(package)
+    datas.extend(package_datas)
+    binaries.extend(package_binaries)
+    hiddenimports.extend(package_hidden)
 
 # ── OpenCV ──
 # Only collect what we need from cv2 instead of collect_all which grabs
 # test data, haarcascades, DNN models, and other bloat.
 binaries.extend(collect_dynamic_libs('cv2'))
 hiddenimports.extend(collect_submodules('cv2'))
+datas, binaries = collect_delvewheel_libs_directory(
+    'cv2_enumerate_cameras', datas=datas, binaries=binaries,
+)
 
 # ── setuptools (needed by some vendored deps at runtime) ──
 setuptools_datas, _, setuptools_hidden = collect_all('setuptools')
@@ -24,7 +36,8 @@ jaraco_text_path = os.path.join(
     os.path.dirname(__import__('setuptools', fromlist=['_vendor']).__file__),
     '_vendor', 'jaraco', 'text'
 )
-datas.append((os.path.join(jaraco_text_path, '*.txt'), 'setuptools/_vendor/jaraco/text/'))
+if os.path.isdir(jaraco_text_path):
+    datas.append((os.path.join(jaraco_text_path, '*.txt'), 'setuptools/_vendor/jaraco/text/'))
 
 a = Analysis(
     ['skellycam/__main__.py'],

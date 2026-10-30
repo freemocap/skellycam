@@ -1,0 +1,44 @@
+@online{uvCacheKeys,
+  title = {uv caching and dynamic metadata},
+  author = {{Astral contributors}},
+  url = {https://docs.astral.sh/uv/concepts/cache/},
+  urldate = {2026-10-30},
+  review = {Reviewed local-directory caching and file-glob cache keys after reproducing a stale native wheel during locked sync.},
+  claim = {Explicit source-file cache keys make uv rebuild a local native wheel when Rust sources change.}
+}
+
+@online{portaudioV19Api,
+  title = {PortAudio V19 API Reference},
+  author = {{PortAudio contributors}},
+  url = {https://files.portaudio.com/docs/v19-doxydocs/portaudio_8h.html},
+  urldate = {2026-10-30},
+  review = {Reviewed the published API reference for initialization, stream callback ABI, device indices, and stream shutdown.},
+  claim = {PortAudio initialization calls must be balanced; callbacks use the documented C ABI and must avoid blocking work.}
+}
+
+@online{hound351WavWriter,
+  title = {Hound 3.5.1 WavWriter},
+  author = {{Hound contributors}},
+  url = {https://docs.rs/hound/3.5.1/hound/struct.WavWriter.html},
+  urldate = {2026-10-30},
+  review = {Reviewed the Rust API documentation for interleaved samples and explicit finalization.},
+  claim = {Explicit WAV finalization reports errors that automatic finalization on drop cannot report.}
+}
+
+@online{imageioFfmpegExecutable,
+  title = {imageio-ffmpeg executable resolution},
+  author = {{ImageIO contributors}},
+  url = {https://github.com/imageio/imageio-ffmpeg/blob/main/imageio_ffmpeg/_utils.py},
+  urldate = {2026-10-30},
+  review = {Reviewed executable resolution source and verified installed imageio-ffmpeg 0.7.0.},
+  claim = {The platform wheel supplies an FFmpeg executable resolved by get_ffmpeg_exe for bundled native recording.}
+}
+
+@online{ffmpegSidecarCommand,
+  title = {ffmpeg-sidecar FfmpegCommand},
+  author = {{ffmpeg-sidecar contributors}},
+  url = {https://docs.rs/ffmpeg-sidecar/2.5.1/ffmpeg_sidecar/command/struct.FfmpegCommand.html},
+  urldate = {2026-10-30},
+  review = {Reviewed the command API and verified new_with_path against locally installed 2.5.1 source.},
+  claim = {new_with_path launches an explicitly supplied encoder executable instead of relying on PATH.}
+}
