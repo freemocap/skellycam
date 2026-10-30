@@ -1,5 +1,9 @@
 """Keep the application's manager stable while choosing a new group's engine."""
 from typing import Literal
+import asyncio
+import sys
+
+from skellycam.core.camera_group.tasks.recommend_exposure import recommend_exposure
 
 from skellycam.core.camera_group.rust_camera_group import RustCameraGroupManager
 
@@ -16,8 +20,13 @@ class CameraBackendManager:
         self._arguments = dict(global_kill_flag=global_kill_flag, worker_registry=worker_registry)
         self._manager = CameraGroupManager(**self._arguments)
         self.backend: CameraBackend = "python"
+        self._configuration_lock = asyncio.Lock()
 
     async def create_or_update_camera_group(self, camera_configs, backend: CameraBackend = "python"):
+        async with self._configuration_lock:
+            return await self._create_or_update(camera_configs, backend)
+
+    async def _create_or_update(self, camera_configs, backend):
         if backend != self.backend:
             if self._manager.camera_groups:
                 raise CameraBackendInUseError("Close the current cameras before choosing another camera backend")
@@ -25,7 +34,17 @@ class CameraBackendManager:
             implementation = CameraGroupManager if backend == "python" else RustCameraGroupManager
             self._manager = implementation(**self._arguments)
             self.backend = backend
-        return await self._manager.create_or_update_camera_group(camera_configs)
+        selected = {key for key, config in camera_configs.items()
+                    if config.exposure_mode == "RECOMMEND" and config.use_this_camera}
+        configs = {key: config.model_copy(deep=True) for key, config in camera_configs.items()}
+        for key in selected:
+            # Preserve the existing Linux device-auto policy: log2 exposure
+            # candidates are not V4L2 absolute exposure units.
+            configs[key].exposure_mode = "AUTO" if sys.platform == "linux" else "MANUAL"
+        group = await self._manager.create_or_update_camera_group(configs)
+        if selected and sys.platform != "linux":
+            await recommend_exposure(group, selected)
+        return group
 
     @property
     def camera_groups(self):
@@ -39,10 +58,12 @@ class CameraBackendManager:
         return self._manager.get_camera_group(camera_group_id)
 
     async def close_all_camera_groups(self):
-        await self._manager.close_all_camera_groups()
+        async with self._configuration_lock:
+            await self._manager.close_all_camera_groups()
 
     async def start_recording_all_groups(self, recording_info):
-        await self._manager.start_recording_all_groups(recording_info)
+        async with self._configuration_lock:
+            await self._manager.start_recording_all_groups(recording_info)
 
     async def stop_recording_all_groups(self):
         return await self._manager.stop_recording_all_groups()

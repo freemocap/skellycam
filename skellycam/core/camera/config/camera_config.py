@@ -10,7 +10,7 @@ from skellycam.core.camera.config.image_rotation_types import RotationTypes
 from skellycam.core.types.numpy_record_dtypes import FRAME_CAMERA_INFO_DTYPE
 from skellycam.core.types.type_overloads import CameraIdString, BYTES_PER_MONO_PIXEL
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString
-from skellycam.core.camera.opencv.opencv_helpers.recommend_camera_exposure_setting import ExposureModes
+from skellycam.core.camera.config.exposure_modes import ExposureModes
 from skellycam.core.recorders.videos.fourcc_codec_helpers import FOURCC_TO_EXTENSION
 
 DEFAULT_IMAGE_HEIGHT: int = 720

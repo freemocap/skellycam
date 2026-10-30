@@ -108,12 +108,6 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
 /// exposure on the new stream. The camera thread stays alive — only
 /// the internal CaptureStream is replaced.
 ///
-/// When `exposure_mode` is `"RECOMMEND"`, this function runs a luminance
-/// calibration sweep before applying the config — measuring brightness at
-/// each exposure setting and picking the one closest to midrange. The
-/// resolved values (`"MANUAL"` + the recommended exposure) are written to
-/// `shared_config` so the caller can propagate them to `active_config`.
-///
 /// Returns the (possibly new) stream, actual_width, and actual_height.
 unsafe fn apply_config(
     ctx: CapContext,
@@ -126,17 +120,8 @@ unsafe fn apply_config(
     shared_config: &Arc<std::sync::Mutex<CameraConfig>>,
     command_receiver: &mpsc::Receiver<CameraCommand>,
 ) -> anyhow::Result<(CapStream, u32, u32)> { unsafe {
-    // Resolve RECOMMEND → MANUAL via luminance calibration.
-    let (exposure_mode, exposure_value) = if new_config.exposure_mode == "RECOMMEND" {
-        let recommended = calibrate_luminance(ctx, stream, label, command_receiver)?;
-        if let Ok(mut guard) = shared_config.lock() {
-            guard.exposure_mode = "MANUAL".to_string();
-            guard.exposure = recommended;
-        }
-        ("MANUAL".to_string(), recommended)
-    } else {
-        (new_config.exposure_mode.clone(), new_config.exposure)
-    };
+    let exposure_mode = new_config.exposure_mode.clone();
+    let exposure_value = new_config.exposure;
 
     let needs_restart = actual_width != new_config.width
         || actual_height != new_config.height
@@ -700,85 +685,6 @@ unsafe fn open_stream_raw(
     Ok(stream)
 }
 
-/// Luminance calibration: sweep the exposure range, measure mean ITU-R BT.601
-/// luminance at each setting, and return the exposure value that produces
-/// brightness closest to the target (127.5, half of the 0–255 range).
-///
-/// Applies a -1 offset after finding the midrange exposure — favouring a
-/// slightly darker (faster) shutter to reduce motion blur. Mocap tracking
-/// prefers bright environments and short exposures.
-///
-/// # Luminance measurement: ITU-R BT.601
-///
-/// The brightness of each captured frame is measured by decoding the MJPEG
-/// frame to RGB, then computing the **weighted** mean luminance as defined
-/// in the ITU-R BT.601 standard:
-///
-/// ```text
-/// Y = 0.299·R + 0.587·G + 0.114·B
-/// ```
-///
-/// This formula is often described as *perceptual* because the human retina
-/// has far more green-sensitive cone cells than red or blue — green light
-/// looks brighter to us at the same physical intensity. But the weights
-/// also align with **camera sensor physics**: the Bayer-pattern colour
-/// filter array on a typical CMOS sensor has 50% green photosites, 25%
-/// red, and 25% blue. The green channel captures twice as many samples and
-/// therefore has roughly √2 better signal-to-noise ratio (SNR) than the
-/// red or blue channels.
-///
-/// A naive `(R + G + B) / 3` mean would give the noisy blue channel (25%
-/// of sensels, poorest SNR under typical indoor tungsten/LED lighting) an
-/// equal vote. The weighted luma de-emphasises the channels with worse SNR
-/// and reflects the physical sampling density of the sensor itself — it is
-/// the same calculation used in every JPEG encoder, video codec, and
-/// television broadcast since the 1980s.
-///
-/// For the purpose of exposure calibration, the exact weighting matters
-/// less than you might think: we are ranking exposure values by distance
-/// from a fixed target, and any monotonic brightness measure will produce
-/// the same ranking. But the BT.601 weights are both technically correct
-/// (matching sensor physics) and already battle-tested in the codebase.
-unsafe fn calibrate_luminance(
-    ctx: CapContext, stream: CapStream, label: &str,
-    command_receiver: &mpsc::Receiver<CameraCommand>,
-) -> anyhow::Result<i32> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    const SETTLE_FRAMES: u32 = 10;
-    let mut best_exposure = -7;
-    let mut best_diff = f64::MAX;
-    let mut buffer = Vec::new();
-    for exposure in (-11..=-5).rev() {
-        unsafe {
-            Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 0);
-            Cap_setProperty(ctx, stream, CAPPROPID_EXPOSURE, exposure);
-        }
-        for index in 0..=SETTLE_FRAMES {
-            wait_for_startup_frame(command_receiver, deadline, || unsafe {
-                Cap_hasNewFrame(ctx, stream) != 0
-            })?;
-            let mut size = 0;
-            if unsafe { Cap_getFrameSize(ctx, stream, &mut size) } != CAPRESULT_OK || size == 0 {
-                continue;
-            }
-            buffer.resize(size as usize, 0);
-            let mut written = 0;
-            let result = unsafe {
-                Cap_captureFrameRaw(ctx, stream, buffer.as_mut_ptr(), size, &mut written)
-            };
-            if result != CAPRESULT_OK || index < SETTLE_FRAMES { continue; }
-            if let Ok((_width, _height, rgb)) = crate::decode::mjpeg_to_rgb(&buffer[..written as usize]) {
-                let diff = (crate::decode::mean_luminance(&rgb) - 127.5).abs();
-                if diff < best_diff { best_diff = diff; best_exposure = exposure; }
-            }
-        }
-    }
-    if best_diff == f64::MAX { anyhow::bail!("Camera {label}: no usable exposure calibration frames"); }
-    let recommended = (best_exposure - 1).clamp(-11, -5);
-    tracing::info!("Camera {label}: recommended exposure={recommended}");
-    Ok(recommended)
-}
-
 unsafe fn configure_exposure(
     ctx: CapContext,
     stream: CapStream,
@@ -786,22 +692,16 @@ unsafe fn configure_exposure(
     exposure_mode: &str,
     target_exposure: i32,
 ) {
-    // USB UVC cameras report min=-13 max=-1, but only -11..-5 produce
-    // meaningful exposure changes. Values outside this range are either
-    // clamped by the hardware (full black at ≤-11, full bright at ≥-5)
-    // or produce unreliable results.
-    let clamped = target_exposure.clamp(-11, -5);
-    if clamped != target_exposure {
-        tracing::debug!(
-            "Camera {label}: exposure {target_exposure} clamped to {clamped} (valid range -11..-5)"
-        );
-    }
-
     let mut min: i32 = 0;
     let mut max: i32 = 0;
     let mut default: i32 = 0;
-    let _ = unsafe {
+    let limits_result = unsafe {
         Cap_getPropertyLimits(ctx, stream, CAPPROPID_EXPOSURE, &mut min, &mut max, &mut default)
+    };
+    let clamped = if limits_result == CAPRESULT_OK && min <= max {
+        target_exposure.clamp(min, max)
+    } else {
+        target_exposure
     };
     if exposure_mode == "AUTO" {
         unsafe { Cap_setAutoProperty(ctx, stream, CAPPROPID_EXPOSURE, 1) };

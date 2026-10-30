@@ -5,8 +5,7 @@ import cv2
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.opencv_extract_config import extract_config_from_cv2_capture
-from skellycam.core.camera.opencv.opencv_helpers.recommend_camera_exposure_setting import get_recommended_cv2_cap_exposure, \
-    ExposureModes
+from skellycam.core.camera.config.exposure_modes import ExposureModes
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +34,7 @@ def _apply_exposure(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> 
         return
 
     if config.exposure_mode == ExposureModes.RECOMMEND.name:
-        optimized = get_recommended_cv2_cap_exposure(cv2_vid_capture)
-        cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
-        cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(optimized))
-        config.exposure = optimized
-        config.exposure_mode = ExposureModes.MANUAL.name
+        raise ValueError("Resolve RECOMMEND through CameraBackendManager before applying device settings")
     elif config.exposure_mode == ExposureModes.AUTO.name:
         cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING)
     elif config.exposure_mode == ExposureModes.MANUAL.name:
