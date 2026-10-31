@@ -64,6 +64,7 @@ def opencv_camera_worker_method(
         # monitor doesn't mistake this for a crash and kill the whole backend.
         logger.error(f"Camera {camera_id} setup failed: {e}")
     except Exception as e:
+        ipc.report_camera_failure(camera_id, config.camera_index, "capture/configuration update", e)
         self_status.signal_error()
         logger.exception(
             f"Exception occurred when running Camera Process for Camera: {camera_id} - {e}"

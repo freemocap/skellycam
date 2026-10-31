@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 
 import cv2
 
@@ -6,6 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.determine_backend import determine_opencv_camera_backend
 from skellycam.core.camera.opencv.opencv_helpers.opencv_apply_config import apply_camera_configuration
 from skellycam.utilities.wait_functions import wait_1s
+from skellycam.core.camera_group.camera_errors import CameraConnectionCancelled
 
 
 class FailedToReadFrameFromCameraException(Exception):
@@ -28,61 +30,75 @@ logger = logging.getLogger(__name__)
 _PREFERRED_BUFFER_SIZE = 1
 
 
-def create_cv2_video_capture(config: CameraConfig, retry_count: int = 5) -> tuple[cv2.VideoCapture, CameraConfig]:
+def create_cv2_video_capture(
+    config: CameraConfig,
+    retry_count: int = 5,
+    *,
+    should_continue: Callable[[], bool] | None = None,
+) -> tuple[cv2.VideoCapture, CameraConfig]:
+    if retry_count < 0:
+        raise ValueError("retry_count must be nonnegative")
     cap_backend = determine_opencv_camera_backend()
-    attempts = -1
-    capture: cv2.VideoCapture | None = None
-    while attempts < retry_count and capture is None:
-        attempts += 1
+    context = f"camera {config.camera_id} (index {config.camera_index}, backend {cap_backend.name})"
+
+    def check_cancelled() -> None:
+        if should_continue is not None and not should_continue():
+            raise CameraConnectionCancelled(f"Connection cancelled for {context}")
+
+    for attempt in range(retry_count + 1):
+        check_cancelled()
         capture = cv2.VideoCapture(int(config.camera_index), cap_backend.id)
-        if not capture.isOpened():
-            if attempts < retry_count:
-                logger.warning(
-                    f"Failed to open camera {config.camera_index}. Retrying... ({attempts + 1}/{retry_count})")
-                capture.release()
-                wait_1s()
-                capture = None
-                continue
-            raise FailedToOpenCameraException()
+        transferred = False
+        try:
+            if not capture.isOpened():
+                raise FailedToOpenCameraException(f"Failed to open {context} on attempt {attempt + 1}/{retry_count + 1}")
+            # Set fourcc, resolution, and framerate before the first read() so that the V4L2
+            # driver negotiates the correct pixel format, frame size, and frame interval when
+            # streaming begins.  Without this, the driver may default to a lower framerate
+            # (e.g. 15fps instead of 30fps) or a format the camera cannot deliver, causing
+            # select() timeouts or degraded performance.
+            if config.capture_fourcc:
+                capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc))
+            capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
+            capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
+            if config.framerate > 0:
+                capture.set(cv2.CAP_PROP_FPS, config.framerate)
 
-        # Set fourcc, resolution, and framerate before the first read() so that the V4L2
-        # driver negotiates the correct pixel format, frame size, and frame interval when
-        # streaming begins.  Without this, the driver may default to a lower framerate
-        # (e.g. 15fps instead of 30fps) or a format the camera cannot deliver, causing
-        # select() timeouts or degraded performance.
-        if config.capture_fourcc:
-            capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc))
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
-        if config.framerate > 0:
-            capture.set(cv2.CAP_PROP_FPS, config.framerate)
+            # Minimize the driver-side frame buffer to reduce stale-frame latency.
+            # This makes grab() timestamps a tighter proxy for actual frame capture time.
+            if not capture.set(cv2.CAP_PROP_BUFFERSIZE, _PREFERRED_BUFFER_SIZE):
+                logger.debug(
+                    f"Camera {config.camera_index}: backend did not accept "
+                    f"CAP_PROP_BUFFERSIZE={_PREFERRED_BUFFER_SIZE} (this is normal for some backends)"
+                )
+            else:
+                actual = capture.get(cv2.CAP_PROP_BUFFERSIZE)
+                logger.debug(f"Camera {config.camera_index}: buffer size set to {int(actual)}")
 
-        # Minimize the driver-side frame buffer to reduce stale-frame latency.
-        # This makes grab() timestamps a tighter proxy for actual frame capture time.
-        if not capture.set(cv2.CAP_PROP_BUFFERSIZE, _PREFERRED_BUFFER_SIZE):
-            logger.debug(
-                f"Camera {config.camera_index}: backend did not accept "
-                f"CAP_PROP_BUFFERSIZE={_PREFERRED_BUFFER_SIZE} (this is normal for some backends)"
-            )
-        else:
-            actual = capture.get(cv2.CAP_PROP_BUFFERSIZE)
-            logger.debug(f"Camera {config.camera_index}: buffer size set to {int(actual)}")
-
-        success, image = capture.read()
-
-        if not success or image is None:
-            if attempts < retry_count:
-                logger.warning(
-                    f"Failed to read frame from camera {config.camera_index}. Retrying... ({attempts + 1}/{retry_count})")
-                capture.release()
-                wait_1s()
-                capture = None
-                continue
-            raise FailedToReadFrameFromCameraException()
-    if not isinstance(capture, cv2.VideoCapture) or not capture.isOpened():
-        raise FailedToOpenCameraException(f"Failed to open camera {config.camera_index} after {retry_count} attempts.")
-    extracted_config = apply_camera_configuration(cv2_vid_capture=capture,
-                                                  prior_config=None,
-                                                  config=config)
-    logger.info(f"Created `cv2.VideoCapture` object for Camera: {config.camera_index}")
-    return capture, extracted_config
+            check_cancelled()
+            success, image = capture.read()
+            if not success or image is None:
+                raise FailedToReadFrameFromCameraException(
+                    f"Failed to read initial frame from {context} on attempt {attempt + 1}/{retry_count + 1}"
+                )
+            check_cancelled()
+            extracted_config = apply_camera_configuration(cv2_vid_capture=capture, prior_config=None, config=config)
+            check_cancelled()
+            logger.info(f"Created `cv2.VideoCapture` object for {context}")
+            transferred = True
+            return capture, extracted_config
+        except (FailedToOpenCameraException, FailedToReadFrameFromCameraException) as error:
+            if attempt == retry_count:
+                raise
+            logger.warning(f"{error}. Retrying...")
+        finally:
+            # Until a successful return, this function owns the capture, including
+            # the final failed attempt and exceptions while applying settings.
+            if not transferred:
+                try:
+                    capture.release()
+                except Exception:
+                    logger.exception(f"Failed to release {context} after connection failure")
+        check_cancelled()
+        wait_1s()
+    raise AssertionError("Camera retry loop exited without a capture or an error")

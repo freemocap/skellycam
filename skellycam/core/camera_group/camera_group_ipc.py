@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from multiprocessing.sharedctypes import Synchronized
+from multiprocessing.sharedctypes import Synchronized, SynchronizedString
 from dataclasses import dataclass, field
 
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
@@ -24,6 +24,21 @@ class CameraGroupIPC:
     timebase_mapping: TimebaseMapping = field(default_factory=TimebaseMapping)
     should_pause: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
     shutdown_camera_group_flag: Synchronized = field(default_factory=lambda: multiprocessing.Value("b", False))
+    # Written before shutdown is signalled, so the parent cannot race a queue's
+    # feeder thread and lose the originating error. Sibling cancellation must
+    # not overwrite the first failure.
+    _failure_message: SynchronizedString = field(default_factory=lambda: multiprocessing.Array("c", 8192))
+
+    @property
+    def failure_message(self) -> str:
+        return self._failure_message.value.decode("utf-8", errors="replace")
+
+    def report_camera_failure(self, camera_id: str, camera_index: int, stage: str, error: Exception) -> None:
+        message = f"Camera {camera_id} (index {camera_index}) failed during {stage}: {type(error).__name__}: {error}"
+        with self._failure_message.get_lock():
+            if not self._failure_message.value:
+                self._failure_message.value = message.encode("utf-8")[:8191]
+        self.should_continue = False
 
     @classmethod
     def create(cls,

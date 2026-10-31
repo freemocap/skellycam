@@ -104,4 +104,4 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
         logger.exception(f"Problem applying configuration for camera: {config},\n\nReceived error:    {e}")
         raise FailedToApplyCameraConfigurationError(
             f"Failed to apply configuration to Camera {config.camera_index} - {type(e).__name__} - {e}"
-        )
+        ) from e

@@ -7,6 +7,7 @@ from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.opencv.opencv_helpers.create_cv2_video_capture import create_cv2_video_capture
 from skellycam.core.camera.opencv.opencv_helpers.create_initial_frame_recarray import create_initial_frame_rec_array
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_errors import CameraConnectionCancelled
 from skellycam.core.camera_group.camera_orchestrator import CameraOrchestrator
 from skellycam.core.camera_group.camera_status import CameraStatus
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -35,10 +36,14 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                              self_status: CameraStatus,
                              shm_subscription: TopicSubscriptionQueue) -> tuple[
     CameraSharedMemoryRingBuffer, CameraConfig, cv2.VideoCapture, np.recarray]:
-    # Create cv2.VideoCapture object
+    cv2_video_capture = None
+    stage = "opening/configuring capture"
     try:
-        cv2_video_capture, config = create_cv2_video_capture(config)
+        cv2_video_capture, config = create_cv2_video_capture(
+            config, should_continue=lambda: ipc.should_continue and not self_status.should_close.value
+        )
 
+        stage = "waiting for shared memory"
         ipc.pubsub.topics[TopicTypes.EXTRACTED_CONFIG].publish(DeviceExtractedConfigMessage(extracted_config=config))
         logger.debug(f"Camera {config.camera_id} connected, awaiting shm message...")
         while camera_shm is None and ipc.should_continue and not self_status.should_close.value:
@@ -53,6 +58,8 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
                 logger.debug(f"Creating camera shared memory for camera {config.camera_id}...")
                 camera_shm = CameraSharedMemoryRingBuffer.recreate(dto=camera_shm_dto,
                                                                    read_only=False)
+        if not ipc.should_continue or self_status.should_close.value:
+            raise CameraConnectionCancelled(f"Camera {config.camera_id} startup cancelled")
         # Ensure camera_group_shm is properly initialized before proceeding
         if camera_shm is None or not camera_shm.valid:
             raise RuntimeError("Failed to initialize camera_group_shm")
@@ -63,15 +70,27 @@ def setup_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer | None,
         while not orchestrator.all_ready and ipc.should_continue and not self_status.should_close.value:
             _, _ = cv2_video_capture.read()  # Clear the buffer
             wait_10ms()
+        if not ipc.should_continue or self_status.should_close.value:
+            raise CameraConnectionCancelled(f"Camera {config.camera_id} startup cancelled")
+        stage = "creating initial frame"
         frame_rec_array = create_initial_frame_rec_array(config=config,
                                                          ipc=ipc)
 
     except Exception as e:
-        logger.exception(f"Failed to create cv2.VideoCapture for camera {config.camera_id}: {e}")
+        if not isinstance(e, CameraConnectionCancelled):
+            ipc.report_camera_failure(config.camera_id, config.camera_index, stage, e)
+            logger.exception(f"Camera {config.camera_id} failed during {stage}: {e}")
         self_status.signal_error()
         # Stop only this camera group's siblings, not the whole backend.
         ipc.should_continue = False
+        # The caller never receives these handles when setup raises.
+        for resource, method in ((cv2_video_capture, "release"), (camera_shm, "close")):
+            if resource is not None:
+                try:
+                    getattr(resource, method)()
+                except Exception:
+                    logger.exception(f"Failed to {method} camera {config.camera_id} resource after setup failure")
         raise CameraSetupFailedException(
-            f"Could not create cv2.VideoCapture for camera {config.camera_id}"
+            f"Camera {config.camera_id} (index {config.camera_index}) failed during {stage}: {e}"
         ) from e
     return camera_shm, config, cv2_video_capture, frame_rec_array

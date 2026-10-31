@@ -30,7 +30,10 @@ def extract_config_from_cv2_capture(camera_index: CameraIndexInt,
     ]):
         logger.error(f"Failed to extract configuration from cv2.VideoCapture object - "
                      f"width: {width}, height: {height}, exposure: {exposure}")
-        raise ValueError("Invalid camera configuration detected. Please check the camera settings.")
+        raise ValueError(
+            f"Camera {camera_id} (index {camera_index}) returned invalid device properties: "
+            f"width={width}, height={height}, exposure={exposure}, opened={cv2_capture.isOpened()}"
+        )
     try:
         return CameraConfig(
             camera_index=camera_index,

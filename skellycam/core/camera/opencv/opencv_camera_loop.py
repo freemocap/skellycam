@@ -124,6 +124,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
             previous_tik = time.perf_counter_ns()
 
     except Exception as e:
+        ipc.report_camera_failure(config.camera_id, config.camera_index, "capture/configuration update", e)
         self_status.signal_error()
         logger.exception(f"Exception occurred in camera loop for Camera: {config.camera_id} - {e}")
         ipc.should_continue = False

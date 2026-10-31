@@ -1,5 +1,7 @@
 import logging
 import multiprocessing
+import time
+from queue import Empty
 from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass
 
@@ -10,6 +12,7 @@ from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.camera_worker import CameraState
 from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
+from skellycam.core.camera_group.camera_errors import CameraConfigurationError
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import (
     DeviceExtractedConfigMessage,
@@ -303,24 +306,37 @@ class CameraGroup:
 async def await_extracted_configs(
     ipc: CameraGroupIPC,
     requested_configs: CameraConfigs,
+    timeout_seconds: float = 30.0,
 ) -> CameraConfigs:
-    updated_configs: dict[CameraIdString, CameraConfig | None] = {
-        camera_id: None for camera_id in requested_configs.keys()
-    }
-    while (
-        any(not isinstance(config, CameraConfig) for config in updated_configs.values())
-        and ipc.should_continue
-    ):
-        if not ipc.extracted_config_subscription.empty():
-            extracted_config_message = ipc.extracted_config_subscription.get()
+    updated_configs: CameraConfigs = {}
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        missing = [camera_id for camera_id in requested_configs if camera_id not in updated_configs]
+        if not ipc.should_continue:
+            detail = ipc.failure_message or "Camera group stopped before configuration completed"
+            raise CameraConfigurationError(f"{detail}. Missing configurations: {missing}")
+        if not missing:
+            break
+        if time.monotonic() >= deadline:
+            ipc.should_continue = False
+            raise CameraConfigurationError(
+                f"Timed out after {timeout_seconds:g}s waiting for camera configurations: {missing}"
+            )
+        try:
+            extracted_config_message = ipc.extracted_config_subscription.get_nowait()
+        except Empty:
+            await await_100ms()
+        else:
             if not isinstance(extracted_config_message, DeviceExtractedConfigMessage):
                 raise RuntimeError(
                     f"Received unexpected message type: {type(extracted_config_message)}"
                 )
-            updated_configs[
-                extracted_config_message.extracted_config.camera_id
-            ] = extracted_config_message.extracted_config
-        await await_100ms()
+            config = extracted_config_message.extracted_config
+            if not isinstance(config, CameraConfig):
+                raise CameraConfigurationError(f"Camera worker returned an invalid configuration: {type(config)}")
+            if config.camera_id not in requested_configs:
+                raise CameraConfigurationError(f"Received configuration for unexpected camera {config.camera_id}")
+            updated_configs[config.camera_id] = config
 
     validate_camera_configs(updated_configs)
 
