@@ -2,8 +2,63 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+import cv2
+import numpy as np
+from skellycam.core.camera.config.camera_config import CameraConfig
 
 from skellycam.core.camera_group.rust_camera_group import RustCameraGroup, RustCameraGroupManager
+
+
+def test_unchanged_native_frames_are_rejected_before_jpeg_decode(monkeypatch):
+    native = Mock()
+    native.get_latest_raw_frames.return_value = {'group': {'camera-A': {'frame_number': 17}}}
+    group = RustCameraGroup('group', {}, native)
+    decode = Mock(side_effect=AssertionError('Unchanged JPEG must not be decoded'))
+    monkeypatch.setattr('cv2.imdecode', decode)
+    assert group.get_latest_frames(if_newer_than=17) is None
+    decode.assert_not_called()
+
+
+def test_native_decoding_reuses_caller_owned_frame_storage():
+    native = Mock()
+    _, jpeg = cv2.imencode('.jpg', np.full((6, 8, 3), 80, dtype=np.uint8))
+    source = {'frame_number': 17, 'jpeg_bytes': jpeg.tobytes(), 'timestamps': {
+        'loop_start_ns': 10, 'frame_available_ns': 20, 'post_jpeg_extract_ns': 30,
+        'pre_send_ns': 40, 'gatherer_received_ns': 50}}
+    native.get_latest_raw_frames.return_value = {'group': {'camera-A': source}}
+    group = RustCameraGroup('group', {'camera-A': CameraConfig(camera_id='camera-A', camera_index=0)}, native)
+    buffers = {}
+    first = group.get_latest_frames(frame_buffers=buffers)['camera-A']
+    source['frame_number'] = 18
+    second = group.get_latest_frames(if_newer_than=17, frame_buffers=buffers)['camera-A']
+    assert first is second
+    assert int(second.frame_metadata.frame_number[0]) == 18
+    assert np.all(second.image == 80)
+
+
+@pytest.mark.parametrize('rotation', [-1, 0, 1, 2])
+def test_native_frames_restore_sensor_orientation_before_python_consumers_rotate(rotation):
+    """Native raw JPEGs are display-oriented; Python frame records are sensor-oriented."""
+    sensor_image = np.random.default_rng(19).integers(0, 256, (48, 80, 3), dtype=np.uint8)
+    display_image = sensor_image if rotation == -1 else cv2.rotate(sensor_image, rotation)
+    _, jpeg = cv2.imencode('.jpg', display_image)
+    decoded_display = cv2.imdecode(jpeg, cv2.IMREAD_COLOR)
+    native = Mock()
+    native.get_latest_raw_frames.return_value = {'group': {'000a': {
+        'frame_number': 17, 'jpeg_bytes': jpeg.tobytes(), 'timestamps': {
+            'loop_start_ns': 10, 'frame_available_ns': 20, 'post_jpeg_extract_ns': 30,
+            'pre_send_ns': 40, 'gatherer_received_ns': 50}}}}
+    config = CameraConfig(camera_id='000a', camera_index=3, rotation=rotation,
+                          resolution={'width': 80, 'height': 48})
+    group = RustCameraGroup('group', {'000a': config}, native)
+    buffers = {}
+    frame = group.get_latest_frames(frame_buffers=buffers)['000a']
+    assert frame.image[0].shape == sensor_image.shape
+    assert int(frame.frame_metadata.camera_info.camera_index[0]) == 3
+    applied_rotation = int(frame.frame_metadata.camera_info.rotation[0])
+    displayed = frame.image[0] if applied_rotation == -1 else cv2.rotate(frame.image[0], applied_rotation)
+    np.testing.assert_array_equal(displayed, decoded_display)
+    assert group.get_latest_frames(frame_buffers=buffers)['000a'] is frame
 
 
 def test_new_group_frames_are_not_hidden_by_an_older_groups_threshold():

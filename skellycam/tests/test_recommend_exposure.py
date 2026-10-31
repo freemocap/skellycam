@@ -30,6 +30,39 @@ class CameraFrames:
 
 
 @pytest.mark.asyncio
+async def test_recommendation_never_probes_exposure_above_minus_five():
+    group = CameraFrames()
+    await recommend_exposure(group, {"one"}, settle_frames=1)
+    assert all(configs["one"].exposure <= -5 for configs in group.applied)
+    with pytest.raises(ValueError, match="at most -5"):
+        await recommend_exposure(group, {"one"}, candidates=(-5, -4))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("backend", ["python", "rust"])
+@pytest.mark.parametrize("mode,requested,expected", [("MANUAL", -4, -5), ("MANUAL", -3, -5),
+                                                    ("MANUAL", -7, -7), ("AUTO", -4, -4)])
+async def test_camera_requests_limit_manual_exposure_without_changing_saved_data(monkeypatch, backend, mode, requested, expected):
+    from skellycam.core.camera_group import camera_backend_manager as selection
+    from skellycam.core.camera_group import camera_group_manager as python_backend
+
+    class Manager:
+        def __init__(self, **kwargs):
+            self.camera_groups = {}
+
+        async def create_or_update_camera_group(self, configs):
+            assert configs["one"].exposure == expected
+            return SimpleNamespace(configs=configs)
+
+    monkeypatch.setattr(python_backend, "CameraGroupManager", Manager)
+    monkeypatch.setattr(selection, "RustCameraGroupManager", Manager)
+    manager = selection.CameraBackendManager(global_kill_flag=None, worker_registry=None)
+    config = CameraConfig(camera_id="one", exposure_mode=mode, exposure=requested)
+    await manager.create_or_update_camera_group({"one": config}, backend=backend)
+    assert config.exposure == requested
+
+
+@pytest.mark.asyncio
 async def test_shared_task_selects_per_camera_exposure_and_preserves_other_settings():
     group = CameraFrames()
     values = await recommend_exposure(group, {"one", "two"}, candidates=(-8, -7, -6), settle_frames=2)

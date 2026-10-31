@@ -129,6 +129,10 @@ class CameraGroup:
     def camera_ids(self) -> list[CameraIdString]:
         return list(self.configs.keys())
 
+    @property
+    def recording_in_progress(self) -> bool:
+        return any(status.recording_in_progress.value for status in self.cameras.orchestrator.camera_statuses.values())
+
     def get_latest_frames(self) -> dict[CameraIdString, np.recarray] | None:
         if self.shm is None or not self.shm.valid:
             return None
@@ -144,8 +148,12 @@ class CameraGroup:
     ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview] | None:
         if not self.cameras.all_ready:
             return None
+        if self.shm is None or not self.shm.valid or self.shm.latest_multiframe_number <= if_newer_than:
+            return None
         latest_frames = self.get_latest_frames()
         if not latest_frames:
+            return None
+        if int(next(iter(latest_frames.values())).frame_metadata.frame_number[0]) <= if_newer_than:
             return None
         return create_frontend_payload(
             latest_frames=latest_frames,
@@ -287,7 +295,7 @@ class CameraGroup:
                 for camera_id, worker in self.cameras.camera_workers.items()
             },
             alive=self.alive,
-            recording_in_progress=orchestrator.all_cameras_recording,
+            recording_in_progress=self.recording_in_progress,
             paused=orchestrator.any_cameras_paused,
         )
 

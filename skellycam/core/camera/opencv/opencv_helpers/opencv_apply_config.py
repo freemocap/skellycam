@@ -33,12 +33,18 @@ def _apply_exposure(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> 
         cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING)
         return
 
+    # DirectShow uses a boolean here, not V4L2's exposure-mode enum.
+    # OpenCV 4.12.0 enables auto only when cvRound(value) == 1.
+    # [@opencv412DirectShowControls]
+    directshow = int(cv2_vid_capture.get(cv2.CAP_PROP_BACKEND)) == cv2.CAP_DSHOW
+    auto_setting = 1.0 if directshow else AUTO_EXPOSURE_SETTING
+    manual_setting = 0.0 if directshow else MANUAL_EXPOSURE_SETTING
     if config.exposure_mode == ExposureModes.RECOMMEND.name:
         raise ValueError("Resolve RECOMMEND through CameraBackendManager before applying device settings")
     elif config.exposure_mode == ExposureModes.AUTO.name:
-        cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_SETTING)
+        cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_setting)
     elif config.exposure_mode == ExposureModes.MANUAL.name:
-        cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, MANUAL_EXPOSURE_SETTING)
+        cv2_vid_capture.set(cv2.CAP_PROP_AUTO_EXPOSURE, manual_setting)
         cv2_vid_capture.set(cv2.CAP_PROP_EXPOSURE, float(config.exposure))
 
 
@@ -63,9 +69,6 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
                 f"Failed to apply configuration to Camera {config.camera_index} - Camera is not open"
             )
 
-        if should_apply_exposure:
-            _apply_exposure(cv2_vid_capture, config)
-
         if should_apply_resolution:
             cv2_vid_capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
             cv2_vid_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
@@ -78,6 +81,12 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
             cv2_vid_capture.set(
                 cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc)
             )
+
+        # Resolution/FourCC changes can reopen the DirectShow stream. Apply
+        # exposure to the resulting stream, including an otherwise unchanged
+        # exposure value after a format change. [@opencv412DirectShowControls]
+        if should_apply_exposure or should_apply_resolution or should_apply_capture_fourcc:
+            _apply_exposure(cv2_vid_capture, config)
 
         extracted_config = extract_config_from_cv2_capture(cv2_capture=cv2_vid_capture,
                                                            camera_index=config.camera_index,

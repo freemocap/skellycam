@@ -1,13 +1,16 @@
 """Keep the application's manager stable while choosing a new group's engine."""
 from typing import Literal
 import asyncio
+import logging
 import sys
+from skellycam.core.camera.config.camera_config import MAX_MANUAL_EXPOSURE
 
 from skellycam.core.camera_group.tasks.recommend_exposure import recommend_exposure
 
 from skellycam.core.camera_group.rust_camera_group import RustCameraGroupManager
 
 CameraBackend = Literal["python", "rust"]
+logger = logging.getLogger(__name__)
 
 
 class CameraBackendInUseError(ValueError):
@@ -41,6 +44,11 @@ class CameraBackendManager:
             # Preserve the existing Linux device-auto policy: log2 exposure
             # candidates are not V4L2 absolute exposure units.
             configs[key].exposure_mode = "AUTO" if sys.platform == "linux" else "MANUAL"
+        for key, config in configs.items():
+            if config.use_this_camera and config.exposure_mode == "MANUAL" and config.exposure > MAX_MANUAL_EXPOSURE:
+                logger.warning("Camera %s: limiting requested manual exposure %s to %s",
+                               key, config.exposure, MAX_MANUAL_EXPOSURE)
+                config.exposure = MAX_MANUAL_EXPOSURE
         group = await self._manager.create_or_update_camera_group(configs)
         if selected and sys.platform != "linux":
             await recommend_exposure(group, selected)

@@ -3,7 +3,6 @@ import logging
 import multiprocessing
 import multiprocessing.queues
 from multiprocessing.sharedctypes import Synchronized
-import os
 import signal
 import threading
 import time
@@ -107,11 +106,10 @@ class WorkerRegistry:
             if self._global_kill_flag.value:
                 for worker in self._workers:
                     worker.wait_for_recording_save()
-                logger.error(
-                    "global_kill_flag is set (no worker death detected) — "
-                    "triggering parent shutdown"
-                )
-                os.kill(os.getpid(), signal.SIGTERM)
+                logger.info('Application shutdown requested; notifying the registered signal handler')
+                # On Windows, os.kill(pid, SIGTERM) terminates the process without
+                # running Python's handler or application cleanup.
+                signal.raise_signal(signal.SIGTERM)
                 return
             self._heartbeat_stop.wait(timeout=1.0)
 

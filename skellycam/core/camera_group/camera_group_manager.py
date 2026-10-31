@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.camera_group.camera_group import CameraGroup
+from skellycam.core.camera_group.camera_errors import CameraStateConflict
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
 from skellycam.core.ipc.process_management.worker_registry import WorkerRegistry
@@ -72,14 +73,31 @@ class CameraGroupManager:
 
     async def create_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
         """Create a camera group with the provided configuration settings."""
+        selected_configs = {key: config for key, config in camera_configs.items() if config.use_this_camera}
+        if not selected_configs:
+            raise ValueError('Select at least one camera; use close_all_camera_groups to disconnect all cameras')
         camera_groups = self._get_configs_by_group(camera_configs)
         if not camera_groups:
-            return await self.create_and_start_camera_group(camera_configs)
+            return await self.create_and_start_camera_group(selected_configs)
         if len(camera_groups) > 1:
             raise NotImplementedError("Cannot update multiple camera groups at once (yet).")
-        camera_group_id, configs = next(iter(camera_groups.items()))
+        camera_group_id = next(iter(camera_groups))
         camera_group = self.get_camera_group(camera_group_id)
-        await camera_group.update_camera_settings(requested_configs=configs)
+        # Shared-memory shapes and worker membership are fixed at group creation.
+        rebuild = set(selected_configs) != set(camera_group.configs) or any(
+            config.resolution != camera_group.configs[key].resolution
+            or config.color_channels != camera_group.configs[key].color_channels
+            or config.pixel_format != camera_group.configs[key].pixel_format
+            for key, config in selected_configs.items() if key in camera_group.configs
+        )
+        if rebuild:
+            if camera_group.recording_in_progress:
+                raise CameraStateConflict('Stop recording before changing camera membership or image dimensions')
+            await camera_group.close()
+            self.camera_groups.pop(camera_group_id)
+            self.camera_group_framerate_subscriptions.pop(camera_group_id, None)
+            return await self.create_and_start_camera_group(selected_configs)
+        await camera_group.update_camera_settings(requested_configs=selected_configs)
         return camera_group
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup:
@@ -102,17 +120,13 @@ class CameraGroupManager:
     async def close_all_camera_groups(self) -> None:
         """Close all camera groups."""
         self.closing = True
-        if not self.camera_groups:
-            logger.warning("No camera groups to close.")
-            return
-
-        for camera_group_id in list(self.camera_groups.keys()):
-            await self.camera_groups[camera_group_id].close()
-        logger.success(
-            f"Successfully closed all camera groups ids - {list(self.camera_groups.keys())}"
-        )
-        self.camera_groups.clear()
-        self.closing = False
+        try:
+            for camera_group_id in list(self.camera_groups):
+                await self.camera_groups[camera_group_id].close()
+                self.camera_groups.pop(camera_group_id)
+                self.camera_group_framerate_subscriptions.pop(camera_group_id, None)
+        finally:
+            self.closing = False
 
     async def start_recording_all_groups(self, recording_info: RecordingInfo) -> None:
         """Start recording for all camera groups."""

@@ -10,7 +10,7 @@ interface CameraConfigExposureProps {
     onExposureValueChange: (value: number) => void;
 }
 
-const EXPOSURE_CONSTRAINTS = { min: -13, max: -4, default: -7 };
+const EXPOSURE_CONSTRAINTS = { min: -13, max: -5, default: -7 };
 
 export const CameraConfigExposure: React.FC<CameraConfigExposureProps> = ({
     exposureMode = 'MANUAL',

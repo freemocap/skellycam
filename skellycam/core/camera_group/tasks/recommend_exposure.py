@@ -4,7 +4,7 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, MAX_MANUAL_EXPOSURE
 
 
 @runtime_checkable
@@ -20,7 +20,7 @@ async def recommend_exposure(
     group: ExposureCameraGroup,
     camera_ids: set[str],
     *,
-    candidates: tuple[int, ...] = tuple(range(-12, -3)),
+    candidates: tuple[int, ...] = tuple(range(-12, MAX_MANUAL_EXPOSURE + 1)),
     settle_frames: int = 10,
     frame_timeout: float = 5.0,
     offset: int = -1,
@@ -36,6 +36,8 @@ async def recommend_exposure(
         return {}
     if not candidates or settle_frames < 1 or not camera_ids <= group.configs.keys():
         raise ValueError("Exposure task requires candidates, settling frames, and known camera IDs")
+    if any(candidate > MAX_MANUAL_EXPOSURE for candidate in candidates):
+        raise ValueError(f"Manual exposure candidates must be at most {MAX_MANUAL_EXPOSURE}")
     original = {key: value.model_copy(deep=True) for key, value in group.configs.items()}
     best: dict[str, tuple[float, int]] = {}
 

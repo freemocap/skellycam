@@ -88,6 +88,9 @@ class RustCameraGroup:
     # ── Lifecycle ──────────────────────────────────────────────────────
 
     async def update_camera_settings(self, requested_configs):
+        requested_configs = {key: config for key, config in requested_configs.items() if config.use_this_camera}
+        if not requested_configs:
+            raise ValueError('Select at least one camera; close the group to disconnect all cameras')
         configs_dict = {}
         for camera_id, config in requested_configs.items():
             resolution = config.resolution
@@ -169,23 +172,46 @@ class RustCameraGroup:
     def unpause(self, await_unpaused=True):
         self._native.pause_group(self.id, False)
 
-    def get_latest_frames(self):
+    def get_latest_frames(self, if_newer_than=None, frame_buffers=None):
         import cv2
         from skellycam.core.types.numpy_record_dtypes import FRAME_METADATA_DTYPE
         native_frames = self._native.get_latest_raw_frames().get(self.id, {})
         if not native_frames:
+            return None
+        if if_newer_than is not None and all(source['frame_number'] <= if_newer_than for source in native_frames.values()):
             return None
         result = {}
         for camera_id, source in native_frames.items():
             image = cv2.imdecode(np.frombuffer(source["jpeg_bytes"], dtype=np.uint8), cv2.IMREAD_COLOR)
             if image is None:
                 raise RuntimeError(f"Cannot decode native frame for camera {camera_id}")
-            frame = np.zeros(1, dtype=np.dtype([
-                ("frame_metadata", FRAME_METADATA_DTYPE), ("image", np.uint8, image.shape),
-            ], align=True)).view(np.recarray)
-            frame.image[0] = image
-            metadata = frame.frame_metadata
             config = self.configs[camera_id]
+            rotation = config.rotation.value
+            # The native dispatcher caches JPEGs AFTER applying display rotation.
+            # Python frame records hold sensor-oriented pixels plus a rotation to
+            # apply later (tracking, preview, recording). Restore that contract
+            # directly into the caller-owned array, without another image allocation.
+            image_shape = image.shape
+            inverse_rotation = rotation
+            if rotation == cv2.ROTATE_90_CLOCKWISE:
+                inverse_rotation = cv2.ROTATE_90_COUNTERCLOCKWISE
+                image_shape = (image.shape[1], image.shape[0], image.shape[2])
+            elif rotation == cv2.ROTATE_90_COUNTERCLOCKWISE:
+                inverse_rotation = cv2.ROTATE_90_CLOCKWISE
+                image_shape = (image.shape[1], image.shape[0], image.shape[2])
+            frame_dtype = np.dtype([
+                ("frame_metadata", FRAME_METADATA_DTYPE), ("image", np.uint8, image_shape),
+            ], align=True)
+            frame = None if frame_buffers is None else frame_buffers.get(camera_id)
+            if frame is None or frame.dtype != frame_dtype:
+                frame = np.zeros(1, dtype=frame_dtype).view(np.recarray)
+                if frame_buffers is not None:
+                    frame_buffers[camera_id] = frame
+            if rotation == -1:
+                frame.image[0] = image
+            else:
+                cv2.rotate(src=image, rotateCode=inverse_rotation, dst=frame.image[0])
+            metadata = frame.frame_metadata
             metadata.camera_info.camera_id = camera_id
             metadata.camera_info.camera_index = config.camera_index
             metadata.camera_info.rotation = config.rotation.value
