@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Body, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import StrictBool, BaseModel, Field
 import numpy as np
 
 from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
@@ -153,12 +153,14 @@ async def start_recording(
             RecordingInfo(**request_body.model_dump()))
 
         return True
+    except CameraStateConflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@camera_router.get("/group/all/record/stop", summary="Stop recording")
+@camera_router.post("/group/all/record/stop", summary="Stop recording")
 async def stop_recording(request: Request) -> list[StopRecordingResponse]:
     try:
         results = await get_or_create_camera_group_manager(app=request.app).stop_recording_all_groups()
@@ -188,6 +190,8 @@ async def stop_recording(request: Request) -> list[StopRecordingResponse]:
             ))
 
         return responses
+    except CameraStateConflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -203,11 +207,15 @@ async def close_all_camera_groups(request: Request) -> bool:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@camera_router.get("/group/all/pause_unpause", summary="Pause/unpause cameras")
-async def pause_camera_groups(request: Request) -> bool:
+class CameraPauseState(BaseModel):
+    paused: StrictBool
+
+
+@camera_router.put("/group/all/pause", summary="Set camera pause state")
+async def pause_camera_groups(request: Request, desired: CameraPauseState) -> CameraPauseState:
     try:
-        await get_or_create_camera_group_manager(app=request.app).pause_unpause_all_groups()
-        return True
+        await get_or_create_camera_group_manager(app=request.app).set_paused_all_groups(paused=desired.paused)
+        return desired
     except Exception as e:
         logger.error(f"Error in {request.url}: {type(e).__name__} - {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

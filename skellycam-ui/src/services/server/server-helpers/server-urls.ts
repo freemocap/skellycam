@@ -48,7 +48,7 @@ class ServerUrls {
             camerasConnectOrUpdate: `${baseUrl}/skellycam/camera/group/apply`,
             closeAll: `${baseUrl}/skellycam/camera/group/close/all`,
             updateConfigs: `${baseUrl}/skellycam/camera/update`,
-            pauseUnpauseCameras: `${baseUrl}/skellycam/camera/group/all/pause_unpause`,
+            pauseUnpauseCameras: `${baseUrl}/skellycam/camera/group/all/pause`,
             detectMicrophones: `${baseUrl}/skellycam/camera/microphone/detect`,
 
             // Recording endpoints

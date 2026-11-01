@@ -1,6 +1,7 @@
 """Extended tests for CameraConfig — validation, orientation, serialization edge cases."""
 import numpy as np
 import pytest
+from beartype.roar import BeartypeCallHintParamViolation
 
 from skellycam.core.camera.config.camera_config import (
     CameraConfig,
@@ -29,11 +30,11 @@ class TestValidateCameraConfigs:
         validate_camera_configs(configs)  # should not raise
 
     def test_non_dict_raises_type_error(self) -> None:
-        with pytest.raises(TypeError, match="dictionary"):
+        with pytest.raises(BeartypeCallHintParamViolation, match="dict"):
             validate_camera_configs([CameraConfig()])  # type: ignore[arg-type]
 
     def test_non_camera_config_value_raises(self) -> None:
-        with pytest.raises(TypeError, match="CameraConfig"):
+        with pytest.raises(BeartypeCallHintParamViolation, match="CameraConfig"):
             validate_camera_configs({"cam0": {"not": "a config"}})  # type: ignore[dict-item]
 
     def test_mismatched_camera_id_raises(self) -> None:

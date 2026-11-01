@@ -183,6 +183,12 @@ class CameraGroup:
             logger.warning(f"Requested frame number {frame_number} but got {frame_number_out}")
         return frames_bytearray, float(mf_timestamp)
 
+    async def set_paused(self, *, paused: bool, await_state_change: bool = True) -> None:
+        if paused:
+            await self.cameras.pause(await_paused=await_state_change)
+        else:
+            await self.cameras.unpause(await_unpaused=await_state_change)
+
     async def pause_unpause(self, await_state_change: bool = True) -> None:
         await self.cameras.pause_unpause(await_state_change)
 

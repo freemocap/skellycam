@@ -166,8 +166,8 @@ export const cameraSlice = createSlice({
             })
 
             // ========== Pause / Unpause Cameras ==========
-            .addCase(pauseUnpauseCameras.fulfilled, (state) => {
-                state.isPaused = !state.isPaused;
+            .addCase(pauseUnpauseCameras.fulfilled, (state, action) => {
+                state.isPaused = action.payload;
             })
 
             // ========== Server state snapshot (authoritative) ==========

@@ -271,7 +271,7 @@ class TestRecordingInfo:
         config = CameraConfig(camera_id="cam0", camera_index=0)
         path = info.video_file_path_from_camera_config(config)
         assert "cam0" in path
-        assert "idx0" in path
+        assert "idx-0" in path
 
     def test_camera_timestamps_path(self) -> None:
         info = RecordingInfo(

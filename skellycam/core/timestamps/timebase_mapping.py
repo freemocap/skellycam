@@ -67,6 +67,10 @@ class TimebaseMapping:
         # uniformly here instead of attribute access to avoid shape-dependent differences.
         if rec_array.dtype != TIMEBASE_MAPPING_DTYPE:
             raise ValueError(f"Expected rec_array to have dtype {TIMEBASE_MAPPING_DTYPE}, but got {rec_array.dtype}")
+        if isinstance(rec_array, np.ndarray):
+            if rec_array.shape not in ((), (1,)):
+                raise ValueError(f"Expected a scalar record or one-row array, got shape {rec_array.shape}")
+            rec_array = rec_array.reshape(())[()]
         return cls(
             utc_time_ns=int(rec_array["utc_time_ns"]),
             perf_counter_ns=int(rec_array["perf_counter_ns"]),

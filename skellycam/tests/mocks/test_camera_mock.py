@@ -64,8 +64,8 @@ class TestMockVideoCapture:
         assert cap.get(cv2.CAP_PROP_FPS) == 60.0
         
         # Test valid Resolution
-        assert cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        assert cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        assert cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920.0)
+        assert cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080.0)
         assert cap.get(cv2.CAP_PROP_FRAME_WIDTH) == 1920
         assert cap.get(cv2.CAP_PROP_FRAME_HEIGHT) == 1080
         

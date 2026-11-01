@@ -93,8 +93,8 @@ class TestRecording:
         assert response.json() is True
 
     def test_stop_recording(self, client, mock_camera_group_manager):
-        """GET /skellycam/camera/group/all/record/stop returns list of StopRecordingResponse."""
-        response = client.get("/skellycam/camera/group/all/record/stop")
+        """POST /skellycam/camera/group/all/record/stop returns list of StopRecordingResponse."""
+        response = client.post("/skellycam/camera/group/all/record/stop")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
@@ -111,7 +111,8 @@ class TestCameraGroupManagement:
         assert response.json() is True
 
     def test_pause_unpause(self, client, mock_camera_group_manager):
-        """GET /skellycam/camera/group/all/pause_unpause returns true."""
-        response = client.get("/skellycam/camera/group/all/pause_unpause")
+        """PUT explicitly sets pause state."""
+        response = client.put("/skellycam/camera/group/all/pause", json={"paused": True})
         assert response.status_code == 200
-        assert response.json() is True
+        assert response.json() == {"paused": True}
+        mock_camera_group_manager.set_paused_all_groups.assert_awaited_once_with(paused=True)

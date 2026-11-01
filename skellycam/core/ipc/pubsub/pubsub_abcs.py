@@ -36,10 +36,8 @@ class PubSubTopicABC(ABC):
         return sub
 
 
-    def publish(self, message:TopicMessageABC, overwrite:bool=False, print_log:bool=True):
-        """
-        Publish a message to all subscribers of this topic.
-        """
+    def publish(self, message: TopicMessageABC, *, print_log: bool = True):
+        """Enqueue each publication for every subscriber, without discarding pending messages."""
         if not isinstance(message, self.message_type):
             raise TypeError(f"Expected {self.message_type} but got {type(message)}")
         if len(self.subscriptions) == 0:
@@ -48,13 +46,6 @@ class PubSubTopicABC(ABC):
         if print_log:
             logger.trace(f"Publishing message of type {self.message_type} to {len(self.subscriptions)} subscribers")
         for sub in self.subscriptions:
-            if overwrite:
-                overwrote = 0
-                while not sub.empty():
-                    sub.get()
-                    overwrote += 1
-                if overwrote > 0 and print_log:
-                    logger.trace(f"Overwrote {overwrote} messages in subscription queue {sub}")
             sub.put(message)
     def close(self):
         """

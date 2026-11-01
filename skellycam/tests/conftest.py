@@ -5,8 +5,10 @@ Builds a lightweight FastAPI app with the same routes as the real app
 but WITHOUT the heavy lifespan (bytecode compilation, logging setup, etc).
 """
 import multiprocessing
+import logging
 from unittest.mock import MagicMock, patch, AsyncMock
 
+import numpy as np
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -43,19 +45,16 @@ def mock_camera_group_manager():
     All async methods are AsyncMock so they can be awaited without error.
     Sync methods return sensible defaults.
     """
-    mgr = MagicMock()
+    from skellycam.core.camera_group.camera_backend_manager import CameraBackendManager
+    mgr = MagicMock(spec=CameraBackendManager)
     # Async methods
     mgr.create_or_update_camera_group = AsyncMock()
     mgr.create_and_start_camera_group = AsyncMock()
     mgr.start_recording_all_groups = AsyncMock()
     def _mock_stats_recarray(mean=30.0):
-        m = MagicMock()
-        m.median_value = mean
-        m.mean_value = mean
-        m.standard_deviation_value = 1.0
-        m.min_value = mean - 2.0
-        m.max_value = mean + 2.0
-        return m
+        return np.array((mean, mean, 1.0, mean - 2.0, mean + 2.0), dtype=[
+            ('median_value', 'f8'), ('mean_value', 'f8'), ('standard_deviation_value', 'f8'),
+            ('min_value', 'f8'), ('max_value', 'f8')]).view(np.recarray)
 
     mock_recording_info = MagicMock()
     mock_recording_info.recording_name = "test_recording"
@@ -71,6 +70,7 @@ def mock_camera_group_manager():
 
     mgr.stop_recording_all_groups = AsyncMock(return_value=[(mock_recording_info, mock_timestamp_stats)])
     mgr.close_all_camera_groups = AsyncMock()
+    mgr.set_paused_all_groups = AsyncMock()
     mgr.pause_unpause_all_groups = AsyncMock()
     mgr.pause_all_groups = AsyncMock()
     mgr.unpause_all_groups = AsyncMock()
@@ -88,7 +88,7 @@ def mock_camera_group_manager():
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def app(mock_global_kill_flag, mock_worker_registry, mock_camera_group_manager):
+def app(mock_global_kill_flag, mock_worker_registry, mock_camera_group_manager, logging_runtime):
     """
     A lightweight FastAPI app with the same routes but no heavy lifespan.
 
@@ -125,3 +125,18 @@ def client(app):
     """Synchronous TestClient for HTTP endpoint tests."""
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
+
+
+@pytest.fixture
+def logging_runtime(monkeypatch):
+    """Supply the normal logging prerequisites without files or global handlers."""
+    from skellylogs.configure_logging import _register_custom_levels
+    from skellylogs.handlers import websocket_log_queue_handler
+    for name in ('loop', 'trace', 'success', 'api'):
+        monkeypatch.setattr(logging.Logger, name, getattr(logging.Logger, name, None), raising=False)
+    _register_custom_levels()
+    queue = multiprocessing.Queue()
+    monkeypatch.setattr(websocket_log_queue_handler, 'WEBSOCKET_LOG_QUEUE', queue)
+    yield
+    queue.close()
+    queue.join_thread()
