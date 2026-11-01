@@ -52,7 +52,7 @@ export const stopRecording = createAsyncThunk<
     'recording/stop',
     async () => {
         const response = await backendFetch(serverUrls.endpoints.stopRecording, {
-            method: 'GET',
+            method: 'POST',
         });
 
         if (!response.ok) {

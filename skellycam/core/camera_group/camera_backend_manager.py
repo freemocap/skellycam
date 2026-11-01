@@ -8,6 +8,7 @@ from skellycam.core.camera.config.camera_config import MAX_MANUAL_EXPOSURE
 from skellycam.core.camera_group.tasks.recommend_exposure import recommend_exposure
 
 from skellycam.core.camera_group.rust_camera_group import RustCameraGroupManager
+from skellycam.core.camera_group.camera_errors import CameraStateConflict
 
 CameraBackend = Literal["python", "rust"]
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ class CameraBackendManager:
         self._manager = CameraGroupManager(**self._arguments)
         self.backend: CameraBackend = "python"
         self._configuration_lock = asyncio.Lock()
+        self._recording_requested = False
 
     async def create_or_update_camera_group(self, camera_configs, backend: CameraBackend = "python"):
         async with self._configuration_lock:
@@ -68,13 +70,26 @@ class CameraBackendManager:
     async def close_all_camera_groups(self):
         async with self._configuration_lock:
             await self._manager.close_all_camera_groups()
+            self._recording_requested = False
 
     async def start_recording_all_groups(self, recording_info):
         async with self._configuration_lock:
+            if self._recording_requested:
+                raise CameraStateConflict('Recording is already running or starting')
+            if not self.camera_groups:
+                raise CameraStateConflict('No open cameras to record')
+            # Reserve before awaiting: worker recording flags can lag the request.
+            # A failed start must be stopped/closed before another can overwrite it.
+            self._recording_requested = True
             await self._manager.start_recording_all_groups(recording_info)
 
     async def stop_recording_all_groups(self):
-        return await self._manager.stop_recording_all_groups()
+        async with self._configuration_lock:
+            if not self._recording_requested:
+                raise CameraStateConflict('No recording is running')
+            result = await self._manager.stop_recording_all_groups()
+            self._recording_requested = False
+            return result
 
     def get_latest_frontend_payloads(self, if_newer_than, display_image_sizes=None):
         return self._manager.get_latest_frontend_payloads(if_newer_than, display_image_sizes)
@@ -90,6 +105,9 @@ class CameraBackendManager:
 
     def unpause_all_groups(self, await_unpaused=True):
         self._manager.unpause_all_groups(await_unpaused)
+
+    async def set_paused_all_groups(self, *, paused: bool, await_state_change: bool = True) -> None:
+        await self._manager.set_paused_all_groups(paused=paused, await_state_change=await_state_change)
 
     async def pause_unpause_all_groups(self, await_state_change=True):
         await self._manager.pause_unpause_all_groups(await_state_change)

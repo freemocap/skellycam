@@ -438,6 +438,12 @@ class RustCameraGroupManager:
         self._native.pause()
         logger.info("Paused all Rust camera groups")
 
+    async def set_paused_all_groups(self, *, paused: bool, await_state_change: bool = True) -> None:
+        if paused:
+            self._native.pause()
+        else:
+            self._native.unpause()
+
     async def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
         # Toggle: check if any camera is paused
         state = self._native.to_state_dict()

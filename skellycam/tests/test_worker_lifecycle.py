@@ -268,7 +268,6 @@ class TestWorkerRegistry:
         """A kill flag set by anyone — with no worker death — must escalate to
         parent shutdown via SIGTERM. This is the path a main-process actor (e.g.
         the websocket relay) relies on: it sets the flag but never exits a worker."""
-        import os
         import signal
         from unittest import mock
 
@@ -278,7 +277,7 @@ class TestWorkerRegistry:
             worker_mode=WorkerMode.THREAD,
         )
         with mock.patch(
-            "skellycam.core.ipc.process_management.worker_registry.os.kill"
+            "skellycam.core.ipc.process_management.worker_registry.signal.raise_signal"
         ) as mock_kill:
             registry.start_heartbeat()
             kill_flag.value = True
@@ -287,7 +286,7 @@ class TestWorkerRegistry:
             while time.perf_counter() < deadline and not mock_kill.called:
                 time.sleep(0.05)
             assert mock_kill.called, "monitor did not escalate on a set kill flag"
-            mock_kill.assert_called_with(os.getpid(), signal.SIGTERM)
+            mock_kill.assert_called_with(signal.SIGTERM)
 
         registry.shutdown_all()
 
@@ -302,7 +301,7 @@ class TestWorkerRegistry:
             worker_mode=WorkerMode.THREAD,
         )
         with mock.patch(
-            "skellycam.core.ipc.process_management.worker_registry.os.kill"
+            "skellycam.core.ipc.process_management.worker_registry.signal.raise_signal"
         ) as mock_kill:
             registry.start_heartbeat()
             time.sleep(2.5)  # several monitor poll cycles

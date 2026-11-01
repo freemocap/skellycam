@@ -212,6 +212,10 @@ class CameraGroupManager:
             camera_group.pause(await_paused=await_paused)
             logger.info(f"Paused camera group ID: {camera_group.id}")
 
+    async def set_paused_all_groups(self, *, paused: bool, await_state_change: bool = True) -> None:
+        for camera_group in self.camera_groups.values():
+            await camera_group.set_paused(paused=paused, await_state_change=await_state_change)
+
     async def pause_unpause_all_groups(self, await_state_change: bool = True) -> None:
         """Pause/Unpause all camera groups."""
         for camera_group in self.camera_groups.values():

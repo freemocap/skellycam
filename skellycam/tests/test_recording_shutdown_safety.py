@@ -135,7 +135,7 @@ def test_server_shutdown_waits_for_video_saves():
 
     worker.wait_for_recording_save.side_effect = finish_save
     registry._workers.append(worker)
-    with patch("skellycam.core.ipc.process_management.worker_registry.os.kill") as terminate_server:
+    with patch("skellycam.core.ipc.process_management.worker_registry.signal.raise_signal") as terminate_server:
         registry.start_heartbeat()
         try:
             application_stop.value = True

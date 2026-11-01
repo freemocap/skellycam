@@ -80,7 +80,7 @@ class TestFramerateTracker:
         base = 1_000_000_000
         interval_ns = 33_333_333  # ~30fps
         for i in range(10):
-            tracker.update(timestamp_ns=float(base + i * interval_ns))
+            tracker.update(timestamp_ns=base + i * interval_ns)
 
         assert tracker.has_data is True
         fr = tracker.current_framerate
@@ -88,8 +88,8 @@ class TestFramerateTracker:
 
     def test_clear_resets_state(self) -> None:
         tracker = FramerateTracker.create(framerate_source="test")
-        tracker.update(timestamp_ns=1_000_000_000.0)
-        tracker.update(timestamp_ns=1_033_333_333.0)
+        tracker.update(timestamp_ns=1_000_000_000)
+        tracker.update(timestamp_ns=1_033_333_333)
         assert tracker.has_data is True
 
         tracker.clear()
@@ -204,3 +204,59 @@ class TestTimeUnitConversion:
     def test_roundtrip_ns_ms(self) -> None:
         original_ns = 123_456_789
         assert ms_to_ns(ns_to_ms(original_ns)) == original_ns
+
+
+@pytest.mark.parametrize('shape', [(), (1,)])
+def test_timebase_record_shapes_preserve_large_integer_timestamps(shape):
+    mapping = TimebaseMapping(utc_time_ns=1_799_999_999_999_999_999,
+                              perf_counter_ns=123_456_789_012_345, local_time_utc_offset=-14400)
+    records = mapping.to_numpy_record_array().reshape(shape)
+    assert TimebaseMapping.from_numpy_record_array(records) == mapping
+    assert TimebaseMapping.from_numpy_record_array(records.reshape(1)[0]) == mapping
+
+
+@pytest.mark.parametrize('shape', [(0,), (2,), (1, 1)])
+def test_timebase_rejects_ambiguous_record_shapes(shape):
+    template = TimebaseMapping().to_numpy_record_array()
+    records = np.recarray(shape, dtype=template.dtype)
+    with pytest.raises(ValueError, match='shape'):
+        TimebaseMapping.from_numpy_record_array(records)
+
+
+def test_milliseconds_rounding_and_array_contract():
+    milliseconds = np.array([[0.0000005, 0.0000015], [-0.0000005, -0.0000015]])
+    converted = ms_to_ns(milliseconds)
+    assert converted.dtype == np.int64
+    np.testing.assert_array_equal(converted, [[0, 2], [0, -2]])
+    for value, expected in [(0, 0), (1, 1_000_000), (1.23456789, 1_234_568)]:
+        assert type(ms_to_ns(value)) is int
+        assert ms_to_ns(value) == expected
+    assert ms_to_ns(np.float32(1.5)) == 1_500_000
+    assert ms_to_ns(np.array(1.5)).shape == ()
+    assert ms_to_ns(np.array([])).shape == (0,)
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), -float('inf')])
+def test_milliseconds_reject_nonfinite_values(value):
+    with pytest.raises(ValueError, match='finite'):
+        ms_to_ns(value)
+    with pytest.raises(ValueError, match='finite'):
+        ms_to_ns(np.array([0.0, value]))
+
+
+@pytest.mark.parametrize('value', [2 ** 63 / 1e6, -(2 ** 63) / 1e6 - 1, 1e308])
+def test_milliseconds_reject_overflow(value):
+    with pytest.raises(OverflowError, match='64-bit'):
+        ms_to_ns(value)
+    with pytest.raises(OverflowError, match='64-bit'):
+        ms_to_ns(np.array([value]))
+
+
+def test_integer_milliseconds_preserve_precision_near_int64_limit():
+    value = (2 ** 63 - 1) // 1_000_000
+    assert ms_to_ns(value) == value * 1_000_000
+    assert ms_to_ns(-value) == -value * 1_000_000
+    np.testing.assert_array_equal(ms_to_ns(np.array([value], dtype=np.uint64)), [value * 1_000_000])
+    for invalid in (value + 1, -(value + 1), 10 ** 100, np.uint64(2 ** 64 - 1)):
+        with pytest.raises(OverflowError):
+            ms_to_ns(invalid)

@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 import pytest
+from beartype.roar import BeartypeCallHintParamViolation
 
 from skellycam.core.ipc.pubsub.pubsub_abcs import TopicMessageABC, PubSubTopicABC
 from skellycam.core.ipc.pubsub.pubsub_manager import (
@@ -34,25 +35,21 @@ GET_TIMEOUT: float = 2.0
 # ---------------------------------------------------------------------------
 
 class TestPubSubTopicManager:
-    def test_has_all_topic_types(self) -> None:
-        manager = PubSubTopicManager()
+    def test_has_all_topic_types(self, manager) -> None:
         for topic_type in TopicTypes:
             assert topic_type in manager.topics
 
-    def test_subscribe_returns_queue(self) -> None:
-        manager = PubSubTopicManager()
+    def test_subscribe_returns_queue(self, manager) -> None:
         sub = manager.get_subscription(TopicTypes.FRAMERATE)
         assert sub is not None
         assert hasattr(sub, "get")
         assert hasattr(sub, "put")
 
-    def test_subscribe_unknown_topic_raises(self) -> None:
-        manager = PubSubTopicManager()
-        with pytest.raises(ValueError, match="Unknown topic"):
+    def test_subscribe_unknown_topic_raises(self, manager) -> None:
+        with pytest.raises(BeartypeCallHintParamViolation, match="TopicTypes"):
             manager.get_subscription("not_a_real_topic")  # type: ignore[arg-type]
 
-    def test_close_clears_topics(self) -> None:
-        manager = PubSubTopicManager()
+    def test_close_clears_topics(self, manager) -> None:
         manager.get_subscription(TopicTypes.FRAMERATE)
         manager.close()
         assert len(manager.topics) == 0
@@ -63,8 +60,7 @@ class TestPubSubTopicManager:
 # ---------------------------------------------------------------------------
 
 class TestPubSubPublishSubscribe:
-    def test_publish_delivers_to_subscriber(self) -> None:
-        manager = PubSubTopicManager()
+    def test_publish_delivers_to_subscriber(self, manager) -> None:
         sub = manager.get_subscription(TopicTypes.UPDATE_CAMERA_SETTINGS)
 
         configs = {DEFAULT_CAMERA_ID: CameraConfig()}
@@ -77,8 +73,7 @@ class TestPubSubPublishSubscribe:
         assert isinstance(received, UpdateCamerasSettingsMessage)
         assert DEFAULT_CAMERA_ID in received.requested_configs
 
-    def test_publish_delivers_to_multiple_subscribers(self) -> None:
-        manager = PubSubTopicManager()
+    def test_publish_delivers_to_multiple_subscribers(self, manager) -> None:
         sub1 = manager.get_subscription(TopicTypes.EXTRACTED_CONFIG)
         sub2 = manager.get_subscription(TopicTypes.EXTRACTED_CONFIG)
 
@@ -91,8 +86,7 @@ class TestPubSubPublishSubscribe:
         assert r1.extracted_config.camera_id == "test_cam"
         assert r2.extracted_config.camera_id == "test_cam"
 
-    def test_publish_wrong_type_raises(self) -> None:
-        manager = PubSubTopicManager()
+    def test_publish_wrong_type_raises(self, manager) -> None:
         manager.get_subscription(TopicTypes.FRAMERATE)
 
         wrong_msg = UpdateCamerasSettingsMessage(
@@ -101,32 +95,19 @@ class TestPubSubPublishSubscribe:
         with pytest.raises(TypeError, match="Expected"):
             manager.topics[TopicTypes.FRAMERATE].publish(wrong_msg)
 
-    def test_publish_overwrite_mode(self) -> None:
-        manager = PubSubTopicManager()
-        sub = manager.get_subscription(TopicTypes.RECORDING_INFO)
-
-        msg1 = RecordingInfoMessage(recording_info=RecordingInfo.create_temp())
-        msg2 = RecordingInfoMessage(recording_info=RecordingInfo.create_temp())
-
-        # Publish msg1, then wait for it to actually land in the queue
-        # before publishing msg2 with overwrite. Without this, the overwrite
-        # drain loop (`while not sub.empty(): sub.get()`) may see an empty
-        # queue because the feeder thread hasn't flushed msg1 yet.
-        manager.topics[TopicTypes.RECORDING_INFO].publish(msg1)
-        landed = sub.get(timeout=GET_TIMEOUT)
-        assert landed.recording_info.recording_uuid == msg1.recording_info.recording_uuid
-        # Put it back so the overwrite drain can find and remove it
-        sub.put(landed)
-
-        # Now publish with overwrite — drains msg1, then puts msg2
-        manager.topics[TopicTypes.RECORDING_INFO].publish(msg2, overwrite=True)
-
-        received = sub.get(timeout=GET_TIMEOUT)
-        assert received.recording_info.recording_uuid == msg2.recording_info.recording_uuid
-
-        # Confirm queue is now empty
-        with pytest.raises(queue.Empty):
-            sub.get(timeout=0.1)
+    def test_publish_preserves_pending_messages_in_order(self, manager, tmp_path) -> None:
+        subscribers = [manager.get_subscription(TopicTypes.RECORDING_INFO) for _ in range(2)]
+        messages = [RecordingInfoMessage(recording_info=RecordingInfo(
+            recording_directory=str(tmp_path), recording_name=f'capture-{index}')) for index in range(100)]
+        # Publish a burst without waiting for the multiprocessing feeder thread.
+        for message in messages:
+            manager.topics[TopicTypes.RECORDING_INFO].publish(message, print_log=False)
+        expected = [message.recording_info.recording_uuid for message in messages]
+        for subscriber in subscribers:
+            received = [subscriber.get(timeout=GET_TIMEOUT).recording_info.recording_uuid for _ in messages]
+            assert received == expected
+            with pytest.raises(queue.Empty):
+                subscriber.get(timeout=0.1)
 
 
 # ---------------------------------------------------------------------------
@@ -154,3 +135,10 @@ class TestRecordingInfoMessage:
         info = RecordingInfo.create_temp()
         msg = RecordingInfoMessage(recording_info=info)
         assert msg.recording_info.recording_uuid == info.recording_uuid
+
+
+@pytest.fixture
+def manager(logging_runtime):
+    manager = PubSubTopicManager()
+    yield manager
+    manager.close()

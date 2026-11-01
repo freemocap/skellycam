@@ -4,6 +4,7 @@ import json
 import pytest
 
 
+@pytest.mark.timeout(10)
 class TestWebsocketConnect:
     def test_websocket_connect_disconnect(self, client):
         """Can connect to the websocket endpoint and cleanly disconnect."""
@@ -34,16 +35,10 @@ class TestWebsocketConnect:
     def test_websocket_receives_app_state(self, client):
         """After connecting, server should send an app_state JSON message."""
         with client.websocket_connect("/skellycam/websocket/connect") as ws:
-            # The _app_state_sender task sends state periodically.
-            # We may receive it or it may be delayed. Try receive with a timeout.
-            try:
-                data = ws.receive_json(mode="text")
-                # It could be app_state or a log message
-                assert "message_type" in data or "levelno" in data
-            except Exception:
-                # If nothing received within the test timeframe, that's acceptable
-                # since the state sender is async and may not have fired yet
-                pass
+            data = ws.receive_json(mode="text")
+            assert data["message_type"] == "app_state"
+            assert data["state"] == {"camera_groups": {}}
+            assert data["server_pid"] > 0
 
     def test_websocket_frame_acknowledgment(self, client, mock_camera_group_manager):
         """Sending a frame acknowledgment JSON updates the server state."""
