@@ -29,7 +29,11 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
     Raises:
         ValueError: If the number of frames is inconsistent across cameras.
     """
-    num_frames = None
+    if frame_metadatas_by_camera.keys() != camera_configs.keys():
+        raise ValueError(
+            "Camera IDs differ between frame metadata and camera configs: "
+            f"metadata={sorted(frame_metadatas_by_camera)}, configs={sorted(camera_configs)}"
+        )
 
     frame_count_by_camera = {camera_id: len(frame_metadatas) for camera_id, frame_metadatas in
                              frame_metadatas_by_camera.items()}
@@ -76,6 +80,11 @@ async def process_and_save_recording_timestamps(
     tik = time.perf_counter()
     (frame_numbers, timebase_mapping) = validate_frame_metadatas(frame_metadatas_by_camera=frame_metadatas_by_camera,
                                                                  camera_configs=camera_configs)
+
+    # Dense timestamp rows and CSV filenames must use the same camera identity order.
+    frame_metadatas_by_camera = {
+        camera_id: frame_metadatas_by_camera[camera_id] for camera_id in camera_configs
+    }
 
     # Find the earliest timestamp as recording start time
     first_timestamps = {camera_id: md[0].timestamps[0] for camera_id, md in frame_metadatas_by_camera.items()}
