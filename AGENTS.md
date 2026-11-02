@@ -25,8 +25,7 @@ creating replacements; ask only for unresolved consequential intent.
   and task bodies before running commands. Documentation commands alone do not
   authorize installations or environment changes.
 
-Follow containing workspace policy when present. Preserve user edits and leave
-Git state to the human. Verify this repository ignores generated outputs before
+Follow containing workspace policy when present. Preserve user edits and follow the workspace Git authorization and repository-scope policy. Verify this repository ignores generated outputs before
 creating them, or use external temporary storage. Hardware-dependent checks need
 available cameras; historical pass statements are not current test results.
 For external source attribution, follow [CITATIONS.md](CITATIONS.md).
