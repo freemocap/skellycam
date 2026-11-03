@@ -1,9 +1,10 @@
 import logging
+import asyncio
 import multiprocessing
 import time
 from queue import Empty
 from multiprocessing.sharedctypes import Synchronized
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict
@@ -39,6 +40,16 @@ from skellycam.core.camera_group.camera_status import CameraStatus
 logger = logging.getLogger(__name__)
 
 
+async def await_owned_camera_task(task: asyncio.Task):
+    """Drain owned work through cancellation before its resources are released."""
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            continue
+    return task.result()
+
+
 class CameraGroupState(BaseModel):
     """Serializable representation of a camera group state."""
     model_config = ConfigDict(
@@ -61,6 +72,7 @@ class CameraGroup:
     shm: CameraGroupSharedMemory | None = None
     started: bool = False
     _audio_recorder: AudioRecorder | None = None
+    _close_task: asyncio.Task | None = field(default=None, init=False, repr=False)
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -112,19 +124,49 @@ class CameraGroup:
         )
 
     async def start(self) -> CameraConfigs:
+        operation = asyncio.create_task(self._start())
+        try:
+            return await asyncio.shield(operation)
+        except asyncio.CancelledError as cancelled:
+            # A worker.start()/allocation call may still be executing. Signal
+            # owned children, then drain it before joining/unmapping resources.
+            self.ipc.should_continue = False
+            try:
+                await await_owned_camera_task(operation)
+            except Exception:
+                logger.debug("Camera startup ended while cancellation was pending", exc_info=True)
+            try:
+                await await_owned_camera_task(asyncio.create_task(self.close()))
+            except Exception as cleanup_error:
+                raise BaseExceptionGroup("Camera startup cancellation cleanup failed", [cancelled, cleanup_error])
+            raise
+        except Exception:
+            await await_owned_camera_task(asyncio.create_task(self.close()))
+            raise
+
+    async def _start(self) -> CameraConfigs:
+        if not self.ipc.should_continue:
+            raise CameraConfigurationError("Camera group stopped before starting camera workers")
         self.started = True
         logger.info(f"Starting camera group ID: {self.id} with cameras: {list(self.configs.keys())}")
-        self.cameras.start()
+        await asyncio.to_thread(self.cameras.start)
+        if not self.ipc.should_continue:
+            raise CameraConfigurationError("Camera group stopped while starting camera workers")
         logger.debug("Awaiting extracted configs so we can create shared memory...")
         extracted_configs: CameraConfigs = await await_extracted_configs(
             ipc=self.ipc, requested_configs=self.configs
         )
-        self.shm = CameraGroupSharedMemory.create(
+        if not self.ipc.should_continue:
+            raise CameraConfigurationError("Camera group stopped before allocating shared memory")
+        self.shm = await asyncio.to_thread(
+            CameraGroupSharedMemory.create,
             camera_configs=extracted_configs,
             timebase_mapping=self.ipc.timebase_mapping,
             read_only=True,
         )
-        self.ipc.publish_shm_message(shm_dto=self.shm.to_dto())
+        if not self.ipc.should_continue:
+            raise CameraConfigurationError("Camera group stopped while allocating shared memory")
+        await asyncio.to_thread(self.ipc.publish_shm_message, shm_dto=self.shm.to_dto())
         self.configs = extracted_configs
         return extracted_configs
 
@@ -262,6 +304,17 @@ class CameraGroup:
         return recording_info, timestamp_stats
 
     async def close(self) -> None:
+        # Concurrent close callers share the same owned cleanup; a failed close
+        # remains retryable rather than discarding the still-owned resources.
+        if self._close_task is None or (self._close_task.done() and self._close_task.exception() is not None):
+            self._close_task = asyncio.create_task(self._close())
+        try:
+            await asyncio.shield(self._close_task)
+        except asyncio.CancelledError:
+            await await_owned_camera_task(self._close_task)
+            raise
+
+    async def _close(self) -> None:
         logger.debug("Closing camera group")
 
         if any(
@@ -277,21 +330,23 @@ class CameraGroup:
         # Stop audio if still running (e.g. error during stop_recording)
         if self._audio_recorder is not None:
             try:
-                self._audio_recorder.stop()
+                await asyncio.to_thread(self._audio_recorder.stop)
             except Exception as e:
                 logger.error(f"Error stopping audio during close: {type(e).__name__} - {e}")
             self._audio_recorder = None
 
         self.ipc.should_continue = False
-        self.cameras.close()
+        await asyncio.to_thread(self.cameras.close)
 
         if self.shm is not None:
             try:
-                self.shm.unlink_and_close()
+                await asyncio.to_thread(self.shm.unlink_and_close)
             except Exception as e:
                 logger.error(f"Error closing shared memory: {type(e).__name__} - {e}")
+                raise
             logger.success("Shared memory closed and unlinked if applicable.")
 
+        self.started = False
         logger.success("Camera group closed successfully.")
 
     def to_state(self) -> CameraGroupState:

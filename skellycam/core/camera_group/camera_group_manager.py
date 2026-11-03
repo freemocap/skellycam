@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import multiprocessing
 from multiprocessing.sharedctypes import Synchronized
 from dataclasses import dataclass, field
@@ -8,7 +9,7 @@ from fastapi import FastAPI
 
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.camera_group.camera_group import CameraGroup
+from skellycam.core.camera_group.camera_group import CameraGroup, await_owned_camera_task
 from skellycam.core.camera_group.camera_errors import CameraStateConflict
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
@@ -22,7 +23,7 @@ from skellycam.core.types.type_overloads import (
     MultiframeTimestampFloat,
     TopicSubscriptionQueue,
 )
-from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats
+from skellycam.core.timestamps.recording_timestamp_stats import RecordingTimestampsStats  # noqa: TC001 - beartype resolves the recording return annotation
 
 logger = logging.getLogger(__name__)
 
@@ -39,30 +40,43 @@ class CameraGroupManager:
 
     async def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
         """Create a camera group with the provided configuration settings."""
-        camera_group = CameraGroup.create(
+        creation = asyncio.create_task(asyncio.to_thread(
+            CameraGroup.create,
             camera_configs=camera_configs,
             heartbeat_timestamp=self.worker_registry.heartbeat_timestamp,
             global_kill_flag=self.global_kill_flag,
             worker_registry=self.worker_registry,
-        )
-        self.camera_group_framerate_subscriptions[camera_group.id] = (
-            camera_group.ipc.pubsub.get_subscription(TopicTypes.FRAMERATE)
-        )
+        ))
+        try:
+            camera_group = await asyncio.shield(creation)
+        except asyncio.CancelledError:
+            # Creation can allocate owned IPC even before child processes start.
+            # Retrieve its actual result, register ownership, then clean it up.
+            camera_group = await await_owned_camera_task(creation)
+            self.camera_groups[camera_group.id] = camera_group
+            await await_owned_camera_task(asyncio.create_task(camera_group.close()))
+            self.camera_groups.pop(camera_group.id, None)
+            raise
         self.camera_groups[camera_group.id] = camera_group
         try:
+            self.camera_group_framerate_subscriptions[camera_group.id] = (
+                camera_group.ipc.pubsub.get_subscription(TopicTypes.FRAMERATE)
+            )
             await self.camera_groups[camera_group.id].start()
-        except Exception:
+        except BaseException as error:
             # Startup failed (e.g. a camera couldn't open) — tear the
             # half-started group down so a retry creates a fresh group instead
             # of finding this one and trying to "update" a group whose workers
             # already exited.
-            logger.error(f"Camera group {camera_group.id} failed to start, tearing it down")
-            try:
-                await camera_group.close()
-            except Exception as close_err:
-                logger.error(f"Error closing failed camera group {camera_group.id}: {close_err}")
-            del self.camera_groups[camera_group.id]
-            del self.camera_group_framerate_subscriptions[camera_group.id]
+            if isinstance(error, asyncio.CancelledError):
+                logger.info(f"Camera group {camera_group.id} startup cancelled, completing cleanup")
+            else:
+                logger.error(f"Camera group {camera_group.id} failed to start, tearing it down")
+            # CameraGroup.close coalesces successful cleanup. Keep a failed
+            # cleanup registered for a subsequent close/retry.
+            await await_owned_camera_task(asyncio.create_task(camera_group.close()))
+            self.camera_groups.pop(camera_group.id, None)
+            self.camera_group_framerate_subscriptions.pop(camera_group.id, None)
             raise
 
         logger.info(
