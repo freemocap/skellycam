@@ -371,8 +371,14 @@ fn main() {
         println!("cargo:rustc-link-lib=static=openpnp-capture");
         info!(directive = "rustc-link-lib", lib = "openpnp-capture", kind = "static");
 
-        println!("cargo:rustc-link-lib=static=turbojpeg-static");
-        info!(directive = "rustc-link-lib", lib = "turbojpeg-static", kind = "static");
+        // The macOS artifact ships libturbojpeg.a, without the Windows suffix.
+        let turbojpeg_lib = if target.contains("apple-darwin") {
+            "turbojpeg"
+        } else {
+            "turbojpeg-static"
+        };
+        println!("cargo:rustc-link-lib=static={turbojpeg_lib}");
+        info!(directive = "rustc-link-lib", lib = turbojpeg_lib, kind = "static");
 
         // Windows system libraries required by openpnp-capture
         if target.contains("windows") {

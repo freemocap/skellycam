@@ -65,3 +65,12 @@ pushes. FreeMoCap dependency changes are a separate integration stage.
 Local validation covers Windows x64. Other operating systems and release
 signing remain CI/release validation. The existing OpenPNP static library emits
 MSVC LNK4098; capture and recording pass, but the warning is not suppressed.
+
+## macOS ARM64 build validation
+
+On 2026-11-02, the build.23 macOS ARM64 artifact contained `libturbojpeg.a`.
+The build script now links `turbojpeg` on macOS, retaining `turbojpeg-static`
+on other targets. Core integration validation with Python 3.12.14 completed
+`uv sync --frozen --group dev` and imported `_skellycam_rust` successfully.
+No physical cameras were attached, so this validates installation and native
+module loading, not capture or recording.
