@@ -5,6 +5,29 @@ groups use Python/OpenCV by default; choose Rust/OpenPNP in the Camera backend
 control before connecting cameras. Close an existing group before changing its
 implementation. Both implementations are installed together.
 
+## Native build prerequisites
+
+SkellyCam and FreeMoCap Core environments build `skellycam-rust` from source
+during `uv sync`, even when the Python/OpenCV backend is selected.
+
+- Rust 1.88 or newer. The crate uses the 2024 edition, released in Rust 1.85
+  [@rustEdition2024], and the locked `image` 0.25.10 dependency declares
+  `rust-version = "1.88.0"` [@image02510RustVersion]. rustup does not refresh an
+  installed `stable` toolchain; run `rustup update stable`. Cargo older than 1.85
+  stops with "feature `edition2024` is required".
+- Windows: Visual Studio 2022 Build Tools 17.14 with the "Desktop development
+  with C++" workload. The OpenPNP build.23 Windows objects were compiled by MSVC
+  build 35226 (Visual Studio 2022 17.14), and the final link must use build tools
+  at least as recent as those that built any input. [@msvcBinaryCompatibility]
+  Visual Studio 2019 (MSVC 14.29) lacks the `_Thrd_sleep_for` STL symbol that the
+  library references, so its link fails with LNK2019 and LNK1120. Visual Studio
+  2019 may remain installed; rustc selected the newer Build Tools.
+
+On 2026-11-07, Windows x64 with Rust 1.99.1 and Visual Studio 2022 Build Tools
+17.14 (linker 14.44.35229) completed Core's `uv sync` and imported
+`_skellycam_rust`. No physical cameras were attached, so this validates
+installation and native module loading, not capture or recording.
+
 ## Run this SkellyCam checkout
 
 Validated development tools: Python 3.12, Rust 1.98.1, MSVC, Node, and npm.
@@ -14,7 +37,6 @@ build.23 artifact. Tauri is outside this integration.
 1. Synchronize from the repository root:
 
    ```powershell
-   Set-Location 'C:/Users/jonma/code-stuff/github/freemocap/project/repos/skellycam'
    uv sync --locked
    ```
 
@@ -28,10 +50,10 @@ build.23 artifact. Tauri is outside this integration.
    ./.venv/Scripts/python.exe -m skellycam
    ```
 
-3. Run Electron in a second terminal:
+3. Run Electron in a second terminal, starting from the repository root:
 
    ```powershell
-   Set-Location 'C:/Users/jonma/code-stuff/github/freemocap/project/repos/skellycam/skellycam-ui'
+   Set-Location skellycam-ui
    npm.cmd ci
    npm.cmd run dev -- --host 127.0.0.1 --port 5174 --strictPort
    ```

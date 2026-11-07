@@ -47,6 +47,11 @@ The installer bundles everything you need — no Python or Node.js required.
 
 ### Run from Source
 
+`uv sync` builds the native `skellycam-rust` package from source. It needs Rust
+1.88 or newer and, on Windows, Visual Studio 2022 Build Tools 17.14 with the
+"Desktop development with C++" workload. See the
+[native build prerequisites](RUST-BACKEND-DEVELOPMENT.md#native-build-prerequisites).
+
 For developers who want to run from the source code:
 
 ```bash
