@@ -10,11 +10,19 @@ implementation. Both implementations are installed together.
 SkellyCam and FreeMoCap Core environments build `skellycam-rust` from source
 during `uv sync`, even when the Python/OpenCV backend is selected.
 
-- Rust 1.88 or newer. The crate uses the 2024 edition, released in Rust 1.85
-  [@rustEdition2024], and the locked `image` 0.25.10 dependency declares
-  `rust-version = "1.88.0"` [@image02510RustVersion]. rustup does not refresh an
-  installed `stable` toolchain; run `rustup update stable`. Cargo older than 1.85
-  stops with "feature `edition2024` is required".
+- Rust: `skellycam-rust/rust-toolchain.toml` pins Rust 1.99.1. rustup finds it
+  from Cargo's working directory and installs that toolchain when it is absent,
+  including during `uv sync`, whatever the default `stable` version is.
+  [@rustupOverrides] [@rustupAutoInstall] Run Cargo from `skellycam-rust/`; from
+  the repository root, `--manifest-path` builds use the default toolchain. If
+  `RUSTUP_AUTO_INSTALL=0`, run `rustup toolchain install` in `skellycam-rust/`.
+  Bump the pin deliberately after validating a newer release; it is a uv cache
+  key, so a bump rebuilds the native wheel. [@uvCacheKeys]
+- Rust without rustup ignores the pin and must be 1.88 or newer. The crate uses
+  the 2024 edition, released in Rust 1.85 [@rustEdition2024], and the locked
+  `image` 0.25.10 dependency declares `rust-version = "1.88.0"`
+  [@image02510RustVersion]. Cargo older than 1.85 stops with "feature
+  `edition2024` is required".
 - Windows: Visual Studio 2022 Build Tools 17.14 with the "Desktop development
   with C++" workload. The OpenPNP build.23 Windows objects were compiled by MSVC
   build 35226 (Visual Studio 2022 17.14), and the final link must use build tools
@@ -25,7 +33,8 @@ during `uv sync`, even when the Python/OpenCV backend is selected.
 
 On 2026-11-07, Windows x64 with Rust 1.99.1 and Visual Studio 2022 Build Tools
 17.14 (linker 14.44.35229) completed Core's `uv sync` and imported
-`_skellycam_rust`. No physical cameras were attached, so this validates
+`_skellycam_rust`. With only `stable` installed, that sync installed the pinned
+toolchain automatically. No physical cameras were attached, so this validates
 installation and native module loading, not capture or recording.
 
 ## Run this SkellyCam checkout

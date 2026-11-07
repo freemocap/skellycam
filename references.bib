@@ -77,3 +77,21 @@
   review = {Reviewed excerpts of the binary-compatibility restrictions on linking and the Redistributable, not the full page, after OpenPNP build.23 failed to link with MSVC 14.29 and linked with MSVC 14.44.35229.},
   claim = {Binaries built with Visual Studio 2015 through 2026 can be linked together only by build tools at least as recent as the newest tools used to build any input.}
 }
+
+@online{rustupOverrides,
+  title = {Overrides - The rustup book},
+  author = {{The Rust Project Developers}},
+  url = {https://rust-lang.github.io/rustup/overrides.html},
+  urldate = {2026-11-07},
+  review = {Reviewed the toolchain file section and its directory-walk discovery text, not the full page.},
+  claim = {rustup discovers rust-toolchain.toml by walking up from the current directory, and its toolchain section can set channel, components, targets and profile.}
+}
+
+@online{rustupAutoInstall,
+  title = {Environment variables - The rustup book},
+  author = {{The Rust Project Developers}},
+  url = {https://rust-lang.github.io/rustup/environment-variables.html},
+  urldate = {2026-11-07},
+  review = {Reviewed only the RUSTUP_AUTO_INSTALL entry.},
+  claim = {By default rustup installs the active toolchain when it is absent; RUSTUP_AUTO_INSTALL=0 disables that.}
+}
