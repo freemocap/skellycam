@@ -91,8 +91,15 @@ MSVC LNK4098; capture and recording pass, but the warning is not suppressed.
 ## macOS ARM64 build validation
 
 On 2026-11-02, the build.23 macOS ARM64 artifact contained `libturbojpeg.a`.
-The build script now links `turbojpeg` on macOS, retaining `turbojpeg-static`
-on other targets. Core integration validation with Python 3.12.14 completed
+The build script now links `turbojpeg` on macOS and Linux, retaining
+`turbojpeg-static` on Windows. Core integration validation with Python 3.12.14 completed
 `uv sync --frozen --group dev` and imported `_skellycam_rust` successfully.
 No physical cameras were attached, so this validates installation and native
 module loading, not capture or recording.
+
+## Linux x86_64 build validation
+
+On 2026-11-07, the build.23 Linux x86_64 artifact also contained `libturbojpeg.a`.
+Because openpnp-capture is C++, Linux links `stdc++` as well. Core's `uv sync` with
+CPython 3.12.16 built the extension, and `_skellycam_rust` imported without
+unresolved non-Python symbols. No cameras were exercised.

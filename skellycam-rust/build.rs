@@ -371,14 +371,21 @@ fn main() {
         println!("cargo:rustc-link-lib=static=openpnp-capture");
         info!(directive = "rustc-link-lib", lib = "openpnp-capture", kind = "static");
 
-        // The macOS artifact ships libturbojpeg.a, without the Windows suffix.
-        let turbojpeg_lib = if target.contains("apple-darwin") {
-            "turbojpeg"
-        } else {
+        // Only the Windows artifact uses the `-static` suffix; macOS and Linux
+        // artifacts ship libturbojpeg.a.
+        let turbojpeg_lib = if target.contains("windows") {
             "turbojpeg-static"
+        } else {
+            "turbojpeg"
         };
         println!("cargo:rustc-link-lib=static={turbojpeg_lib}");
         info!(directive = "rustc-link-lib", lib = turbojpeg_lib, kind = "static");
+
+        // openpnp-capture is C++; Linux needs the C++ runtime linked explicitly.
+        if target.contains("linux") {
+            println!("cargo:rustc-link-lib=stdc++");
+            debug!(directive = "rustc-link-lib", lib = "stdc++", kind = "system");
+        }
 
         // Windows system libraries required by openpnp-capture
         if target.contains("windows") {
