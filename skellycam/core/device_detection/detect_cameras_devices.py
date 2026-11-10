@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, computed_field
 from tabulate import tabulate
 
 from skellycam.core.camera.determine_backend import determine_opencv_camera_backend, OpenCVBackend
+from skellycam.core.device_detection.usb_connection import usb_version
 from skellycam.core.types.type_overloads import CameraIndexInt, CameraNameString, CameraBackendInt, CameraVendorIdInt, \
     CameraProductIdInt, CameraDevicePathString, CameraBackendNameString, CameraIdString
 
@@ -51,6 +52,11 @@ class CameraDeviceInfo(BaseModel):
         default_factory=list,
         description="MJPEG capture modes from native detection, largest resolution first. "
                     "Empty when no natively detected device has this device's path.",
+    )
+    usb_version: str | None = Field(
+        default=None,
+        description="USB generation the camera is connected through ('USB 3', 'USB 2' or 'USB 1'); "
+                    "None when it cannot be determined (non-USB cameras, unsupported platforms).",
     )
 
     @computed_field
@@ -156,6 +162,7 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
     native_detections = _detect_native_cameras()
     for camera in cameras:
         camera.supported_modes = _capture_modes_for_path(camera.path, native_detections)
+        camera.usb_version = usb_version(camera.path)
     logger.debug(f"Detected {len(cameras)} cameras:\n {tabulate([camera.model_dump() for camera in cameras], headers='keys')}\n)")
     return cameras
 

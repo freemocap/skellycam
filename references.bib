@@ -50,6 +50,38 @@
   claim = {Each FPS, frame size or FourCC setting stops and recreates the capture device, and stopDevice discards the previously requested size, subtype and frame rate. FPS and size restarts request no subtype, so setup tries subtypes in list order with YUY2 before MJPG; size and FourCC restarts keep the previous stream's frame rate; only a FourCC setting requests MJPG. Open-time size and FourCC parameters are applied before open, but a later FPS setting discards them.}
 }
 
+@online{windowsUsbConnectionFlags,
+  title = {Windows 10 SDK (10.0.16299) usbioctl.h: USB node connection information V2 flags},
+  url = {https://github.com/tpn/winsdk-10/blob/master/Include/10.0.16299.0/shared/usbioctl.h#L1739-L1747},
+  urldate = {2026-11-10},
+  review = {Read the USB_NODE_CONNECTION_INFORMATION_EX_V2_FLAGS union and the IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX_V2 definition in a mirror of the Windows SDK headers; the Microsoft Learn page could not be retrieved. On the owner's workstation the flag matched each camera port (four SuperSpeed, one high-speed).},
+  claim = {Bit 0 of the per-port V2 connection flags is DeviceIsOperatingAtSuperSpeedOrHigher and bit 1 is DeviceIsSuperSpeedCapableOrHigher.}
+}
+
+@online{windowsCfgmgrDeviceAddress,
+  title = {Windows 10 SDK (10.0.16299) cfgmgr32.h: CM_DRP_ADDRESS},
+  url = {https://github.com/tpn/winsdk-10/blob/master/Include/10.0.16299.0/um/cfgmgr32.h#L1039},
+  urldate = {2026-11-10},
+  review = {Read the device-node property constant in a mirror of the Windows SDK headers. Documentation that a USB device's address is its parent-hub port number was not found here; the code checks it per device by requiring the camera's vendor and product IDs in the descriptor at that hub port, and it held for all five cameras on the owner's workstation.},
+  claim = {CM_DRP_ADDRESS (0x1D) reads a device node's bus address; for the USB cameras tested it equals the port number on the parent hub.}
+}
+
+@online{linuxSysfsUsbSpeed,
+  title = {Linux kernel ABI documentation: sysfs-bus-usb},
+  url = {https://github.com/torvalds/linux/blob/master/Documentation/ABI/testing/sysfs-bus-usb},
+  urldate = {2026-11-10},
+  review = {Read the speed attribute entry (documented under /sys/bus/usb/devices/usbX; every USB device directory has the same attribute). Not exercised on Linux hardware here; covered by a unit test with a synthetic sysfs tree.},
+  claim = {The speed attribute reports a USB device's speed in Mb/s: 1.5 low speed, 15 full speed as documented (12 in practice), 480 high speed, 5000 SuperSpeed, 10000 SuperSpeed+, 20000 SuperSpeed+ Gen 2x2.}
+}
+
+@online{macosIOUSBHostSpeed,
+  title = {macOS 11.3 SDK IOUSBHostFamilyDefinitions.h},
+  url = {https://github.com/phracker/MacOSX-SDKs/blob/master/MacOSX11.3.sdk/System/Library/Frameworks/IOKit.framework/Versions/A/Headers/usb/IOUSBHostFamilyDefinitions.h},
+  urldate = {2026-11-10},
+  review = {Read the tIOUSBHostConnectionSpeed enum and the USBSpeed and locationID property keys in a mirror of the macOS SDK headers. That USBSpeed carries this enum, and that AVFoundation's unique ID for a USB camera begins with its location ID, are assumptions not confirmed here; the macOS path is untested on hardware and reports unknown for any other ID form.},
+  claim = {IOUSBHost devices expose USBSpeed and locationID properties; connection speeds are 1 full, 2 low, 3 high, 4 SuperSpeed, 5 SuperSpeed+ and 6 SuperSpeed+ x2.}
+}
+
 @online{ffmpegSidecarCommand,
   title = {ffmpeg-sidecar FfmpegCommand},
   author = {{ffmpeg-sidecar contributors}},

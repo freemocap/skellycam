@@ -8,7 +8,9 @@ from skellycam.core.camera.config.camera_config import MAX_MANUAL_EXPOSURE
 from skellycam.core.camera_group.tasks.recommend_exposure import recommend_exposure
 
 from skellycam.core.camera_group.rust_camera_group import RustCameraGroupManager
-from skellycam.core.camera_group.camera_errors import CameraStateConflict
+from skellycam.core.camera_group.camera_errors import CameraConnectionCancelled, CameraStartFailed, CameraStateConflict
+from skellycam.core.camera_group.camera_start_failure import describe_start_failure
+from datetime import datetime, timezone
 
 CameraBackend = Literal["python", "rust"]
 logger = logging.getLogger(__name__)
@@ -51,7 +53,15 @@ class CameraBackendManager:
                 logger.warning("Camera %s: limiting requested manual exposure %s to %s",
                                key, config.exposure, MAX_MANUAL_EXPOSURE)
                 config.exposure = MAX_MANUAL_EXPOSURE
-        group = await self._manager.create_or_update_camera_group(configs)
+        started = datetime.now(timezone.utc)
+        try:
+            group = await self._manager.create_or_update_camera_group(configs)
+        except (CameraConnectionCancelled, CameraStartFailed):
+            raise
+        except (RuntimeError, TimeoutError) as error:
+            # Both backends fail here: say what was requested, what happened, why, and what to try.
+            explanation = await asyncio.to_thread(describe_start_failure, error, configs, started)
+            raise CameraStartFailed(explanation) from error
         if selected and sys.platform != "linux":
             await recommend_exposure(group, selected)
         return group
