@@ -91,7 +91,7 @@ pub struct VideoRecorder {
     ffmpeg_child: ffmpeg_sidecar::child::FfmpegChild,
     stdin: Option<ChildStdin>,
     /// Reads ffmpeg's stderr for the whole recording; returns its last lines.
-    stderr_reader: Option<JoinHandle<VecDeque<String>>>,
+    stderr_reader: Option<JoinHandle<FfmpegStderr>>,
     output_path: PathBuf,
     frame_count: u64,
     timestamps: Vec<FrameTimestamp>,
@@ -264,6 +264,7 @@ impl VideoRecorder {
         let stderr_tail = self.stderr_reader
             .take()
             .and_then(|reader| reader.join().ok())
+            .map(|stderr| stderr.tail)
             .unwrap_or_default();
         if !status.success() {
             anyhow::bail!(
@@ -297,16 +298,52 @@ impl VideoRecorder {
 const STDERR_TAIL_LINES: usize = 40;
 /// Longest stored line; ffmpeg's lines are short, this only bounds malformed output.
 const STDERR_MAX_LINE_BYTES: usize = 1024;
+/// Distinct ffmpeg warning/error messages logged per recording; any beyond this are only counted.
+const STDERR_MAX_DISTINCT_PROBLEMS: usize = 16;
 
-/// Read ffmpeg's stderr until ffmpeg closes it, returning the last lines.
+/// What ffmpeg wrote to stderr during one recording.
+#[derive(Default)]
+struct FfmpegStderr {
+    /// The last lines, for the error report when encoding fails.
+    tail: VecDeque<String>,
+    /// Each distinct warning/error message with its number of occurrences.
+    problems: Vec<FfmpegProblem>,
+    /// Warning/error lines beyond `STDERR_MAX_DISTINCT_PROBLEMS` distinct messages.
+    unlisted_problems: u64,
+}
+
+struct FfmpegProblem {
+    context: String,
+    level: String,
+    message: String,
+    count: u64,
+}
+
+/// One `-loglevel level+...` line: `[level] message` or `[context @ pointer] [level] message`.
+struct FfmpegLogLine<'a> {
+    context: &'a str,
+    level: &'a str,
+    message: &'a str,
+}
+
+fn parse_ffmpeg_log_line(line: &str) -> Option<FfmpegLogLine<'_>> {
+    let (context, rest) = match line.strip_prefix('[').and_then(|after| after.split_once("] ")) {
+        Some((tag, rest)) if tag.contains(" @ ") => (tag.split(" @ ").next().unwrap_or(""), rest),
+        _ => ("", line),
+    };
+    let (level, message) = rest.strip_prefix('[')?.split_once(']')?;
+    Some(FfmpegLogLine { context, level, message: message.trim_start() })
+}
+
+/// Read ffmpeg's stderr until ffmpeg closes it.
 ///
-/// Error-level lines are logged as they arrive; warning-level lines are counted. Lines end at
-/// `\n` or `\r`, because ffmpeg ends progress lines with `\r`.
-fn read_ffmpeg_stderr(mut stderr: impl Read, label: &str) -> VecDeque<String> {
-    let mut tail = VecDeque::with_capacity(STDERR_TAIL_LINES);
+/// ffmpeg can repeat one warning or error on every frame, so each distinct message is logged
+/// once and its repeats are counted and reported when the recording ends. Lines end at `\n` or
+/// `\r`, because ffmpeg ends progress lines with `\r`.
+fn read_ffmpeg_stderr(mut stderr: impl Read, label: &str) -> FfmpegStderr {
+    let mut output = FfmpegStderr { tail: VecDeque::with_capacity(STDERR_TAIL_LINES), ..Default::default() };
     let mut line = Vec::with_capacity(256);
     let mut buffer = [0u8; 8192];
-    let mut warnings = 0u64;
     loop {
         let read = match stderr.read(&mut buffer) {
             Ok(0) | Err(_) => break,
@@ -314,45 +351,66 @@ fn read_ffmpeg_stderr(mut stderr: impl Read, label: &str) -> VecDeque<String> {
         };
         for &byte in &buffer[..read] {
             if byte == b'\n' || byte == b'\r' {
-                finish_stderr_line(&mut line, &mut tail, &mut warnings, label);
+                finish_stderr_line(&mut line, &mut output, label);
             } else if line.len() < STDERR_MAX_LINE_BYTES {
                 line.push(byte);
             }
         }
     }
-    finish_stderr_line(&mut line, &mut tail, &mut warnings, label);
-    if warnings > 0 {
-        tracing::debug!("ffmpeg {label}: {warnings} warning lines");
+    finish_stderr_line(&mut line, &mut output, label);
+    for problem in output.problems.iter().filter(|problem| problem.count > 1) {
+        tracing::warn!(
+            "ffmpeg {label}: {} more lines of [{}] [{}] {}",
+            problem.count - 1, problem.context, problem.level, problem.message,
+        );
     }
-    tail
+    if output.unlisted_problems > 0 {
+        tracing::warn!("ffmpeg {label}: {} other warning or error lines", output.unlisted_problems);
+    }
+    output
 }
 
-fn finish_stderr_line(line: &mut Vec<u8>, tail: &mut VecDeque<String>, warnings: &mut u64, label: &str) {
+fn finish_stderr_line(line: &mut Vec<u8>, output: &mut FfmpegStderr, label: &str) {
     if line.is_empty() {
         return;
     }
     let text = String::from_utf8_lossy(line).into_owned();
     line.clear();
-    match ffmpeg_log_level(&text) {
-        Some("error" | "fatal" | "panic") => tracing::error!("ffmpeg {label}: {text}"),
-        Some("warning") => *warnings += 1,
-        _ => {}
+    if let Some(parsed) = parse_ffmpeg_log_line(&text) {
+        if matches!(parsed.level, "warning" | "error" | "fatal" | "panic") {
+            note_ffmpeg_problem(output, &parsed, label);
+        }
     }
-    if tail.len() == STDERR_TAIL_LINES {
-        tail.pop_front();
+    if output.tail.len() == STDERR_TAIL_LINES {
+        output.tail.pop_front();
     }
-    tail.push_back(text);
+    output.tail.push_back(text);
 }
 
-/// The `[level]` tag of an ffmpeg `level+...` log line: `[level] text` or `[ctx @ ptr] [level] text`.
-fn ffmpeg_log_level(line: &str) -> Option<&str> {
-    let rest = match line.strip_prefix('[') {
-        Some(after) if after.split(']').next().is_some_and(|tag| tag.contains(" @ ")) => {
-            after.split_once("] ")?.1
-        }
-        _ => line,
-    };
-    rest.strip_prefix('[')?.split_once(']').map(|(level, _)| level)
+/// Log a warning/error message the first time it appears; count it afterwards.
+///
+/// ffmpeg keeps encoding after these lines. A recording that fails is reported by ffmpeg's
+/// exit status in `finish()` or by a failed write in `feed_frame()`.
+fn note_ffmpeg_problem(output: &mut FfmpegStderr, line: &FfmpegLogLine<'_>, label: &str) {
+    let known = output.problems.iter_mut().find(|known| {
+        known.message == line.message && known.context == line.context && known.level == line.level
+    });
+    if let Some(known) = known {
+        known.count += 1;
+    } else if output.problems.len() < STDERR_MAX_DISTINCT_PROBLEMS {
+        tracing::warn!(
+            "ffmpeg {label}: [{}] [{}] {} (repeats are counted, not logged)",
+            line.context, line.level, line.message,
+        );
+        output.problems.push(FfmpegProblem {
+            context: line.context.into(),
+            level: line.level.into(),
+            message: line.message.into(),
+            count: 1,
+        });
+    } else {
+        output.unlisted_problems += 1;
+    }
 }
 
 impl Drop for VideoRecorder {
@@ -375,32 +433,60 @@ mod tests {
 
     #[test]
     fn stderr_reader_reads_to_the_end_and_keeps_the_last_lines() {
-        // More output than a pipe buffer holds, shaped like ffmpeg's per-frame MJPEG warnings
+        // More output than a pipe buffer holds, shaped like ffmpeg's per-frame MJPEG errors
         // and `\r`-terminated progress lines.
         let mut log = String::from("[info] ffmpeg version 7.1\n");
         for frame in 1..=5000 {
             log.push_str(&format!(
-                "[mjpeg @ 000002C7070CDAC0] [warning] unable to decode APP fields\n[info] frame={frame}\r"
+                "[mjpeg @ 000002C7070CDAC0] [error] unable to decode APP fields\n[info] frame={frame}\r"
             ));
         }
-        let tail = read_ffmpeg_stderr(log.as_bytes(), "test camera");
-        assert_eq!(tail.len(), STDERR_TAIL_LINES);
-        assert_eq!(tail.back().map(String::as_str), Some("[info] frame=5000"));
+        let output = read_ffmpeg_stderr(log.as_bytes(), "test camera");
+        assert_eq!(output.tail.len(), STDERR_TAIL_LINES);
+        assert_eq!(output.tail.back().map(String::as_str), Some("[info] frame=5000"));
+    }
+
+    #[test]
+    fn a_message_repeated_on_every_frame_is_one_problem_with_a_count() {
+        // The decoder context's address can differ between ffmpeg's decoder threads.
+        let mut log = String::new();
+        for frame in 0..3600 {
+            let address = if frame % 2 == 0 { "000002C7070CDAC0" } else { "000002C7070CE000" };
+            log.push_str(&format!("[mjpeg @ {address}] [error] unable to decode APP fields\n"));
+        }
+        log.push_str("[swscaler @ 000002083BFDB200] [warning] deprecated pixel format used\n");
+        let output = read_ffmpeg_stderr(log.as_bytes(), "test camera");
+        let problems: Vec<_> = output.problems.iter()
+            .map(|problem| (problem.context.as_str(), problem.level.as_str(), problem.count))
+            .collect();
+        assert_eq!(problems, [("mjpeg", "error", 3600), ("swscaler", "warning", 1)]);
+        assert_eq!(output.unlisted_problems, 0);
+    }
+
+    #[test]
+    fn distinct_problem_messages_are_bounded() {
+        let log: String = (0..100).map(|frame| format!("[error] corrupt frame {frame}\n")).collect();
+        let output = read_ffmpeg_stderr(log.as_bytes(), "test camera");
+        assert_eq!(output.problems.len(), STDERR_MAX_DISTINCT_PROBLEMS);
+        assert_eq!(output.unlisted_problems, 100 - STDERR_MAX_DISTINCT_PROBLEMS as u64);
     }
 
     #[test]
     fn stderr_reader_bounds_line_length() {
         let log = vec![b'x'; 10 * STDERR_MAX_LINE_BYTES];
-        let tail = read_ffmpeg_stderr(log.as_slice(), "test camera");
-        assert_eq!(tail.len(), 1);
-        assert_eq!(tail[0].len(), STDERR_MAX_LINE_BYTES);
+        let output = read_ffmpeg_stderr(log.as_slice(), "test camera");
+        assert_eq!(output.tail.len(), 1);
+        assert_eq!(output.tail[0].len(), STDERR_MAX_LINE_BYTES);
     }
 
     #[test]
-    fn log_level_is_read_with_and_without_a_context_prefix() {
-        assert_eq!(ffmpeg_log_level("[info] frame=1"), Some("info"));
-        assert_eq!(ffmpeg_log_level("[mjpeg @ 000002C7] [warning] unable to decode APP fields"), Some("warning"));
-        assert_eq!(ffmpeg_log_level("[out#0/mp4 @ 000001D4] [error] Error opening output"), Some("error"));
-        assert_eq!(ffmpeg_log_level("plain text"), None);
+    fn log_lines_parse_with_and_without_a_context_prefix() {
+        let parts = |line| parse_ffmpeg_log_line(line).map(|parsed| (parsed.context, parsed.level, parsed.message));
+        assert_eq!(parts("[info] frame=1"), Some(("", "info", "frame=1")));
+        assert_eq!(parts("[mjpeg @ 000002C7] [error] unable to decode APP fields"),
+                   Some(("mjpeg", "error", "unable to decode APP fields")));
+        assert_eq!(parts("[out#0/mp4 @ 000001D4] [fatal] Error opening output"),
+                   Some(("out#0/mp4", "fatal", "Error opening output")));
+        assert_eq!(parts("plain text"), None);
     }
 }
