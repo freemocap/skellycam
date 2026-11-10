@@ -50,3 +50,19 @@
   review = {Reviewed the command API and verified new_with_path against locally installed 2.5.1 source.},
   claim = {new_with_path launches an explicitly supplied encoder executable instead of relying on PATH.}
 }
+
+@online{openpnpCaptureDeviceIds,
+  title = {openpnp-capture device enumeration, release build.23},
+  url = {https://github.com/jonmatthis/openpnp-capture/blob/cf75a990dd115bc88040659ea573918a09014f84/win/platformcontext.cpp},
+  urldate = {2026-11-09},
+  review = {Reviewed device enumeration in win/platformcontext.cpp, linux/platformcontext.cpp and mac/platformcontext.mm at the commit tagged build.23, the release skellycam-rust downloads, and compared detections of five attached USB cameras on Windows.},
+  claim = {A device's unique ID is its name, a space and a platform identifier: the DirectShow DevicePath on Windows (the device number when none is reported), the V4L2 bus_info on Linux and the AVFoundation uniqueID on macOS.}
+}
+
+@online{cv2EnumerateCamerasPaths,
+  title = {cv2_enumerate_cameras 1.4.0 camera enumeration},
+  url = {https://github.com/lukehugh/cv2_enumerate_cameras/tree/v1.4.0/cv2_enumerate_cameras},
+  urldate = {2026-11-09},
+  review = {Reviewed the Windows, Linux and macOS enumerators in the installed 1.4.0 package and the matching v1.4.0 tag.},
+  claim = {CameraInfo.path is the DirectShow DevicePath for DSHOW, the Media Foundation symbolic link for MSMF, the /dev/video* node on Linux and the AVFoundation uniqueID on macOS.}
+}

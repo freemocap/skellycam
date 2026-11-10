@@ -6,7 +6,7 @@ import cv2
 from cv2.videoio_registry import getBackendName
 from cv2_enumerate_cameras import supported_backends, enumerate_cameras
 from cv2_enumerate_cameras.camera_info import CameraInfo
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 from tabulate import tabulate
 
 from skellycam.core.camera.determine_backend import determine_opencv_camera_backend, OpenCVBackend
@@ -32,6 +32,13 @@ def find_camera(
     return None
 
 
+class CaptureMode(BaseModel):
+    """One MJPEG capture resolution and every frame rate the camera reports for it."""
+    width: int
+    height: int
+    framerates: list[float]
+
+
 class CameraDeviceInfo(BaseModel):
     index: CameraIndexInt
     name: CameraNameString
@@ -40,6 +47,11 @@ class CameraDeviceInfo(BaseModel):
     path: CameraDevicePathString | None = None
     backend_id: CameraBackendInt | None = None
     backend_name: CameraBackendNameString | None = None
+    supported_modes: list[CaptureMode] = Field(
+        default_factory=list,
+        description="MJPEG capture modes from native detection, largest resolution first. "
+                    "Empty when no natively detected device has this device's path.",
+    )
 
     @computed_field
     @property
@@ -83,6 +95,40 @@ class CameraDeviceInfo(BaseModel):
             raise RuntimeError(f"Failed to read frame from camera {self.index} with Vendor ID: {self.vendor_id} and Product ID: {self.product_id}")
         return cap
 
+
+def _detect_native_cameras() -> list[dict]:
+    """Return the native engine's openpnp-capture detections, or none when it is unavailable."""
+    try:
+        import _skellycam_rust
+        return _skellycam_rust.detect_cameras()
+    except (ImportError, RuntimeError) as error:
+        logger.warning(f"Camera capture modes unavailable: {type(error).__name__} - {error}")
+        return []
+
+
+def _capture_modes_for_path(path: CameraDevicePathString | None, native_detections: list[dict]) -> list[CaptureMode]:
+    """Group the MJPEG formats of the native detection whose device is `path`.
+
+    openpnp-capture identifies a device as "<name> <platform id>" [@openpnpCaptureDeviceIds].
+    That id is the DirectShow DevicePath on Windows, which OpenCV's DirectShow enumeration
+    reports as `path`, and the AVFoundation uniqueID on macOS [@cv2EnumerateCamerasPaths].
+    Media Foundation links and Linux /dev/video* paths match no native device.
+    """
+    if not path:
+        return []
+    detection = next((native for native in native_detections if native["device_path"].endswith(f" {path}")), None)
+    if detection is None:
+        return []
+    framerates: dict[tuple[int, int], set[int]] = {}
+    for capture_format in detection["formats"]:
+        if capture_format["fourcc_str"] == "MJPG":
+            resolution = (capture_format["width"], capture_format["height"])
+            framerates.setdefault(resolution, set()).add(capture_format["fps"])
+    resolutions = sorted(framerates, key=lambda resolution: (resolution[0] * resolution[1], resolution[0]), reverse=True)
+    return [CaptureMode(width=width, height=height, framerates=sorted(framerates[width, height]))
+            for width, height in resolutions]
+
+
 def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virtual:bool=True) -> list[CameraDeviceInfo]:
     """
     Detects available cameras using the cv2_enumerate_cameras package.
@@ -107,6 +153,9 @@ def detect_available_cameras(backend_id: CameraBackendInt|None=None, filter_virt
         if any(camera.camera_id == device.camera_id for camera in cameras):
             raise ValueError(f"Detected devices have colliding camera IDs: {device.camera_id}. Device paths: {[camera.path for camera in cameras]} and {device.path}")
         cameras.append(device)
+    native_detections = _detect_native_cameras()
+    for camera in cameras:
+        camera.supported_modes = _capture_modes_for_path(camera.path, native_detections)
     logger.debug(f"Detected {len(cameras)} cameras:\n {tabulate([camera.model_dump() for camera in cameras], headers='keys')}\n)")
     return cameras
 

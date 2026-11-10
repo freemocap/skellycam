@@ -10,7 +10,8 @@ def test_native_audio_references_have_required_metadata():
     sources = ["skellycam-rust/src/recording/audio.rs", "skellycam-rust/src/recording/recorder.rs",
                "skellycam/core/camera_group/rust_camera_group.py", "skellycam-rust/pyproject.toml",
                "RUST-BACKEND-DEVELOPMENT.md",
-               "skellycam/core/camera/opencv/opencv_helpers/opencv_apply_config.py"]
+               "skellycam/core/camera/opencv/opencv_helpers/opencv_apply_config.py",
+               "skellycam/core/device_detection/detect_cameras_devices.py"]
     keys = [key for source in sources
             for key in re.findall(r"\[@(\w+)\]", (root / source).read_text(encoding="utf-8"))]
     assert keys
