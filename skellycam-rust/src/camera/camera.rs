@@ -79,11 +79,19 @@ impl Camera {
     /// full effect until the camera is restarted.
     ///
     /// Takes `&self` (not `&mut self`) because sending a channel message
-    /// only requires a shared reference. Updates the local config copy so
-    /// that `config()` and `camera_statuses()` reflect the current settings.
+    /// only requires a shared reference. Updates the requested settings in
+    /// the shared config so that `config()` and `camera_statuses()` reflect
+    /// them, but keeps the negotiated width, height and framerate: the
+    /// capture thread writes those when it (re)opens the stream, and the
+    /// dispatcher reads that framerate when it creates recorders.
     pub fn configure(&self, config: CameraConfig) {
         if let Ok(mut guard) = self.config.lock() {
-            *guard = config.clone();
+            *guard = CameraConfig {
+                width: guard.width,
+                height: guard.height,
+                framerate: guard.framerate,
+                ..config.clone()
+            };
         }
         let _ = self
             .command_sender
@@ -280,6 +288,41 @@ mod tests {
             framerate: -1.0,
             rotation: -1,
         }
+    }
+
+    /// `configure` forwards the full request to the capture thread but keeps
+    /// the negotiated stream format in the shared config: the dispatcher reads
+    /// that framerate when it creates recorders (falling back to 30 fps for a
+    /// non-positive value such as the -1 "device default" request).
+    #[test]
+    fn configure_keeps_negotiated_format_and_forwards_the_request() {
+        let identity = CameraIdentity {
+            camera_name: "Test Cam".into(),
+            camera_index: 0,
+            camera_id: "cam0".into(),
+            device_path: String::new(),
+            formats: Vec::new(),
+        };
+        let requested = make_config(&identity);
+        let (forwarded_sender, forwarded) = mpsc::channel();
+        let camera = Camera::spawn_fake(identity, requested.clone(), move |commands, _events| {
+            while let Ok(CameraCommand::Configure { config }) = commands.recv() {
+                let _ = forwarded_sender.send(config);
+            }
+        });
+        // The capture thread negotiated 200 fps for the -1 request.
+        camera.shared_config().lock().unwrap().framerate = 200.0;
+
+        camera.configure(CameraConfig { exposure: -5, ..requested });
+
+        let shared = camera.config();
+        assert_eq!(
+            (shared.width, shared.height, shared.framerate, shared.exposure),
+            (1280, 720, 200.0, -5)
+        );
+        let sent = forwarded.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_eq!((sent.framerate, sent.exposure), (-1.0, -5));
+        camera.shutdown().unwrap();
     }
 
     // ── Hardware tests (require at least one camera attached) ──

@@ -179,7 +179,7 @@ impl CameraGroup {
 
     /// [`start`](Self::start) with an injectable camera launcher, so tests can
     /// exercise the startup policy without hardware.
-    fn start_with(
+    pub(crate) fn start_with(
         &mut self,
         mut launch_camera: impl FnMut(
             CameraIdentity,
@@ -339,10 +339,13 @@ impl CameraGroup {
 
     /// Apply a new set of camera configs.
     ///
-    /// Pauses the group, diffs the new configs against the current set, applies
-    /// changes (reconfigure / add camera / remove camera), then unpauses. This
-    /// ensures that the gatherer is idle and no cameras are blocked at the
-    /// barrier while `set_total()` or shutdown operations happen.
+    /// Diffs the new configs against the current set and applies changes
+    /// (reconfigure / add camera / remove camera). Changes that add or remove
+    /// cameras or reopen a stream (size, framerate) pause the group first and
+    /// unpause it afterwards, so the gatherer is idle and no camera is blocked
+    /// at the barrier while `set_total()`, stream restarts or shutdowns happen.
+    /// Exposure, exposure-mode and rotation changes are applied while the
+    /// group streams: each camera thread applies them between frames.
     ///
     /// - **Changed configs** (same camera ID, different settings): sends
     ///   `Configure` command to the camera thread, which applies settings
@@ -360,11 +363,6 @@ impl CameraGroup {
                 self.state
             );
         }
-
-        // Pause the gatherer before making any changes — cameras are not at
-        // the barrier while paused, so set_total() and shutdown() are safe.
-        self.pause();
-        std::thread::sleep(std::time::Duration::from_millis(100));
 
         // Compute the diff
         let mut changed = Vec::new();
@@ -388,6 +386,22 @@ impl CameraGroup {
             if !new_configs.contains_key(id) {
                 removed.push(id.clone());
             }
+        }
+
+        // Pause the gatherer before changing the camera set or reopening a
+        // stream — cameras are not at the barrier while paused, so set_total()
+        // and shutdown() are safe. Live-only changes skip the pause (and its
+        // 2 × 100 ms settle sleeps), e.g. every step of an exposure sweep.
+        let needs_pause = !added.is_empty()
+            || !removed.is_empty()
+            || changed.iter().any(|(id, new_cfg)| {
+                self.configs.get(id).map_or(true, |existing| {
+                    existing.capture_config.needs_stream_restart(&new_cfg.capture_config)
+                })
+            });
+        if needs_pause {
+            self.pause();
+            std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
         // Reconfigure changed cameras
@@ -435,8 +449,10 @@ impl CameraGroup {
         }
 
         // Resume frame flow now that all changes are applied
-        self.unpause();
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        if needs_pause {
+            self.unpause();
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
 
         Ok(())
     }
@@ -1248,5 +1264,71 @@ mod tests {
         assert_eq!(group.state(), CameraGroupState::Created);
         assert_eq!(group.camera_count(), 0);
         assert!(!group.is_paused());
+    }
+
+    /// Exposure, exposure-mode and rotation changes are applied while the
+    /// group streams (each camera thread applies them between frames). A size
+    /// or framerate change still pauses the group, so streams reopen with no
+    /// camera waiting at the barrier.
+    #[test]
+    fn apply_pauses_only_for_changes_that_reopen_streams() {
+        use crate::camera::{CameraCommand, CameraEvent};
+
+        let mut group =
+            CameraGroup::new(HashMap::from([("cam0".to_string(), group_config("cam0", 0))]));
+        let received = Arc::new(Mutex::new(Vec::<CameraConfig>::new()));
+        let mut paused = None;
+        group
+            .start_with(|identity, config, _barrier, group_paused, _first_frame| {
+                paused = Some(group_paused);
+                let received = received.clone();
+                Ok(Camera::spawn_fake(identity, config, move |commands, events| {
+                    let _ = events.send(CameraEvent::Ready);
+                    while let Ok(CameraCommand::Configure { config }) = commands.recv() {
+                        received.lock().unwrap().push(config);
+                    }
+                }))
+            })
+            .unwrap();
+        let paused = paused.unwrap();
+
+        // Apply one config while a watcher records whether the group paused.
+        let apply_and_watch = |group: &mut CameraGroup, capture_config: CameraConfig| {
+            let done = Arc::new(AtomicBool::new(false));
+            let watcher = {
+                let (done, paused) = (done.clone(), paused.clone());
+                std::thread::spawn(move || {
+                    let mut saw_pause = false;
+                    while !done.load(Ordering::SeqCst) {
+                        saw_pause |= paused.load(Ordering::SeqCst);
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+                    saw_pause
+                })
+            };
+            let config = CameraGroupConfig { capture_config, ..group_config("cam0", 0) };
+            group.apply(HashMap::from([("cam0".to_string(), config)])).unwrap();
+            done.store(true, Ordering::SeqCst);
+            watcher.join().unwrap()
+        };
+
+        let live = CameraConfig {
+            exposure: -5,
+            exposure_mode: "AUTO".into(),
+            rotation: 1,
+            ..group_config("cam0", 0).capture_config
+        };
+        assert!(!apply_and_watch(&mut group, live.clone()), "a live change must not pause the group");
+        let reopen = CameraConfig { width: 1280, height: 720, ..live };
+        assert!(apply_and_watch(&mut group, reopen), "a size change pauses the group");
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while received.lock().unwrap().len() < 2 && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        let received: Vec<(i32, u32)> =
+            received.lock().unwrap().iter().map(|c| (c.exposure, c.width)).collect();
+        assert_eq!(received, [(-5, 640), (-5, 1280)]);
+        group.shutdown().unwrap();
     }
 }

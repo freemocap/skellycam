@@ -108,6 +108,10 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
 /// exposure on the new stream. The camera thread stays alive — only
 /// the internal CaptureStream is replaced.
 ///
+/// `old_config` is the previously *requested* config: the restart decision
+/// compares requests (see `CameraConfig::needs_stream_restart`), never the
+/// negotiated format against a request.
+///
 /// Returns the (possibly new) stream, actual_width, and actual_height.
 unsafe fn apply_config(
     ctx: CapContext,
@@ -123,11 +127,7 @@ unsafe fn apply_config(
     let exposure_mode = new_config.exposure_mode.clone();
     let exposure_value = new_config.exposure;
 
-    let needs_restart = actual_width != new_config.width
-        || actual_height != new_config.height
-        || (old_config.framerate - new_config.framerate).abs() > 0.1;
-
-    if needs_restart {
+    if old_config.needs_stream_restart(new_config) {
          Cap_closeStream(ctx, stream) ;
 
         let format_info = match find_best_mjpg(
@@ -242,6 +242,8 @@ fn run_camera_thread(
         let _ = event_sender.send(CameraEvent::Ready);
         let mut frame_sm = FrameStateMachine::new(start_frame_number);
         let mut raw_buffer: Vec<u8> = Vec::new();
+        // The most recently requested config. The negotiated format lives in
+        // actual_width/actual_height and the shared config.
         let mut active_config = initial_config;
 
         loop {
@@ -261,16 +263,6 @@ fn run_camera_thread(
                         error
                     })?;
                     active_config = new_config;
-                    // Pull actual negotiated framerate/width/height from the
-                    // shared config (written by apply_config for restarts, or
-                    // by Camera::configure for exposure-only changes).
-                    if let Ok(guard) = shared_config.lock() {
-                        active_config.framerate = guard.framerate;
-                        active_config.width = guard.width;
-                        active_config.height = guard.height;
-                        active_config.exposure_mode = guard.exposure_mode.clone();
-                        active_config.exposure = guard.exposure;
-                    }
                 }
                 CommandResult::None => {}
             }
@@ -297,16 +289,6 @@ fn run_camera_thread(
                             error
                         })?;
                         active_config = new_config;
-                    // Pull actual negotiated framerate/width/height from the
-                    // shared config (written by apply_config for restarts, or
-                    // by Camera::configure for exposure-only changes).
-                    if let Ok(guard) = shared_config.lock() {
-                        active_config.framerate = guard.framerate;
-                        active_config.width = guard.width;
-                        active_config.height = guard.height;
-                        active_config.exposure_mode = guard.exposure_mode.clone();
-                        active_config.exposure = guard.exposure;
-                    }
                     }
                     CommandResult::None => {
                         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -335,16 +317,6 @@ fn run_camera_thread(
                             error
                         })?;
                         active_config = new_config;
-                    // Pull actual negotiated framerate/width/height from the
-                    // shared config (written by apply_config for restarts, or
-                    // by Camera::configure for exposure-only changes).
-                    if let Ok(guard) = shared_config.lock() {
-                        active_config.framerate = guard.framerate;
-                        active_config.width = guard.width;
-                        active_config.height = guard.height;
-                        active_config.exposure_mode = guard.exposure_mode.clone();
-                        active_config.exposure = guard.exposure;
-                    }
                     }
                     CommandResult::None => {}
                 }

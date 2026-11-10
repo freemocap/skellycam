@@ -247,6 +247,22 @@ pub struct CameraConfig {
     pub rotation: i32,
 }
 
+impl CameraConfig {
+    /// Whether moving from this requested config to `next` needs the capture
+    /// stream reopened (new size or framerate). Exposure, exposure mode and
+    /// rotation are applied to the running stream.
+    ///
+    /// Compare requests with requests, never with the negotiated format: a
+    /// request for the device-default framerate (-1) or an unsupported size
+    /// negotiates something else, and comparing that with the next identical
+    /// request reopened the stream on every exposure change.
+    pub fn needs_stream_restart(&self, next: &CameraConfig) -> bool {
+        self.width != next.width
+            || self.height != next.height
+            || (self.framerate - next.framerate).abs() > 0.1
+    }
+}
+
 #[derive(Debug)]
 pub enum CameraCommand {
     Shutdown,
@@ -270,5 +286,41 @@ pub struct CameraHandle {
 impl CameraHandle {
     pub fn send_shutdown(&self) {
         let _ = self.command_sender.send(CameraCommand::Shutdown);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CameraConfig;
+
+    fn request(width: u32, height: u32, framerate: f64) -> CameraConfig {
+        CameraConfig {
+            camera_id: "cam0".into(),
+            camera_index: 0,
+            width,
+            height,
+            exposure: -7,
+            exposure_mode: "MANUAL".into(),
+            framerate,
+            rotation: -1,
+        }
+    }
+
+    #[test]
+    fn stream_restarts_only_when_the_requested_size_or_framerate_changes() {
+        // The device-default request (-1) negotiates e.g. 200 fps; repeating
+        // it with new exposure, exposure mode or rotation is not a restart.
+        let default_rate = request(1280, 720, -1.0);
+        let live = CameraConfig {
+            exposure: -5,
+            exposure_mode: "AUTO".into(),
+            rotation: 1,
+            ..default_rate.clone()
+        };
+        assert!(!default_rate.needs_stream_restart(&default_rate));
+        assert!(!default_rate.needs_stream_restart(&live));
+        assert!(default_rate.needs_stream_restart(&request(1280, 720, 30.0)));
+        assert!(request(1280, 720, 30.0).needs_stream_restart(&request(1280, 720, 60.0)));
+        assert!(request(1280, 720, 30.0).needs_stream_restart(&request(1920, 1080, 30.0)));
     }
 }

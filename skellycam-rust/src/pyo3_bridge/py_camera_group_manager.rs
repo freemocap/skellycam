@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
-use crate::camera::{detect_cameras, CameraConfig, CameraIdentity};
+use crate::camera::{detect_cameras, CameraConfig, CameraDetection, CameraIdentity};
 use crate::camera_group::{CameraGroup, CameraGroupConfig, CameraStatus};
 
 // ── PyO3 class ─────────────────────────────────────────────────────────────
@@ -202,48 +202,15 @@ impl PyO3CameraGroupManager {
     /// Takes a Python dict mapping camera_id → config_dict (same format as
     /// `create_or_update_group`). Calls `CameraGroup::apply()` which diffs
     /// the configs and applies changes (reconfigure, add, or remove cameras).
+    /// Runs without the GIL, so Python threads keep polling frames during the
+    /// change, and detects devices only when the request adds a camera.
     fn apply_configs(
-        &mut self,
-        _py: Python<'_>,
+        &self,
+        py: Python<'_>,
         group_id: &str,
         configs: &Bound<'_, PyDict>,
     ) -> PyResult<()> {
-        let group_mutex = self.groups.get(group_id)
-            .ok_or_else(|| PyValueError::new_err(format!("Group '{group_id}' not found")))?;
-        let mut group = group_mutex.lock().unwrap();
-
-        let all_cameras = detect_cameras()
-            .map_err(|e| PyRuntimeError::new_err(format!("Camera detection failed: {e}")))?;
-
-        let mut rust_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
-
-        for (key, value) in configs.iter() {
-            let python_camera_id: String = key.extract()?;
-            let parsed = parse_config_entry(&value, &python_camera_id)?;
-
-            let mut identity = all_cameras
-                .iter()
-                .find(|d| d.identity.camera_index == parsed.camera_index as i32)
-                .map(|d| d.identity.clone())
-                .unwrap_or_else(|| {
-                    CameraIdentity {
-                        camera_name: format!("Camera {}", parsed.camera_index),
-                        camera_index: parsed.camera_index as i32,
-                        camera_id: parsed.camera_id.clone(),
-                        device_path: String::new(),
-                        formats: vec![],
-                    }
-                });
-
-            identity.camera_id = python_camera_id;
-            rust_configs.insert(parsed.camera_id.clone(), parsed.into_group_config(identity));
-        }
-
-        group.apply(rust_configs)
-            .map_err(|e| PyRuntimeError::new_err(format!("Config apply failed: {e}")))?;
-
-        self.camera_statuses = group.camera_statuses();
-        Ok(())
+        self.apply_configs_with(py, group_id, configs, detect_cameras)
     }
 
     /// Return a JSON string of the latest performance snapshot from the gatherer.
@@ -392,6 +359,74 @@ impl PyO3CameraGroupManager {
 }
 
 impl PyO3CameraGroupManager {
+    /// `apply_configs` with an injectable device detector, for hardware-free tests.
+    fn apply_configs_with(
+        &self,
+        py: Python<'_>,
+        group_id: &str,
+        configs: &Bound<'_, PyDict>,
+        detect: impl FnOnce() -> anyhow::Result<Vec<CameraDetection>> + Send,
+    ) -> PyResult<()> {
+        let group_mutex = self.groups.get(group_id)
+            .ok_or_else(|| PyValueError::new_err(format!("Group '{group_id}' not found")))?;
+
+        let mut requested: Vec<(String, ParsedConfigEntry)> = Vec::new();
+        for (key, value) in configs.iter() {
+            let python_camera_id: String = key.extract()?;
+            let parsed = parse_config_entry(&value, &python_camera_id)?;
+            requested.push((python_camera_id, parsed));
+        }
+
+        // Cameras already in the group keep their identity; only a request
+        // that adds a camera needs device detection.
+        let known: HashMap<String, CameraIdentity> = group_mutex
+            .lock()
+            .unwrap()
+            .camera_identities()
+            .into_iter()
+            .map(|identity| (identity.camera_id.clone(), identity.clone()))
+            .collect();
+
+        py.detach(move || {
+            let detected = if requested.iter().any(|(id, _)| !known.contains_key(id)) {
+                detect().map_err(|e| {
+                    PyRuntimeError::new_err(format!("Camera detection failed: {e}"))
+                })?
+            } else {
+                Vec::new()
+            };
+
+            let mut rust_configs: HashMap<String, CameraGroupConfig> = HashMap::new();
+            for (python_camera_id, parsed) in requested {
+                let mut identity = known
+                    .get(&python_camera_id)
+                    .cloned()
+                    .or_else(|| {
+                        detected
+                            .iter()
+                            .find(|d| d.identity.camera_index == parsed.camera_index as i32)
+                            .map(|d| d.identity.clone())
+                    })
+                    .unwrap_or_else(|| CameraIdentity {
+                        camera_name: format!("Camera {}", parsed.camera_index),
+                        camera_index: parsed.camera_index as i32,
+                        camera_id: parsed.camera_id.clone(),
+                        device_path: String::new(),
+                        formats: vec![],
+                    });
+
+                identity.camera_id = python_camera_id;
+                rust_configs.insert(parsed.camera_id.clone(), parsed.into_group_config(identity));
+            }
+
+            group_mutex
+                .lock()
+                .unwrap()
+                .apply(rust_configs)
+                .map_err(|e| PyRuntimeError::new_err(format!("Config apply failed: {e}")))
+        })
+    }
+
     fn close_all_groups_inner(&mut self) {
         for (id, mutex) in self.groups.drain() {
             let mut group = mutex.into_inner().unwrap();
@@ -663,5 +698,120 @@ mod tests {
         assert_eq!(cfg.capture_config.width, 640);
         assert_eq!(cfg.capture_config.height, 480);
         assert_eq!(cfg.capture_config.exposure, -7);
+    }
+
+    /// A manager holding one started group whose camera "cam0" is a test
+    /// double that records each `Configure` it receives.
+    fn manager_with_fake_group(
+        configures: std::sync::Arc<Mutex<Vec<CameraConfig>>>,
+    ) -> PyO3CameraGroupManager {
+        use crate::camera::{Camera, CameraCommand, CameraEvent};
+
+        let identity = CameraIdentity {
+            camera_name: "Test Cam".into(),
+            camera_index: 0,
+            camera_id: "cam0".into(),
+            device_path: String::new(),
+            formats: vec![],
+        };
+        let capture_config = CameraConfig {
+            camera_id: "cam0".into(),
+            camera_index: 0,
+            width: 640,
+            height: 480,
+            exposure: -7,
+            exposure_mode: "MANUAL".into(),
+            framerate: 30.0,
+            rotation: -1,
+        };
+        let mut group = CameraGroup::new(HashMap::from([(
+            "cam0".to_string(),
+            CameraGroupConfig { identity, capture_config },
+        )]));
+        group
+            .start_with(|identity, config, _barrier, _paused, _first_frame| {
+                let configures = configures.clone();
+                Ok(Camera::spawn_fake(identity, config, move |commands, events| {
+                    let _ = events.send(CameraEvent::Ready);
+                    while let Ok(CameraCommand::Configure { config }) = commands.recv() {
+                        configures.lock().unwrap().push(config);
+                    }
+                }))
+            })
+            .unwrap();
+        PyO3CameraGroupManager {
+            groups: HashMap::from([("group".to_string(), Mutex::new(group))]),
+            camera_statuses: Vec::new(),
+        }
+    }
+
+    /// A Python request dict: camera_id → {camera_index, 640x480 @30, exposure}.
+    fn camera_request<'py>(py: Python<'py>, cameras: &[(&str, i32, i32)]) -> Bound<'py, PyDict> {
+        let request = PyDict::new(py);
+        for &(camera_id, camera_index, exposure) in cameras {
+            let camera = PyDict::new(py);
+            camera.set_item("camera_index", camera_index).unwrap();
+            camera.set_item("width", 640_i32).unwrap();
+            camera.set_item("height", 480_i32).unwrap();
+            camera.set_item("framerate", 30.0_f64).unwrap();
+            camera.set_item("exposure", exposure).unwrap();
+            request.set_item(camera_id, camera).unwrap();
+        }
+        request
+    }
+
+    /// Reconfiguring cameras already in the group needs no device detection
+    /// (about 0.1-0.2 s on every step of a Recommend exposure sweep).
+    #[test]
+    fn apply_configs_reconfigures_known_cameras_without_detection() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        pyo3::Python::initialize();
+        let configures = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let manager = manager_with_fake_group(configures.clone());
+        // Report detection through a flag, not a panic: a panic while the
+        // group lock is held would poison it and abort the test binary.
+        let detected = std::sync::Arc::new(AtomicBool::new(false));
+        let flag = detected.clone();
+        let result = Python::attach(|py| {
+            let request = camera_request(py, &[("cam0", 0, -5)]);
+            manager
+                .apply_configs_with(py, "group", &request, move || {
+                    flag.store(true, Ordering::SeqCst);
+                    anyhow::bail!("known cameras must not trigger device detection")
+                })
+                .map_err(|error| error.to_string())
+        });
+        assert!(!detected.load(Ordering::SeqCst), "known cameras must not trigger device detection");
+        assert_eq!(result, Ok(()));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while configures.lock().unwrap().is_empty() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        let exposures: Vec<i32> = configures.lock().unwrap().iter().map(|c| c.exposure).collect();
+        assert_eq!(exposures, [-5]);
+    }
+
+    /// Adding a camera detects devices, without holding the GIL.
+    #[test]
+    fn apply_configs_detects_new_cameras_without_holding_the_gil() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        pyo3::Python::initialize();
+        let manager = manager_with_fake_group(std::sync::Arc::new(Mutex::new(Vec::new())));
+        let detected_without_gil = std::sync::Arc::new(AtomicBool::new(false));
+        let flag = detected_without_gil.clone();
+        let error = Python::attach(|py| {
+            let request = camera_request(py, &[("cam0", 0, -7), ("cam1", 1, -7)]);
+            manager
+                .apply_configs_with(py, "group", &request, move || {
+                    flag.store(unsafe { pyo3::ffi::PyGILState_Check() } == 0, Ordering::SeqCst);
+                    anyhow::bail!("simulated detection failure")
+                })
+                .unwrap_err()
+                .to_string()
+        });
+        assert!(detected_without_gil.load(Ordering::SeqCst), "detection ran with the GIL held");
+        assert!(error.contains("Camera detection failed: simulated detection failure"), "{error}");
     }
 }
