@@ -83,6 +83,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                     if not cv2_video_capture.isOpened():
                         raise RuntimeError(f"Camera {config.camera_id} shutdown unexpectedly - exiting camera loop.")
                 current_tik = time.perf_counter_ns()
+                # Whole frame interval, read to read; recordings carry its median rate.
                 frame_durations_seconds.append((current_tik - previous_tik) / 1e9)
                 previous_tik = current_tik
                 if len(frame_durations_seconds) >= 30:
@@ -126,7 +127,6 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
 
             # Last camera to increment their frame count status triggers the next frame_grab
             self_status.frame_count.value = frame_rec_array.frame_metadata.frame_number[0]
-            previous_tik = time.perf_counter_ns()
 
     except Exception as e:
         ipc.report_camera_failure(config.camera_id, config.camera_index, "capture/configuration update", e)

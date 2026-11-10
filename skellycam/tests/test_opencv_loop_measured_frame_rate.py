@@ -63,3 +63,44 @@ def test_frame_rate_change_restarts_the_measured_rate(monkeypatch, change, measu
     assert (rates_offered_to_recorder[CHANGE_AT] is None) is measurement_restarts
     assert rates_offered_to_recorder[CHANGE_AT + 30] is not None  # measured again from the new stream
 
+
+def test_measured_rate_spans_whole_frame_intervals(monkeypatch):
+    """Reading a frame takes 5 ms and handling it 5 ms more: frames arrive every 10 ms, so the rate is 100 fps."""
+    clock = Mock(ns=0)
+    clock.perf_counter_ns = lambda: clock.ns
+    monkeypatch.setattr(loop_module, "time", clock)
+    ipc = Mock(spec=CameraGroupIPC)
+    ipc.should_continue = True
+    status = CameraStatus()
+    status.connected.value = True
+    capture = Mock(spec=cv2.VideoCapture)
+    capture.isOpened.return_value = True
+    orchestrator = Mock(spec=CameraOrchestrator)
+    orchestrator.should_grab_by_id.return_value = True
+    orchestrator.should_record_frame_number.return_value = (False, False)
+    rates_offered_to_recorder = []
+
+    def update_checks(*, config, frame_rec_array, video_recorder, self_status, framerate, **_):
+        rates_offered_to_recorder.append(framerate)
+        ipc.should_continue = len(rates_offered_to_recorder) < STOP_AT
+        return config, frame_rec_array, video_recorder, self_status
+
+    def read_frame(cap, frame_rec_array):
+        clock.ns += 5_000_000
+        return True, frame_rec_array
+
+    def handle_frame(**kwargs):
+        clock.ns += 5_000_000
+        return kwargs["video_recorder"]
+
+    monkeypatch.setattr(loop_module, "camera_loop_update_checks", update_checks)
+    monkeypatch.setattr(loop_module, "opencv_get_frame", read_frame)
+    monkeypatch.setattr(loop_module, "handle_video_recording", handle_frame)
+    loop_module.run_opencv_camera_loop(
+        camera_shm=Mock(spec=CameraSharedMemoryRingBuffer),
+        config=CameraConfig(camera_id="cam", camera_index=0, framerate=REPORTED_30_FPS),
+        cv2_video_capture=capture, frame_rec_array=frame_buffer(64, 48), ipc=ipc, orchestrator=orchestrator,
+        self_status=status, update_camera_settings_subscription=Mock(spec=TopicSubscriptionQueue),
+        recording_info_subscription=Mock(spec=TopicSubscriptionQueue))
+
+    assert rates_offered_to_recorder[-1] == pytest.approx(100.0)
