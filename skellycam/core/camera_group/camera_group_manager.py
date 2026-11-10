@@ -8,7 +8,7 @@ import numpy as np
 from fastapi import FastAPI
 
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
-from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfigs, MixedCameraFrameRates, validate_group_frame_rate
 from skellycam.core.camera.opencv.opencv_helpers.opencv_apply_config import frame_rate_changed
 from skellycam.core.camera_group.camera_group import CameraGroup, await_owned_camera_task
 from skellycam.core.camera_group.camera_errors import CameraStateConflict
@@ -41,6 +41,7 @@ class CameraGroupManager:
 
     async def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
         """Create a camera group with the provided configuration settings."""
+        validate_group_frame_rate(camera_configs)
         creation = asyncio.create_task(asyncio.to_thread(
             CameraGroup.create,
             camera_configs=camera_configs,
@@ -88,6 +89,7 @@ class CameraGroupManager:
 
     async def create_or_update_camera_group(self, camera_configs: CameraConfigs) -> CameraGroup:
         """Create a camera group with the provided configuration settings."""
+        validate_group_frame_rate(camera_configs)
         selected_configs = {key: config for key, config in camera_configs.items() if config.use_this_camera}
         if not selected_configs:
             raise ValueError('Select at least one camera; use close_all_camera_groups to disconnect all cameras')
@@ -118,7 +120,13 @@ class CameraGroupManager:
             for key, config in selected_configs.items()
         ):
             raise CameraStateConflict('Stop recording before changing the frame rate')
-        await camera_group.update_camera_settings(requested_configs=selected_configs)
+        try:
+            await camera_group.update_camera_settings(requested_configs=selected_configs)
+        except MixedCameraFrameRates:
+            # A device negotiated a different rate. The group closed its workers.
+            self.camera_groups.pop(camera_group_id)
+            self.camera_group_framerate_subscriptions.pop(camera_group_id, None)
+            raise
         return camera_group
 
     def get_camera_group(self, camera_group_id: CameraGroupIdString) -> CameraGroup:
@@ -272,9 +280,9 @@ from skellycam.core.camera_group.camera_backend_manager import CameraBackendMana
 _CAMERA_GROUP_MANAGER: CameraBackendManager | None = None
 
 
-async def close_native_camera_groups() -> None:
-    """Finalize in-process native recorders before the worker monitor exits."""
-    if _CAMERA_GROUP_MANAGER is not None and _CAMERA_GROUP_MANAGER.backend == "rust":
+async def close_camera_groups() -> None:
+    """Close every camera group, finishing recordings, before the worker monitor exits."""
+    if _CAMERA_GROUP_MANAGER is not None:
         await _CAMERA_GROUP_MANAGER.close_all_camera_groups()
 
 

@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from skellycam.core.camera.camera_manager import CameraManager
 from skellycam.core.camera.camera_worker import CameraState
-from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_camera_configs
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, MixedCameraFrameRates, validate_camera_configs, validate_group_frame_rate
 from skellycam.core.camera_group.camera_group_ipc import CameraGroupIPC
 from skellycam.core.camera_group.camera_errors import CameraConfigurationError
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -71,6 +71,8 @@ class CameraGroup:
     cameras: CameraManager
     shm: CameraGroupSharedMemory | None = None
     started: bool = False
+    # Camera workers write their own frames into shared memory; no separate transport can fail.
+    transport_error: str | None = None
     _audio_recorder: AudioRecorder | None = None
     _close_task: asyncio.Task | None = field(default=None, init=False, repr=False)
 
@@ -102,6 +104,7 @@ class CameraGroup:
     ) -> "CameraGroup":
         try:
             validate_camera_configs(camera_configs)
+            validate_group_frame_rate(camera_configs)
             ipc = CameraGroupIPC.create(
                 global_kill_flag=global_kill_flag,
                 heartbeat_timestamp=heartbeat_timestamp,
@@ -156,6 +159,7 @@ class CameraGroup:
         extracted_configs: CameraConfigs = await await_extracted_configs(
             ipc=self.ipc, requested_configs=self.configs
         )
+        validate_group_frame_rate(extracted_configs)
         if not self.ipc.should_continue:
             raise CameraConfigurationError("Camera group stopped before allocating shared memory")
         self.shm = await asyncio.to_thread(
@@ -236,12 +240,18 @@ class CameraGroup:
 
     async def update_camera_settings(self, requested_configs: CameraConfigs) -> CameraConfigs:
         """Update camera settings and await the extracted configurations."""
+        validate_group_frame_rate(requested_configs)
         self.ipc.pubsub.topics[TopicTypes.UPDATE_CAMERA_SETTINGS].publish(
             UpdateCamerasSettingsMessage(requested_configs=requested_configs)
         )
         updated_configs = await await_extracted_configs(
             ipc=self.ipc, requested_configs=requested_configs
         )
+        try:
+            validate_group_frame_rate(updated_configs)
+        except MixedCameraFrameRates:
+            await self.close()
+            raise
         self.configs = updated_configs
         logger.info(f"Updated camera configs - {list(requested_configs.keys())}")
         return self.configs

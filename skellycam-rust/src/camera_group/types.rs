@@ -43,7 +43,8 @@ pub type SharedConfigMap = HashMap<String, Arc<Mutex<CameraConfig>>>;
 /// Command sent from the `CameraGroup` handle to the dispatcher thread.
 pub enum DispatcherCommand {
     StartRecording { params: RecordingParams },
-    StopRecording { response_tx: mpsc::Sender<RecordingSummary> },
+    /// Answered with the finalized recording, or why it failed.
+    StopRecording { response_tx: mpsc::Sender<Result<RecordingSummary, String>> },
     /// Push updated camera config references when cameras are added or
     /// reconfigured at runtime via `apply()`.
     UpdateConfigs { configs: SharedConfigMap },

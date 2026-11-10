@@ -1,6 +1,9 @@
 //! Camera channel protocol types.
 
 use std::sync::mpsc;
+use std::sync::Arc;
+
+pub use super::frame_pool::FrameBytes;
 
 /// All nanosecond-precision monotonic timestamps in a single frame's lifecycle.
 ///
@@ -67,9 +70,9 @@ impl FrameLifecycleTimestamps {
 #[derive(Debug, Clone)]
 pub enum FrameData {
     /// Decoded 24-bit RGB (width * height * 3 bytes).
-    Rgb(Vec<u8>),
+    Rgb(FrameBytes),
     /// Raw MJPEG bytes — each frame is a valid JPEG.
-    Mjpg(Vec<u8>),
+    Mjpg(FrameBytes),
 }
 
 impl FrameData {
@@ -90,6 +93,13 @@ impl FrameData {
     pub fn is_jpeg(&self) -> bool {
         matches!(self, Self::Mjpg(_))
     }
+
+    /// The frame's bytes, shared (a reference-count increment; no copy).
+    pub fn shared(&self) -> FrameBytes {
+        match self {
+            Self::Rgb(bytes) | Self::Mjpg(bytes) => Arc::clone(bytes),
+        }
+    }
 }
 
 /// A single camera frame traveling through the pipeline.
@@ -100,7 +110,8 @@ pub struct FramePacket {
     pub height: u32,
     pub rotation: i32,
     pub timestamps: FrameLifecycleTimestamps,
-    pub identity: CameraIdentity,
+    /// Shared with every frame of this camera (cloning it is a reference-count increment).
+    pub identity: Arc<CameraIdentity>,
     pub frame_number: i64,
 }
 

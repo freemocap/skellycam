@@ -1,8 +1,10 @@
 //! Dispatcher thread — the single downstream consumer of `MultiFramePayload`.
 //!
 //! Spawned by `CameraGroup::start()`. Receives multiframes from the gatherer
-//! via an unbounded channel, processes them, and stores the encoded frontend
-//! payload for external polling.
+//! via an unbounded channel and stores each camera's JPEG, unrotated, in the
+//! latest-frames slot. Previews are built from that slot only when a consumer
+//! asks for a newer frameset (`FrameSlots::frontend_payload`); recorders rotate
+//! inside their own ffmpeg encode.
 //!
 //! When recording is active, per-camera JPEG frames are extracted and sent
 //! via an unbounded channel to a dedicated recording thread — so the dispatcher
@@ -11,16 +13,15 @@
 //! Spin-waits on the multiframe channel, the control channel, AND the recording
 //! channel — never blocks, so config changes and recording commands stay responsive.
 
+use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use crate::camera::{CameraIdentity, FrameLifecycleTimestamps, MultiFramePayload};
-use crate::camera_group::frontend_encoder::encode_multiframe;
-use crate::camera_group::jpeg_transform::rotate_jpeg_lossless;
+use crate::camera::{CameraIdentity, FrameBytes, FrameLifecycleTimestamps, MultiFramePayload};
 use crate::camera_group::recording_stats::RecordingStats;
 use crate::recording::finalizer::RecordingSummary;
 use crate::recording::{
@@ -32,10 +33,8 @@ use super::types::{DispatcherCommand, SharedConfigMap};
 
 // ── Frontend payload type ─────────────────────────────────────────────────
 
-/// Encoded frontend payload, ready for polling by external consumers.
-///
-/// Stored in an `Arc<Mutex<Option<...>>>` shared between the dispatcher
-/// thread (writer) and the `CameraGroup` handle (reader).
+/// Encoded frontend payload for one frameset, built on request by
+/// `FrameSlots::frontend_payload`.
 #[derive(Clone)]
 pub struct FrontendPayload {
     pub frame_number: i64,
@@ -57,7 +56,10 @@ pub struct RawFrame {
     pub camera_index: i32,
     pub width: u32,
     pub height: u32,
-    pub jpeg_bytes: Arc<[u8]>,
+    /// Rotation to apply for display and recording (SkellyCam / OpenCV rotation code,
+    /// -1 = none); `jpeg_bytes` stays in sensor orientation.
+    pub rotation: i32,
+    pub jpeg_bytes: FrameBytes,
     /// Monotonic frame number — all cameras in the same multiframe share this.
     pub frame_number: i64,
     /// Per-frame lifecycle timestamps (loop_start, frame_available,
@@ -72,7 +74,8 @@ pub struct RawFrame {
 pub fn spawn_dispatcher(
     multi_frame_receiver: Receiver<MultiFramePayload>,
     control_receiver: Receiver<DispatcherCommand>,
-    latest_payload: Arc<Mutex<Option<FrontendPayload>>>,
+    camera_fps: Arc<AtomicU64>,
+    newest_frame_number: Arc<AtomicI64>,
     latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
     mut shared_configs: SharedConfigMap,
@@ -88,6 +91,7 @@ pub fn spawn_dispatcher(
         // Camera FPS tracking — computed from consecutive frame_available_ns timestamps
         let mut prev_camera_ts: Option<f64> = None;
         let mut prev_camera_fn: Option<i64> = None;
+        let mut frame_intervals = FrameIntervals::default();
 
         loop {
             // ── Drain all pending commands ──
@@ -103,39 +107,29 @@ pub fn spawn_dispatcher(
                     DispatcherCommand::StopRecording { response_tx } => {
                         recording_active.store(false, Ordering::SeqCst);
                         let stats_summary = recording_stats.take().map(|s| s.finalize());
-                        let summary = if let Some(handle) = recording_handle.take() {
-                            match handle.stop(stats_summary) {
-                                Ok(s) => s,
-                                Err(e) => {
-                                    tracing::error!(
-                                        "[dispatcher] recording thread stop error: {e}"
-                                    );
-                                    RecordingSummary {
-                                        total_frames_per_camera: 0,
-                                        video_paths: Vec::new(),
-                                        csv_paths: Vec::new(),
-                                        recording_dir: PathBuf::new(),
-                                        stats: None,
-                                    }
-                                }
-                            }
-                        } else {
-                            tracing::warn!(
-                                "[dispatcher] StopRecording but no recording handle"
-                            );
-                            RecordingSummary {
-                                total_frames_per_camera: 0,
-                                video_paths: Vec::new(),
-                                csv_paths: Vec::new(),
-                                recording_dir: PathBuf::new(),
-                                stats: stats_summary,
+                        let result = match recording_handle.take() {
+                            Some(handle) => handle.stop(stats_summary).map_err(|error| {
+                                tracing::error!("[dispatcher] {error}");
+                                error.to_string()
+                            }),
+                            None => {
+                                tracing::warn!("[dispatcher] StopRecording but no recording handle");
+                                Ok(RecordingSummary {
+                                    total_frames_per_camera: 0,
+                                    video_paths: Vec::new(),
+                                    csv_paths: Vec::new(),
+                                    recording_dir: PathBuf::new(),
+                                    stats: stats_summary,
+                                })
                             }
                         };
-                        let _ = response_tx.send(summary);
+                        let _ = response_tx.send(result);
                         tracing::info!("[dispatcher] recording stopped");
                     }
                     DispatcherCommand::UpdateConfigs { configs } => {
                         shared_configs = configs;
+                        // A new frame rate makes the measured intervals stale.
+                        frame_intervals = FrameIntervals::default();
                         tracing::debug!(
                             "[dispatcher] updated configs: {} cameras",
                             shared_configs.len()
@@ -155,9 +149,10 @@ pub fn spawn_dispatcher(
                 }
             }
 
-            // ── Try to receive the next multiframe ──
-            match multi_frame_receiver.try_recv() {
-                Ok(mut payload) => {
+            // ── Wait for the next multiframe (wakes on arrival; commands are checked every 1 ms) ──
+            match multi_frame_receiver.recv_timeout(Duration::from_millis(1)) {
+                Ok(payload) => {
+                    frame_intervals.push(&payload);
 
                     // ── Deferred recorder setup (first multiframe after StartRecording) ──
                     // Builds spawn configs (fast, no ffmpeg spawn) then enqueues
@@ -169,6 +164,7 @@ pub fn spawn_dispatcher(
                             &params,
                             &payload,
                             &shared_configs,
+                            &frame_intervals,
                         ) {
                             Ok((recorder_configs, csv_paths, session_dir, infos)) => {
                                 let camera_count = payload.frames.len();
@@ -194,85 +190,28 @@ pub fn spawn_dispatcher(
                         }
                     }
 
-                    // Apply lossless JPEG rotation per frame.
-                    // Also update frame.width/height for 90°/270° rotations so that
-                    // the binary protocol header, raw_frames, and recording all see
-                    // the correct post-rotation dimensions.
-                    for frame in &mut payload.frames {
-                        if frame.rotation != -1 {
-                            if let FrameData::Mjpg(ref jpeg_bytes) = frame.data {
-                                if let Some(rotated) =
-                                    rotate_jpeg_lossless(jpeg_bytes, frame.rotation)
-                                {
-                                    frame.data = FrameData::Mjpg(rotated);
-                                    if matches!(frame.rotation, 0 | 2) {
-                                        std::mem::swap(&mut frame.width, &mut frame.height);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Build Arc<[u8]> once per camera — shared by raw_frames and recording ──
-                    let jpeg_arcs: Vec<Arc<[u8]>> = payload
+                    // ── Each camera's bytes, shared (no copy) by raw_frames and recording ──
+                    let jpeg_arcs: Vec<FrameBytes> = payload
                         .frames
                         .iter()
-                        .map(|f| Arc::from(f.data.as_bytes()))
+                        .map(|f| f.data.shared())
                         .collect();
 
-                    // Encode for frontend
-                    match encode_multiframe(&payload) {
-                        Ok(binary) => {
-                            let timestamp_ns = if payload.frames.is_empty() {
-                                0.0
-                            } else {
-                                let sum: i64 = payload
-                                    .frames
-                                    .iter()
-                                    .map(|f| f.timestamps.frame_available_ns)
-                                    .sum();
-                                (sum as f64) / (payload.frames.len() as f64)
-                            };
-                            let frame_number = payload
-                                .frames
-                                .first()
-                                .map(|f| f.frame_number)
-                                .unwrap_or(0);
-
-                            // Compute true camera FPS from consecutive camera-side timestamps
-                            let camera_fps = if let (Some(prev_ts), Some(prev_fn)) =
-                                (prev_camera_ts, prev_camera_fn)
-                            {
-                                let delta_frames = frame_number - prev_fn;
-                                if delta_frames > 0 {
-                                    let per_frame_ns =
-                                        (timestamp_ns - prev_ts) / delta_frames as f64;
-                                    if per_frame_ns > 0.0 {
-                                        1_000_000_000.0 / per_frame_ns
-                                    } else {
-                                        0.0
-                                    }
-                                } else {
-                                    0.0
-                                }
-                            } else {
-                                0.0
-                            };
-                            prev_camera_ts = Some(timestamp_ns);
-                            prev_camera_fn = Some(frame_number);
-
-                            if let Ok(mut guard) = latest_payload.lock() {
-                                *guard = Some(FrontendPayload {
-                                    frame_number,
-                                    timestamp_ns,
-                                    camera_fps,
-                                    jpeg_bytes: binary,
-                                });
+                    // True camera capture rate from consecutive camera-side timestamps.
+                    if !payload.frames.is_empty() {
+                        let timestamp_ns = payload.frames.iter()
+                            .map(|f| f.timestamps.frame_available_ns as f64)
+                            .sum::<f64>() / payload.frames.len() as f64;
+                        let frame_number = payload.frames[0].frame_number;
+                        if let (Some(prev_ts), Some(prev_fn)) = (prev_camera_ts, prev_camera_fn) {
+                            let delta_frames = frame_number - prev_fn;
+                            if delta_frames > 0 && timestamp_ns > prev_ts {
+                                let fps = 1_000_000_000.0 * delta_frames as f64 / (timestamp_ns - prev_ts);
+                                camera_fps.store(fps.to_bits(), Ordering::Relaxed);
                             }
                         }
-                        Err(e) => {
-                            tracing::error!("[dispatcher] encode error: {e}");
-                        }
+                        prev_camera_ts = Some(timestamp_ns);
+                        prev_camera_fn = Some(frame_number);
                     }
 
                     // ── Store raw per-camera JPEGs for on-demand decode (Arc clone — no copy) ──
@@ -287,12 +226,16 @@ pub fn spawn_dispatcher(
                                     camera_index: f.identity.camera_index,
                                     width: f.width,
                                     height: f.height,
+                                    rotation: f.rotation,
                                     jpeg_bytes: Arc::clone(arc),
                                     frame_number: f.frame_number,
                                     timestamps: f.timestamps.clone(),
                                 })
                                 .collect(),
                         );
+                        if let Some(first) = payload.frames.first() {
+                            newest_frame_number.store(first.frame_number, Ordering::Release);
+                        }
                     }
 
                     // ── Recording: send per-camera frames to recording thread (Arc clone — no copy) ──
@@ -318,13 +261,16 @@ pub fn spawn_dispatcher(
                                 .collect();
                             handle.send_frames(frames, post_encode_ns);
                             stats.push_multiframe(&payload, post_encode_ns);
+                            if let Some(reason) = handle.failure() {
+                                // A writer failed: end the recording now; stopping it reports why.
+                                tracing::error!("[dispatcher] recording ended: {reason}");
+                                recording_active.store(false, Ordering::SeqCst);
+                            }
                         }
                     }
                 }
-                Err(mpsc::TryRecvError::Empty) => {
-                    std::thread::sleep(Duration::from_millis(1));
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
                     tracing::warn!("[dispatcher] gatherer disconnected, exiting");
                     break;
                 }
@@ -332,6 +278,49 @@ pub fn spawn_dispatcher(
         }
     })
     .expect("Failed to spawn dispatcher thread")
+}
+
+// ── Measured frame rate ─────────────────────────────────────────────────────
+
+/// Each camera's most recent frame intervals, read to read (consecutive `frame_available_ns`), by position in
+/// the frameset. A recording's videos carry their median rate, as the OpenCV backend's recorder does with its
+/// last 1000 read-to-read intervals.
+#[derive(Default)]
+struct FrameIntervals {
+    previous: Vec<Option<(i64, i64)>>,
+    intervals: Vec<VecDeque<i64>>,
+}
+
+impl FrameIntervals {
+    const WINDOW: usize = 1000;
+
+    fn push(&mut self, payload: &MultiFramePayload) {
+        if self.previous.len() != payload.frames.len() {
+            *self = Self { previous: vec![None; payload.frames.len()], intervals: vec![VecDeque::new(); payload.frames.len()] };
+        }
+        for (position, frame) in payload.frames.iter().enumerate() {
+            let now = (frame.frame_number, frame.timestamps.frame_available_ns);
+            if let Some((number, time)) = self.previous[position].replace(now) {
+                if now.0 == number + 1 && now.1 > time {
+                    let intervals = &mut self.intervals[position];
+                    if intervals.len() == Self::WINDOW {
+                        intervals.pop_front();
+                    }
+                    intervals.push_back(now.1 - time);
+                }
+            }
+        }
+    }
+
+    /// The median measured rate of the camera at `position`, if any interval was measured.
+    fn median_fps(&self, position: usize) -> Option<f32> {
+        let mut intervals: Vec<i64> = self.intervals.get(position)?.iter().copied().collect();
+        if intervals.is_empty() {
+            return None;
+        }
+        intervals.sort_unstable();
+        Some((1e9 / intervals[intervals.len() / 2] as f64) as f32)
+    }
 }
 
 // ── Recording lifecycle helpers ────────────────────────────────────────────
@@ -345,6 +334,7 @@ fn build_recorder_configs(
     params: &super::types::RecordingParams,
     payload: &MultiFramePayload,
     shared_configs: &SharedConfigMap,
+    frame_intervals: &FrameIntervals,
 ) -> anyhow::Result<(
     Vec<RecorderSpawnConfig>,
     Vec<PathBuf>,
@@ -368,46 +358,95 @@ fn build_recorder_configs(
     let mut infos: Vec<(CameraIdentity, u32, u32)> =
         Vec::with_capacity(payload.frames.len());
 
-    for frame in &payload.frames {
+    for (position, frame) in payload.frames.iter().enumerate() {
         let identity = &frame.identity;
         let video_path = videos_dir.join(format!("{session_name}.id-{}.idx-{}.mp4", identity.camera_id, identity.camera_index));
         let csv_path = timestamps_dir.join(format!("{session_name}.camera{}.timestamps.csv", identity.camera_id));
 
-        // Look up the actual negotiated framerate from the shared camera config.
-        // The camera thread writes the real FPS here after find_best_mjpg.
-        // Fall back to 30.0 if the config hasn't been populated yet (shouldn't
-        // happen — recording always starts after cameras are running).
-        let target_fps = shared_configs
-            .get(&identity.camera_id)
-            .and_then(|cfg| {
-                let guard = cfg.lock().ok()?;
-                if guard.framerate > 0.0 {
-                    Some(guard.framerate as f32)
-                } else {
-                    None
-                }
-            })
-            .unwrap_or(30.0);
+        // The video carries the frame rate measured from this camera's frames (median interval), as the
+        // OpenCV backend's videos do; the negotiated rate only when no interval has been measured yet.
+        let target_fps = match frame_intervals.median_fps(position) {
+            Some(measured) => measured,
+            None => shared_configs
+                .get(&identity.camera_id)
+                .and_then(|cfg| cfg.lock().ok().map(|guard| guard.framerate as f32))
+                .filter(|negotiated| *negotiated > 0.0)
+                .ok_or_else(|| anyhow::anyhow!("Camera {}: no measured or negotiated frame rate", identity.camera_id))?,
+        };
 
-        // Recorder setup runs before payload rotation; use the dimensions of
-        // the rotated JPEG that the recording thread will actually receive.
-        let (width, height) = if matches!(frame.rotation, 0 | 2) {
-            (frame.height, frame.width)
-        } else { (frame.width, frame.height) };
+        // ffmpeg receives the camera's JPEGs in sensor orientation and rotates while encoding,
+        // so the video file has the rotated size.
         recorder_configs.push(RecorderSpawnConfig {
             output_path: video_path,
-            identity: identity.clone(),
-            width,
-            height,
+            identity: (**identity).clone(),
+            width: frame.width,
+            height: frame.height,
+            rotation: frame.rotation,
             target_fps,
             config: VideoRecorderConfig::default(),
         });
 
         csv_paths.push(csv_path);
-        infos.push((identity.clone(), width, height));
+        let (video_width, video_height) =
+            crate::camera_group::preview::rotated_size(frame.width, frame.height, frame.rotation);
+        infos.push(((**identity).clone(), video_width, video_height));
     }
 
     Ok((recorder_configs, csv_paths, session_dir, infos))
 }
 
-use crate::camera::FrameData;
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::camera::{FrameData, FramePacket, GathererTimestamps};
+
+    fn frameset(frame_number: i64, available_ns: &[i64]) -> MultiFramePayload {
+        MultiFramePayload {
+            frames: available_ns.iter().enumerate().map(|(index, &frame_available_ns)| FramePacket {
+                data: FrameData::Mjpg(Arc::new(Vec::new())),
+                width: 64,
+                height: 48,
+                rotation: -1,
+                timestamps: FrameLifecycleTimestamps { frame_available_ns, ..FrameLifecycleTimestamps::new() },
+                identity: Arc::new(CameraIdentity {
+                    camera_name: "Test Cam".into(),
+                    camera_index: index as i32,
+                    camera_id: format!("cam{index}"),
+                    device_path: String::new(),
+                    formats: Vec::new(),
+                }),
+                frame_number,
+            }).collect(),
+            frame_number,
+            gatherer_timestamps: GathererTimestamps::new(),
+        }
+    }
+
+    #[test]
+    fn the_video_rate_is_the_median_measured_interval() {
+        // These cameras at "60 fps": 16 ms apart, with a 33 ms gap every 24th frame (2026-11-10 recording).
+        let mut intervals = FrameIntervals::default();
+        let mut time = 0;
+        for number in 0..200 {
+            time += if number % 24 == 23 { 33_000_000 } else { 16_000_000 };
+            intervals.push(&frameset(number, &[time, time + 1_000]));
+        }
+        assert_eq!(intervals.median_fps(0), Some(62.5));
+        assert_eq!(intervals.median_fps(1), Some(62.5));
+    }
+
+    #[test]
+    fn skipped_frame_numbers_and_a_new_camera_count_restart_the_measurement() {
+        let mut intervals = FrameIntervals::default();
+        intervals.push(&frameset(0, &[0]));
+        intervals.push(&frameset(5, &[100_000_000])); // not consecutive: no interval
+        assert_eq!(intervals.median_fps(0), None);
+        intervals.push(&frameset(6, &[120_000_000]));
+        assert_eq!(intervals.median_fps(0), Some(50.0));
+        intervals.push(&frameset(7, &[140_000_000, 140_000_000])); // two cameras now
+        assert_eq!(intervals.median_fps(0), None);
+    }
+}

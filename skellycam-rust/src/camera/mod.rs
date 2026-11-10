@@ -2,12 +2,13 @@ pub mod ffi;
 pub mod types;
 pub mod camera;
 pub mod camera_thread;
+pub mod frame_pool;
 pub mod frame_loop;
 pub mod detect;
 
 pub use types::{
     CameraConfig, CameraCommand, CameraDetection, CameraEvent, CameraFormatInfo,
-    CameraHandle, CameraIdentity, FrameData, FrameLifecycleTimestamps, FramePacket,
+    CameraHandle, CameraIdentity, FrameBytes, FrameData, FrameLifecycleTimestamps, FramePacket,
     GathererTimestamps, MultiFramePayload,
 };
 pub use camera::Camera;

@@ -20,7 +20,7 @@
 //! ```
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
@@ -91,7 +91,42 @@ pub struct CameraStatus {
 #[derive(Clone)]
 pub struct FrameSlots {
     pub raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
-    pub frontend_payload: Arc<Mutex<Option<FrontendPayload>>>,
+    /// Camera capture rate measured by the dispatcher (`f64` bits).
+    pub camera_fps: Arc<AtomicU64>,
+    /// Frame number of the newest frameset in `raw_frames` (-1 before the first), readable without a lock.
+    pub newest_frame_number: Arc<AtomicI64>,
+}
+
+impl FrameSlots {
+    /// Frame number of the newest frameset (-1 before the first); one atomic load.
+    pub fn newest_frame_number(&self) -> i64 {
+        self.newest_frame_number.load(Ordering::Acquire)
+    }
+
+    /// The UI preview of the newest frameset, built now if it is newer than `if_newer_than`.
+    ///
+    /// Same contract as SkellyCam's Python `create_frontend_payload` (see `preview`): rotated,
+    /// scaled to `display_sizes` (camera ID -> width, height) but at most half size, JPEG q60.
+    pub fn frontend_payload(
+        &self,
+        if_newer_than: i64,
+        display_sizes: &HashMap<String, (u32, u32)>,
+    ) -> Result<Option<FrontendPayload>, String> {
+        let Some(frames) = self.newest_frames(if_newer_than)? else { return Ok(None) };
+        let camera_fps = f64::from_bits(self.camera_fps.load(Ordering::Relaxed));
+        super::preview::build_frontend_payload(&frames, display_sizes, camera_fps).map(Some)
+    }
+
+    /// The newest frameset if it is newer than `if_newer_than`: an `Arc` clone per camera, no copy.
+    pub fn newest_frames(&self, if_newer_than: i64) -> Result<Option<Vec<RawFrame>>, String> {
+        if self.newest_frame_number() <= if_newer_than {
+            return Ok(None);
+        }
+        let guard = self.raw_frames.lock().map_err(|_| "latest-frames slot poisoned".to_string())?;
+        Ok(guard.as_ref()
+            .filter(|frames| frames.first().is_some_and(|frame| frame.frame_number > if_newer_than))
+            .cloned())
+    }
 }
 
 pub struct CameraGroup {
@@ -109,7 +144,8 @@ pub struct CameraGroup {
     // Dispatcher
     dispatcher_handle: Option<JoinHandle<()>>,
     dispatcher_control_sender: Option<mpsc::Sender<DispatcherCommand>>,
-    latest_frontend_payload: Arc<Mutex<Option<FrontendPayload>>>,
+    camera_fps: Arc<AtomicU64>,
+    newest_frame_number: Arc<AtomicI64>,
     latest_raw_frames: Arc<Mutex<Option<Vec<RawFrame>>>>,
     recording_active: Arc<AtomicBool>,
 
@@ -148,7 +184,8 @@ impl CameraGroup {
             gatherer_update_sender: None,
             dispatcher_handle: None,
             dispatcher_control_sender: None,
-            latest_frontend_payload: Arc::new(Mutex::new(None)),
+            camera_fps: Arc::new(AtomicU64::new(0f64.to_bits())),
+            newest_frame_number: Arc::new(AtomicI64::new(-1)),
             latest_raw_frames: Arc::new(Mutex::new(None)),
             recording_active: Arc::new(AtomicBool::new(false)),
             performance_snapshot: Arc::new(Mutex::new(None)),
@@ -247,6 +284,21 @@ impl CameraGroup {
             }
         }
 
+        // Two devices can accept the same request using different fallback modes.
+        // Inspect their negotiated modes while all capture threads are still paused.
+        if failures.is_empty() {
+            let rates: Vec<_> = self.cameras.iter()
+                .map(|(id, camera)| (id, camera.config().framerate))
+                .collect();
+            if let Some((_, first)) = rates.first() {
+                if rates.iter().any(|(_, rate)| rate != first) {
+                    for (id, rate) in rates {
+                        failures.push((id.clone(), format!("negotiated {rate} fps; synchronized group requires a common rate")));
+                    }
+                }
+            }
+        }
+
         // All-or-nothing, like the Python camera backend: never report a group
         // as started without every requested camera. On 2026-11-09 (4 and 5
         // cameras at 200 fps on one USB controller) the cameras that did
@@ -317,7 +369,8 @@ impl CameraGroup {
         let dispatcher_handle = super::dispatcher::spawn_dispatcher(
             multi_frame_receiver,
             control_receiver,
-            self.latest_frontend_payload.clone(),
+            self.camera_fps.clone(),
+            self.newest_frame_number.clone(),
             self.latest_raw_frames.clone(),
             self.recording_active.clone(),
             shared_configs,
@@ -519,16 +572,16 @@ impl CameraGroup {
 
     // ── Frontend polling ──────────────────────────────────────────────────
 
-    /// Return the latest encoded frontend payload, if any.
+    /// The newest frameset's UI preview at the default size (half resolution), built now.
     ///
-    /// The dispatcher thread encodes every multiframe and stores the result
-    /// in a shared slot. This method returns a clone of the latest one.
-    /// Returns `None` if no payload has been produced yet.
+    /// `None` before the first frameset or when the preview cannot be built (logged). Pollers
+    /// that hold a lock should take `frame_slots()` and build outside it.
     pub fn latest_frontend_payload(&self) -> Option<FrontendPayload> {
-        self.latest_frontend_payload
-            .lock()
+        self.frame_slots()
+            .frontend_payload(-1, &HashMap::new())
+            .map_err(|error| tracing::warn!("[camera_group {}] preview failed: {error}", self.group_id))
             .ok()
-            .and_then(|guard| guard.clone())
+            .flatten()
     }
 
     /// Return the latest per-camera raw JPEG frames, if any.
@@ -552,7 +605,8 @@ impl CameraGroup {
     pub fn frame_slots(&self) -> FrameSlots {
         FrameSlots {
             raw_frames: self.latest_raw_frames.clone(),
-            frontend_payload: self.latest_frontend_payload.clone(),
+            camera_fps: self.camera_fps.clone(),
+            newest_frame_number: self.newest_frame_number.clone(),
         }
     }
 
@@ -623,7 +677,8 @@ impl CameraGroup {
             .send(DispatcherCommand::StopRecording { response_tx: tx })
             .map_err(|_| anyhow::anyhow!("Dispatcher disconnected"))?;
         rx.recv()
-            .map_err(|_| anyhow::anyhow!("Dispatcher did not respond"))
+            .map_err(|_| anyhow::anyhow!("Dispatcher did not respond"))?
+            .map_err(|reason| anyhow::anyhow!(reason))
     }
 
     /// Whether the group is currently recording.
@@ -706,16 +761,16 @@ impl CameraGroup {
         let new_total = self.cameras.len() + 1 + 1; // existing + new + gatherer
         self.barrier.set_total(new_total);
 
-        // The payload's frame_number is the gatherer's step at assembly
+        // The latest frameset's frame_number is the gatherer's step at assembly
         // time. After the barrier releases, every camera increments
         // frame_number past that value. Adding 1 matches what the
         // existing cameras will send next — without this, the new
         // camera is permanently one frame behind.
         let current_frame = self
-            .latest_frontend_payload
+            .latest_raw_frames
             .lock()
             .ok()
-            .and_then(|g| g.as_ref().map(|p| p.frame_number))
+            .and_then(|g| g.as_ref().and_then(|frames| frames.first().map(|f| f.frame_number)))
             .unwrap_or(0)
             + 1;
 
@@ -1264,6 +1319,28 @@ mod tests {
         assert_eq!(group.state(), CameraGroupState::Created);
         assert_eq!(group.camera_count(), 0);
         assert!(!group.is_paused());
+    }
+
+    #[test]
+    fn start_rejects_mixed_negotiated_rates_and_releases_devices() {
+        use crate::camera::CameraEvent;
+        let mut group = CameraGroup::new(HashMap::from([
+            ("cam0".into(), group_config("cam0", 0)),
+            ("cam1".into(), group_config("cam1", 1)),
+        ]));
+        let result = group.start_with(|identity, mut config, _, _, _| {
+            if identity.camera_id == "cam1" {
+                config.framerate = 60.0;
+            }
+            Ok(Camera::spawn_fake(identity, config, |commands, events| {
+                events.send(CameraEvent::Ready).unwrap();
+                let _ = commands.recv();
+            }))
+        });
+        let reason = result.unwrap_err().to_string();
+        assert!(reason.contains("cam0: negotiated 30 fps") && reason.contains("cam1: negotiated 60 fps"));
+        assert_eq!(group.camera_count(), 0);
+        assert_eq!(group.state(), CameraGroupState::Created);
     }
 
     /// Exposure, exposure-mode and rotation changes are applied while the

@@ -7,6 +7,17 @@ component-specific lifecycle and transport remain here.
 
 ## Task continuity
 
+Camera frame-rate comparisons must allow the driver's documented frame-interval
+quantization. Reuse `frame_rates_equal` in `camera_config.py` for nominal rate
+equality. A 60 fps request may read back as 60.0002 fps. Validate genuine mixed
+rates such as 60 and 59.94 separately. Group startup tests must include negotiated
+readbacks from heterogeneous devices, not only equal integer requests.
+
+For client-facing actions, follow the workspace's stable-control recovery rule.
+A failed command remains diagnostic information and never changes a normal action
+into a saved retry or prevents a fresh command. Current server observations
+supersede old client assumptions after failure and reconnect.
+
 At milestones, checkpoint the objective, decisions and reasons, exact checkout,
 existing interfaces, relevant plan stage, verification evidence and next action.
 Include the paths and questions needed to recover that action. After compaction

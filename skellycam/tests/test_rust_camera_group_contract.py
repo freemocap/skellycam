@@ -37,12 +37,11 @@ def test_native_decoding_reuses_caller_owned_frame_storage():
 
 
 @pytest.mark.parametrize('rotation', [-1, 0, 1, 2])
-def test_native_frames_restore_sensor_orientation_before_python_consumers_rotate(rotation):
-    """Native raw JPEGs are display-oriented; Python frame records are sensor-oriented."""
+def test_native_frames_stay_sensor_oriented_for_python_consumers_to_rotate(rotation):
+    """Native raw JPEGs and Python frame records are sensor-oriented; the record carries the rotation."""
     sensor_image = np.random.default_rng(19).integers(0, 256, (48, 80, 3), dtype=np.uint8)
-    display_image = sensor_image if rotation == -1 else cv2.rotate(sensor_image, rotation)
-    _, jpeg = cv2.imencode('.jpg', display_image)
-    decoded_display = cv2.imdecode(jpeg, cv2.IMREAD_COLOR)
+    _, jpeg = cv2.imencode('.jpg', sensor_image)
+    decoded_sensor = cv2.imdecode(jpeg, cv2.IMREAD_COLOR)
     native = Mock()
     native.get_latest_raw_frames.return_value = {'group': {'000a': {
         'frame_number': 17, 'jpeg_bytes': jpeg.tobytes(), 'timestamps': {
@@ -55,16 +54,15 @@ def test_native_frames_restore_sensor_orientation_before_python_consumers_rotate
     frame = group.get_latest_frames(frame_buffers=buffers)['000a']
     assert frame.image[0].shape == sensor_image.shape
     assert int(frame.frame_metadata.camera_info.camera_index[0]) == 3
-    applied_rotation = int(frame.frame_metadata.camera_info.rotation[0])
-    displayed = frame.image[0] if applied_rotation == -1 else cv2.rotate(frame.image[0], applied_rotation)
-    np.testing.assert_array_equal(displayed, decoded_display)
+    assert int(frame.frame_metadata.camera_info.rotation[0]) == rotation
+    np.testing.assert_array_equal(frame.image[0], decoded_sensor)
     assert group.get_latest_frames(frame_buffers=buffers)['000a'] is frame
 
 
 def test_new_group_frames_are_not_hidden_by_an_older_groups_threshold():
     native = Mock()
     frames = {"old": (101, 123.0, b"old"), "new": (1, 124.0, b"new")}
-    native.get_latest_frame_payloads.side_effect = lambda if_newer_than: {
+    native.get_latest_frame_payloads.side_effect = lambda if_newer_than, display_sizes=None: {
         key: value for key, value in frames.items() if value[0] > if_newer_than
     }
     manager = RustCameraGroupManager.__new__(RustCameraGroupManager)

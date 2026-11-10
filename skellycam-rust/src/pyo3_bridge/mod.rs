@@ -45,6 +45,8 @@ fn _skellycam_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // ── Engine ──
     m.add_class::<py_camera_group_manager::PyO3CameraGroupManager>()?;
+    m.add_class::<py_camera_group_manager::PyFrameset>()?;
+    m.add_class::<py_camera_group_manager::PyPayloadBuffer>()?;
     m.add_class::<py_audio_recorder::PyAudioRecorder>()?;
 
     // ── Functions ──

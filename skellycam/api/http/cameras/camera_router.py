@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import StrictBool, BaseModel, Field
 import numpy as np
 
-from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs
+from skellycam.core.camera.config.camera_config import CameraConfig, DEFAULT_CAMERA_ID, CameraConfigs, MixedCameraFrameRates
 from skellycam.core.camera_group.camera_group_manager import get_or_create_camera_group_manager
 from skellycam.core.camera_group.camera_backend_manager import CameraBackend, CameraBackendInUseError
 from skellycam.core.camera_group.camera_errors import CameraStateConflict
@@ -130,6 +130,8 @@ async def camera_group_apply_post_endpoint(
             group_id=camera_group.id,
             camera_configs=camera_group.configs
         )
+    except MixedCameraFrameRates as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except (CameraBackendInUseError, CameraStateConflict) as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     except Exception as e:

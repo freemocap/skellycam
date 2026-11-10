@@ -1,6 +1,6 @@
 //! PyO3CameraGroupManager — Python-facing wrapper for the Rust camera group.
 //! Handles PyDict → CameraGroupConfig conversion and provides frame polling
-//! via `latest_frontend_payload()`.
+//! via `get_latest_frame_payloads()`.
 //!
 //! All lifecycle logic is delegated to `CameraGroup`. This module is a
 //! thin adapter — Python type conversion only.
@@ -18,6 +18,9 @@ use crate::camera_group::{CameraGroup, CameraGroupConfig, CameraStatus};
 #[pyclass(name = "CameraGroupManager")]
 pub struct PyO3CameraGroupManager {
     groups: HashMap<String, Mutex<CameraGroup>>,
+    /// Each group's frame slots, so polling never waits on a group's lock (held for seconds by a stop or a
+    /// reconfiguration) while holding the GIL.
+    slots: HashMap<String, FrameSlots>,
     camera_statuses: Vec<CameraStatus>,
 }
 
@@ -27,6 +30,7 @@ impl PyO3CameraGroupManager {
     fn new() -> Self {
         Self {
             groups: HashMap::new(),
+            slots: HashMap::new(),
             camera_statuses: Vec::new(),
         }
     }
@@ -93,36 +97,64 @@ impl PyO3CameraGroupManager {
 
         let group_id = group.group_id().to_string();
 
+        manager.slots.insert(group_id.clone(), group.frame_slots());
         manager.groups.insert(group_id.clone(), Mutex::new(group));
         Ok(group_id)
     }
 
-    /// Poll for latest JPEG frame payloads across all groups.
+    /// UI previews of each group's newest frameset that is newer than `if_newer_than`.
     ///
-    /// Returns a dict mapping group_id → (frame_number, timestamp_ns, jpeg_bytes).
-    #[pyo3(signature = (if_newer_than = None))]
+    /// Returns a dict mapping group_id -> (frame_number, timestamp_ns, payload): a read-only buffer (wrap it in a
+    /// memoryview; no copy). A poll with nothing new reads one atomic per group and returns at once; otherwise
+    /// each preview is built without the GIL: rotated, scaled to `display_sizes` (camera_id -> (width, height))
+    /// but at most half size, JPEG q60, in the shared wire layout.
+    #[pyo3(signature = (if_newer_than = None, display_sizes = None))]
     fn get_latest_frame_payloads(
         &self,
         py: Python<'_>,
         if_newer_than: Option<i64>,
-    ) -> Py<PyDict> {
+        display_sizes: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<Py<PyDict>> {
         let threshold = if_newer_than.unwrap_or(-1);
         let result = PyDict::new(py);
-
-        for (group_id, group_mutex) in &self.groups {
-            let group = group_mutex.lock().unwrap();
-            if let Some(payload) = group.latest_frontend_payload() {
-                if payload.frame_number > threshold {
-                    let py_bytes = PyBytes::new(py, &payload.jpeg_bytes);
-                    let _ = result.set_item(
-                        group_id.as_str(),
-                        (payload.frame_number, payload.timestamp_ns, py_bytes),
-                    );
+        let newer: Vec<(&String, &FrameSlots)> = self.slots.iter()
+            .filter(|(_, slots)| slots.newest_frame_number() > threshold)
+            .collect();
+        if newer.is_empty() {
+            return Ok(result.into());
+        }
+        let display_sizes: HashMap<String, (u32, u32)> = match display_sizes {
+            Some(sizes) => sizes.extract()?,
+            None => HashMap::new(),
+        };
+        let built = py.detach(|| {
+            newer.into_iter()
+                .map(|(group_id, slots)| (group_id, slots.frontend_payload(threshold, &display_sizes)))
+                .collect::<Vec<_>>()
+        });
+        for (group_id, payload) in built {
+            match payload {
+                Ok(Some(payload)) => result.set_item(
+                    group_id.as_str(),
+                    (payload.frame_number, payload.timestamp_ns, PyPayloadBuffer { bytes: payload.jpeg_bytes }),
+                )?,
+                Ok(None) => {}
+                Err(error) => {
+                    return Err(PyRuntimeError::new_err(format!("Preview for camera group {group_id} failed: {error}")));
                 }
             }
         }
+        Ok(result.into())
+    }
 
-        result.into()
+    /// The newest frameset of `group_id` if it is newer than `if_newer_than`, held for
+    /// `Frameset.decode_into`. `None` when there is none yet or nothing newer.
+    #[pyo3(signature = (group_id, if_newer_than = -1))]
+    fn newest_frameset(&self, group_id: &str, if_newer_than: i64) -> PyResult<Option<PyFrameset>> {
+        let slots = self.slots.get(group_id)
+            .ok_or_else(|| PyValueError::new_err(format!("No camera group {group_id}")))?;
+        let frames = slots.newest_frames(if_newer_than).map_err(PyRuntimeError::new_err)?;
+        Ok(frames.map(|frames| PyFrameset { frames }))
     }
 
     /// Poll for latest raw per-camera JPEG bytes across all groups.
@@ -137,9 +169,8 @@ impl PyO3CameraGroupManager {
     ) -> Py<PyDict> {
         let result = PyDict::new(py);
 
-        for (group_id, group_mutex) in &self.groups {
-            let group = group_mutex.lock().unwrap();
-            if let Some(raw_frames) = group.latest_raw_frames() {
+        for (group_id, slots) in &self.slots {
+            if let Ok(Some(raw_frames)) = slots.newest_frames(-1) {
                 let group_dict = PyDict::new(py);
                 for frame in &raw_frames {
                     let frame_dict = PyDict::new(py);
@@ -167,33 +198,38 @@ impl PyO3CameraGroupManager {
     }
 
     /// Pause all camera groups (suppress downstream frame sends).
-    pub fn pause(&self) {
-        for group_mutex in self.groups.values() {
-            if let Ok(mut group) = group_mutex.lock() {
-                group.pause();
+    pub fn pause(&self, py: Python<'_>) {
+        // A group's lock can be held for seconds (stop, reconfigure): wait for it without the GIL.
+        py.detach(|| {
+            for group_mutex in self.groups.values() {
+                if let Ok(mut group) = group_mutex.lock() {
+                    group.pause();
+                }
             }
-        }
+        });
     }
 
     /// Unpause all camera groups (resume downstream frame sends).
-    pub fn unpause(&self) {
-        for group_mutex in self.groups.values() {
-            if let Ok(mut group) = group_mutex.lock() {
-                group.unpause();
+    pub fn unpause(&self, py: Python<'_>) {
+        py.detach(|| {
+            for group_mutex in self.groups.values() {
+                if let Ok(mut group) = group_mutex.lock() {
+                    group.unpause();
+                }
             }
-        }
+        });
     }
 
     /// Toggle pause state across all camera groups.
     /// If any group is paused, unpause all; otherwise pause all.
-    pub fn pause_unpause_all(&self) {
-        let any_paused = self.groups.values().any(|m| {
+    pub fn pause_unpause_all(&self, py: Python<'_>) {
+        let any_paused = py.detach(|| self.groups.values().any(|m| {
             m.lock().map(|g| g.is_paused()).unwrap_or(false)
-        });
+        }));
         if any_paused {
-            self.unpause();
+            self.unpause(py);
         } else {
-            self.pause();
+            self.pause(py);
         }
     }
 
@@ -279,10 +315,13 @@ impl PyO3CameraGroupManager {
     }
 
     /// Group-scoped operations used by the application's camera-group adapter.
-    pub fn pause_group(&self, group_id: &str, paused: bool) -> PyResult<()> {
-        let mut group = self.groups.get(group_id)
-            .ok_or_else(|| PyValueError::new_err("Unknown camera group"))?.lock().unwrap();
-        if paused { group.pause(); } else { group.unpause(); }
+    pub fn pause_group(&self, py: Python<'_>, group_id: &str, paused: bool) -> PyResult<()> {
+        let group = self.groups.get(group_id)
+            .ok_or_else(|| PyValueError::new_err("Unknown camera group"))?;
+        py.detach(|| {
+            let mut group = group.lock().unwrap();
+            if paused { group.pause(); } else { group.unpause(); }
+        });
         Ok(())
     }
 
@@ -306,7 +345,11 @@ impl PyO3CameraGroupManager {
     pub fn close_group(manager: Py<Self>, py: Python<'_>, group_id: &str) -> PyResult<()> {
         // Release the exclusive Python borrow before detaching for shutdown.
         // Other Python threads may poll the remaining groups during this wait.
-        let group = manager.borrow_mut(py).groups.remove(group_id);
+        let group = {
+            let mut manager = manager.borrow_mut(py);
+            manager.slots.remove(group_id);
+            manager.groups.remove(group_id)
+        };
         if let Some(group) = group {
             py.detach(|| group.into_inner().unwrap().shutdown())
                 .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
@@ -319,11 +362,18 @@ impl PyO3CameraGroupManager {
         let result = PyDict::new(py);
         let groups_dict = PyDict::new(py);
 
-        for (group_id, group_mutex) in &self.groups {
-            let group = group_mutex.lock().unwrap();
+        // Read every group without the GIL (a group's lock can be held for seconds), then build the dicts.
+        let states: Vec<(&String, String, Vec<CameraStatus>, bool, bool)> = py.detach(|| {
+            self.groups.iter()
+                .map(|(group_id, group_mutex)| {
+                    let group = group_mutex.lock().unwrap();
+                    (group_id, group.group_id().to_string(), group.camera_statuses(), group.is_paused(), group.is_recording())
+                })
+                .collect()
+        });
+        for (group_id, native_group_id, statuses, is_paused, is_recording) in states {
             let group_state = PyDict::new(py);
-            group_state.set_item("group_id", group.group_id())?;
-            let statuses = group.camera_statuses();
+            group_state.set_item("group_id", native_group_id)?;
             group_state.set_item("camera_count", statuses.len())?;
 
             let cameras_list: Vec<Py<PyDict>> = statuses
@@ -335,14 +385,13 @@ impl PyO3CameraGroupManager {
                     d.set_item("unique_identifier", &cam.config.camera_id)?;
                     d.set_item("width", cam.config.width as i32)?;
                     d.set_item("height", cam.config.height as i32)?;
-                    d.set_item("is_paused", group.is_paused())?;
-                    d.set_item("is_recording", group.is_recording())?;
+                    d.set_item("is_paused", is_paused)?;
+                    d.set_item("is_recording", is_recording)?;
                     Ok(d.into())
                 })
                 .collect::<PyResult<Vec<_>>>()?;
 
             group_state.set_item("cameras", cameras_list)?;
-            drop(group);
             groups_dict.set_item(group_id.as_str(), group_state)?;
         }
 
@@ -428,6 +477,7 @@ impl PyO3CameraGroupManager {
     }
 
     fn close_all_groups_inner(&mut self) {
+        self.slots.clear();
         for (id, mutex) in self.groups.drain() {
             let mut group = mutex.into_inner().unwrap();
             let _ = group.shutdown();
@@ -579,6 +629,103 @@ fn recording_summary_to_pydict(
 }
 
 // Non-PyO3 methods — called from Rust (e.g., freemocap's PyO3 bridge)
+/// A preview payload owned by Rust and shared with Python as a read-only buffer: `memoryview(payload)` reads
+/// these bytes in place, without a copy.
+#[pyclass(name = "PayloadBuffer", frozen)]
+pub struct PyPayloadBuffer {
+    bytes: Vec<u8>,
+}
+
+#[pymethods]
+impl PyPayloadBuffer {
+    unsafe fn __getbuffer__(slf: Bound<'_, Self>, view: *mut pyo3::ffi::Py_buffer, flags: std::os::raw::c_int) -> PyResult<()> {
+        let bytes = &slf.get().bytes;
+        // Read-only view of `bytes`; the view holds a reference to this object, keeping the bytes alive.
+        if unsafe {
+            pyo3::ffi::PyBuffer_FillInfo(view, slf.as_ptr(), bytes.as_ptr() as *mut std::ffi::c_void,
+                                         bytes.len() as pyo3::ffi::Py_ssize_t, 1, flags)
+        } == -1 {
+            return Err(PyErr::fetch(slf.py()));
+        }
+        Ok(())
+    }
+
+    unsafe fn __releasebuffer__(&self, _view: *mut pyo3::ffi::Py_buffer) {}
+
+    fn __len__(&self) -> usize {
+        self.bytes.len()
+    }
+}
+
+/// One camera group's frameset (every camera's JPEG, frame number and grab bracket), held so the JPEGs can
+/// be decoded into memory the caller owns.
+#[pyclass(name = "Frameset")]
+pub struct PyFrameset {
+    frames: Vec<RawFrame>,
+}
+
+/// A caller-owned buffer, kept alive by its `PyBuffer` while threads write into it.
+struct Destination(*mut u8, usize);
+unsafe impl Send for Destination {}
+
+#[pymethods]
+impl PyFrameset {
+    #[getter]
+    fn frame_number(&self) -> i64 {
+        self.frames[0].frame_number
+    }
+
+    /// camera_id -> {camera_index, width, height, rotation, loop_start_ns, frame_available_ns}.
+    fn cameras<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let cameras = PyDict::new(py);
+        for frame in &self.frames {
+            let camera = PyDict::new(py);
+            camera.set_item("camera_index", frame.camera_index)?;
+            camera.set_item("width", frame.width)?;
+            camera.set_item("height", frame.height)?;
+            camera.set_item("rotation", frame.rotation)?;
+            camera.set_item("loop_start_ns", frame.timestamps.loop_start_ns)?;
+            camera.set_item("frame_available_ns", frame.timestamps.frame_available_ns)?;
+            cameras.set_item(frame.camera_id.as_str(), camera)?;
+        }
+        Ok(cameras)
+    }
+
+    /// Decode every camera's JPEG at full size, BGR, sensor orientation, into `targets[camera_id]`: a
+    /// writable C-contiguous buffer of height * width * 3 bytes, such as a SkellyCam shared-memory image.
+    /// Cameras decode in parallel without the GIL. Exact by default (as OpenCV's decoder); `fast_dct` and
+    /// `fast_upsample` select libjpeg-turbo's faster, inexact decode options.
+    #[pyo3(signature = (targets, fast_dct = false, fast_upsample = false))]
+    fn decode_into(&self, py: Python<'_>, targets: &Bound<'_, PyDict>, fast_dct: bool, fast_upsample: bool) -> PyResult<()> {
+        use crate::camera_group::jpeg::{FAST_DCT, FAST_UPSAMPLE};
+        let flags = if fast_dct { FAST_DCT } else { 0 } | if fast_upsample { FAST_UPSAMPLE } else { 0 };
+        let mut buffers = Vec::with_capacity(self.frames.len());
+        for frame in &self.frames {
+            let target = targets.get_item(frame.camera_id.as_str())?
+                .ok_or_else(|| PyValueError::new_err(format!("No destination for camera {}", frame.camera_id)))?;
+            let buffer = PyBuffer::<u8>::get(&target)?;
+            if buffer.readonly() || !buffer.is_c_contiguous() {
+                return Err(PyValueError::new_err(format!(
+                    "Destination for camera {} must be writable and C-contiguous", frame.camera_id)));
+            }
+            buffers.push(buffer);
+        }
+        let destinations: Vec<Destination> = buffers.iter()
+            .map(|buffer| Destination(buffer.buf_ptr() as *mut u8, buffer.len_bytes()))
+            .collect();
+        let frames = &self.frames;
+        let decoded = py.detach(move || {
+            // Each destination is a distinct buffer held by `buffers` until this returns.
+            let slices = destinations.into_iter()
+                .map(|destination| unsafe { std::slice::from_raw_parts_mut(destination.0, destination.1) })
+                .collect();
+            decode_frameset_into(frames, slices, flags)
+        });
+        drop(buffers);
+        decoded.map_err(PyRuntimeError::new_err)
+    }
+}
+
 // to access FrameSlots without going through Python.
 impl PyO3CameraGroupManager {
     /// Extract `FrameSlots` for a given group. Called by the freemocap
@@ -593,6 +740,9 @@ impl PyO3CameraGroupManager {
 }
 
 use crate::camera_group::FrameSlots;
+use crate::camera_group::dispatcher::RawFrame;
+use crate::camera_group::pixels::decode_frameset_into;
+use pyo3::buffer::PyBuffer;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -736,6 +886,7 @@ mod tests {
             })
             .unwrap();
         PyO3CameraGroupManager {
+            slots: HashMap::from([("group".to_string(), group.frame_slots())]),
             groups: HashMap::from([("group".to_string(), Mutex::new(group))]),
             camera_statuses: Vec::new(),
         }

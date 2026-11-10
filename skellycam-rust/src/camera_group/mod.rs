@@ -4,7 +4,9 @@ pub mod gatherer;
 pub mod dispatcher;
 pub mod sync_utils;
 pub mod frontend_encoder;
-pub mod jpeg_transform;
+pub mod jpeg;
+pub mod pixels;
+pub mod preview;
 pub mod recording_stats;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,8 +22,7 @@ pub use camera_group::{
     GathererState, GathererStateMachine,
 };
 pub use dispatcher::FrontendPayload;
-pub use frontend_encoder::{encode_multiframe, encode_payload, FrameHeader, PayloadHeader};
-pub use jpeg_transform::rotate_jpeg_lossless;
+pub use frontend_encoder::{pack_payload, FrameHeader, PayloadHeader, PreviewImage};
 
 /// Block on `receiver` until `shutdown` is set or the channel disconnects.
 ///

@@ -116,6 +116,8 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
 /// (see `resolve_device_index`), not the index remembered in the config.
 ///
 /// Returns the (possibly new) stream, actual_width, and actual_height.
+/// Apply `new_config`, restarting the stream when the format changes. On error the stream has been
+/// closed (a restart that could not reopen it): the caller releases the context, never the stream.
 unsafe fn apply_config(
     ctx: CapContext,
     stream: CapStream,
@@ -149,8 +151,7 @@ unsafe fn apply_config(
                 match find_best_mjpg(ctx, device_index, old_config.width, old_config.height, old_config.framerate, label) {
                     Ok(f) => f,
                     Err(_) => {
-                        tracing::error!("Camera {label}: fatal — cannot reopen stream");
-                        return Ok((stream, actual_width, actual_height));
+                        anyhow::bail!("Camera {label}: no format matches the new or the previous settings; the stream is closed");
                     }
                 }
             }
@@ -159,8 +160,7 @@ unsafe fn apply_config(
         let new_stream = match open_stream_raw(ctx, device_index, label, &format_info) {
             Ok(s) => s,
             Err(e) => {
-                tracing::error!("Camera {label}: failed to open new stream: {e}");
-                return Ok((stream, actual_width, actual_height));
+                anyhow::bail!("Camera {label}: could not reopen the stream ({e}); the stream is closed");
             }
         };
 
@@ -276,7 +276,10 @@ fn run_camera_thread(
 
         let _ = event_sender.send(CameraEvent::Ready);
         let mut frame_sm = FrameStateMachine::new(start_frame_number);
-        let mut raw_buffer: Vec<u8> = Vec::new();
+        // The driver copies each frame once, into a pooled buffer that consumers share.
+        let mut frame_pool = crate::camera::frame_pool::FramePool::default();
+        let mut frame_capacity: usize = 0;
+        let shared_identity = std::sync::Arc::new(identity.clone());
         // The most recently requested config. The negotiated format lives in
         // actual_width/actual_height and the shared config.
         let mut active_config = initial_config;
@@ -293,8 +296,7 @@ fn run_camera_thread(
                         ctx, stream, device_index, label, &new_config, &active_config,
                         actual_width, actual_height, &shared_config, command_receiver,
                     ).map_err(|error| {
-                        Cap_closeStream(ctx, stream);
-                        Cap_releaseContext(ctx);
+                        Cap_releaseContext(ctx); // apply_config closed the stream
                         error
                     })?;
                     active_config = new_config;
@@ -319,8 +321,7 @@ fn run_camera_thread(
                             ctx, stream, device_index, label, &new_config, &active_config,
                             actual_width, actual_height, &shared_config, command_receiver,
                         ).map_err(|error| {
-                            Cap_closeStream(ctx, stream);
-                            Cap_releaseContext(ctx);
+                            Cap_releaseContext(ctx); // apply_config closed the stream
                             error
                         })?;
                         active_config = new_config;
@@ -347,8 +348,7 @@ fn run_camera_thread(
                             ctx, stream, device_index, label, &new_config, &active_config,
                             actual_width, actual_height, &shared_config, command_receiver,
                         ).map_err(|error| {
-                            Cap_closeStream(ctx, stream);
-                            Cap_releaseContext(ctx);
+                            Cap_releaseContext(ctx); // apply_config closed the stream
                             error
                         })?;
                         active_config = new_config;
@@ -375,12 +375,14 @@ fn run_camera_thread(
             // returned true — the hardware-ready instant, before any capture work.
             let frame_available_ns =
                 crate::timestamps::performance::performance_counter_nanoseconds();
-            // ── Capture the frame and copy bytes into a heap-owned Vec ──
+            // ── Capture the frame: the driver copies it once, into a pooled buffer ──
             // Cap_getFrameSize and Cap_captureFrameRaw are not atomic — the
             // DirectShow callback thread can deliver a differently-sized
             // MJPEG frame between the two calls. Retry on buffer-too-small.
             let mut out_bytes: u32 = 0;
             let mut capture_ok = false;
+            let slot = frame_pool.take(frame_capacity);
+            let frame_bytes = std::sync::Arc::get_mut(slot).expect("a free pooled buffer has no other owner");
             for _retry in 0..3 {
                 let mut frame_size: u32 = 0;
                 if Cap_getFrameSize(ctx, stream, &mut frame_size) != CAPRESULT_OK
@@ -394,22 +396,27 @@ fn run_camera_thread(
                     break;
                 }
                 let needed = frame_size as usize;
-                if raw_buffer.len() < needed {
-                    raw_buffer.resize(needed * 2, 0);
+                if frame_bytes.capacity() < needed {
+                    frame_capacity = needed * 2;
+                    frame_bytes.reserve(frame_capacity);
                 }
+                // The driver writes into the buffer's spare capacity; only the bytes it reports
+                // are made part of the frame.
                 let result = Cap_captureFrameRaw(
                     ctx, stream,
-                    raw_buffer.as_mut_ptr(), raw_buffer.len() as u32,
+                    frame_bytes.as_mut_ptr(), frame_bytes.capacity() as u32,
                     &mut out_bytes,
                 );
                 if result == CAPRESULT_OK {
+                    frame_bytes.set_len(out_bytes as usize);
                     capture_ok = true;
                     break;
                 }
                 // Buffer too small — out_bytes carries the actual size,
                 // grow and retry.
-                if out_bytes as usize > raw_buffer.len() {
-                    raw_buffer.resize(out_bytes as usize * 2, 0);
+                if out_bytes as usize > frame_bytes.capacity() {
+                    frame_capacity = out_bytes as usize * 2;
+                    frame_bytes.reserve(frame_capacity);
                     continue;
                 }
                 let msg = format!(
@@ -423,12 +430,10 @@ fn run_camera_thread(
             if !capture_ok {
                 break;
             }
-            let frame_data = FrameData::Mjpg(raw_buffer[..out_bytes as usize].to_vec());
-            // Stamp `post_jpeg_extract_ns` immediately after the raw bytes are
-            // owned by a heap Vec. The interval (post_jpeg_extract - frame_available)
-            // covers Cap_captureFrameRaw + the to_vec() copy — i.e. the full
-            // device-buffer → heap-owned JPEG path. This is the OpenCV
-            // `cap.read()` comparison metric.
+            let frame_data = FrameData::Mjpg(std::sync::Arc::clone(slot));
+            // Stamp `post_jpeg_extract_ns` immediately after the driver copied the frame.
+            // The interval (post_jpeg_extract - frame_available) covers Cap_captureFrameRaw,
+            // the only copy of the JPEG.
             let post_jpeg_extract_ns =
                 crate::timestamps::performance::performance_counter_nanoseconds();
             if let Err(e) = frame_sm.begin_capture(frame_available_ns) {
@@ -451,7 +456,7 @@ fn run_camera_thread(
                 height: actual_height,
                 rotation: active_config.rotation,
                 timestamps: frame_sm.timestamps.clone(),
-                identity: identity.clone(),
+                identity: std::sync::Arc::clone(&shared_identity),
                 frame_number: frame_sm.frame_number(),
             };
 

@@ -1,46 +1,37 @@
-//! Recording thread — owns `VideoRecorder`s and `CsvWriter`s, performing all
-//! recording I/O off the dispatcher's critical path.
+//! Recording writers: one thread per camera, each owning that camera's `VideoRecorder` (ffmpeg) and timestamp
+//! `CsvWriter`, so one slow or failed ffmpeg cannot stall the other cameras.
 //!
-//! Spawned by the dispatcher after building recorder configs. Receives
-//! per-camera frame data via an unbounded `mpsc::channel()`, so the dispatcher
-//! never blocks on ffmpeg pipe writes or CSV fsyncs.
-//!
-//! ## Lifecycle
+//! The dispatcher hands each camera's frame to that camera's writer through an unbounded queue (frames are never
+//! dropped) and never blocks. Each writer sets itself up (directories, ffmpeg, timestamp file) on its own thread,
+//! then writes its frames in order. A writer that fails records why and stops; the dispatcher sees the failure on
+//! its next frameset and ends the recording, and `stop()` returns the reason.
 //!
 //! ```text
-//! dispatcher                         recording_thread
-//! ─────────                          ────────────────
-//! build_recorder_configs()
-//! spawn_recording_thread() ───→      [Setup enqueued, thread spawned]
-//!                                     recv() → Setup → spawn ffmpeg + create CSV writers
-//!                                     (FeedFrames silently queue in the channel)
-//! recording_active = true
-//! send_frames(frames, ts)  ───→      feed_frame() + write_row() per camera
-//! send_frames(frames, ts)  ───→      feed_frame() + write_row() per camera
-//!   ...                                 ...
-//! handle.stop(stats)        ───→      finalize_all() → summary via oneshot → exit
+//! dispatcher                              writer thread per camera
+//! spawn_recording_thread() ──────────→    create dirs, spawn ffmpeg, create CSV
+//! send_frames(frames, ts)  ── queue i ──→ feed_frame() + write_row()
+//! failure()                ←── first error, if any
+//! stop(stats)              ── close ───→  drain queue, finish ffmpeg + CSV → paths; then finalize
 //! ```
 
 use std::path::PathBuf;
-use std::sync::{mpsc, Arc};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
 use crate::camera::{CameraIdentity, FrameLifecycleTimestamps};
 use crate::camera_group::recording_stats::RecordingStatsSummary;
 use crate::recording::finalizer::{self, RecordingSummary};
 use crate::recording::{RecorderSpawnConfig, VideoRecorder};
+use crate::timestamps::performance::performance_counter_nanoseconds;
 use crate::timestamps::CsvWriter;
 
 // ── Frame data ─────────────────────────────────────────────────────────────
 
-/// Per-camera frame data sent from the dispatcher to the recording thread.
-///
-/// Carries everything the recording thread needs to write one frame to ffmpeg
-/// and one row to the timestamp CSV — without holding a reference to the
-/// `MultiFramePayload`.
+/// One camera's frame, sent from the dispatcher to that camera's writer.
 pub struct RecordingFrameData {
     pub camera_index: usize,
-    pub jpeg_bytes: Arc<[u8]>,
+    pub jpeg_bytes: crate::camera::FrameBytes,
     pub frame_number: i64,
     /// `frame_available_ns` from the camera thread — the grab timestamp.
     pub grab_timestamp_ns: i64,
@@ -48,373 +39,233 @@ pub struct RecordingFrameData {
     pub timestamps: FrameLifecycleTimestamps,
 }
 
-// ── Commands ───────────────────────────────────────────────────────────────
+struct Queued {
+    frame: RecordingFrameData,
+    recorded_timestamp_ns: i64,
+    enqueued_ns: i64,
+}
 
-enum RecordingCommand {
-    /// Initialize recorders by spawning ffmpeg subprocesses and creating CSV
-    /// writers. Always the first command sent to the recording thread.
-    /// Processing blocks the recording thread while ffmpeg spawns — the work
-    /// we moved off the dispatcher. FeedFrames arriving during this time
-    /// silently queue in the unbounded channel.
-    Setup {
-        recorder_configs: Vec<RecorderSpawnConfig>,
-        writer_paths: Vec<PathBuf>,
-        recording_dir: PathBuf,
-        camera_infos: Vec<(CameraIdentity, u32, u32)>,
-    },
-    /// Feed one multiframe's worth of per-camera frames.
-    FeedFrames {
-        frames: Vec<RecordingFrameData>,
-        recorded_timestamp_ns: i64,
-    },
-    /// Stop recording, finalize all files, and return the summary.
-    Stop {
-        response_tx: mpsc::Sender<RecordingSummary>,
-        stats: Option<RecordingStatsSummary>,
-    },
-    /// Emergency shutdown — finalize and exit, discarding the summary.
-    Shutdown,
+/// How far one camera's writer fell behind during the recording.
+#[derive(Debug, Clone, Default)]
+pub struct WriterBacklog {
+    pub camera_id: String,
+    /// Most frames waiting in this camera's queue at once.
+    pub max_queued_frames: usize,
+    /// Longest a frame waited in the queue before its writer took it.
+    pub max_wait_ns: i64,
+}
+
+type WriterResult = Result<(PathBuf, PathBuf), String>;
+
+struct CameraWriter {
+    camera_id: String,
+    sender: Option<mpsc::Sender<Queued>>,
+    queued: Arc<AtomicUsize>,
+    max_queued: Arc<AtomicUsize>,
+    max_wait_ns: Arc<AtomicI64>,
+    thread: Option<JoinHandle<WriterResult>>,
 }
 
 // ── Handle ─────────────────────────────────────────────────────────────────
 
-/// Handle to the recording thread.
-///
-/// Held by the dispatcher. `send_frames()` is non-blocking (unbounded channel).
-/// `stop()` and `shutdown()` consume the handle and join the thread.
+/// The writers of one recording. Held by the dispatcher; `send_frames()` never blocks.
 pub struct RecordingHandle {
-    sender: mpsc::Sender<RecordingCommand>,
-    thread: Option<JoinHandle<()>>,
+    writers: Vec<CameraWriter>,
+    failure: Arc<Mutex<Option<String>>>,
+    recording_dir: PathBuf,
+    camera_infos: Vec<(CameraIdentity, u32, u32)>,
 }
 
 impl RecordingHandle {
-    /// Send one multiframe's per-camera frames to the recording thread.
-    ///
-    /// Non-blocking: uses an unbounded channel. If the recording thread has
-    /// died (panic), the send error is silently ignored — the dispatcher
-    /// detects the dead thread on the next `stop()` or `shutdown()`.
+    /// Queue each camera's frame for that camera's writer.
     pub fn send_frames(&self, frames: Vec<RecordingFrameData>, recorded_timestamp_ns: i64) {
-        let _ = self.sender.send(RecordingCommand::FeedFrames {
-            frames,
-            recorded_timestamp_ns,
-        });
+        let enqueued_ns = performance_counter_nanoseconds();
+        for frame in frames {
+            let Some(writer) = self.writers.get(frame.camera_index) else { continue };
+            let Some(sender) = &writer.sender else { continue };
+            let depth = writer.queued.fetch_add(1, Ordering::SeqCst) + 1;
+            writer.max_queued.fetch_max(depth, Ordering::Relaxed);
+            if sender.send(Queued { frame, recorded_timestamp_ns, enqueued_ns }).is_err() {
+                writer.queued.fetch_sub(1, Ordering::SeqCst); // the writer stopped; its failure says why
+            }
+        }
     }
 
-    /// Stop recording and wait for finalization.
-    ///
-    /// Sends a `Stop` command to the recording thread, then blocks on the
-    /// oneshot response channel until finalization completes. Joins the
-    /// recording thread before returning.
+    /// Why the recording failed, if a writer failed: the first error, with its camera.
+    pub fn failure(&self) -> Option<String> {
+        self.failure.lock().ok().and_then(|failure| failure.clone())
+    }
+
+    /// Each writer's backlog so far.
+    pub fn backlog(&self) -> Vec<WriterBacklog> {
+        self.writers.iter()
+            .map(|writer| WriterBacklog {
+                camera_id: writer.camera_id.clone(),
+                max_queued_frames: writer.max_queued.load(Ordering::Relaxed),
+                max_wait_ns: writer.max_wait_ns.load(Ordering::Relaxed),
+            })
+            .collect()
+    }
+
+    /// Write every queued frame, finish every file, and finalize the recording; a failure is the error.
     pub fn stop(mut self, stats: Option<RecordingStatsSummary>) -> anyhow::Result<RecordingSummary> {
-        let (tx, rx) = mpsc::channel();
-        let _ = self.sender.send(RecordingCommand::Stop {
-            response_tx: tx,
-            stats,
-        });
-        match rx.recv() {
-            Ok(summary) => {
-                if let Some(thread) = self.thread.take() {
-                    let _ = thread.join();
-                }
-                Ok(summary)
-            }
-            Err(_) => {
-                if let Some(thread) = self.thread.take() {
-                    let _ = thread.join();
-                }
-                anyhow::bail!("Recording thread disconnected before sending summary")
-            }
+        let results = self.finish_writers();
+        for backlog in self.backlog() {
+            tracing::info!(
+                "[recording] camera {}: at most {} frames queued, longest wait {:.1} ms",
+                backlog.camera_id, backlog.max_queued_frames, backlog.max_wait_ns as f64 / 1e6,
+            );
         }
+        if let Some(reason) = self.failure() {
+            anyhow::bail!("Recording failed: {reason}");
+        }
+        let mut video_paths = Vec::with_capacity(results.len());
+        let mut csv_paths = Vec::with_capacity(results.len());
+        for result in results {
+            let (video, csv) = result.map_err(|reason| anyhow::anyhow!("Recording failed: {reason}"))?;
+            video_paths.push(video);
+            csv_paths.push(csv);
+        }
+        finalizer::finalize_recording(&self.recording_dir, &self.camera_infos, &video_paths, &csv_paths, stats)
     }
 
-    /// Emergency shutdown — tells the recording thread to finalize and exit.
-    ///
-    /// Does not wait for a summary. Joins the thread.
+    /// End the recording without a summary (shutdown): writers still finish their files.
     pub fn shutdown(mut self) {
-        let _ = self.sender.send(RecordingCommand::Shutdown);
-        if let Some(thread) = self.thread.take() {
-            let _ = thread.join();
+        let _ = self.finish_writers();
+    }
+
+    /// Close every queue, then wait for each writer to drain it and finish its files.
+    fn finish_writers(&mut self) -> Vec<WriterResult> {
+        for writer in &mut self.writers {
+            writer.sender.take();
         }
+        self.writers.iter_mut()
+            .map(|writer| match writer.thread.take().map(JoinHandle::join) {
+                Some(Ok(result)) => result,
+                Some(Err(_)) => Err(format!("camera {}: writer thread panicked", writer.camera_id)),
+                None => Err(format!("camera {}: writer already finished", writer.camera_id)),
+            })
+            .collect()
     }
 }
 
 // ── Spawn ──────────────────────────────────────────────────────────────────
 
-/// Spawn the recording thread.
-///
-/// Enqueues a `Setup` command carrying recorder spawn configs and CSV writer
-/// paths, then spawns the worker thread. The recording thread will spawn
-/// ffmpeg processes on its own thread — this call returns immediately.
-///
-/// The dispatcher calls this after `build_recorder_configs()`.
+/// Start one writer per camera (each spawns its own ffmpeg) and return at once.
 pub fn spawn_recording_thread(
     recorder_configs: Vec<RecorderSpawnConfig>,
     writer_paths: Vec<PathBuf>,
     recording_dir: PathBuf,
     camera_infos: Vec<(CameraIdentity, u32, u32)>,
 ) -> RecordingHandle {
-    let (tx, rx) = mpsc::channel::<RecordingCommand>();
-
-    // Enqueue Setup as the first command. Sent before the thread starts,
-    // so the recording thread's first recv() is guaranteed to be Setup,
-    // followed by any FeedFrames the dispatcher sends after setting
-    // recording_active = true.
-    let _ = tx.send(RecordingCommand::Setup {
-        recorder_configs,
-        writer_paths,
-        recording_dir,
-        camera_infos,
-    });
-
-    let thread = thread::Builder::new()
-        .name("recording_thread".into())
-        .spawn(move || {
-            run(rx);
-        })
-        .expect("Failed to spawn recording thread");
-
-    RecordingHandle {
-        sender: tx,
-        thread: Some(thread),
-    }
+    let failure = Arc::new(Mutex::new(None));
+    let writers = recorder_configs.into_iter()
+        .zip(writer_paths)
+        .map(|(config, csv_path)| spawn_camera_writer(config, csv_path, Arc::clone(&failure)))
+        .collect();
+    RecordingHandle { writers, failure, recording_dir, camera_infos }
 }
 
-// ── Main loop ──────────────────────────────────────────────────────────────
-
-fn run(receiver: mpsc::Receiver<RecordingCommand>) {
-    // Recorders and writers are created lazily from the Setup command.
-    // Before Setup completes, FeedFrames accumulate in the channel buffer.
-    let mut recorders: Option<Vec<VideoRecorder>> = None;
-    let mut writers: Option<Vec<CsvWriter>> = None;
-    let mut recording_dir: Option<PathBuf> = None;
-    let mut camera_infos: Option<Vec<(CameraIdentity, u32, u32)>> = None;
-
-    loop {
-        match receiver.recv() {
-            Ok(RecordingCommand::Setup {
-                recorder_configs,
-                writer_paths,
-                recording_dir: dir,
-                camera_infos: infos,
-            }) => {
-                tracing::info!(
-                    "[recording_thread] Setup: spawning {} recorder(s)...",
-                    recorder_configs.len()
-                );
-
-                // ── Create output directories (moved here from dispatcher hot thread) ──
-                for cfg in &recorder_configs {
-                    if let Some(parent) = cfg.output_path.parent() {
-                        if let Err(e) = std::fs::create_dir_all(parent) {
-                            tracing::error!("[recording_thread] failed to create output dir: {e}");
-                            return;
-                        }
+fn spawn_camera_writer(config: RecorderSpawnConfig, csv_path: PathBuf, failure: Arc<Mutex<Option<String>>>) -> CameraWriter {
+    let (sender, receiver) = mpsc::channel::<Queued>();
+    let camera_id = config.identity.camera_id.clone();
+    let (queued, max_queued, max_wait_ns) =
+        (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)), Arc::new(AtomicI64::new(0)));
+    let thread = {
+        let (queued, max_wait_ns, label) = (Arc::clone(&queued), Arc::clone(&max_wait_ns), config.identity.label());
+        thread::Builder::new()
+            .name(format!("recording-{camera_id}"))
+            .spawn(move || {
+                let result = write_camera(config, csv_path, receiver, &queued, &max_wait_ns);
+                if let Err(reason) = &result {
+                    tracing::error!("[recording] camera {label}: {reason}");
+                    if let Ok(mut first) = failure.lock() {
+                        first.get_or_insert_with(|| format!("camera {label}: {reason}"));
                     }
                 }
-                for path in &writer_paths {
-                    if let Some(parent) = path.parent() {
-                        if let Err(e) = std::fs::create_dir_all(parent) {
-                            tracing::error!("[recording_thread] failed to create timestamps dir: {e}");
-                            return;
-                        }
-                    }
-                }
-
-                // ── Spawn all ffmpeg processes in parallel ──
-                let n = recorder_configs.len();
-                let mut slot: Vec<Option<VideoRecorder>> = (0..n).map(|_| None).collect();
-                std::thread::scope(|s| {
-                    let handles: Vec<_> = recorder_configs
-                        .into_iter()
-                        .enumerate()
-                        .map(|(i, cfg)| s.spawn(move || (i, VideoRecorder::spawn(cfg))))
-                        .collect();
-                    for handle in handles {
-                        match handle.join() {
-                            Ok((i, Ok(r))) => slot[i] = Some(r),
-                            Ok((i, Err(e))) => tracing::error!(
-                                "[recording_thread] failed to spawn recorder {i}: {e}"
-                            ),
-                            Err(_) => tracing::error!(
-                                "[recording_thread] recorder spawn thread panicked"
-                            ),
-                        }
-                    }
-                });
-                if slot.iter().any(|r| r.is_none()) {
-                    tracing::error!("[recording_thread] one or more recorders failed — aborting");
-                    return;
-                }
-                let recs: Vec<VideoRecorder> = slot.into_iter().flatten().collect();
-
-                // ── Create CSV writers ──
-                let mut wrs = Vec::with_capacity(writer_paths.len());
-                for path in writer_paths {
-                    match CsvWriter::new(path) {
-                        Ok(w) => wrs.push(w),
-                        Err(e) => {
-                            tracing::error!(
-                                "[recording_thread] failed to create CSV writer: {e}"
-                            );
-                            for r in recs {
-                                drop(r);
-                            }
-                            for w in wrs {
-                                drop(w);
-                            }
-                            return;
-                        }
-                    }
-                }
-
-                recorders = Some(recs);
-                writers = Some(wrs);
-                recording_dir = Some(dir);
-                camera_infos = Some(infos);
-
-                tracing::info!(
-                    "[recording_thread] Setup complete — ready to receive frames"
-                );
-            }
-
-            Ok(RecordingCommand::FeedFrames {
-                frames,
-                recorded_timestamp_ns,
-            }) => {
-                if let (Some(recs), Some(wrs)) = (&mut recorders, &mut writers) {
-                    for frame_data in &frames {
-                        let i = frame_data.camera_index;
-                        if let (Some(recorder), Some(writer)) =
-                            (recs.get_mut(i), wrs.get_mut(i))
-                        {
-                            let pre_record_ns = crate::timestamps::performance::performance_counter_nanoseconds();
-                            if let Err(e) = recorder.feed_frame(
-                                &frame_data.jpeg_bytes,
-                                frame_data.frame_number,
-                                frame_data.grab_timestamp_ns,
-                                recorded_timestamp_ns,
-                            ) {
-                                tracing::error!(
-                                    "[recording_thread] recorder error camera {i}: {e}"
-                                );
-                            }
-                            if let Err(e) = writer.write_row(
-                                frame_data.frame_number,
-                                &frame_data.timestamps,
-                                pre_record_ns,
-                                crate::timestamps::performance::performance_counter_nanoseconds(),
-                            ) {
-                                tracing::error!(
-                                    "[recording_thread] CSV write error camera {i}: {e}"
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-
-            Ok(RecordingCommand::Stop { response_tx, stats }) => {
-                let recs = recorders.take().unwrap_or_default();
-                let wrs = writers.take().unwrap_or_default();
-                let dir = recording_dir.take().unwrap_or_default();
-                let infos = camera_infos.take().unwrap_or_default();
-                let summary = finalize_all(recs, wrs, &dir, &infos, stats);
-                let _ = response_tx.send(summary);
-                return;
-            }
-
-            Ok(RecordingCommand::Shutdown) => {
-                let recs = recorders.take().unwrap_or_default();
-                let wrs = writers.take().unwrap_or_default();
-                let dir = recording_dir.take().unwrap_or_default();
-                let infos = camera_infos.take().unwrap_or_default();
-                let _ = finalize_all(recs, wrs, &dir, &infos, None);
-                return;
-            }
-
-            Err(_) => {
-                tracing::warn!(
-                    "[recording_thread] channel disconnected without Stop/Shutdown"
-                );
-                return;
-            }
-        }
-    }
+                result
+            })
+            .expect("Failed to spawn recording writer thread")
+    };
+    CameraWriter { camera_id, sender: Some(sender), queued, max_queued, max_wait_ns, thread: Some(thread) }
 }
 
-// ── Finalization ───────────────────────────────────────────────────────────
+/// One camera's writer: set up, write every queued frame in order, finish both files.
+fn write_camera(
+    config: RecorderSpawnConfig,
+    csv_path: PathBuf,
+    receiver: mpsc::Receiver<Queued>,
+    queued: &AtomicUsize,
+    max_wait_ns: &AtomicI64,
+) -> WriterResult {
+    for directory in [config.output_path.parent(), csv_path.parent()].into_iter().flatten() {
+        std::fs::create_dir_all(directory)
+            .map_err(|error| format!("could not create {}: {error}", directory.display()))?;
+    }
+    let mut recorder = VideoRecorder::spawn(config).map_err(|error| format!("could not start ffmpeg: {error}"))?;
+    let mut writer = CsvWriter::new(csv_path).map_err(|error| format!("could not create the timestamp file: {error}"))?;
+    while let Ok(item) = receiver.recv() {
+        let pre_record_ns = performance_counter_nanoseconds();
+        max_wait_ns.fetch_max(pre_record_ns - item.enqueued_ns, Ordering::Relaxed);
+        let frame = &item.frame;
+        recorder.feed_frame(&frame.jpeg_bytes, frame.frame_number, frame.grab_timestamp_ns, item.recorded_timestamp_ns)
+            .map_err(|error| format!("video write failed at frame {}: {error}", frame.frame_number))?;
+        writer.write_row(frame.frame_number, &frame.timestamps, pre_record_ns, performance_counter_nanoseconds())
+            .map_err(|error| format!("timestamp write failed at frame {}: {error}", frame.frame_number))?;
+        queued.fetch_sub(1, Ordering::SeqCst);
+    }
+    let video = recorder.output_path().to_path_buf();
+    recorder.finish().map_err(|error| format!("ffmpeg did not finish the video: {error}"))?;
+    let csv = writer.finish().map_err(|error| format!("could not finish the timestamp file: {error}"))?;
+    Ok((video, csv))
+}
 
-/// Finalize all recorders and writers, then validate per-camera frame counts.
-fn finalize_all(
-    recorders: Vec<VideoRecorder>,
-    writers: Vec<CsvWriter>,
-    recording_dir: &PathBuf,
-    camera_infos: &[(CameraIdentity, u32, u32)],
-    stats: Option<RecordingStatsSummary>,
-) -> RecordingSummary {
-    let camera_count = recorders.len();
-    let mut video_paths = Vec::with_capacity(camera_count);
-    let mut csv_paths = Vec::with_capacity(camera_count);
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
 
-    for recorder in recorders {
-        let frame_count = recorder.frame_count();
-        let path = recorder.output_path().to_path_buf();
-        match recorder.finish() {
-            Ok(timestamps) => {
-                video_paths.push(path);
-                tracing::info!(
-                    "[recording_thread] recorder finished: {frame_count} frames, {} timestamps",
-                    timestamps.len()
-                );
-            }
-            Err(e) => {
-                tracing::error!("[recording_thread] recorder finish error: {e}");
-            }
+    use super::*;
+    use crate::recording::VideoRecorderConfig;
+
+    fn identity(camera_id: &str) -> CameraIdentity {
+        CameraIdentity {
+            camera_name: "Test Cam".into(),
+            camera_index: 0,
+            camera_id: camera_id.into(),
+            device_path: String::new(),
+            formats: Vec::new(),
         }
     }
 
-    for writer in writers {
-        match writer.finish() {
-            Ok(path) => csv_paths.push(path),
-            Err(e) => tracing::error!("[recording_thread] CSV finish error: {e}"),
-        }
-    }
-
-    if camera_infos.len() != video_paths.len() || camera_infos.len() != csv_paths.len() {
-        tracing::error!(
-            "[recording_thread] mismatch: {} camera infos, {} videos, {} CSVs — recording not finalized",
-            camera_infos.len(),
-            video_paths.len(),
-            csv_paths.len(),
-        );
-        return RecordingSummary {
-            total_frames_per_camera: 0,
-            video_paths,
-            csv_paths,
-            recording_dir: PathBuf::new(),
-            stats,
+    #[test]
+    fn a_writer_that_cannot_start_fails_the_recording_with_its_reason() {
+        let root = std::env::temp_dir().join(format!("skellycam-writer-test-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let blocker = root.join("blocker"); // a file where the video folder should be
+        std::fs::write(&blocker, b"").unwrap();
+        let config = RecorderSpawnConfig {
+            output_path: blocker.join("videos").join("cam0.mp4"),
+            identity: identity("cam0"),
+            width: 64,
+            height: 48,
+            rotation: -1,
+            target_fps: 30.0,
+            config: VideoRecorderConfig::default(),
         };
-    }
-
-    let total = video_paths.len() as u64;
-    match finalizer::finalize_recording(recording_dir, camera_infos, &video_paths, &csv_paths, stats)
-    {
-        Ok(summary) => {
-            tracing::info!(
-                "[recording_thread] recording finalized → {}",
-                summary.recording_dir.display(),
-            );
-            summary
-        }
-        Err(e) => {
-            tracing::error!("[recording_thread] finalize_recording error: {e}");
-            RecordingSummary {
-                total_frames_per_camera: total,
-                video_paths,
-                csv_paths,
-                recording_dir: PathBuf::new(),
-                stats: None,
-            }
-        }
+        let handle = spawn_recording_thread(vec![config], vec![root.join("cam0.csv")], root.clone(),
+                                            vec![(identity("cam0"), 64, 48)]);
+        handle.send_frames(vec![RecordingFrameData {
+            camera_index: 0,
+            jpeg_bytes: Arc::new(vec![0u8; 16]),
+            frame_number: 0,
+            grab_timestamp_ns: 0,
+            timestamps: FrameLifecycleTimestamps::new(),
+        }], 0);
+        let error = match handle.stop(None) {
+            Ok(_) => panic!("a writer that cannot start must fail the recording"),
+            Err(error) => error.to_string(),
+        };
+        assert!(error.contains("Recording failed: camera") && error.contains("could not create"), "{error}");
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

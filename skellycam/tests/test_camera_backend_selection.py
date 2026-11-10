@@ -40,7 +40,7 @@ async def test_selection_changes_group_factory_without_replacing_application_man
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("backend", ["python", "rust"])
-async def test_shutdown_finalizes_native_recorders_before_signaling_process_exit(monkeypatch, backend):
+async def test_shutdown_closes_camera_groups_before_signaling_process_exit(monkeypatch, backend):
     from fastapi import FastAPI, Request
     from skellycam.api.http.app import shutdown
 
@@ -59,7 +59,7 @@ async def test_shutdown_finalizes_native_recorders_before_signaling_process_exit
     request = Request({"type": "http", "method": "GET", "path": "/shutdown",
                        "headers": [], "scheme": "http", "server": ("localhost", 53117), "app": app})
     await shutdown.shutdown_server(request)
-    assert finalized == ([True] if backend == "rust" else [])
+    assert finalized == [True]  # one close path for both backends
     assert app.state.global_kill_flag.value
 
 

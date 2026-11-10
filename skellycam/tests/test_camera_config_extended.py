@@ -9,6 +9,8 @@ from skellycam.core.camera.config.camera_config import (
     OrientationTypes,
     RotationTypes,
     validate_camera_configs,
+    validate_group_frame_rate,
+    MixedCameraFrameRates,
     get_video_file_type,
     DEFAULT_CAMERA_ID,
     DEFAULT_IMAGE_HEIGHT,
@@ -22,6 +24,48 @@ from skellycam.core.camera.config.image_resolution import ImageResolution
 # ---------------------------------------------------------------------------
 
 class TestValidateCameraConfigs:
+    @pytest.mark.parametrize("rates", [(60, 60.0002), (30, 30.00003), (59.94, 59.94006)])
+    def test_driver_quantization_preserves_a_common_rate(self, rates):
+        configs = {str(i): CameraConfig(camera_id=str(i), camera_index=i, framerate=rate)
+                   for i, rate in enumerate(rates)}
+        validate_group_frame_rate(configs)
+
+    @pytest.mark.parametrize("rates", [(60, 59.94), (30, 29.97), (60, -1)])
+    def test_distinct_capture_rates_are_rejected(self, rates):
+        configs = {str(i): CameraConfig(camera_id=str(i), camera_index=i, framerate=rate)
+                   for i, rate in enumerate(rates)}
+        with pytest.raises(MixedCameraFrameRates):
+            validate_group_frame_rate(configs)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("backend", ["python", "rust"])
+    @pytest.mark.parametrize("operation", ["create_and_start_camera_group", "create_or_update_camera_group"])
+    async def test_mixed_rates_fail_before_manager_touches_devices(self, backend, operation):
+        from skellycam.core.camera_group.camera_group_manager import CameraGroupManager
+        from skellycam.core.camera_group.rust_camera_group import RustCameraGroupManager
+
+        manager_type = CameraGroupManager if backend == "python" else RustCameraGroupManager
+        manager = manager_type.__new__(manager_type)
+        configs = {
+            "A": CameraConfig(camera_id="A", camera_index=0, framerate=60),
+            "B": CameraConfig(camera_id="B", camera_index=1, framerate=30),
+        }
+        with pytest.raises(MixedCameraFrameRates, match="same frame rate"):
+            await getattr(manager, operation)(configs)
+
+    def test_synchronized_rate_applies_to_selected_cameras(self) -> None:
+        cameras = {
+            "A": CameraConfig(camera_id="A", camera_index=0, framerate=30),
+            "B": CameraConfig(camera_id="B", camera_index=1, framerate=60),
+        }
+        with pytest.raises(MixedCameraFrameRates, match="A: 30 fps, B: 60 fps"):
+            validate_group_frame_rate(cameras)
+        cameras["B"].use_this_camera = False
+        validate_group_frame_rate(cameras)
+        cameras["B"].use_this_camera = True
+        cameras["B"].framerate = 30
+        validate_group_frame_rate(cameras)
+
     def test_valid_configs_pass(self) -> None:
         configs: CameraConfigs = {
             "cam0": CameraConfig(camera_id="cam0", camera_index=0),

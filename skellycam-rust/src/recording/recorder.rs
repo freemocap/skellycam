@@ -58,10 +58,24 @@ impl Default for VideoRecorderConfig {
 pub struct RecorderSpawnConfig {
     pub output_path: PathBuf,
     pub identity: CameraIdentity,
+    /// Camera image size in sensor orientation (the JPEGs ffmpeg receives).
     pub width: u32,
     pub height: u32,
+    /// SkellyCam / OpenCV rotation code applied while encoding (-1 = none).
+    pub rotation: i32,
     pub target_fps: f32,
     pub config: VideoRecorderConfig,
+}
+
+/// ffmpeg video filter that turns a camera's image upright, for SkellyCam's rotation codes
+/// (OpenCV `cv2.rotate`: 0 = 90° clockwise, 1 = 180°, 2 = 90° counterclockwise, -1 = none).
+pub fn rotation_filter(rotation: i32) -> Option<&'static str> {
+    match rotation {
+        0 => Some("transpose=clock"),
+        1 => Some("hflip,vflip"),
+        2 => Some("transpose=cclock"),
+        _ => None,
+    }
 }
 
 /// Timestamp record for a single frame written to video.
@@ -114,13 +128,15 @@ pub fn configure_ffmpeg_path(path: PathBuf) -> anyhow::Result<()> {
 impl VideoRecorder {
     /// Spawn a new ffmpeg subprocess recording to `output_path`.
     ///
-    /// `width` and `height` are rounded down to even numbers (required by
-    /// H.264 yuv420p chroma subsampling).
+    /// `width` and `height` are the camera JPEGs' size, rounded down to even numbers (required by
+    /// H.264 yuv420p chroma subsampling). ffmpeg applies `rotation` while encoding, in its own
+    /// process, so the video is upright and no frame path rotates.
     pub fn new(
         output_path: PathBuf,
         identity: &CameraIdentity,
         width: u32,
         height: u32,
+        rotation: i32,
         target_fps: f32,
         config: &VideoRecorderConfig,
     ) -> anyhow::Result<Self> {
@@ -142,7 +158,7 @@ impl VideoRecorder {
             Some(path) => FfmpegCommand::new_with_path(path),
             None => FfmpegCommand::new(),
         };
-        let mut child = command
+        command
             .overwrite()
             .format(&config.input_format)
             .codec_video(&config.input_codec)
@@ -153,7 +169,11 @@ impl VideoRecorder {
             .preset(&config.preset)
             .crf(config.crf)
             .pix_fmt(&config.pix_fmt)
-            .no_audio()
+            .no_audio();
+        if let Some(filter) = rotation_filter(rotation) {
+            command.args(["-vf", filter]);
+        }
+        let mut child = command
             .output(output_path.to_string_lossy().as_ref())
             .spawn()
             .context("Failed to spawn ffmpeg")?;
@@ -211,6 +231,7 @@ impl VideoRecorder {
             &config.identity,
             config.width,
             config.height,
+            config.rotation,
             config.target_fps,
             &config.config,
         )
@@ -430,6 +451,14 @@ impl Drop for VideoRecorder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rotation_codes_map_to_upright_ffmpeg_filters() {
+        assert_eq!(super::rotation_filter(-1), None);
+        assert_eq!(super::rotation_filter(0), Some("transpose=clock"));
+        assert_eq!(super::rotation_filter(1), Some("hflip,vflip"));
+        assert_eq!(super::rotation_filter(2), Some("transpose=cclock"));
+    }
 
     #[test]
     fn stderr_reader_reads_to_the_end_and_keeps_the_last_lines() {

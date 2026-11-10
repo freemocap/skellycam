@@ -50,6 +50,34 @@ class CameraSharedMemoryRingBuffer(SharedMemoryRingBuffer):
             raise ValueError("Cannot put new frame into read-only instance of shared memory!")
         self.put_data(frame_rec_array, overwrite_allowed=overwrite)
 
+    def frame_slot(self, frame_number: int) -> np.ndarray:
+        """Writable one-record view of the ring slot for `frame_number`, a structured array (fields by name).
+
+        Ring index and frame number are the same (readers fetch frame N at index N), so a writer that
+        skips frame numbers writes each frame at its own number, then publishes it with `commit_frame`.
+        A plain structured view keeps field access in numpy's C code: recarray attributes run in Python.
+        """
+        if self.read_only:
+            raise ValueError("Cannot write into a read-only instance of shared memory!")
+        slots = getattr(self, "_writable_slots", None)
+        if slots is None:
+            slots = self._writable_slots = self.ring_shm.buffer.view(np.ndarray)
+        slot = frame_number % self.ring_buffer_length
+        return slots[slot:slot + 1]
+
+    def commit_frame(self, frame_number: int) -> None:
+        """Publish the frame written into `frame_slot(frame_number)` as this camera's newest frame.
+
+        This instance is the ring's only writer, so it checks frame order against its own last commit.
+        """
+        last = getattr(self, "_last_committed", None)
+        if last is None:
+            last = self.last_written_index.value
+        if frame_number <= last:
+            raise ValueError(f"Frame {frame_number} is not newer than frame {last}")
+        self.last_written_index.value = frame_number
+        self._last_committed = frame_number
+
     def retrieve_latest_frame(self, frame_rec_array:np.recarray) -> np.recarray:
         frame_rec_array = self.get_latest_data(frame_rec_array)
         return frame_rec_array

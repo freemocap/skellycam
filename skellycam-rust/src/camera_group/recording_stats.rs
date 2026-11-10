@@ -261,7 +261,7 @@ mod tests {
     fn single_camera_multiframe(frame_number: i64, frame_available_ns: i64) -> MultiFramePayload {
         MultiFramePayload {
             frames: vec![FramePacket {
-                data: FrameData::Mjpg(Vec::new()),
+                data: FrameData::Mjpg(std::sync::Arc::new(Vec::new())),
                 width: 1280,
                 height: 720,
                 rotation: -1,
@@ -269,13 +269,13 @@ mod tests {
                     frame_available_ns,
                     ..FrameLifecycleTimestamps::new()
                 },
-                identity: CameraIdentity {
+                identity: std::sync::Arc::new(CameraIdentity {
                     camera_name: "Test Cam".into(),
                     camera_index: 0,
                     camera_id: "cam0".into(),
                     device_path: String::new(),
                     formats: Vec::new(),
-                },
+                }),
                 frame_number,
             }],
             frame_number,

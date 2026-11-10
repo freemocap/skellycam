@@ -7,7 +7,10 @@ import numpy as np
 from fastapi import FastAPI
 
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
-from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfigs, CameraConfig, validate_group_frame_rate
+from skellycam.core.camera.config.image_resolution import ImageResolution
+from skellycam.core.ipc.shared_memory.camera_group_shared_memory import CameraGroupSharedMemory
+from skellycam.core.types.frontend_payload_bytearray import create_frontend_payload
 from skellycam.core.camera_group.camera_group import CameraGroup, CameraGroupState
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
 from skellycam.core.ipc.pubsub.pubsub_topics import FramerateMessage
@@ -27,9 +30,20 @@ logger = logging.getLogger(__name__)
 
 import asyncio
 import json
+import threading
+import time
 from dataclasses import asdict
 from types import SimpleNamespace
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
+
+def native_display_sizes(
+    display_image_sizes: dict[CameraIdString, dict[str, float]] | None,
+) -> dict[CameraIdString, tuple[int, int]] | None:
+    """The UI's display sizes as the native preview builder takes them, truncated like the Python preview."""
+    if display_image_sizes is None:
+        return None
+    return {camera_id: (int(size["width"]), int(size["height"])) for camera_id, size in display_image_sizes.items()}
+
 
 class RustCameraGroup:
     """Lightweight adapter wrapping a Rust camera group, exposing the same
@@ -43,6 +57,15 @@ class RustCameraGroup:
         self._audio_recorder = None
         self._recording_info = None
         self._timebase = TimebaseMapping()
+        self._timebase_record = self._timebase.to_numpy_record_array()
+        # Per-camera frame-record camera info, rebuilt only when the settings object changes.
+        self._camera_info: dict[CameraIdString, np.record] = {}
+        self._camera_info_settings: CameraConfigs | None = None
+        self._shm: CameraGroupSharedMemory | None = None
+        self._pixel_stop = threading.Event()
+        self._pixel_init_lock = threading.Lock()
+        self._pixel_thread: threading.Thread | None = None
+        self.transport_error: str | None = None  # why the pixel builder stopped, if it did
 
     @property
     def id(self) -> CameraGroupIdString:
@@ -65,15 +88,101 @@ class RustCameraGroup:
         if_newer_than: int,
         display_image_sizes: dict[CameraIdString, dict[str, float]] | None = None,
     ) -> tuple[FrameNumberInt, MultiframeTimestampFloat, memoryview] | None:
-        payloads = self._native.get_latest_frame_payloads(if_newer_than=if_newer_than)
+        payloads = self._native.get_latest_frame_payloads(
+            if_newer_than=if_newer_than, display_sizes=native_display_sizes(display_image_sizes))
         group_data = payloads.get(self._group_id)
         if group_data is None:
             return None
         frame_number, timestamp_ns, py_bytes = group_data
         return (int(frame_number), float(timestamp_ns), memoryview(py_bytes))
 
+    @property
+    def started(self) -> bool:
+        return not self._closed
+
     async def start(self) -> None:
         pass
+
+    @property
+    def shm(self) -> CameraGroupSharedMemory:
+        """SkellyCam shared memory with each newest frameset's pixels, in the OpenCV backend's layout.
+
+        Created, and the pixel builder started, when a consumer first asks for it (a tracker reads frames).
+        Frames sit at their own SkellyCam frame numbers; the builder skips to the newest frameset.
+        """
+        with self._pixel_init_lock:
+            if self._pixel_stop.is_set():
+                raise RuntimeError(f"Camera group {self.id} is closed")
+            if self._shm is not None:
+                return self._shm
+            frameset = None
+            deadline = time.monotonic() + 30
+            while frameset is None:
+                frameset = self._native.newest_frameset(self.id, -1)
+                if frameset is None:
+                    if self._pixel_stop.wait(0.005):
+                        raise RuntimeError(f"Camera group {self.id} is closing")
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(f"No first frameset from Rust camera group {self.id} within 30 seconds")
+            sizes = frameset.cameras()
+            configs = {camera_id: self.configs[camera_id].model_copy(update={"resolution": ImageResolution(
+                width=sizes[camera_id]["width"], height=sizes[camera_id]["height"])}) for camera_id in self.camera_ids}
+            memory = CameraGroupSharedMemory.create(configs, self._timebase)
+            try:
+                self._write_frameset(frameset, memory)
+                worker = threading.Thread(target=self._build_pixels, args=(frameset.frame_number, memory),
+                                          name=f"RustPixels-{self.id}", daemon=True)
+                self.transport_error = None
+                worker.start()
+            except BaseException as error:
+                self.transport_error = f"{type(error).__name__}: {error}"
+                memory.unlink_and_close()
+                raise
+            self._pixel_thread = worker
+            self._shm = memory
+            return memory
+
+    def _build_pixels(self, last_frame_number: int, memory: CameraGroupSharedMemory) -> None:
+        try:
+            while not self._pixel_stop.is_set():
+                frameset = self._native.newest_frameset(self.id, last_frame_number)
+                if frameset is None:
+                    self._pixel_stop.wait(0.001)
+                    continue
+                self._write_frameset(frameset, memory)
+                last_frame_number = frameset.frame_number
+        except Exception as error:
+            self.transport_error = f"{type(error).__name__}: {error}"
+            logger.exception(f"Pixel builder for camera group {self.id} stopped")
+
+    def _camera_info_records(self, memory: CameraGroupSharedMemory) -> dict[CameraIdString, np.record]:
+        """Each camera's frame-record camera info for the current settings, at the size frames arrive in."""
+        if self._camera_info_settings is not self._configs:
+            self._camera_info = {camera_id: self._configs[camera_id].model_copy(
+                update={"resolution": memory.camera_configs[camera_id].resolution}).to_frame_camera_info()[0]
+                for camera_id in memory.camera_shms}
+            self._camera_info_settings = self._configs
+        return self._camera_info
+
+    def _write_frameset(self, frameset, memory: CameraGroupSharedMemory) -> None:
+        """Decode every camera straight into its slot, fill the metadata, then publish all cameras."""
+        number = frameset.frame_number
+        cameras = frameset.cameras()
+        slots = {camera_id: ring.frame_slot(number) for camera_id, ring in memory.camera_shms.items()}
+        frameset.decode_into({camera_id: slot["image"][0] for camera_id, slot in slots.items()})
+        camera_info = self._camera_info_records(memory)
+        for camera_id, slot in slots.items():
+            metadata = slot["frame_metadata"]
+            metadata["camera_info"] = camera_info[camera_id]
+            metadata["frame_number"] = number
+            metadata["timebase_mapping"] = self._timebase_record
+            # Only the frame-grab bracket is shared with the OpenCV backend (see rust_recording.py).
+            timestamps = metadata["timestamps"]
+            timestamps[...] = 0
+            timestamps["pre_frame_grab_ns"] = cameras[camera_id]["loop_start_ns"]
+            timestamps["post_frame_grab_ns"] = cameras[camera_id]["frame_available_ns"]
+        for ring in memory.camera_shms.values():
+            ring.commit_frame(number)
 
     async def close(self) -> None:
         if self._closed:
@@ -82,8 +191,17 @@ class RustCameraGroup:
             if self._recording_info is not None:
                 await self.stop_recording()
         finally:
+            self._pixel_stop.set()
+            await asyncio.to_thread(self._join_pixel_worker)
             await asyncio.to_thread(self._native.close_group, self.id)
             self._closed = True
+            if self._shm is not None:
+                self._shm.unlink_and_close()
+
+    def _join_pixel_worker(self) -> None:
+        with self._pixel_init_lock:
+            if self._pixel_thread is not None:
+                self._pixel_thread.join()
 
     # ── Lifecycle ──────────────────────────────────────────────────────
 
@@ -91,6 +209,7 @@ class RustCameraGroup:
         requested_configs = {key: config for key, config in requested_configs.items() if config.use_this_camera}
         if not requested_configs:
             raise ValueError('Select at least one camera; close the group to disconnect all cameras')
+        validate_group_frame_rate(requested_configs)
         configs_dict = {}
         for camera_id, config in requested_configs.items():
             resolution = config.resolution
@@ -186,31 +305,17 @@ class RustCameraGroup:
             if image is None:
                 raise RuntimeError(f"Cannot decode native frame for camera {camera_id}")
             config = self.configs[camera_id]
-            rotation = config.rotation.value
-            # The native dispatcher caches JPEGs AFTER applying display rotation.
-            # Python frame records hold sensor-oriented pixels plus a rotation to
-            # apply later (tracking, preview, recording). Restore that contract
-            # directly into the caller-owned array, without another image allocation.
-            image_shape = image.shape
-            inverse_rotation = rotation
-            if rotation == cv2.ROTATE_90_CLOCKWISE:
-                inverse_rotation = cv2.ROTATE_90_COUNTERCLOCKWISE
-                image_shape = (image.shape[1], image.shape[0], image.shape[2])
-            elif rotation == cv2.ROTATE_90_COUNTERCLOCKWISE:
-                inverse_rotation = cv2.ROTATE_90_CLOCKWISE
-                image_shape = (image.shape[1], image.shape[0], image.shape[2])
+            # Native frames are sensor-oriented, as frame records are; the record carries the
+            # rotation for consumers to apply (tracking, preview, recording).
             frame_dtype = np.dtype([
-                ("frame_metadata", FRAME_METADATA_DTYPE), ("image", np.uint8, image_shape),
+                ("frame_metadata", FRAME_METADATA_DTYPE), ("image", np.uint8, image.shape),
             ], align=True)
             frame = None if frame_buffers is None else frame_buffers.get(camera_id)
             if frame is None or frame.dtype != frame_dtype:
                 frame = np.zeros(1, dtype=frame_dtype).view(np.recarray)
                 if frame_buffers is not None:
                     frame_buffers[camera_id] = frame
-            if rotation == -1:
-                frame.image[0] = image
-            else:
-                cv2.rotate(src=image, rotateCode=inverse_rotation, dst=frame.image[0])
+            frame.image[0] = image
             metadata = frame.frame_metadata
             metadata.camera_info.camera_id = camera_id
             metadata.camera_info.camera_index = config.camera_index
@@ -227,6 +332,16 @@ class RustCameraGroup:
         return result
 
     def get_frontend_payload_by_frame_number(self, frame_number, display_image_sizes=None):
+        """The preview of one frameset; from shared memory (as the OpenCV group) while trackers read frames."""
+        if self._shm is not None:
+            if self._closed or frame_number > self._shm.latest_multiframe_number:
+                return None
+            frames = {camera_id: ring.get_data_by_index(index=frame_number, rec_array=None)
+                      for camera_id, ring in self._shm.camera_shms.items()}
+            if any(int(frame.frame_metadata.frame_number[0]) != frame_number for frame in frames.values()):
+                return None
+            _, timestamp, payload = create_frontend_payload(latest_frames=frames, display_image_sizes=display_image_sizes)
+            return payload, float(timestamp)
         latest = self.get_latest_frontend_payload(frame_number - 1, display_image_sizes)
         if latest is None or latest[0] != frame_number:
             return None
@@ -285,6 +400,10 @@ class RustCameraGroupManager:
         self._framerate_timestamps: dict[CameraGroupIdString, list[tuple[int, float]]] = {}
 
     async def create_and_start_camera_group(self, camera_configs: CameraConfigs) -> RustCameraGroup:
+        camera_configs = {key: config for key, config in camera_configs.items() if config.use_this_camera}
+        if not camera_configs:
+            raise ValueError('Select at least one camera to create a camera group')
+        validate_group_frame_rate(camera_configs)
         configs_dict: dict[str, dict] = {}
         for camera_id, config in camera_configs.items():
             configs_dict[camera_id] = {
@@ -311,6 +430,7 @@ class RustCameraGroupManager:
         return group
 
     async def create_or_update_camera_group(self, camera_configs: CameraConfigs) -> RustCameraGroup:
+        validate_group_frame_rate(camera_configs)
         matches = self._get_configs_by_group(camera_configs)
         if not matches:
             return await self.create_and_start_camera_group(camera_configs)
@@ -384,7 +504,8 @@ class RustCameraGroupManager:
         if self.closing or not self.camera_groups:
             return {}
         threshold = min((if_newer_than.get(key, -1) for key in self.camera_groups), default=-1)
-        raw = self._native.get_latest_frame_payloads(if_newer_than=threshold)
+        raw = self._native.get_latest_frame_payloads(
+            if_newer_than=threshold, display_sizes=native_display_sizes(display_image_sizes))
         result: dict[CameraGroupIdString, tuple[
             FrameNumberInt, MultiframeTimestampFloat, memoryview
         ]] = {}

@@ -72,11 +72,28 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
 
         // ── Poll for a new frame (if a group is active) ──
         if let Some(ref group_id) = active_id {
-            let payload = {
+            let slots = {
                 let manager = state.camera_manager.lock().await;
-                manager
-                    .get_group(group_id)
-                    .and_then(|g| g.latest_frontend_payload())
+                manager.get_group(group_id).map(|g| g.frame_slots())
+            };
+            let since = last_frame_number;
+            let payload = match slots {
+                Some(slots) => match tokio::task::spawn_blocking(move || {
+                    slots.frontend_payload(since, &std::collections::HashMap::new())
+                })
+                .await
+                {
+                    Ok(Ok(payload)) => payload,
+                    Ok(Err(error)) => {
+                        tracing::warn!("[websocket] preview failed: {error}");
+                        None
+                    }
+                    Err(error) => {
+                        tracing::warn!("[websocket] preview task failed: {error}");
+                        None
+                    }
+                },
+                None => None,
             };
 
             if let Some(payload) = payload {

@@ -1,10 +1,9 @@
 import logging
-import math
 import sys
 
 import cv2
 
-from skellycam.core.camera.config.camera_config import CameraConfig
+from skellycam.core.camera.config.camera_config import CameraConfig, frame_rates_equal
 from skellycam.core.camera.opencv.opencv_helpers.opencv_extract_config import extract_config_from_cv2_capture
 from skellycam.core.camera.config.exposure_modes import ExposureModes
 
@@ -27,7 +26,7 @@ def frame_rate_changed(current: float, requested: float) -> bool:
     below 1e-4 (that quantization, up to 1000 fps) is the same rate. A non-positive request names no
     rate, as when a camera opens.
     """
-    return requested > 0 and not math.isclose(requested, current, rel_tol=1e-4)
+    return requested > 0 and not frame_rates_equal(requested, current)
 
 
 def _apply_exposure(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> None:
