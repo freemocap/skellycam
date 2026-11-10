@@ -66,3 +66,12 @@
   review = {Reviewed the Windows, Linux and macOS enumerators in the installed 1.4.0 package and the matching v1.4.0 tag.},
   claim = {CameraInfo.path is the DirectShow DevicePath for DSHOW, the Media Foundation symbolic link for MSMF, the /dev/video* node on Linux and the AVFoundation uniqueID on macOS.}
 }
+
+@online{ffmpegSidecarChildPipes,
+  title = {ffmpeg-sidecar FfmpegCommand and FfmpegChild standard streams},
+  author = {{ffmpeg-sidecar contributors}},
+  url = {https://docs.rs/ffmpeg-sidecar/2.5.1/ffmpeg_sidecar/child/struct.FfmpegChild.html},
+  urldate = {2026-11-09},
+  review = {Reviewed FfmpegCommand::new_with_path, set_expected_loglevel and FfmpegChild::wait in the locally installed 2.5.1 source. Reproduced the resulting stall on Windows: an ffmpeg child fed camera MJPEG at 30 and 60 fps with stderr unread stopped accepting stdin after about 570 frames, and completed 3600 frames when stderr was read.},
+  claim = {FfmpegCommand pipes the child's stdin, stdout and stderr and adds -loglevel level+info. FfmpegChild::wait drains stderr only when it is called, so a caller that writes stdin without reading stderr can block once the stderr pipe fills.}
+}
