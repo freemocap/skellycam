@@ -112,10 +112,14 @@ fn check_commands(command_receiver: &mpsc::Receiver<CameraCommand>) -> CommandRe
 /// compares requests (see `CameraConfig::needs_stream_restart`), never the
 /// negotiated format against a request.
 ///
+/// `device_index` is this camera's index in `ctx`'s own device enumeration
+/// (see `resolve_device_index`), not the index remembered in the config.
+///
 /// Returns the (possibly new) stream, actual_width, and actual_height.
 unsafe fn apply_config(
     ctx: CapContext,
     stream: CapStream,
+    device_index: u32,
     label: &str,
     new_config: &CameraConfig,
     old_config: &CameraConfig,
@@ -132,7 +136,7 @@ unsafe fn apply_config(
 
         let format_info = match find_best_mjpg(
             ctx,
-            new_config.camera_index,
+            device_index,
             new_config.width,
             new_config.height,
             new_config.framerate,
@@ -142,7 +146,7 @@ unsafe fn apply_config(
             Err(e) => {
                 tracing::error!("Camera {label}: failed to find format for new config: {e}");
                 // Reopen with the original format as fallback
-                match find_best_mjpg(ctx, old_config.camera_index, old_config.width, old_config.height, old_config.framerate, label) {
+                match find_best_mjpg(ctx, device_index, old_config.width, old_config.height, old_config.framerate, label) {
                     Ok(f) => f,
                     Err(_) => {
                         tracing::error!("Camera {label}: fatal — cannot reopen stream");
@@ -152,7 +156,7 @@ unsafe fn apply_config(
             }
         };
 
-        let new_stream = match open_stream_raw(ctx, new_config.camera_index, label, &format_info) {
+        let new_stream = match open_stream_raw(ctx, device_index, label, &format_info) {
             Ok(s) => s,
             Err(e) => {
                 tracing::error!("Camera {label}: failed to open new stream: {e}");
@@ -203,14 +207,40 @@ fn run_camera_thread(
             shared_config.lock().unwrap().clone()
         };
 
-        let format_info = find_best_mjpg(
+        // Every failure below releases the context (and the stream, once opened).
+        let device_paths: Vec<String> = (0..Cap_getDeviceCount(ctx))
+            .map(|index| cstr_to_string(Cap_getDeviceUniqueID(ctx, index)).unwrap_or_default())
+            .collect();
+        let device_index = match resolve_device_index(
+            &identity.device_path, initial_config.camera_index, &device_paths,
+        ) {
+            Ok(index) => index,
+            Err(error) => {
+                Cap_releaseContext(ctx);
+                return Err(error.context(format!("Camera {label}")));
+            }
+        };
+        if device_index != initial_config.camera_index {
+            tracing::warn!(
+                "Camera {label}: device now enumerates at index {device_index}, not {}; opening by device path",
+                initial_config.camera_index,
+            );
+        }
+
+        let format_info = match find_best_mjpg(
             ctx,
-            initial_config.camera_index,
+            device_index,
             initial_config.width,
             initial_config.height,
             initial_config.framerate,
             label,
-        )?;
+        ) {
+            Ok(info) => info,
+            Err(error) => {
+                Cap_releaseContext(ctx);
+                return Err(error);
+            }
+        };
 
         // Write actual negotiated settings back to shared config so that
         // external consumers (recording path, API responses) see the real values.
@@ -221,8 +251,13 @@ fn run_camera_thread(
             guard.height = format_info.height;
         }
 
-        let mut stream =
-            open_stream_raw(ctx, initial_config.camera_index, label, &format_info)?;
+        let mut stream = match open_stream_raw(ctx, device_index, label, &format_info) {
+            Ok(stream) => stream,
+            Err(error) => {
+                Cap_releaseContext(ctx);
+                return Err(error);
+            }
+        };
 
         configure_exposure(ctx, stream, label, &initial_config.exposure_mode, initial_config.exposure);
         if let Err(error) = stabilize_raw(ctx, stream, label, command_receiver) {
@@ -255,7 +290,7 @@ fn run_camera_thread(
                 }
                 CommandResult::Configure(new_config) => {
                     (stream, actual_width, actual_height) = apply_config(
-                        ctx, stream, label, &new_config, &active_config,
+                        ctx, stream, device_index, label, &new_config, &active_config,
                         actual_width, actual_height, &shared_config, command_receiver,
                     ).map_err(|error| {
                         Cap_closeStream(ctx, stream);
@@ -281,7 +316,7 @@ fn run_camera_thread(
                     }
                     CommandResult::Configure(new_config) => {
                         (stream, actual_width, actual_height) = apply_config(
-                            ctx, stream, label, &new_config, &active_config,
+                            ctx, stream, device_index, label, &new_config, &active_config,
                             actual_width, actual_height, &shared_config, command_receiver,
                         ).map_err(|error| {
                             Cap_closeStream(ctx, stream);
@@ -309,7 +344,7 @@ fn run_camera_thread(
                     }
                     CommandResult::Configure(new_config) => {
                         (stream, actual_width, actual_height) = apply_config(
-                            ctx, stream, label, &new_config, &active_config,
+                            ctx, stream, device_index, label, &new_config, &active_config,
                             actual_width, actual_height, &shared_config, command_receiver,
                         ).map_err(|error| {
                             Cap_closeStream(ctx, stream);
@@ -460,6 +495,34 @@ fn run_camera_thread(
         tracing::info!("Camera {label}: shutdown complete");
     }
     Ok(())
+}
+
+/// This camera's index in a capture context's own device enumeration.
+///
+/// The remembered index comes from an earlier enumeration (detection, group
+/// creation). A USB reset or hot-plug can re-enumerate devices before this
+/// thread's context is created, so the remembered index can name a different
+/// camera or none. The device path (`Cap_getDeviceUniqueID`) identifies the
+/// device; an empty path (an identity built without detection) keeps the
+/// remembered index.
+fn resolve_device_index(
+    device_path: &str,
+    remembered_index: u32,
+    device_paths: &[String],
+) -> anyhow::Result<u32> {
+    if device_path.is_empty() {
+        return Ok(remembered_index);
+    }
+    device_paths
+        .iter()
+        .position(|path| path == device_path)
+        .map(|index| index as u32)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "device {device_path} is not connected ({} video devices enumerated)",
+                device_paths.len()
+            )
+        })
 }
 
 /// Find the best MJPG format matching the requested dimensions and framerate.
@@ -742,6 +805,33 @@ fn stabilize_raw(
     }
     tracing::debug!("Camera {label}: raw stabilization complete ({STABILIZATION_FRAMES} frames)");
     Ok(())
+}
+
+#[cfg(test)]
+mod device_index_tests {
+    use super::resolve_device_index;
+
+    fn paths(names: &[&str]) -> Vec<String> {
+        names.iter().map(|name| name.to_string()).collect()
+    }
+
+    #[test]
+    fn follows_the_device_path_when_enumeration_order_changed() {
+        let enumerated = paths(&["usb#port-20", "usb#port-19", "usb#port-5"]);
+        assert_eq!(resolve_device_index("usb#port-19", 0, &enumerated).unwrap(), 1);
+    }
+
+    #[test]
+    fn a_missing_device_fails_instead_of_opening_another_camera() {
+        let enumerated = paths(&["usb#port-20", "usb#port-5"]);
+        let error = resolve_device_index("usb#port-19", 0, &enumerated).unwrap_err().to_string();
+        assert!(error.contains("usb#port-19") && error.contains("not connected"), "{error}");
+    }
+
+    #[test]
+    fn identities_without_a_path_keep_the_remembered_index() {
+        assert_eq!(resolve_device_index("", 3, &paths(&["usb#port-20"])).unwrap(), 3);
+    }
 }
 
 #[cfg(test)]
