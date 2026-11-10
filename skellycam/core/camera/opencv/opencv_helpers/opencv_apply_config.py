@@ -62,6 +62,12 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
     should_apply_resolution = initial_config or prior_config.resolution != config.resolution
     should_apply_framerate = False  # framerate application is disabled
     should_apply_capture_fourcc = initial_config or prior_config.capture_fourcc != config.capture_fourcc
+    if int(cv2_vid_capture.get(cv2.CAP_PROP_BACKEND)) == cv2.CAP_DSHOW:
+        # create_cv2_video_capture already set the initial format in DirectShow's order; setting size and
+        # FourCC again would restart the stream twice more, once in YUY2. A size change restarts the
+        # stream in the first supported subtype, so FourCC must follow it. [@opencv412DirectShowSetup]
+        should_apply_resolution = should_apply_resolution and not initial_config
+        should_apply_capture_fourcc = (should_apply_capture_fourcc or should_apply_resolution) and not initial_config
 
     try:
         if not cv2_vid_capture.isOpened():

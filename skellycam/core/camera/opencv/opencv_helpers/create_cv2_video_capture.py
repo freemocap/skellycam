@@ -57,12 +57,25 @@ def create_cv2_video_capture(
             # streaming begins.  Without this, the driver may default to a lower framerate
             # (e.g. 15fps instead of 30fps) or a format the camera cannot deliver, causing
             # select() timeouts or degraded performance.
-            if config.capture_fourcc:
-                capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc))
-            capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
-            capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
-            if config.framerate > 0:
-                capture.set(cv2.CAP_PROP_FPS, config.framerate)
+            if cap_backend.id == cv2.CAP_DSHOW:
+                # OpenCV 4.12's DirectShow backend restarts the stream for each of these settings and
+                # each restart forgets the previous request: frame-rate and size restarts select the
+                # first supported subtype (YUY2 before MJPG), and a size restart keeps the previous
+                # stream's frame rate. Frame rate first keeps every later restart at the target rate;
+                # FourCC last leaves the stream in the requested format. [@opencv412DirectShowSetup]
+                if config.framerate > 0:
+                    capture.set(cv2.CAP_PROP_FPS, config.framerate)
+                capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
+                capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
+                if config.capture_fourcc:
+                    capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc))
+            else:
+                if config.capture_fourcc:
+                    capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc))
+                capture.set(cv2.CAP_PROP_FRAME_WIDTH, config.resolution.width)
+                capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
+                if config.framerate > 0:
+                    capture.set(cv2.CAP_PROP_FPS, config.framerate)
 
             # Minimize the driver-side frame buffer to reduce stale-frame latency.
             # This makes grab() timestamps a tighter proxy for actual frame capture time.

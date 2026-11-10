@@ -42,6 +42,14 @@
   claim = {DirectShow auto exposure is enabled only when the rounded property value equals one. Resolution and FourCC changes can stop and recreate the capture stream. Auto-exposure readback is unsupported in this backend version.}
 }
 
+@online{opencv412DirectShowSetup,
+  title = {OpenCV 4.12.0 DirectShow device setup and stream restarts},
+  url = {https://github.com/opencv/opencv/blob/4.12.0/modules/videoio/src/cap_dshow.cpp#L2755-L2830},
+  urldate = {2026-11-10},
+  review = {Read VideoCapture_DShow::setProperty (frame width, frame height, FourCC and FPS cases), its constructor and open, and videoInput::setIdealFramerate, setupDevice, setupDeviceFourcc, stopDevice and the format selection in setup, in the version matching the installed OpenCV (4.12.0). The USB bandwidth each resulting stream reserves depends on the camera and is not derivable from this source.},
+  claim = {Each FPS, frame size or FourCC setting stops and recreates the capture device, and stopDevice discards the previously requested size, subtype and frame rate. FPS and size restarts request no subtype, so setup tries subtypes in list order with YUY2 before MJPG; size and FourCC restarts keep the previous stream's frame rate; only a FourCC setting requests MJPG. Open-time size and FourCC parameters are applied before open, but a later FPS setting discards them.}
+}
+
 @online{ffmpegSidecarCommand,
   title = {ffmpeg-sidecar FfmpegCommand},
   author = {{ffmpeg-sidecar contributors}},
