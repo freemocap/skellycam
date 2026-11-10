@@ -413,21 +413,16 @@ async fn stop_recording(
         lines.push(format!("[recording]   timestamps: {}", csv_path.display()));
     }
     lines.push(format!(
-        "[recording]   info JSON: {}",
-        summary.info_json_path.display()
+        "[recording]   folder: {}",
+        summary.recording_dir.display()
     ));
     tracing::info!("\n{}", lines.join("\n"));
 
     let total_frames = summary.total_frames_per_camera as i32;
-    let recording_path = summary
-        .info_json_path
-        .parent()
-        .map(|p| p.display().to_string())
-        .unwrap_or_default();
+    let recording_path = summary.recording_dir.display().to_string();
     let recording_name = summary
-        .info_json_path
-        .parent()
-        .and_then(|p| p.file_name())
+        .recording_dir
+        .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 

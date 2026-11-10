@@ -9,11 +9,13 @@ logger = logging.getLogger(__name__)
 def save_timestamp_statistics_summary(
         multiframe_rows_recarray: np.recarray,
         recording_info: RecordingInfo,
-        number_of_cameras: int,) -> RecordingTimestampsStats:
+        number_of_cameras: int,
+        stage_columns: list[str] | None = None,) -> RecordingTimestampsStats:
     stats = RecordingTimestampsStats.from_multiframe_rows(
         multiframe_rows=multiframe_rows_recarray,
         recording_info=recording_info,
         number_of_cameras=number_of_cameras,
+        stage_columns=stage_columns,
     )
 
     stats_json_path = recording_info.timestamp_stats_json_file_path

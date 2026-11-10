@@ -3,7 +3,8 @@ import time
 
 import numpy as np
 from skellycam.core.camera.config.camera_config import CameraConfigs
-from skellycam.core.timestamps.numpy_timestamps.create_camera_csvs import create_and_save_camera_csvs
+from skellycam.core.timestamps.numpy_timestamps.create_camera_csvs import create_and_save_camera_csvs, \
+    stamped_stage_columns
 from skellycam.core.timestamps.numpy_timestamps.create_multi_frame_csvs import \
     create_and_save_multiframe_csv
 from skellycam.core.timestamps.numpy_timestamps.process_recording_timestamps import \
@@ -76,7 +77,9 @@ def validate_frame_metadatas(frame_metadatas_by_camera: dict[CameraIdString, lis
 async def process_and_save_recording_timestamps(
         frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
         camera_configs: CameraConfigs,
-        recording_info: RecordingInfo, ) -> RecordingTimestampsStats:
+        recording_info: RecordingInfo,
+        additional_lifecycle_timestamps_by_camera: dict[CameraIdString, dict[str, np.ndarray]] | None = None,
+) -> RecordingTimestampsStats:
     tik = time.perf_counter()
     (frame_numbers, timebase_mapping) = validate_frame_metadatas(frame_metadatas_by_camera=frame_metadatas_by_camera,
                                                                  camera_configs=camera_configs)
@@ -99,6 +102,8 @@ async def process_and_save_recording_timestamps(
         frame_numbers=frame_numbers,
     )
 
+    # Report only lifecycle events this recording stamped; a backend leaves events it does not have at 0.
+    stage_columns = stamped_stage_columns(all_timestamps)
     timestamps_rows_by_camera = create_and_save_camera_csvs(
         all_timestamps=all_timestamps,
         all_durations=all_durations,
@@ -106,7 +111,9 @@ async def process_and_save_recording_timestamps(
         camera_configs=camera_configs,
         connection_frame_numbers=frame_numbers,
         recording_start_time_ns=recording_start_time_ns,
-        timebase_mapping=timebase_mapping
+        timebase_mapping=timebase_mapping,
+        stage_columns=stage_columns,
+        additional_lifecycle_timestamps_by_camera=additional_lifecycle_timestamps_by_camera,
     )
     tok_cams = time.perf_counter()
     print(f"Processed timestamps for {len(frame_metadatas_by_camera)} cameras in {tok_cams - tik_cams:.3f} seconds.")
@@ -114,6 +121,7 @@ async def process_and_save_recording_timestamps(
     tik_mf = time.perf_counter()
     multiframe_rows = create_and_save_multiframe_csv(timestamps_rows_by_camera=timestamps_rows_by_camera,
                                                      recording_info=recording_info,
+                                                     stage_columns=stage_columns,
                                                      )
     tok_mf = time.perf_counter()
     print(f"Processed multiframe timestamps in {tok_mf - tik_mf:.3f} seconds.")
@@ -121,4 +129,5 @@ async def process_and_save_recording_timestamps(
     # Save statistics summary
     return save_timestamp_statistics_summary(multiframe_rows_recarray=multiframe_rows,
                                              recording_info=recording_info,
-                                             number_of_cameras=len(frame_metadatas_by_camera))
+                                             number_of_cameras=len(frame_metadatas_by_camera),
+                                             stage_columns=stage_columns)

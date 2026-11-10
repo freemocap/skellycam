@@ -344,7 +344,7 @@ fn run(receiver: mpsc::Receiver<RecordingCommand>) {
 
 // ── Finalization ───────────────────────────────────────────────────────────
 
-/// Finalize all recorders and writers, then write `recording_info.json`.
+/// Finalize all recorders and writers, then validate per-camera frame counts.
 fn finalize_all(
     recorders: Vec<VideoRecorder>,
     writers: Vec<CsvWriter>,
@@ -382,7 +382,7 @@ fn finalize_all(
 
     if camera_infos.len() != video_paths.len() || camera_infos.len() != csv_paths.len() {
         tracing::error!(
-            "[recording_thread] mismatch: {} camera infos, {} videos, {} CSVs — skipping recording_info.json",
+            "[recording_thread] mismatch: {} camera infos, {} videos, {} CSVs — recording not finalized",
             camera_infos.len(),
             video_paths.len(),
             csv_paths.len(),
@@ -391,7 +391,7 @@ fn finalize_all(
             total_frames_per_camera: 0,
             video_paths,
             csv_paths,
-            info_json_path: PathBuf::new(),
+            recording_dir: PathBuf::new(),
             stats,
         };
     }
@@ -401,8 +401,8 @@ fn finalize_all(
     {
         Ok(summary) => {
             tracing::info!(
-                "[recording_thread] recording_info.json written → {}",
-                summary.info_json_path.display(),
+                "[recording_thread] recording finalized → {}",
+                summary.recording_dir.display(),
             );
             summary
         }
@@ -412,7 +412,7 @@ fn finalize_all(
                 total_frames_per_camera: total,
                 video_paths,
                 csv_paths,
-                info_json_path: PathBuf::new(),
+                recording_dir: PathBuf::new(),
                 stats: None,
             }
         }

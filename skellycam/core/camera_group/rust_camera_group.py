@@ -147,8 +147,8 @@ class RustCameraGroup:
                 await asyncio.to_thread(recorder.stop)
         if not group_data.get("video_paths") or not group_data.get("total_frames_per_camera"):
             raise RuntimeError("Rust recorder did not produce video frames")
-        from skellycam.core.camera_group.rust_recording import finalize_native_recording
-        stats = await finalize_native_recording(
+        from skellycam.core.camera_group.rust_recording import finalize_rust_recording
+        stats = await finalize_rust_recording(
             summary=group_data, recording_info=info,
             camera_configs=self.configs, timebase=self._timebase,
         )
@@ -219,13 +219,10 @@ class RustCameraGroup:
             metadata.frame_number = source["frame_number"]
             metadata.timebase_mapping = self._timebase.to_numpy_record_array()
             times = source["timestamps"]
-            metadata.timestamps.initialized_ns = times["loop_start_ns"]
+            # Only the frame-grab bracket is shared with the OpenCV backend (see rust_recording.py).
+            # The other lifecycle fields stay 0; the performance panel reports them as not measured.
             metadata.timestamps.pre_frame_grab_ns = times["loop_start_ns"]
             metadata.timestamps.post_frame_grab_ns = times["frame_available_ns"]
-            metadata.timestamps.pre_frame_retrieve_ns = times["frame_available_ns"]
-            metadata.timestamps.post_frame_retrieve_ns = times["post_jpeg_extract_ns"]
-            metadata.timestamps.pre_copy_to_camera_shm_ns = times["pre_send_ns"]
-            metadata.timestamps.post_copy_to_camera_shm_ns = times["gatherer_received_ns"]
             result[camera_id] = frame
         return result
 

@@ -1,51 +1,29 @@
-//! Recording finalizer: validates frame counts across cameras, generates
-//! RecordingInfo JSON, and produces a human-readable summary.
+//! Recording finalizer: validates that every camera recorded the same number of
+//! frames and reports where the recording's files are.
 //!
-//! Fed by the VideoRecorder (video files) and CsvWriter (timestamp CSVs).
-//! Reads the CSV files to count frames and validate consistency.
+//! Fed by the VideoRecorder (video files) and CsvWriter (per-camera timestamp CSVs).
+//! Reads the CSV files to count frames and validate consistency. SkellyCam's Python
+//! recording finalizer then writes the recording's info and timestamp files.
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 
 use crate::camera::CameraIdentity;
 
-/// Metadata about a single camera in the recording.
-#[derive(serde::Serialize)]
-struct CameraRecordingInfo {
-    camera_index: i32,
-    display_name: String,
-    unique_identifier: String,
-    width: u32,
-    height: u32,
-    frame_count: u64,
-    video_path: String,
-    timestamp_csv_path: String,
-}
-
-/// The RecordingInfo JSON written alongside the video and CSV files.
-#[derive(serde::Serialize)]
-struct RecordingInfo {
-    recording_directory: String,
-    camera_count: usize,
-    total_frames_per_camera: u64,
-    cameras: Vec<CameraRecordingInfo>,
-}
-
 pub struct RecordingSummary {
     pub total_frames_per_camera: u64,
     pub video_paths: Vec<PathBuf>,
     pub csv_paths: Vec<PathBuf>,
-    pub info_json_path: PathBuf,
+    /// Folder holding this recording; empty when the recording failed to finalize.
+    pub recording_dir: PathBuf,
     pub stats: Option<crate::camera_group::recording_stats::RecordingStatsSummary>,
 }
 
-/// Validate recording output and generate RecordingInfo JSON.
+/// Validate recording output.
 ///
-/// Reads each camera's timestamp CSV to count frames, validates that all
-/// cameras recorded the same number of frames, then writes a RecordingInfo
-/// JSON file to the recording directory.
+/// Reads each camera's timestamp CSV to count frames and validates that all
+/// cameras recorded the same number of frames.
 pub fn finalize_recording(
     recording_dir: &Path,
     camera_infos: &[(CameraIdentity, u32, u32)],  // (identity, width, height)
@@ -62,36 +40,10 @@ pub fn finalize_recording(
         );
     }
 
-    let mut cameras: Vec<CameraRecordingInfo> = Vec::new();
-    let mut frame_counts: Vec<u64> = Vec::new();
-
-    for idx in 0..camera_infos.len() {
-        let (identity, width, height) = &camera_infos[idx];
-        let video_path = &video_paths[idx];
-        let csv_path = &csv_paths[idx];
-
+    let mut frame_counts: Vec<u64> = Vec::with_capacity(csv_paths.len());
+    for (idx, csv_path) in csv_paths.iter().enumerate() {
         let frame_count = count_csv_rows(csv_path)
             .with_context(|| format!("Failed to read timestamp CSV for camera {idx}"))?;
-
-        cameras.push(CameraRecordingInfo {
-            camera_index: identity.camera_index,
-            display_name: identity.camera_name.clone(),
-            unique_identifier: identity.camera_id.clone(),
-            width: *width,
-            height: *height,
-            frame_count,
-            video_path: video_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-            timestamp_csv_path: csv_path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string(),
-        });
-
         frame_counts.push(frame_count);
     }
 
@@ -105,28 +57,11 @@ pub fn finalize_recording(
         }
     }
 
-    let info = RecordingInfo {
-        recording_directory: recording_dir
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string(),
-        camera_count: cameras.len(),
-        total_frames_per_camera: first_count,
-        cameras,
-    };
-
-    let json_path = recording_dir.join("native_recording_summary.json");
-    let json_string = serde_json::to_string_pretty(&info)
-        .context("Failed to serialize RecordingInfo")?;
-    fs::write(&json_path, json_string)
-        .context("Failed to write recording_info.json")?;
-
     Ok(RecordingSummary {
         total_frames_per_camera: first_count,
         video_paths: video_paths.to_vec(),
         csv_paths: csv_paths.to_vec(),
-        info_json_path: json_path,
+        recording_dir: recording_dir.to_path_buf(),
         stats,
     })
 }

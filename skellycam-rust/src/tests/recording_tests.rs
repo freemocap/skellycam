@@ -6,7 +6,7 @@
 //! Verifies:
 //!   - `start_recording()` / `stop_recording()` complete without errors
 //!   - `RecordingSummary` has correct frame counts
-//!   - mp4 files, CSV timestamps, and `recording_info.json` exist on disk
+//!   - mp4 files and per-camera timestamp CSVs exist on disk
 //!   - Clean shutdown after recording
 
 use std::collections::HashMap;
@@ -196,8 +196,8 @@ pub fn run(args: &RecordingArgs) -> anyhow::Result<()> {
     tracing::info!("  RecordingSummary:");
     tracing::info!("    total_frames_per_camera: {}", summary.total_frames_per_camera);
     tracing::info!(
-        "    info_json_path: {}",
-        summary.info_json_path.display()
+        "    recording_dir: {}",
+        summary.recording_dir.display()
     );
     let expected_frames = RECORD_FRAMES as u64;
     if summary.total_frames_per_camera != expected_frames {
@@ -315,33 +315,14 @@ fn verify_disk_output(
     summary: &skellycam::recording::finalizer::RecordingSummary,
     _expected_frame_count: u64,
 ) -> anyhow::Result<()> {
-    // 1. recording_info.json exists and is valid
-    if summary.info_json_path.as_os_str().is_empty() {
-        tracing::warn!("  ✗ recording_info.json path is empty — file was not written");
-    } else if summary.info_json_path.exists() {
-        let content = std::fs::read_to_string(&summary.info_json_path)?;
-        let parsed: serde_json::Value = serde_json::from_str(&content)?;
-        tracing::info!("  ✓ recording_info.json exists:");
-        tracing::info!(
-            "    recording_directory: {}",
-            parsed.get("recording_directory")
-                .and_then(|v| v.as_str())
-                .unwrap_or("?")
-        );
-        tracing::info!(
-            "    camera_count: {}",
-            parsed.get("camera_count")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-1)
-        );
-        tracing::info!(
-            "    total_frames_per_camera: {}",
-            parsed.get("total_frames_per_camera")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0)
-        );
+    // 1. Recording folder exists
+    if summary.recording_dir.as_os_str().is_empty() {
+        tracing::warn!("  ✗ recording folder is empty — recording did not finalize");
+    } else if summary.recording_dir.is_dir() {
+        tracing::info!("  ✓ recording folder exists: {}", summary.recording_dir.display());
+        tracing::info!("    total_frames_per_camera: {}", summary.total_frames_per_camera);
     } else {
-        tracing::warn!("  ✗ recording_info.json does not exist: {}", summary.info_json_path.display());
+        tracing::warn!("  ✗ recording folder does not exist: {}", summary.recording_dir.display());
     }
 
     // 2. Each mp4 file exists and has non-zero size

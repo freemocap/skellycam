@@ -549,7 +549,7 @@ fn recording_summary_to_pydict(
     py: Python<'_>,
     summary: &crate::recording::finalizer::RecordingSummary,
 ) -> PyResult<Py<PyDict>> {
-    if summary.info_json_path.as_os_str().is_empty() || summary.total_frames_per_camera == 0 {
+    if summary.recording_dir.as_os_str().is_empty() || summary.total_frames_per_camera == 0 {
         return Err(PyRuntimeError::new_err("Native recording failed to finalize all camera videos and timestamps; see recorder logs"));
     }
     let d = PyDict::new(py);
@@ -569,10 +569,6 @@ fn recording_summary_to_pydict(
             .iter()
             .map(|p| p.to_string_lossy().to_string())
             .collect::<Vec<_>>(),
-    )?;
-    d.set_item(
-        "info_json_path",
-        summary.info_json_path.to_string_lossy().to_string(),
     )?;
     if let Some(ref stats) = summary.stats {
         let stats_json = serde_json::to_string(stats)

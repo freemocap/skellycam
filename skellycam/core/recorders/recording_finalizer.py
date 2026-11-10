@@ -38,16 +38,20 @@ class RecordingFinalizer:
     recording_info: RecordingInfo
     camera_configs: CameraConfigs
     frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]]
+    # Lifecycle events a capture backend has beyond the shared ones, per camera, one value per frame.
+    additional_lifecycle_timestamps_by_camera: dict[CameraIdString, dict[str, np.ndarray]] | None = None
 
     @classmethod
     def create(cls,
                recording_info: RecordingInfo,
                camera_configs: CameraConfigs,
                frame_metadatas_by_camera: dict[CameraIdString, list[np.recarray]],
+               additional_lifecycle_timestamps_by_camera: dict[CameraIdString, dict[str, np.ndarray]] | None = None,
                ):
         return cls(recording_info=recording_info,
                    frame_metadatas_by_camera=frame_metadatas_by_camera,
                    camera_configs=camera_configs,
+                   additional_lifecycle_timestamps_by_camera=additional_lifecycle_timestamps_by_camera,
                    )
 
     async def finalize_recording(self) -> "RecordingTimestampsStats":
@@ -58,6 +62,7 @@ class RecordingFinalizer:
             recording_info=self.recording_info,
             camera_configs=self.camera_configs,
             frame_metadatas_by_camera=self.frame_metadatas_by_camera,
+            additional_lifecycle_timestamps_by_camera=self.additional_lifecycle_timestamps_by_camera,
         )
 
         # self._remux_videos_with_audio_and_timestamps()

@@ -18,7 +18,14 @@ pub struct CsvWriter {
 
 impl CsvWriter {
     /// Create a new CSV file at `path` and write the header row.
-    /// Column names use full words with dot-separated hierarchy.
+    ///
+    /// Columns are this backend's frame lifecycle events in perf-counter nanoseconds.
+    /// `pre_frame_grab_ns` / `post_frame_grab_ns` are the frame-grab bracket shared with
+    /// SkellyCam's OpenCV backend: the capture loop starts waiting for the next frame
+    /// (barrier exit) / the next frame is available to the loop (first poll with
+    /// `Cap_hasNewFrame` true). The other columns are events only this backend has.
+    /// SkellyCam's Python recording finalizer rewrites this file in the standard
+    /// per-camera timestamps layout, keeping these events.
     pub fn new(path: PathBuf) -> anyhow::Result<Self> {
         let writer = csv::Writer::from_path(&path)
             .context("Failed to create timestamp CSV file")?;
@@ -27,13 +34,13 @@ impl CsvWriter {
         writer
             .write_record(&[
                 "frame_number",
-                "timestamps.loop_start_ns",
-                "timestamps.frame_available_ns",
-                "timestamps.post_jpeg_extract_ns",
-                "timestamps.pre_send_ns",
-                "timestamps.gatherer_received_ns",
-                "timestamps.pre_frame_record_ns",
-                "timestamps.post_frame_record_ns",
+                "pre_frame_grab_ns",
+                "post_frame_grab_ns",
+                "copied_from_driver_ns",
+                "sent_to_multiframe_ns",
+                "received_by_multiframe_ns",
+                "pre_write_to_video_encoder_ns",
+                "post_write_to_video_encoder_ns",
             ])
             .context("Failed to write CSV header")?;
         writer

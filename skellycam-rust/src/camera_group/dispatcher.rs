@@ -114,7 +114,7 @@ pub fn spawn_dispatcher(
                                         total_frames_per_camera: 0,
                                         video_paths: Vec::new(),
                                         csv_paths: Vec::new(),
-                                        info_json_path: PathBuf::new(),
+                                        recording_dir: PathBuf::new(),
                                         stats: None,
                                     }
                                 }
@@ -127,7 +127,7 @@ pub fn spawn_dispatcher(
                                 total_frames_per_camera: 0,
                                 video_paths: Vec::new(),
                                 csv_paths: Vec::new(),
-                                info_json_path: PathBuf::new(),
+                                recording_dir: PathBuf::new(),
                                 stats: stats_summary,
                             }
                         };
@@ -371,7 +371,7 @@ fn build_recorder_configs(
     for frame in &payload.frames {
         let identity = &frame.identity;
         let video_path = videos_dir.join(format!("{session_name}.id-{}.idx-{}.mp4", identity.camera_id, identity.camera_index));
-        let csv_path = timestamps_dir.join(format!("{session_name}.camera{}.native_timestamps.csv", identity.camera_id));
+        let csv_path = timestamps_dir.join(format!("{session_name}.camera{}.timestamps.csv", identity.camera_id));
 
         // Look up the actual negotiated framerate from the shared camera config.
         // The camera thread writes the real FPS here after find_best_mjpg.

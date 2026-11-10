@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+from numpy.lib import recfunctions
 
 from skellycam.core.camera.config.camera_config import CameraConfigs
 from skellycam.core.timestamps.timebase_mapping import TimebaseMapping
@@ -11,6 +12,45 @@ from skellycam.utilities.time_unit_conversion import ns_to_sec, ns_to_ms
 
 logger = logging.getLogger(__name__)
 
+STAGE_COLUMN_PREFIXES = ('frame.', 'duration.', 'total.')
+
+# Lifecycle timestamps each duration is computed from (calculate_durations in calculate_timestamps_numpy.py).
+DURATION_INPUTS: dict[str, tuple[str, ...]] = {
+    'idle_before_frame_grab_ns': ('initialized_ns', 'pre_frame_grab_ns'),
+    'during_frame_grab_ns': ('pre_frame_grab_ns', 'post_frame_grab_ns'),
+    'idle_before_retrieve_ns': ('post_frame_grab_ns', 'pre_frame_retrieve_ns'),
+    'during_frame_retrieve_ns': ('pre_frame_retrieve_ns', 'post_frame_retrieve_ns'),
+    'idle_before_copy_to_camera_shm_ns': ('post_frame_retrieve_ns', 'pre_copy_to_camera_shm_ns'),
+    'during_copy_to_camera_shm_ns': ('pre_copy_to_camera_shm_ns', 'post_copy_to_camera_shm_ns'),
+    'idle_before_frame_record_ns': ('post_copy_to_camera_shm_ns', 'pre_frame_record_ns'),
+    'during_frame_record_ns': ('pre_frame_record_ns', 'post_frame_record_ns'),
+    'total_frame_processing_time_ns': FRAME_LIFECYCLE_TIMESTAMPS_DTYPE.names[1:],
+    'total_camera_idle_time_ns': ('initialized_ns', 'pre_frame_grab_ns'),
+}
+
+
+def lifecycle_column(field_name: str) -> str:
+    return f'frame.{field_name.replace("_ns", "")}.ns'
+
+
+def duration_column(field_name: str) -> str:
+    if "total" in field_name:
+        return field_name.replace("_ns", ".ns").replace('total_', 'total.')
+    return f'duration.{field_name.replace("_ns", ".ns")}'
+
+
+def stamped_stage_columns(all_timestamps: AllTimestampsArray) -> list[str]:
+    """Lifecycle and duration columns this recording can report, in CSV order.
+
+    A lifecycle timestamp counts as stamped when any camera stamped it on any frame. Events a capture
+    backend does not have stay 0 (the Rust backend stamps only the frame-grab bracket: the capture loop
+    starts waiting for the next frame / the next frame is available to the loop). A duration is reported
+    only when every timestamp it is computed from was stamped.
+    """
+    stamped = {name for name in FRAME_LIFECYCLE_TIMESTAMPS_DTYPE.names if np.any(all_timestamps[name] != 0)}
+    return ([lifecycle_column(name) for name in FRAME_LIFECYCLE_TIMESTAMPS_DTYPE.names if name in stamped] +
+            [duration_column(name) for name in FRAME_DURATION_DTYPE.names if stamped.issuperset(DURATION_INPUTS[name])])
+
 
 def create_and_save_camera_csvs(
         all_timestamps: AllTimestampsArray,
@@ -19,7 +59,9 @@ def create_and_save_camera_csvs(
         recording_info: RecordingInfo,
         camera_configs: CameraConfigs,
         connection_frame_numbers: list[int],
-        timebase_mapping: TimebaseMapping
+        timebase_mapping: TimebaseMapping,
+        stage_columns: list[str] | None = None,
+        additional_lifecycle_timestamps_by_camera: dict[str, dict[str, np.ndarray]] | None = None,
 ) -> np.recarray:
     """
     Create and save per-camera CSV files with frame timestamps and durations.
@@ -32,12 +74,19 @@ def create_and_save_camera_csvs(
         camera_configs: A list of camera configuration strings corresponding to each camera.
         connection_frame_numbers: A list of connection frame numbers corresponding to each frame.
         timebase_mapping: TimebaseMapping instance for converting timestamps.
+        stage_columns: Lifecycle and duration columns to write (see stamped_stage_columns); None writes all.
+        additional_lifecycle_timestamps_by_camera: Lifecycle events a capture backend has beyond the shared
+            ones (perf-counter ns, one value per frame), written after the other columns as `frame.<event>.ns`.
 
     Returns:
         A numpy recarray containing all camera CSV rows.
     """
     num_cameras, num_frames = all_timestamps.shape
     connection_frame_numbers = np.array(connection_frame_numbers)
+    if stage_columns is None:
+        stage_columns = [name for name in CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names if name.startswith(STAGE_COLUMN_PREFIXES)]
+    written_columns = [name for name in CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names
+                       if not name.startswith(STAGE_COLUMN_PREFIXES) or name in stage_columns]
 
     all_camera_csv_rows = np.recarray((num_cameras, num_frames), dtype=CAMERA_TIMESTAMPS_CSV_ROW_DTYPE)
 
@@ -84,24 +133,30 @@ def create_and_save_camera_csvs(
 
         # Fill in all timestamp fields (vectorized)
         for field_name in FRAME_LIFECYCLE_TIMESTAMPS_DTYPE.names:
-            csv_field = f'frame.{field_name.replace("_ns", "")}.ns'
-            all_camera_csv_rows[camera_number][csv_field] = camera_frame_timestamps[
+            all_camera_csv_rows[camera_number][lifecycle_column(field_name)] = camera_frame_timestamps[
                                                                 field_name] - recording_start_time_ns
 
         # Fill in all duration fields (vectorized)
         for field_name in FRAME_DURATION_DTYPE.names:
-            if  "total" in field_name:
-                csv_field = field_name.replace("_ns", ".ns").replace('total_', 'total.')
-            else:
-                csv_field = f'duration.{field_name.replace("_ns", ".ns")}'
-
-            all_camera_csv_rows[camera_number][csv_field] = camera_frame_durations[
+            all_camera_csv_rows[camera_number][duration_column(field_name)] = camera_frame_durations[
                 field_name]
 
-        # Save to CSV
+        # Save to CSV: only lifecycle events this recording stamped, durations computed from them, and
+        # lifecycle events only this capture backend has
+        rows = recfunctions.repack_fields(all_camera_csv_rows[camera_number][written_columns])
+        additional = (additional_lifecycle_timestamps_by_camera or {}).get(camera_id, {})
+        if additional:
+            if any(len(values) != num_frames for values in additional.values()):
+                raise ValueError(f"Camera {camera_id} has additional lifecycle timestamps for a different "
+                                 f"number of frames than its frame metadata ({num_frames})")
+            rows = recfunctions.append_fields(
+                rows, [lifecycle_column(name) for name in additional],
+                [np.asarray(values, dtype=np.int64) - recording_start_time_ns for values in additional.values()],
+                usemask=False)
         csv_file_path = recording_info.camera_timestamps_file_path_from_camera_id(camera_id)
-        np.savetxt(csv_file_path, all_camera_csv_rows[camera_number], delimiter=',', fmt='%s',
-                   header=",".join(CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names),
+        np.savetxt(csv_file_path, rows,
+                   delimiter=',', fmt='%s',
+                   header=",".join(rows.dtype.names),
                    comments='')
 
     return all_camera_csv_rows

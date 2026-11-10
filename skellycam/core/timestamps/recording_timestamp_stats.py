@@ -13,6 +13,20 @@ from skellycam.core.types.numpy_record_dtypes import MULTI_FRAME_TIMESTAMP_CSV_R
 REPORT_PRECISION: int = 3
 SEPARATOR_WIDTH: int = 80
 
+# Stage statistic -> the per-camera CSV column it summarizes (via the per-frame median across cameras).
+STAGE_STATS_COLUMNS: dict[str, str] = {
+    "idle_before_frame_grab_ms": "duration.idle_before_frame_grab.ns",
+    "during_frame_grab_ms": "duration.during_frame_grab.ns",
+    "idle_before_retrieve_ms": "duration.idle_before_retrieve.ns",
+    "during_frame_retrieve_ms": "duration.during_frame_retrieve.ns",
+    "idle_before_copy_to_camera_shm_ms": "duration.idle_before_copy_to_camera_shm.ns",
+    "during_copy_to_camera_shm_ms": "duration.during_copy_to_camera_shm.ns",
+    "idle_before_frame_record_ms": "duration.idle_before_frame_record.ns",
+    "during_frame_record_ms": "duration.during_frame_record.ns",
+    "total_frame_processing_time_ms": "total.frame_processing_time.ns",
+    "total_camera_idle_time_ms": "total.camera_idle_time.ns",
+}
+
 
 def _format_stats_row(
     stage_name: str,
@@ -50,16 +64,17 @@ class RecordingTimestampsStats:
     frame_duration_stats: np.recarray
     inter_camera_grab_range_ms: np.recarray
 
-    idle_before_frame_grab_ms: np.recarray
-    during_frame_grab_ms: np.recarray
-    idle_before_retrieve_ms: np.recarray
-    during_frame_retrieve_ms: np.recarray
-    idle_before_copy_to_camera_shm_ms: np.recarray
-    during_copy_to_camera_shm_ms: np.recarray
-    idle_before_frame_record_ms: np.recarray
-    during_frame_record_ms: np.recarray
-    total_frame_processing_time_ms: np.recarray
-    total_camera_idle_time_ms: np.recarray
+    # Stages whose lifecycle timestamps the capture backend did not stamp stay None and are not reported.
+    idle_before_frame_grab_ms: np.recarray | None = None
+    during_frame_grab_ms: np.recarray | None = None
+    idle_before_retrieve_ms: np.recarray | None = None
+    during_frame_retrieve_ms: np.recarray | None = None
+    idle_before_copy_to_camera_shm_ms: np.recarray | None = None
+    during_copy_to_camera_shm_ms: np.recarray | None = None
+    idle_before_frame_record_ms: np.recarray | None = None
+    during_frame_record_ms: np.recarray | None = None
+    total_frame_processing_time_ms: np.recarray | None = None
+    total_camera_idle_time_ms: np.recarray | None = None
 
     @classmethod
     def from_multiframe_rows(
@@ -67,12 +82,18 @@ class RecordingTimestampsStats:
         multiframe_rows: np.recarray,
         recording_info: RecordingInfo,
         number_of_cameras: int,
+        stage_columns: list[str] | None = None,
     ) -> "RecordingTimestampsStats":
         if multiframe_rows.dtype != MULTI_FRAME_TIMESTAMP_CSV_ROW:
             raise ValueError(
                 f"Expected dtype {MULTI_FRAME_TIMESTAMP_CSV_ROW}, got {multiframe_rows.dtype}"
             )
 
+        stage_stats = {
+            field: calculate_statistics(data=multiframe_rows[column.replace(".ns", ".ms.median")], axis=0)
+            for field, column in STAGE_STATS_COLUMNS.items()
+            if stage_columns is None or column in stage_columns
+        }
         return cls(
             recording_info=recording_info,
             number_of_cameras=number_of_cameras,
@@ -87,42 +108,14 @@ class RecordingTimestampsStats:
             inter_camera_grab_range_ms=calculate_statistics(
                 data=multiframe_rows["inter_camera.frame_grab_range.ms"], axis=0
             ),
-            idle_before_frame_grab_ms=calculate_statistics(
-                data=multiframe_rows["duration.idle_before_frame_grab.ms.median"], axis=0
-            ),
-            during_frame_grab_ms=calculate_statistics(
-                data=multiframe_rows["duration.during_frame_grab.ms.median"], axis=0
-            ),
-            idle_before_retrieve_ms=calculate_statistics(
-                data=multiframe_rows["duration.idle_before_retrieve.ms.median"], axis=0
-            ),
-            during_frame_retrieve_ms=calculate_statistics(
-                data=multiframe_rows["duration.during_frame_retrieve.ms.median"], axis=0
-            ),
-            idle_before_copy_to_camera_shm_ms=calculate_statistics(
-                data=multiframe_rows["duration.idle_before_copy_to_camera_shm.ms.median"],
-                axis=0,
-            ),
-            during_copy_to_camera_shm_ms=calculate_statistics(
-                data=multiframe_rows["duration.during_copy_to_camera_shm.ms.median"], axis=0
-            ),
-            idle_before_frame_record_ms=calculate_statistics(
-                data=multiframe_rows["duration.idle_before_frame_record.ms.median"], axis=0
-            ),
-            during_frame_record_ms=calculate_statistics(
-                data=multiframe_rows["duration.during_frame_record.ms.median"], axis=0
-            ),
-            total_frame_processing_time_ms=calculate_statistics(
-                data=multiframe_rows["total.frame_processing_time.ms.median"], axis=0
-            ),
-            total_camera_idle_time_ms=calculate_statistics(
-                data=multiframe_rows["total.camera_idle_time.ms.median"], axis=0
-            ),
+            **stage_stats,
         )
 
     def to_json(self, exclude: set[str] | None = None, indent: int | None = None) -> str:
-        """Serialize to JSON, converting numpy recarrays to plain dicts."""
-        exclude = exclude or set()
+        """Serialize to JSON, converting numpy recarrays to plain dicts. Unreported stages are omitted."""
+        exclude = (exclude or set()) | {
+            field.name for field in dataclasses.fields(self) if getattr(self, field.name) is None
+        }
 
         def _to_serializable(obj: object) -> object:
             if dataclasses.is_dataclass(obj):
@@ -195,13 +188,15 @@ class RecordingTimestampsStats:
     def _build_processing_table(self) -> str:
         """Build the per-stage frame processing breakdown table."""
         processing_stages: list[tuple[str, np.recarray]] = [
-            ("During frame grab", self.during_frame_grab_ms),
-            ("Idle before retrieve", self.idle_before_retrieve_ms),
-            ("During frame retrieve", self.during_frame_retrieve_ms),
-            ("Idle before copy to camera SHM", self.idle_before_copy_to_camera_shm_ms),
-            ("During copy to camera SHM", self.during_copy_to_camera_shm_ms),
-            ("Idle before frame record", self.idle_before_frame_record_ms),
-            ("During frame record", self.during_frame_record_ms),
+            (stage_name, stats) for stage_name, stats in (
+                ("During frame grab", self.during_frame_grab_ms),
+                ("Idle before retrieve", self.idle_before_retrieve_ms),
+                ("During frame retrieve", self.during_frame_retrieve_ms),
+                ("Idle before copy to camera SHM", self.idle_before_copy_to_camera_shm_ms),
+                ("During copy to camera SHM", self.during_copy_to_camera_shm_ms),
+                ("Idle before frame record", self.idle_before_frame_record_ms),
+                ("During frame record", self.during_frame_record_ms),
+            ) if stats is not None
         ]
 
         median_stage_total = sum(stage.median_value for _, stage in processing_stages)
@@ -215,35 +210,36 @@ class RecordingTimestampsStats:
             )
             rows.append(_format_stats_row(stage_name=stage_name, stats=stats, percentage=pct))
 
-        # Separator
-        rows.append(["═" * 25, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 10])
-
-        # Totals
+        # Totals (only when every stage they sum was stamped)
         total_processing = self.total_frame_processing_time_ms
         total_idle = self.total_camera_idle_time_ms
-        total_time = total_processing.median_value + total_idle.median_value
+        if total_processing is not None and total_idle is not None:
+            # Separator
+            rows.append(["═" * 25, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 12, "═" * 10])
 
-        if total_time > 0:
-            processing_pct = (total_processing.median_value / total_time) * 100
-            idle_pct = (total_idle.median_value / total_time) * 100
-        else:
-            processing_pct = 0.0
-            idle_pct = 0.0
+            total_time = total_processing.median_value + total_idle.median_value
 
-        rows.append(
-            _format_stats_row(
-                stage_name="TOTAL FRAME PROCESSING TIME",
-                stats=total_processing,
-                percentage=processing_pct,
+            if total_time > 0:
+                processing_pct = (total_processing.median_value / total_time) * 100
+                idle_pct = (total_idle.median_value / total_time) * 100
+            else:
+                processing_pct = 0.0
+                idle_pct = 0.0
+
+            rows.append(
+                _format_stats_row(
+                    stage_name="TOTAL FRAME PROCESSING TIME",
+                    stats=total_processing,
+                    percentage=processing_pct,
+                )
             )
-        )
-        rows.append(
-            _format_stats_row(
-                stage_name="TOTAL CAMERA IDLE TIME",
-                stats=total_idle,
-                percentage=idle_pct,
+            rows.append(
+                _format_stats_row(
+                    stage_name="TOTAL CAMERA IDLE TIME",
+                    stats=total_idle,
+                    percentage=idle_pct,
+                )
             )
-        )
 
         return tabulate(
             rows,

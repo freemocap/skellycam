@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 import numpy as np
+from numpy.lib import recfunctions
 
 from skellycam.core.recorders.videos.recording_info import RecordingInfo
 from skellycam.core.types.numpy_record_dtypes import CAMERA_TIMESTAMPS_CSV_ROW_DTYPE, MULTI_FRAME_TIMESTAMP_CSV_ROW
@@ -11,12 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
-                                   recording_info: RecordingInfo) -> np.recarray:
+                                   recording_info: RecordingInfo,
+                                   stage_columns: list[str] | None = None) -> np.recarray:
     """
     Create a multiframe CSV that combines timestamps from all cameras.
 
     Args:
         timestamps_rows_by_camera: A dictionary mapping camera IDs to their respective CSV row recarrays.
+        stage_columns: Per-camera lifecycle and duration columns to summarize; None summarizes all.
+            Statistics of columns not listed are neither computed nor written.
 
     Returns:
         A numpy recarray containing the combined multiframe data.
@@ -72,7 +76,13 @@ def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
 
     # Process statistical columns in batches by type
     timestamp_columns = [col for col in CAMERA_TIMESTAMPS_CSV_ROW_DTYPE.names
-                         if col.startswith(('frame.', 'duration.', 'total.'))]
+                         if col.startswith(('frame.', 'duration.', 'total.'))
+                         and (stage_columns is None or col in stage_columns)]
+    statistics_columns = {f'{column.replace(".ns", "")}.{suffix}' for column in timestamp_columns
+                          for suffix in ('ms.mean', 'ms.median', 'ms.standard_deviation', 'ms.range',
+                                         'proportion.coefficient_of_variation')}
+    written_columns = [name for name in MULTI_FRAME_TIMESTAMP_CSV_ROW.names
+                       if not name.startswith(('frame.', 'duration.', 'total.')) or name in statistics_columns]
 
     for column_name in timestamp_columns:
         # Get data for all cameras and frames for this column
@@ -112,10 +122,10 @@ def create_and_save_multiframe_csv(timestamps_rows_by_camera: np.recarray,
 
     # Save to CSV
     np.savetxt(recording_info.timestamp_file_path,
-               multiframe_csv_rows,
+               recfunctions.repack_fields(multiframe_csv_rows[written_columns]),
                delimiter=',',
                fmt='%s',
-               header=",".join(MULTI_FRAME_TIMESTAMP_CSV_ROW.names),
+               header=",".join(written_columns),
                comments='')
 
     return multiframe_csv_rows
