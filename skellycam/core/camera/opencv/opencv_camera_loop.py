@@ -41,6 +41,7 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
     framerate: float | None = None #median framerate of the past 1000
     try:
         while ipc.should_continue:
+            previous_framerate = config.framerate
             (config,
              frame_rec_array,
              video_recorder,
@@ -56,6 +57,10 @@ def run_opencv_camera_loop(camera_shm: CameraSharedMemoryRingBuffer,
                                            video_recorder=video_recorder,
                                            framerate=framerate
                                            )
+            if config.framerate != previous_framerate:
+                # Recordings declare the measured rate; the previous stream's intervals no longer apply.
+                frame_durations_seconds.clear()
+                framerate = None
 
             if self_status.should_close.value:
                 logger.info(f"Camera {config.camera_id} received shutdown signal.")

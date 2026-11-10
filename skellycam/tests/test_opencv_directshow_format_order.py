@@ -8,6 +8,7 @@ from unittest.mock import Mock, call
 
 import cv2
 import numpy as np
+import pytest
 
 from skellycam.core.camera.config.camera_config import CameraConfig
 from skellycam.core.camera.determine_backend import OpenCVBackend
@@ -69,3 +70,31 @@ def test_directshow_resolution_change_sets_fourcc_after_size(monkeypatch):
     assert format_calls(capture) == [call(cv2.CAP_PROP_FRAME_WIDTH, 640), call(cv2.CAP_PROP_FRAME_HEIGHT, 480),
                                      call(cv2.CAP_PROP_FOURCC, MJPG)]
 
+
+# DirectShow reports 1e7 / AvgTimePerFrame: a camera opened at 30 fps reports 30.00003.
+REPORTED_30_FPS = 1e7 / 333333
+
+
+def change_frame_rate(monkeypatch, backend_id, requested):
+    capture = fake_capture(backend_id)
+    monkeypatch.setattr(application, "logger", Mock())
+    prior = CameraConfig(camera_id="cam0", camera_index=0, resolution={"width": 1280, "height": 720},
+                         framerate=REPORTED_30_FPS, capture_fourcc="MJPG")
+    config = prior.model_copy(update={"framerate": requested})
+    monkeypatch.setattr(application, "extract_config_from_cv2_capture", lambda **kwargs: config)
+    application.apply_camera_configuration(capture, prior, config)
+    return capture
+
+
+def test_directshow_frame_rate_change_sets_fourcc_after_frame_rate(monkeypatch):
+    assert format_calls(change_frame_rate(monkeypatch, cv2.CAP_DSHOW, 60.0)) == [
+        call(cv2.CAP_PROP_FPS, 60.0), call(cv2.CAP_PROP_FOURCC, MJPG)]
+
+
+def test_other_backends_set_only_the_new_frame_rate(monkeypatch):
+    assert format_calls(change_frame_rate(monkeypatch, cv2.CAP_V4L2, 60.0)) == [call(cv2.CAP_PROP_FPS, 60.0)]
+
+
+@pytest.mark.parametrize("requested", [30.0, REPORTED_30_FPS, -1.0])
+def test_reported_frame_rate_or_unset_request_leaves_the_stream_alone(monkeypatch, requested):
+    assert format_calls(change_frame_rate(monkeypatch, cv2.CAP_DSHOW, requested)) == []

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from skellycam.api.websocket.performance_data import extract_performance_data_from_frames
 from skellycam.core.camera.config.camera_config import CameraConfigs
+from skellycam.core.camera.opencv.opencv_helpers.opencv_apply_config import frame_rate_changed
 from skellycam.core.camera_group.camera_group import CameraGroup, await_owned_camera_task
 from skellycam.core.camera_group.camera_errors import CameraStateConflict
 from skellycam.core.ipc.pubsub.pubsub_manager import TopicTypes
@@ -111,6 +112,12 @@ class CameraGroupManager:
             self.camera_groups.pop(camera_group_id)
             self.camera_group_framerate_subscriptions.pop(camera_group_id, None)
             return await self.create_and_start_camera_group(selected_configs)
+        # Cameras change frame rate in place; a recording's videos declare one frame rate.
+        if camera_group.recording_in_progress and any(
+            frame_rate_changed(camera_group.configs[key].framerate, config.framerate)
+            for key, config in selected_configs.items()
+        ):
+            raise CameraStateConflict('Stop recording before changing the frame rate')
         await camera_group.update_camera_settings(requested_configs=selected_configs)
         return camera_group
 

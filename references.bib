@@ -50,6 +50,14 @@
   claim = {Each FPS, frame size or FourCC setting stops and recreates the capture device, and stopDevice discards the previously requested size, subtype and frame rate. FPS and size restarts request no subtype, so setup tries subtypes in list order with YUY2 before MJPG; size and FourCC restarts keep the previous stream's frame rate; only a FourCC setting requests MJPG. Open-time size and FourCC parameters are applied before open, but a later FPS setting discards them.}
 }
 
+@online{opencv412DirectShowFrameRate,
+  title = {OpenCV 4.12.0 DirectShow frame-rate request and readback},
+  url = {https://github.com/opencv/opencv/blob/4.12.0/modules/videoio/src/cap_dshow.cpp#L1470-L1480},
+  urldate = {2026-11-10},
+  review = {Read videoInput::setIdealFramerate (L1155-L1161), videoInput::getFPS (L1470-L1480), the requestedFrameTime declaration and initialization (L436, L792), and the CAP_PROP_FPS case of VideoCapture_DShow::setProperty (L3498-L3510) in the version matching the installed OpenCV (4.12.0). The rate a camera delivers is not derivable from this source; recorded timestamps measure it.},
+  claim = {The backend stores a requested frame rate as the integer frame interval 10000000 / fps in 100 ns units and reports 10000000 / interval as CAP_PROP_FPS, so 30 fps reads back as 30.00003; it reports 0 when no rate was requested. Setting CAP_PROP_FPS restarts the device whenever the rounded value differs from that report, which is every time for a rate whose interval is inexact.}
+}
+
 @online{windowsUsbConnectionFlags,
   title = {Windows 10 SDK (10.0.16299) usbioctl.h: USB node connection information V2 flags},
   url = {https://github.com/tpn/winsdk-10/blob/master/Include/10.0.16299.0/shared/usbioctl.h#L1739-L1747},

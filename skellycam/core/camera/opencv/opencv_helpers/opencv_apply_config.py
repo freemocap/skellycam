@@ -1,4 +1,5 @@
 import logging
+import math
 import sys
 
 import cv2
@@ -15,6 +16,18 @@ MANUAL_EXPOSURE_SETTING = 1
 
 class FailedToApplyCameraConfigurationError(Exception):
     pass
+
+
+def frame_rate_changed(current: float, requested: float) -> bool:
+    """Whether a request names a frame rate other than the one the camera reports.
+
+    Reported rates are quantized: DirectShow reports 1e7 divided by its integer frame interval in
+    100 ns units (30 fps reads back as 30.00003), and 0 when no rate was requested
+    [@opencv412DirectShowFrameRate]. Clients send the reported value back, so a relative difference
+    below 1e-4 (that quantization, up to 1000 fps) is the same rate. A non-positive request names no
+    rate, as when a camera opens.
+    """
+    return requested > 0 and not math.isclose(requested, current, rel_tol=1e-4)
 
 
 def _apply_exposure(cv2_vid_capture: cv2.VideoCapture, config: CameraConfig) -> None:
@@ -60,14 +73,17 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
 
     should_apply_exposure = initial_config or prior_config.exposure_mode != config.exposure_mode or prior_config.exposure != config.exposure
     should_apply_resolution = initial_config or prior_config.resolution != config.resolution
-    should_apply_framerate = False  # framerate application is disabled
+    # create_cv2_video_capture sets the initial frame rate.
+    should_apply_framerate = not initial_config and frame_rate_changed(prior_config.framerate, config.framerate)
     should_apply_capture_fourcc = initial_config or prior_config.capture_fourcc != config.capture_fourcc
     if int(cv2_vid_capture.get(cv2.CAP_PROP_BACKEND)) == cv2.CAP_DSHOW:
         # create_cv2_video_capture already set the initial format in DirectShow's order; setting size and
-        # FourCC again would restart the stream twice more, once in YUY2. A size change restarts the
-        # stream in the first supported subtype, so FourCC must follow it. [@opencv412DirectShowSetup]
+        # FourCC again would restart the stream twice more, once in YUY2. A size or frame-rate change
+        # restarts the stream in the first supported subtype, so FourCC must follow it.
+        # [@opencv412DirectShowSetup]
         should_apply_resolution = should_apply_resolution and not initial_config
-        should_apply_capture_fourcc = (should_apply_capture_fourcc or should_apply_resolution) and not initial_config
+        should_apply_capture_fourcc = (should_apply_capture_fourcc or should_apply_resolution
+                                       or should_apply_framerate) and not initial_config
 
     try:
         if not cv2_vid_capture.isOpened():
@@ -80,18 +96,17 @@ def apply_camera_configuration(cv2_vid_capture: cv2.VideoCapture,
             cv2_vid_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, config.resolution.height)
 
         if should_apply_framerate:
-            if config.framerate > 0:
-                cv2_vid_capture.set(cv2.CAP_PROP_FPS, config.framerate)
+            cv2_vid_capture.set(cv2.CAP_PROP_FPS, config.framerate)
 
         if should_apply_capture_fourcc:
             cv2_vid_capture.set(
                 cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*config.capture_fourcc)
             )
 
-        # Resolution/FourCC changes can reopen the DirectShow stream. Apply
+        # Resolution, frame-rate and FourCC changes can reopen the DirectShow stream. Apply
         # exposure to the resulting stream, including an otherwise unchanged
         # exposure value after a format change. [@opencv412DirectShowControls]
-        if should_apply_exposure or should_apply_resolution or should_apply_capture_fourcc:
+        if should_apply_exposure or should_apply_resolution or should_apply_framerate or should_apply_capture_fourcc:
             _apply_exposure(cv2_vid_capture, config)
 
         extracted_config = extract_config_from_cv2_capture(cv2_capture=cv2_vid_capture,
