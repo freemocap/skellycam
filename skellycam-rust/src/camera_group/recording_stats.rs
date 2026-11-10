@@ -11,6 +11,8 @@
 
 use crate::camera::MultiFramePayload;
 
+use super::gatherer::multiframe_throughput_fps;
+
 // ── Stats computation (same primitives as the gatherer) ──────────────────
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -200,13 +202,6 @@ impl RecordingStats {
 
     /// Compute the final summary for inclusion in `RecordingSummary`.
     pub fn finalize(self) -> RecordingStatsSummary {
-        let multiframe_fps: Vec<f64> = self
-            .multiframe_interval_ns
-            .iter()
-            .filter(|dt| **dt > 0.0)
-            .map(|dt_ns| 1_000_000_000.0 / dt_ns)
-            .collect();
-
         let per_camera: Vec<PerCameraStatsRow> = (0..self.camera_count)
             .map(|i| PerCameraStatsRow {
                 camera_label: self.camera_labels.get(i).cloned().unwrap_or_default(),
@@ -227,7 +222,7 @@ impl RecordingStats {
             .collect();
 
         RecordingStatsSummary {
-            multiframe_fps: compute_stats(&multiframe_fps),
+            multiframe_fps: multiframe_throughput_fps(&self.multiframe_interval_ns),
             multiframe_duration_ns: compute_stats(&self.multiframe_interval_ns),
             frame_arrival_spread: compute_stats(&self.frame_arrival_spread),
             thread_wakeup_spread: compute_stats(&self.thread_wakeup_spread),
@@ -245,7 +240,8 @@ impl RecordingStats {
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct RecordingStatsSummary {
     pub total_multiframes: usize,
-    pub multiframe_fps: Option<StatsSummary>,
+    /// Frames over elapsed time (see `multiframe_throughput_fps`).
+    pub multiframe_fps: Option<f64>,
     pub multiframe_duration_ns: Option<StatsSummary>,
     pub frame_arrival_spread: Option<StatsSummary>,
     pub thread_wakeup_spread: Option<StatsSummary>,
@@ -253,4 +249,57 @@ pub struct RecordingStatsSummary {
     pub gatherer_payload_assembly: Option<StatsSummary>,
     pub gatherer_downstream_send: Option<StatsSummary>,
     pub per_camera: Vec<PerCameraStatsRow>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::camera::{
+        CameraIdentity, FrameData, FrameLifecycleTimestamps, FramePacket, GathererTimestamps,
+    };
+
+    fn single_camera_multiframe(frame_number: i64, frame_available_ns: i64) -> MultiFramePayload {
+        MultiFramePayload {
+            frames: vec![FramePacket {
+                data: FrameData::Mjpg(Vec::new()),
+                width: 1280,
+                height: 720,
+                rotation: -1,
+                timestamps: FrameLifecycleTimestamps {
+                    frame_available_ns,
+                    ..FrameLifecycleTimestamps::new()
+                },
+                identity: CameraIdentity {
+                    camera_name: "Test Cam".into(),
+                    camera_index: 0,
+                    camera_id: "cam0".into(),
+                    device_path: String::new(),
+                    formats: Vec::new(),
+                },
+                frame_number,
+            }],
+            frame_number,
+            gatherer_timestamps: GathererTimestamps::new(),
+        }
+    }
+
+    /// Bursty delivery as observed at 200 fps on 2026-11-09 — three frames
+    /// 0.1 ms apart, then a 15.6 ms gap — is a ~190 fps stream, not the
+    /// thousands of fps a mean of per-interval rates reports.
+    #[test]
+    fn recording_multiframe_fps_is_frames_over_elapsed_time() {
+        let mut stats = RecordingStats::new(1);
+        let mut frame_available_ns = 1_000_000_000;
+        for frame_number in 0..=300 {
+            stats.push_multiframe(&single_camera_multiframe(frame_number, frame_available_ns), 0);
+            frame_available_ns += [100_000, 100_000, 15_600_000][frame_number as usize % 3];
+        }
+
+        let summary = serde_json::to_value(stats.finalize()).unwrap();
+        let fps = &summary["multiframe_fps"];
+        let fps = fps
+            .as_f64()
+            .unwrap_or_else(|| panic!("multiframe_fps must be frames per second, got {fps}"));
+        assert!((fps - 3.0e9 / 15_800_000.0).abs() < 1e-6, "multiframe_fps = {fps}");
+    }
 }

@@ -434,12 +434,8 @@ async fn stop_recording(
     // Derive duration and FPS from stats when available
     let (duration, framerate) = if let Some(ref stats) = summary.stats {
         let total_multiframes = stats.total_multiframes as f64;
-        // multiframe_fps is the gatherer's output rate
-        let fps = stats
-            .multiframe_fps
-            .as_ref()
-            .map(|s| s.mean)
-            .unwrap_or(0.0);
+        // multiframe_fps is the gatherer's output rate (frames over elapsed time)
+        let fps = stats.multiframe_fps.unwrap_or(0.0);
         let dur = if fps > 0.0 {
             total_multiframes / fps
         } else {

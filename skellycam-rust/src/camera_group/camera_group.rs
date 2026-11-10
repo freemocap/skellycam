@@ -25,7 +25,7 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 
-use crate::camera::{Camera, CameraConfig, FramePacket};
+use crate::camera::{Camera, CameraConfig, CameraIdentity, FramePacket};
 use crate::camera_group::sync_utils::BreakableBarrier;
 use crate::timestamps::performance::performance_counter_nanoseconds;
 
@@ -169,8 +169,26 @@ impl CameraGroup {
     ///
     /// Returns an error if:
     /// - The group is not in the `Created` state
-    /// - Any camera fails to start (hardware setup failure)
+    /// - Any camera fails to start (hardware setup failure). Start is
+    ///   all-or-nothing: every camera that did start is shut down, the group
+    ///   stays `Created`, and the message names each failed camera ID with
+    ///   its reason.
     pub fn start(&mut self) -> anyhow::Result<()> {
+        self.start_with(Camera::start)
+    }
+
+    /// [`start`](Self::start) with an injectable camera launcher, so tests can
+    /// exercise the startup policy without hardware.
+    fn start_with(
+        &mut self,
+        mut launch_camera: impl FnMut(
+            CameraIdentity,
+            CameraConfig,
+            Arc<BreakableBarrier>,
+            Arc<AtomicBool>,
+            i64,
+        ) -> anyhow::Result<Camera>,
+    ) -> anyhow::Result<()> {
         if self.state != CameraGroupState::Created {
             anyhow::bail!(
                 "Cannot start CameraGroup in state {:?} — must be Created",
@@ -192,10 +210,12 @@ impl CameraGroup {
         // Barrier: one slot per camera + one for the gatherer
         self.barrier = Arc::new(BreakableBarrier::new(requested_count + 1));
 
+        // (camera_id, reason) for every requested camera that does not reach Ready.
+        let mut failures: Vec<(String, String)> = Vec::new();
+
         // Spawn all camera threads
-        let mut spawn_failures: Vec<String> = Vec::new();
         for (camera_id, group_config) in &self.configs {
-            match Camera::start(
+            match launch_camera(
                 group_config.identity.clone(),
                 group_config.capture_config.clone(),
                 self.barrier.clone(),
@@ -206,78 +226,58 @@ impl CameraGroup {
                     self.cameras.insert(camera_id.clone(), camera);
                 }
                 Err(e) => {
-                    tracing::warn!(
-                        "[CameraGroup {}] thread spawn failed for '{}' ({}): {}",
-                        self.group_id,
-                        camera_id,
-                        group_config.identity.label(),
-                        e
-                    );
-                    spawn_failures.push(camera_id.clone());
+                    let reason = format!("{} thread spawn failed: {e}", group_config.identity.label());
+                    tracing::warn!("[CameraGroup {}] camera '{}': {}", self.group_id, camera_id, reason);
+                    failures.push((camera_id.clone(), reason));
                 }
             }
-        }
-        for id in &spawn_failures {
-            self.configs.remove(id);
-        }
-
-        if self.cameras.is_empty() {
-            self.paused.store(false, Ordering::SeqCst);
-            anyhow::bail!(
-                "All {} camera(s) failed to spawn — no cameras available",
-                requested_count
-            );
         }
 
         // Wait for each camera to finish hardware setup (stream open +
         // 30-frame stabilization). Cameras that succeed send Ready then
         // enter the paused spin; cameras that fail send Error instead.
         let stabilize_timeout = std::time::Duration::from_secs(15);
-        let mut stabilization_failures: Vec<String> = Vec::new();
         for (camera_id, camera) in &self.cameras {
-            match camera.wait_until_ready(stabilize_timeout) {
-                Ok(()) => {}
-                Err(msg) => {
-                    tracing::warn!(
-                        "[CameraGroup {}] camera '{}' hardware setup failed: {}",
-                        self.group_id, camera_id, msg
+            if let Err(reason) = camera.wait_until_ready(stabilize_timeout) {
+                tracing::warn!(
+                    "[CameraGroup {}] camera '{}' hardware setup failed: {}",
+                    self.group_id, camera_id, reason
+                );
+                failures.push((camera_id.clone(), reason));
+            }
+        }
+
+        // All-or-nothing, like the Python camera backend: never report a group
+        // as started without every requested camera. On 2026-11-09 (4 and 5
+        // cameras at 200 fps on one USB controller) the cameras that did
+        // stabilize delivered one multiframe and then stalled, while callers
+        // were told every requested camera was streaming.
+        if !failures.is_empty() {
+            for (camera_id, camera) in self.cameras.drain() {
+                if let Err(e) = camera.shutdown() {
+                    tracing::error!(
+                        "[CameraGroup {}] camera '{}' shutdown error: {}",
+                        self.group_id, camera_id, e
                     );
-                    stabilization_failures.push(camera_id.clone());
                 }
             }
-        }
-
-        // Clean up failed cameras
-        for id in &stabilization_failures {
-            self.configs.remove(id);
-            if let Some(camera) = self.cameras.remove(id) {
-                let _ = camera.shutdown();
-            }
-        }
-
-        if self.cameras.is_empty() {
             self.paused.store(false, Ordering::SeqCst);
-            anyhow::bail!(
-                "All {} camera(s) failed hardware setup — no cameras available",
-                requested_count
-            );
-        }
-
-        let total_failures = spawn_failures.len() + stabilization_failures.len();
-        if total_failures > 0 {
-            tracing::warn!(
-                "[CameraGroup {}] {} of {} camera(s) failed, continuing with {}",
-                self.group_id,
-                total_failures,
+            failures.sort();
+            let failed: Vec<String> = failures
+                .iter()
+                .map(|(camera_id, reason)| format!("{camera_id}: {reason}"))
+                .collect();
+            let message = format!(
+                "{} of {} requested camera(s) did not start; {}",
+                failures.len(),
                 requested_count,
-                self.cameras.len()
+                failed.join("; ")
             );
+            tracing::error!("[CameraGroup {}] {message}", self.group_id);
+            anyhow::bail!(message);
         }
 
-        // Correct the barrier count — no cameras are at barrier.wait()
-        // because all successful cameras are spinning in the paused loop.
         let camera_count = self.cameras.len();
-        self.barrier.set_total(camera_count + 1);
 
         // Release cameras into the capture loop
         self.paused.store(false, Ordering::SeqCst);
@@ -1180,5 +1180,73 @@ mod tests {
             ..a.clone()
         };
         assert!(!camera_config_eq(&a, &c)); // framerate changed
+    }
+
+    fn group_config(camera_id: &str, camera_index: i32) -> CameraGroupConfig {
+        CameraGroupConfig {
+            identity: crate::camera::CameraIdentity {
+                camera_name: "Test Cam".into(),
+                camera_index,
+                camera_id: camera_id.into(),
+                device_path: String::new(),
+                formats: Vec::new(),
+            },
+            capture_config: CameraConfig {
+                camera_id: camera_id.into(),
+                camera_index: camera_index as u32,
+                width: 640,
+                height: 480,
+                exposure: -7,
+                exposure_mode: "MANUAL".into(),
+                framerate: 30.0,
+                rotation: -1,
+            },
+        }
+    }
+
+    /// Start is all-or-nothing: when any requested camera fails hardware
+    /// setup, every camera that did start is shut down and the error names
+    /// each failed camera with its reason. (2026-11-09: the cameras that
+    /// survived a partial start delivered one multiframe, then stalled.)
+    #[test]
+    fn start_shuts_down_started_cameras_and_names_failures_when_any_camera_fails() {
+        use crate::camera::{CameraCommand, CameraEvent};
+
+        let mut group = CameraGroup::new(HashMap::from([
+            ("cam0".to_string(), group_config("cam0", 0)),
+            ("cam1".to_string(), group_config("cam1", 1)),
+            ("cam2".to_string(), group_config("cam2", 2)),
+        ]));
+        let shut_down = Arc::new(Mutex::new(Vec::<String>::new()));
+
+        let result = group.start_with(|identity, config, _barrier, _paused, _first_frame| {
+            let camera_id = identity.camera_id.clone();
+            let shut_down = shut_down.clone();
+            Ok(Camera::spawn_fake(identity, config, move |commands, events| {
+                if camera_id == "cam1" {
+                    let _ = events.send(CameraEvent::Error(
+                        "camera stabilization timed out waiting for frames".into(),
+                    ));
+                    return;
+                }
+                let _ = events.send(CameraEvent::Ready);
+                if let Ok(CameraCommand::Shutdown) = commands.recv() {
+                    shut_down.lock().unwrap().push(camera_id);
+                }
+            }))
+        });
+
+        let error = result.expect_err("a group missing a requested camera must not start");
+        assert_eq!(
+            error.to_string(),
+            "1 of 3 requested camera(s) did not start; \
+             cam1: camera stabilization timed out waiting for frames"
+        );
+        let mut shut_down = shut_down.lock().unwrap().clone();
+        shut_down.sort();
+        assert_eq!(shut_down, ["cam0", "cam2"]);
+        assert_eq!(group.state(), CameraGroupState::Created);
+        assert_eq!(group.camera_count(), 0);
+        assert!(!group.is_paused());
     }
 }

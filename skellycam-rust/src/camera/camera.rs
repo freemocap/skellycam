@@ -194,6 +194,31 @@ impl Camera {
     }
 }
 
+/// Test double: a `Camera` handle whose thread runs `body` instead of the
+/// openpnp-capture loop. `body` receives the command receiver and the event
+/// sender, so tests can script `Ready`/`Error` and observe `Shutdown` without
+/// hardware.
+#[cfg(test)]
+impl Camera {
+    pub(crate) fn spawn_fake(
+        identity: CameraIdentity,
+        config: CameraConfig,
+        body: impl FnOnce(mpsc::Receiver<CameraCommand>, mpsc::Sender<CameraEvent>) + Send + 'static,
+    ) -> Self {
+        let (command_sender, command_receiver) = mpsc::channel();
+        let (event_sender, event_receiver) = mpsc::channel();
+        let (_frame_sender, frame_receiver) = mpsc::sync_channel(1);
+        Self {
+            command_sender,
+            frame_receiver: Some(frame_receiver),
+            event_receiver,
+            thread_handle: Some(std::thread::spawn(move || body(command_receiver, event_sender))),
+            identity,
+            config: Arc::new(std::sync::Mutex::new(config)),
+        }
+    }
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

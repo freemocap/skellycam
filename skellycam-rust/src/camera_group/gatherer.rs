@@ -101,6 +101,22 @@ fn compute_stats(values: &[f64]) -> Option<Stats> {
     })
 }
 
+/// Multiframe throughput in frames per second: frames over elapsed time.
+///
+/// Computed as `n / Σ interval` (the reciprocal of the mean interval), never
+/// as a mean or median of per-interval rates `1 / interval`. Frames can reach
+/// the host in bursts — at 200 fps, intervals were ~0.1 ms within a burst and
+/// ~16 ms between bursts — and per-interval rates then report thousands of
+/// fps for a ~190 fps stream. Non-positive intervals are ignored; returns
+/// `None` when no positive interval remains.
+pub(crate) fn multiframe_throughput_fps(intervals_ns: &[f64]) -> Option<f64> {
+    let (count, elapsed_ns) = intervals_ns
+        .iter()
+        .filter(|interval| **interval > 0.0)
+        .fold((0_usize, 0.0_f64), |(count, sum), interval| (count + 1, sum + interval));
+    (count > 0).then(|| count as f64 * 1_000_000_000.0 / elapsed_ns)
+}
+
 /// Choose a divisor and unit for an entire column of values (ns / µs / ms).
 ///
 /// Uses the **maximum** value in the column, not the median. This ensures
@@ -870,12 +886,6 @@ fn print_statistics(
     gatherer_payload_assembly: &[f64],
     gatherer_downstream_send: &[f64],
 ) {
-    let multiframe_fps: Vec<f64> = multiframe_interval_ns
-        .iter()
-        .filter(|dt| **dt > 0.0)
-        .map(|dt_ns| 1_000_000_000.0 / dt_ns)
-        .collect();
-
     let retained = multiframe_interval_ns.len();
     let total_observed = step as usize;
     let excluded_warmup = STATS_WARMUP_MULTIFRAMES.min(step) as usize;
@@ -938,18 +948,18 @@ fn print_statistics(
     out.push('\n');
 
     // ── 1. THROUGHPUT ──
-    // Two rows: rate (fps) and period (ms). Same throughput information
-    // expressed two ways so it's easy to compare with the duration-valued
-    // metrics in the other tables.
+    // Two rows: the rate (frames over elapsed time — a single value, see
+    // `multiframe_throughput_fps`) and the period distribution, so jitter and
+    // bursty delivery stay visible next to the duration-valued metrics.
     out.push_str("▸ THROUGHPUT ────────────────────────────────────────────────────────────────\n");
     out.push('\n');
     summary_schema.print_header(&mut out, "Metric", &summary_headers);
     summary_schema.print_separator(&mut out);
-    if let Some(stats) = compute_stats(&multiframe_fps) {
-        summary_schema.print_row(&mut out, "Multiframe FPS", &summary_cells(&stats, 1.0, "fps"));
-    } else {
-        summary_schema.print_row(&mut out, "Multiframe FPS", &["(insufficient samples)".to_string()]);
-    }
+    let throughput = match multiframe_throughput_fps(multiframe_interval_ns) {
+        Some(fps) => format!("{} (frames ÷ elapsed time)", fmt_val(fps, "fps")),
+        None => "(insufficient samples)".to_string(),
+    };
+    summary_schema.print_row(&mut out, "Multiframe FPS", &[throughput]);
     if let Some(stats) = compute_stats(multiframe_interval_ns) {
         let (div, unit) = auto_scale(multiframe_interval_ns);
         summary_schema.print_row(&mut out, "Multiframe duration", &summary_cells(&stats, div, unit));
@@ -1079,13 +1089,6 @@ fn build_snapshot_json(
     multiframe_interval_ns: &[f64],
     camera_labels: &[String],
 ) -> String {
-    let fps: Vec<f64> = multiframe_interval_ns
-        .iter()
-        .filter(|dt| **dt > 0.0)
-        .map(|dt_ns| 1_000_000_000.0 / dt_ns)
-        .collect();
-
-    let fps_stats = compute_stats(&fps);
     let spread_stats = compute_stats(frame_arrival_spread);
 
     let per_camera: Vec<serde_json::Value> = camera_labels
@@ -1107,7 +1110,9 @@ fn build_snapshot_json(
         .collect();
 
     let snapshot = serde_json::json!({
-        "multiframe_fps": stat_to_json(fps_stats),
+        // Frames per second over the retained window; null without samples.
+        "multiframe_fps": multiframe_throughput_fps(multiframe_interval_ns),
+        "multiframe_interval_us": stat_to_json(compute_stats(multiframe_interval_ns)),
         "frame_arrival_spread_us": stat_to_json(
             spread_stats.map(|mut s| {
                 s.mean /= 1_000.0; s.median /= 1_000.0;
@@ -1134,5 +1139,53 @@ fn stat_to_json(stats: Option<Stats>) -> serde_json::Value {
             "n": s.n,
         }),
         None => serde_json::Value::Null,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Inter-frame intervals of a bursty ~190 fps stream, modelled on the
+    /// 2026-11-09 single-camera 200 fps run (interval median 0.106 ms, mean
+    /// 5.24 ms): three frames reach the host 0.1 ms apart, and the next burst
+    /// follows 15.6 ms later.
+    fn clustered_intervals_ns(bursts: usize) -> Vec<f64> {
+        [100_000.0, 100_000.0, 15_600_000.0].repeat(bursts)
+    }
+
+    /// Three frames per 15.8 ms burst cycle ≈ 189.87 fps.
+    const CLUSTERED_STREAM_FPS: f64 = 3.0 * 1_000_000_000.0 / 15_800_000.0;
+
+    #[test]
+    fn throughput_is_frames_over_elapsed_time() {
+        let fps = multiframe_throughput_fps(&clustered_intervals_ns(100)).unwrap();
+        assert!((fps - CLUSTERED_STREAM_FPS).abs() < 1e-6, "{fps}");
+        // Steady 30 fps and a dropped frame (one doubled interval).
+        let steady = vec![33_333_333.3; 30];
+        assert!((multiframe_throughput_fps(&steady).unwrap() - 30.0).abs() < 1e-6);
+        let mut dropped = vec![33_333_333.3; 29];
+        dropped.push(66_666_666.7);
+        assert!((multiframe_throughput_fps(&dropped).unwrap() - 30.0 / 1.033_333_333).abs() < 1e-3);
+        assert_eq!(multiframe_throughput_fps(&[]), None);
+        assert_eq!(multiframe_throughput_fps(&[0.0, -5.0]), None);
+    }
+
+    #[test]
+    fn snapshot_multiframe_fps_is_frames_over_elapsed_time() {
+        let intervals = clustered_intervals_ns(100);
+        let snapshot: serde_json::Value =
+            serde_json::from_str(&build_snapshot_json(&[], &[], &[], &[], &[], &intervals, &[]))
+                .unwrap();
+
+        let fps = &snapshot["multiframe_fps"];
+        let fps = fps
+            .as_f64()
+            .unwrap_or_else(|| panic!("multiframe_fps must be frames per second, got {fps}"));
+        assert!((fps - CLUSTERED_STREAM_FPS).abs() < 1e-6, "multiframe_fps = {fps}");
+
+        // The interval distribution keeps the burstiness visible, in µs.
+        assert_eq!(snapshot["multiframe_interval_us"]["median_us"], 100.0);
+        assert_eq!(snapshot["multiframe_interval_us"]["n"], 300);
     }
 }
