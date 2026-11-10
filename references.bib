@@ -123,3 +123,48 @@
   review = {Reviewed FfmpegCommand::new_with_path, set_expected_loglevel and FfmpegChild::wait in the locally installed 2.5.1 source. Reproduced the resulting stall on Windows: an ffmpeg child fed camera MJPEG at 30 and 60 fps with stderr unread stopped accepting stdin after about 570 frames, and completed 3600 frames when stderr was read.},
   claim = {FfmpegCommand pipes the child's stdin, stdout and stderr and adds -loglevel level+info. FfmpegChild::wait drains stderr only when it is called, so a caller that writes stdin without reading stderr can block once the stderr pipe fills.}
 }
+
+@online{rustEdition2024,
+  title = {Rust 2024 - The Rust Edition Guide},
+  author = {{The Rust Project Developers}},
+  url = {https://doc.rust-lang.org/edition-guide/rust-2024/index.html},
+  urldate = {2026-11-07},
+  review = {Reviewed only the page's edition summary, which lists RFC 3501 and release version 1.85.0, after Cargo 1.81.0 rejected the crate manifest.},
+  claim = {The Rust 2024 edition shipped in Rust 1.85.0, so older Cargo cannot parse a manifest that declares edition 2024.}
+}
+
+@online{image02510RustVersion,
+  title = {image 0.25.10 Cargo.toml},
+  author = {{The image-rs Developers}},
+  url = {https://docs.rs/crate/image/0.25.10/source/Cargo.toml},
+  urldate = {2026-11-07},
+  review = {Read the rust-version field on docs.rs and in the locally cached registry source; cargo metadata reported it as the highest rust-version in the locked Windows dependency graph.},
+  claim = {The locked image 0.25.10 dependency requires Rust 1.88.0 or newer.}
+}
+
+@online{msvcBinaryCompatibility,
+  title = {C++ binary compatibility 2015-2026},
+  author = {{Microsoft}},
+  url = {https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017},
+  urldate = {2026-11-07},
+  review = {Reviewed excerpts of the binary-compatibility restrictions on linking and the Redistributable, not the full page, after OpenPNP build.23 failed to link with MSVC 14.29 and linked with MSVC 14.44.35229.},
+  claim = {Binaries built with Visual Studio 2015 through 2026 can be linked together only by build tools at least as recent as the newest tools used to build any input.}
+}
+
+@online{rustupOverrides,
+  title = {Overrides - The rustup book},
+  author = {{The Rust Project Developers}},
+  url = {https://rust-lang.github.io/rustup/overrides.html},
+  urldate = {2026-11-07},
+  review = {Reviewed the toolchain file section and its directory-walk discovery text, not the full page.},
+  claim = {rustup discovers rust-toolchain.toml by walking up from the current directory, and its toolchain section can set channel, components, targets and profile.}
+}
+
+@online{rustupAutoInstall,
+  title = {Environment variables - The rustup book},
+  author = {{The Rust Project Developers}},
+  url = {https://rust-lang.github.io/rustup/environment-variables.html},
+  urldate = {2026-11-07},
+  review = {Reviewed only the RUSTUP_AUTO_INSTALL entry.},
+  claim = {By default rustup installs the active toolchain when it is absent; RUSTUP_AUTO_INSTALL=0 disables that.}
+}

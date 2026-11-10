@@ -1,0 +1,9 @@
+# Pins the compiler that builds skellycam-rust. rustup discovers this file from
+# Cargo's working directory and installs the toolchain when it is absent,
+# including during uv sync. [@rustupOverrides] [@rustupAutoInstall]
+# Bump it deliberately after validating a newer release; see
+# ../RUST-BACKEND-DEVELOPMENT.md#native-build-prerequisites
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["clippy", "rustfmt", "rust-src"]
