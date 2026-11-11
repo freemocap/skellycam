@@ -5,6 +5,26 @@ groups use Python/OpenCV by default; choose Rust/OpenPNP in the Camera backend
 control before connecting cameras. Close an existing group before changing its
 implementation. Both implementations are installed together.
 
+## Python bridge concurrency
+
+The Python manager must release every PyO3 borrow before `Python::detach`.
+Releasing the GIL does not release an `&self`/`PyRef` borrow. Preview encoding,
+state polling and lifecycle operations can overlap; holding a manager borrow
+across detached work makes `close_group` panic with `PyBorrowMutError`.
+
+Take owned `FrameSlots` or `Arc<Mutex<CameraGroup>>` handles while attached, then
+drop the manager borrow before doing native work. Removing a group prevents new
+lookups; existing handles remain valid until their operations finish. Shutdown
+and configuration changes serialize through the group mutex, and an update that
+loses the race with shutdown must reject the stopped group instead of reopening
+it. Recording finalization remains synchronous within the group operation.
+
+The native regression `close_during_detached_preview_releases_manager_borrow`
+holds the frame-slot lock while invoking the real Python preview method on
+another thread, then calls both single-group and all-group shutdown. It requires
+no cameras and reproduces the original panic on the pre-fix implementation.
+Run it with `cargo test --lib close_during_detached_preview` from `skellycam-rust/`.
+
 ## Native build prerequisites
 
 SkellyCam and FreeMoCap Core environments build `skellycam-rust` from source
